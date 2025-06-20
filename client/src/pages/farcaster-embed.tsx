@@ -24,6 +24,7 @@ function PostTool() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<{ like: boolean; recast: boolean }>({ like: false, recast: false });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [pendingActions, setPendingActions] = useState<{ like: boolean; recast: boolean }>({ like: false, recast: false });
 
   async function handleCheck() {
     if (!url) return;
@@ -120,18 +121,37 @@ function PostTool() {
         }
       }
 
+      // Mark action as pending (for recasts that take time to propagate)
+      setPendingActions(prev => ({ ...prev, [type]: true }));
+
       // Update local state optimistically
+      const isCurrentlyActive = stats?.[type === 'like' ? 'liked' : 'recasted'] || false;
       setStats(prev => prev ? {
         ...prev,
-        [type === 'like' ? 'liked' : 'recasted']: !prev[type === 'like' ? 'liked' : 'recasted']
+        [type === 'like' ? 'liked' : 'recasted']: !isCurrentlyActive
       } : null);
 
-      // Show success message
-      setSuccessMessage(`Post ${type}d successfully!`);
-      setTimeout(() => setSuccessMessage(null), 3000);
+      // Show success message with network propagation note for recasts
+      if (type === 'recast') {
+        setSuccessMessage('Recast successful! It may take a few moments to appear in your feed.');
+      } else {
+        setSuccessMessage('Like successful!');
+      }
+      setTimeout(() => setSuccessMessage(null), 5000);
 
-      // Refresh the cast data after a short delay to show updated reactions
+      // Multiple refresh attempts for better accuracy
       setTimeout(() => handleCheck(), 2000);
+      if (type === 'recast') {
+        setTimeout(() => handleCheck(), 8000);
+        setTimeout(() => {
+          handleCheck();
+          setPendingActions(prev => ({ ...prev, [type]: false }));
+        }, 15000);
+      } else {
+        setTimeout(() => {
+          setPendingActions(prev => ({ ...prev, [type]: false }));
+        }, 3000);
+      }
       
     } catch (error) {
       console.error(`Error ${type}ing cast:`, error);
@@ -181,6 +201,11 @@ function PostTool() {
         <div className="mt-4 text-sm text-gray-800 space-y-1">
           <p>❤️ Liked: {stats.liked ? "yes" : "no"}</p>
           <p>🔄 Recasted: {stats.recasted ? "yes" : "no"}</p>
+          {pendingActions.recast && (
+            <p className="text-blue-600 text-xs italic">
+              Note: Recasts may take 10-30 seconds to appear due to network propagation
+            </p>
+          )}
         </div>
       )}
 
@@ -227,13 +252,14 @@ function PostTool() {
                 onClick={() => handleReaction('like')}
                 disabled={actionLoading.like}
                 className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  stats?.liked 
+                  stats?.liked || pendingActions.like
                     ? 'bg-red-100 text-red-700' 
                     : 'bg-gray-100 text-gray-700 hover:bg-red-50'
                 }`}
               >
                 {actionLoading.like ? '⏳' : '❤️'} {
                   actionLoading.like ? 'Liking...' : 
+                  pendingActions.like ? 'Pending...' :
                   stats?.liked ? 'Liked' : 'Like'
                 }
               </button>
@@ -241,13 +267,14 @@ function PostTool() {
                 onClick={() => handleReaction('recast')}
                 disabled={actionLoading.recast}
                 className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  stats?.recasted 
+                  stats?.recasted || pendingActions.recast
                     ? 'bg-green-100 text-green-700' 
                     : 'bg-gray-100 text-gray-700 hover:bg-green-50'
                 }`}
               >
                 {actionLoading.recast ? '⏳' : '🔄'} {
                   actionLoading.recast ? 'Recasting...' : 
+                  pendingActions.recast ? 'Propagating...' :
                   stats?.recasted ? 'Recasted' : 'Recast'
                 }
               </button>

@@ -14,19 +14,19 @@ export default function FarcasterEmbed() {
 }
 
 function PostTool() {
-  /* ------------- identities ------------- */
   const { isAuthenticated, profile } = useProfile();
   const viewerFid = profile?.fid;
 
-  /* ------------- local state ------------- */
   const [url, setUrl] = useState("");
   const [checking, setChecking] = useState(false);
   const [stats, setStats] = useState<null | { liked: boolean; recasted: boolean }>(null);
   const [castData, setCastData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleCheck() {
     if (!url) return;
     setChecking(true);
+    setError(null);
 
     try {
       const res = await fetch(
@@ -35,6 +35,11 @@ function PostTool() {
         )}&type=url&viewer_fid=${viewerFid}`,
         { headers: { "x-api-key": "NEYNAR_API_DOCS" } }
       );
+      
+      if (!res.ok) {
+        throw new Error(`API Error: ${res.status}`);
+      }
+      
       const { cast } = await res.json();
       setCastData(cast);
       setStats({
@@ -43,8 +48,36 @@ function PostTool() {
       });
     } catch (error) {
       console.error("Error fetching cast:", error);
+      setError("Failed to fetch cast. Please check the URL and try again.");
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function handleReaction(type: 'like' | 'recast') {
+    if (!castData) return;
+
+    try {
+      const signerUuid = import.meta.env.VITE_NEYNAR_SIGNER_UUID;
+      const response = await fetch('https://api.neynar.com/v2/farcaster/reaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'NEYNAR_API_DOCS'
+        },
+        body: JSON.stringify({
+          signer_uuid: signerUuid,
+          reaction_type: type,
+          target: castData.hash
+        })
+      });
+
+      if (response.ok) {
+        // Refresh the cast data to show updated reactions
+        setTimeout(() => handleCheck(), 1000);
+      }
+    } catch (error) {
+      console.error(`Error ${type}ing cast:`, error);
     }
   }
 
@@ -53,9 +86,9 @@ function PostTool() {
 
   return (
     <div className="w-full max-w-lg bg-white shadow p-6 rounded-xl">
-      {/* Note: Neynar Auth will be added once component issues are resolved */}
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <p className="text-sm text-blue-700">Connected as: {profile?.displayName || profile?.username}</p>
+        <p className="text-xs text-blue-600">FID: {viewerFid}</p>
       </div>
 
       <input
@@ -71,6 +104,12 @@ function PostTool() {
       >
         {checking ? "Checking…" : "Fetch"}
       </button>
+
+      {error && (
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
 
       {stats && (
         <div className="mt-4 text-sm text-gray-800 space-y-1">
@@ -92,11 +131,53 @@ function PostTool() {
               <p className="text-sm text-gray-500">@{castData.author.username}</p>
             </div>
           </div>
-          <p className="text-gray-800 mb-3">{castData.text}</p>
-          <div className="flex items-center space-x-4 text-sm text-gray-500">
-            <span>❤️ {castData.reactions.likes_count}</span>
-            <span>🔄 {castData.reactions.recasts_count}</span>
-            <span>💬 {castData.replies.count}</span>
+          <p className="text-gray-800 mb-4">{castData.text}</p>
+          
+          {/* Embedded images */}
+          {castData.embeds && castData.embeds.length > 0 && (
+            <div className="mb-4">
+              {castData.embeds.map((embed: any, index: number) => (
+                embed.url && embed.url.match(/\.(jpeg|jpg|gif|png)$/i) && (
+                  <img 
+                    key={index}
+                    src={embed.url} 
+                    alt="Embedded content"
+                    className="max-w-full h-auto rounded-lg mb-2"
+                  />
+                )
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4 text-sm text-gray-500">
+              <span>❤️ {castData.reactions.likes_count}</span>
+              <span>🔄 {castData.reactions.recasts_count}</span>
+              <span>💬 {castData.replies.count}</span>
+            </div>
+            
+            <div className="flex space-x-2">
+              <button
+                onClick={() => handleReaction('like')}
+                className={`px-3 py-1 rounded text-sm ${
+                  stats?.liked 
+                    ? 'bg-red-100 text-red-700' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-red-50'
+                }`}
+              >
+                ❤️ {stats?.liked ? 'Liked' : 'Like'}
+              </button>
+              <button
+                onClick={() => handleReaction('recast')}
+                className={`px-3 py-1 rounded text-sm ${
+                  stats?.recasted 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-green-50'
+                }`}
+              >
+                🔄 {stats?.recasted ? 'Recasted' : 'Recast'}
+              </button>
+            </div>
           </div>
         </div>
       )}

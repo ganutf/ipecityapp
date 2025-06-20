@@ -97,6 +97,12 @@ The application follows a monorepo structure with clear separation between clien
   - Verified quote recast functionality working properly
   - All features tested and confirmed working with paid Neynar plan
   - Cast fetching, like/recast interactions, and quote detection operational
+- June 20, 2025. Migrated to Sign In With Neynar (SIWN):
+  - Replaced AuthKitProvider with NeynarContextProvider
+  - Updated from SignInButton to NeynarAuthButton
+  - Per-user signer_uuid delivery (user.signer_uuid) instead of global VITE_NEYNAR_SIGNER_UUID
+  - Auto-registered & gas-sponsored signers work on free and paid plans
+  - Simplified authentication flow with better UX
 
 ## User Preferences
 

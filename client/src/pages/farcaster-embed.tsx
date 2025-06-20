@@ -49,11 +49,13 @@ function PostTool() {
     setError(null);
 
     try {
+      // Use paid API key for better viewer_context data
+      const apiKey = import.meta.env.VITE_NEYNAR_CLIENT_ID || "NEYNAR_API_DOCS";
       const res = await fetch(
         `https://api.neynar.com/v2/farcaster/cast?identifier=${encodeURIComponent(
           url
         )}&type=url&viewer_fid=${viewerFid}`,
-        { headers: { "x-api-key": "NEYNAR_API_DOCS" } }
+        { headers: { "x-api-key": apiKey } }
       );
       
       if (!res.ok) {
@@ -63,12 +65,18 @@ function PostTool() {
       const { cast } = await res.json();
       setCastData(cast);
       
-      // Check viewer context for regular recast
+      // Check viewer context for regular recast and quote recast
       const regularRecast = !!cast.viewer_context?.recasted;
+      const quotedRecast = !!cast.viewer_context?.recasted_with_comment;
       const liked = !!cast.viewer_context?.liked;
       
-      // Check for quote recast using our server endpoint
-      const quotedRecast = viewerFid && cast.hash ? await checkQuoteRecast(cast.hash, viewerFid) : false;
+      console.log("Viewer context details:", {
+        recasted: cast.viewer_context?.recasted,
+        recasted_with_comment: cast.viewer_context?.recasted_with_comment,
+        liked: cast.viewer_context?.liked,
+        regularRecast,
+        quotedRecast
+      });
       
       setStats({
         liked: liked,

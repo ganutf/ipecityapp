@@ -95,7 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use direct API call since SDK method doesn't exist
       const response = await fetch(
-        `https://api.neynar.com/v2/farcaster/cast/quotes?identifier=${encodeURIComponent(hash)}&type=hash&limit=150`,
+        `https://api.neynar.com/v2/farcaster/cast/quotes?identifier=${encodeURIComponent(hash)}&type=hash&limit=100`,
         {
           headers: {
             'x-api-key': process.env.NEYNAR_API_KEY ?? 'NEYNAR_API_DOCS'

@@ -35,7 +35,12 @@ function PostTool() {
       const quoteRes = await fetch(`/api/neynar/cast/${castHash}/quotes/${viewerFid}`);
       if (quoteRes.ok) {
         const { hasQuoted } = await quoteRes.json();
+        console.log("Quote status:", hasQuoted);
         return hasQuoted;
+      }
+      else
+      {
+        console.error("Failed to check quote status:", await quoteRes.text());
       }
     } catch (error) {
       console.error("Error checking quote status:", error);

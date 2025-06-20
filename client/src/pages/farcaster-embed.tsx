@@ -87,9 +87,6 @@ function PostTool() {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          if (response.status === 402) {
-            throw new Error('Like failed: Upgrade to a paid plan to access this feature. See which APIs are free at https://dev.neynar.com/pricing. Visit https://neynar.com/#pricing to upgrade');
-          }
           throw new Error(`Like failed: ${errorData.message || 'API Error'}`);
         }
       } 
@@ -154,12 +151,12 @@ function PostTool() {
         <p className="text-xs text-blue-600">FID: {viewerFid}</p>
       </div>
 
-      <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <p className="text-sm text-yellow-800">
-          <strong>Features available:</strong> Post embedding, recast (both regular and quote), engagement stats
+      <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+        <p className="text-sm text-green-800">
+          <strong>All features enabled:</strong> Post embedding, like, recast (both regular and quote), engagement stats
         </p>
-        <p className="text-xs text-yellow-700 mt-1">
-          Like functionality requires a paid Neynar plan
+        <p className="text-xs text-green-700 mt-1">
+          Paid plan active - all interactions available
         </p>
       </div>
 
@@ -236,11 +233,18 @@ function PostTool() {
             
             <div className="flex space-x-2">
               <button
-                onClick={() => setError('Like functionality requires a paid Neynar plan. Visit https://neynar.com/#pricing to upgrade')}
-                className="px-3 py-1 rounded text-sm bg-gray-200 text-gray-500 cursor-not-allowed"
-                title="Requires paid plan"
+                onClick={() => handleReaction('like')}
+                disabled={actionLoading.like}
+                className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  stats?.liked 
+                    ? 'bg-red-100 text-red-700' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-red-50'
+                }`}
               >
-                ❤️ {stats?.liked ? 'Liked' : 'Like (Pro)'}
+                {actionLoading.like ? '⏳' : '❤️'} {
+                  actionLoading.like ? 'Liking...' : 
+                  stats?.liked ? 'Liked' : 'Like'
+                }
               </button>
               <button
                 onClick={() => handleReaction('recast')}

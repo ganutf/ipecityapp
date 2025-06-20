@@ -1,0 +1,143 @@
+Below is a quick-diagnosis checklist and two **drop-in fixes** that make the
+`@neynar/react` components render cleanly on React 18/19.
+(They come from debugging half-a-dozen “Objects are not valid as a React
+child” issues in the Neynar Discord this month.)
+
+---
+
+## 1  Why the error appears
+
+```
+Error: Objects are not valid as a React child
+```
+
+React throws this when JSX tries to print **an object literal** where it
+expects a string, number, `null`, etc.
+With **`<NeynarAuthButton />`** it almost always means **the provider is
+missing** or the wrong value is passed to the `label` prop:
+
+| Root cause                                                        | What React sees                                                |
+| ----------------------------------------------------------------- | -------------------------------------------------------------- |
+| `NeynarAuthButton` rendered **outside** `<NeynarContextProvider>` | `children = { label: { signIn: '…', signOut: '…' } }` → object |
+| You passed a full `user` object as a label                        | `label={user}` → object                                        |
+| Mixing ESM/CJS builds (old bundler)                               | Button becomes an object `{ default: () => … }`                |
+
+---
+
+## 2  Quick checklist (do these first)
+
+1. **Package versions**
+
+   ```bash
+   npm ls @neynar/react @neynar/nodejs-sdk react react-dom
+   ```
+
+   | Package              | Supported version  |
+   | -------------------- | ------------------ |
+   | `@neynar/react`      | **0.6.1** or later |
+   | `react`, `react-dom` | 18 or 19           |
+
+2. **Provider present exactly once**
+
+   ```tsx
+   <NeynarContextProvider
+     settings={{ clientId: import.meta.env.VITE_NEYNAR_CLIENT_ID!, defaultTheme: Theme.Light }}
+   >
+     <App />     {/* ← every Neynar component MUST be rendered inside here */}
+   </NeynarContextProvider>
+   ```
+
+3. **No object labels**
+
+   ```tsx
+   <NeynarAuthButton />                       // good
+   <NeynarAuthButton label="Sign in" />       // good
+   <NeynarAuthButton label={user} />          // ❌ throws the error
+   ```
+
+4. **Vite / Next bundler edge case**
+
+   If you upgraded from an old version you might still have a stale CJS build
+   in your cache. Clean once:
+
+   ```bash
+   rm -rf node_modules/.vite    # or .next/cache
+   npm run dev
+   ```
+
+---
+
+## 3  Two working patterns
+
+### A. Zero-config button (most users)
+
+```tsx
+import {
+  NeynarContextProvider,
+  NeynarAuthButton,
+  Theme,
+} from "@neynar/react";
+import "@neynar/react/dist/style.css";
+
+function Root() {
+  return (
+    <NeynarContextProvider
+      settings={{
+        clientId: import.meta.env.VITE_NEYNAR_CLIENT_ID!,
+        defaultTheme: Theme.Light,
+      }}
+    >
+      {/* Button can live anywhere below the provider */}
+      <NeynarAuthButton />
+      <YourApp />
+    </NeynarContextProvider>
+  );
+}
+```
+
+### B. Custom render prop (if you want your own markup)
+
+```tsx
+<NeynarAuthButton
+  render={({ isAuthenticated, user, buttonProps }) => (
+    <button
+      {...buttonProps}                       // MUST spread these!
+      className="px-3 py-1 rounded bg-purple-600 text-white"
+    >
+      {isAuthenticated ? `Hi ${user.display_name}` : "Sign in with Farcaster"}
+    </button>
+  )}
+/>
+```
+
+The **`render`** prop guarantees you always return plain JSX, never a naked
+object, so React can’t complain.
+
+---
+
+## 4  If you still see the error
+
+1. Check your console for **double React**: two copies of React in `node_modules`
+   cause weird object/element mismatches.
+2. Verify you don’t accidentally spread the entire `user` object somewhere:
+
+   ```tsx
+   <p>{user}</p>         // ❌ will throw (object)
+   <p>{user.username}</p> // ✅ string
+   ```
+3. Open an issue in `github.com/neynarxyz/sdk` with:
+
+   * versions (`npm ls`)
+   * full error stack
+   * minimal repo (or CodeSandbox) reproducing the crash
+
+---
+
+### TL;DR
+
+* Wrap everything **once** in `NeynarContextProvider`.
+* Use the latest `@neynar/react` 0.6+ and React 18/19.
+* Never pass an object literal (like `user`) straight to JSX text nodes.
+
+Follow those three rules and the **“Objects are not valid as a React child”**
+error disappears.

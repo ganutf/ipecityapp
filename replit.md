@@ -97,13 +97,15 @@ The application follows a monorepo structure with clear separation between clien
   - Verified quote recast functionality working properly
   - All features tested and confirmed working with paid Neynar plan
   - Cast fetching, like/recast interactions, and quote detection operational
-- June 20, 2025. SIWN Migration (Attempted):
-  - Encountered React rendering errors with @neynar/react package
-  - NeynarAuthButton component causing "Objects are not valid as a React child" errors
+- June 20, 2025. SIWN Migration (Multiple Attempts):
+  - Applied troubleshooting suggestions including package verification, cache clearing, and render props
+  - Persistent React rendering errors with @neynar/react v1.2.4 package
+  - "Objects are not valid as a React child" errors in NeynarAuthButton component despite following guide
+  - Issue appears to be compatibility problem with current @neynar/react package and React 18
   - Reverted to stable Auth Kit implementation for reliability
-  - SIWN architecture benefits noted for future implementation:
+  - SIWN architecture benefits documented for future implementation when package is stable:
     * Per-user signer_uuid delivery instead of global env var
-    * Auto-registered & gas-sponsored signers
+    * Auto-registered & gas-sponsored signers  
     * Better UX with simplified authentication flow
 
 ## User Preferences

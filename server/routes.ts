@@ -67,11 +67,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { hash, viewerFid } = req.params;
       
-      console.log(`Checking quotes for hash: ${hash}, viewerFid: ${viewerFid}`);
-      
-      // Try the quotes endpoint first
-      let response = await fetch(
-        `https://api.neynar.com/v2/farcaster/cast/quotes?identifier=${encodeURIComponent(hash)}&type=hash&limit=50`,
+      const response = await fetch(
+        `https://api.neynar.com/v2/farcaster/cast/quotes?identifier=${encodeURIComponent(hash)}&type=hash&limit=150`,
         {
           headers: {
             'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
@@ -79,43 +76,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       );
 
-      let data = await response.json();
-      console.log(`Quotes API response status: ${response.status}`);
+      const data = await response.json();
       
       if (!response.ok) {
-        console.log(`Quotes API error:`, data);
-        // Try alternative approach - check user's recent casts for this embed
-        response = await fetch(
-          `https://api.neynar.com/v2/farcaster/feed/user/casts?fid=${viewerFid}&limit=25`,
-          {
-            headers: {
-              'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
-            }
-          }
-        );
-        
-        if (response.ok) {
-          const userData = await response.json();
-          const userQuoted = userData.casts?.some((cast: any) => 
-            cast.embeds?.some((embed: any) => 
-              embed.cast_id?.hash === hash
-            )
-          ) || false;
-          console.log(`User ${viewerFid} has quoted (via user feed): ${userQuoted}`);
-          return res.json({ hasQuoted: userQuoted });
-        }
-        
-        return res.json({ hasQuoted: false });
+        return res.status(response.status).json(data);
       }
       
       // Check if viewerFid has quoted this cast
       const userQuoted = data.casts?.some((cast: any) => cast.author?.fid === parseInt(viewerFid)) || false;
-      console.log(`User ${viewerFid} has quoted: ${userQuoted}`);
       
       res.json({ hasQuoted: userQuoted });
     } catch (error) {
-      console.error('Quote check error:', error);
-      res.json({ hasQuoted: false });
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

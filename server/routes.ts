@@ -62,6 +62,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/neynar/cast-lookup', async (req, res) => {
+    try {
+      const { identifier, type, viewer_fid } = req.body;
+      
+      const response = await fetch(
+        `https://api.neynar.com/v2/farcaster/cast?identifier=${encodeURIComponent(identifier)}&type=${type}&viewer_fid=${viewer_fid}`,
+        {
+          headers: {
+            'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
+          }
+        }
+      );
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
+      
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

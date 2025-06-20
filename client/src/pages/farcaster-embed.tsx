@@ -36,12 +36,18 @@ function PostTool() {
     setError(null);
 
     try {
-      const res = await fetch(
-        `https://api.neynar.com/v2/farcaster/cast?identifier=${encodeURIComponent(
-          url
-        )}&type=url&viewer_fid=${viewerFid}`,
-        { headers: { "x-api-key": "NEYNAR_API_DOCS" } }
-      );
+      // Use the server proxy to access with the paid API key
+      const res = await fetch('/api/neynar/cast-lookup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          identifier: url,
+          type: 'url',
+          viewer_fid: viewerFid
+        })
+      });
       
       if (!res.ok) {
         throw new Error(`API Error: ${res.status}`);
@@ -51,7 +57,7 @@ function PostTool() {
       setCastData(cast);
       
       // Log the full viewer_context for debugging
-      console.log("Full viewer_context:", JSON.stringify(cast.viewer_context, null, 2));
+      console.log("Full viewer_context with paid API:", JSON.stringify(cast.viewer_context, null, 2));
       
       const regularRecast = !!cast.viewer_context?.recasted;
       const quotedRecast = !!cast.viewer_context?.recasted_with_comment;

@@ -80,6 +80,12 @@ The application follows a monorepo structure with clear separation between clien
 ## Changelog
 
 - June 20, 2025. Initial setup
+- June 20, 2025. Implemented full Farcaster post embedding functionality:
+  - Farcaster authentication via Auth Kit
+  - Direct Neynar API integration for cast fetching
+  - Like and recast functionality with real-time updates
+  - Post preview with author info, content, and engagement stats
+  - Loading states and error handling for all interactions
 
 ## User Preferences
 

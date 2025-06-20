@@ -22,6 +22,8 @@ function PostTool() {
   const [stats, setStats] = useState<null | { liked: boolean; recasted: boolean }>(null);
   const [castData, setCastData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<{ like: boolean; recast: boolean }>({ like: false, recast: false });
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function handleCheck() {
     if (!url) return;
@@ -57,27 +59,82 @@ function PostTool() {
   async function handleReaction(type: 'like' | 'recast') {
     if (!castData) return;
 
+    setActionLoading(prev => ({ ...prev, [type]: true }));
+    setError(null);
+
     try {
       const signerUuid = import.meta.env.VITE_NEYNAR_SIGNER_UUID;
-      const response = await fetch('https://api.neynar.com/v2/farcaster/reaction', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': 'NEYNAR_API_DOCS'
-        },
-        body: JSON.stringify({
-          signer_uuid: signerUuid,
-          reaction_type: type,
-          target: castData.hash
-        })
-      });
-
-      if (response.ok) {
-        // Refresh the cast data to show updated reactions
-        setTimeout(() => handleCheck(), 1000);
+      const clientId = import.meta.env.VITE_NEYNAR_CLIENT_ID;
+      
+      if (!signerUuid) {
+        setError('Signer UUID not configured. Please check your environment variables.');
+        return;
       }
+
+      // For likes, use the reaction endpoint
+      if (type === 'like') {
+        const response = await fetch('https://api.neynar.com/v2/farcaster/reaction', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': clientId || 'NEYNAR_API_DOCS'
+          },
+          body: JSON.stringify({
+            signer_uuid: signerUuid,
+            reaction_type: 'like',
+            target: castData.hash
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Like failed: ${errorData.message || response.statusText}`);
+        }
+      } 
+      // For recasts, use the cast endpoint
+      else if (type === 'recast') {
+        const response = await fetch('https://api.neynar.com/v2/farcaster/cast', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': clientId || 'NEYNAR_API_DOCS'
+          },
+          body: JSON.stringify({
+            signer_uuid: signerUuid,
+            text: '',
+            embeds: [{
+              cast_id: {
+                hash: castData.hash,
+                fid: castData.author.fid
+              }
+            }]
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Recast failed: ${errorData.message || response.statusText}`);
+        }
+      }
+
+      // Update local state optimistically
+      setStats(prev => prev ? {
+        ...prev,
+        [type === 'like' ? 'liked' : 'recasted']: !prev[type === 'like' ? 'liked' : 'recasted']
+      } : null);
+
+      // Show success message
+      setSuccessMessage(`Post ${type}d successfully!`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+
+      // Refresh the cast data after a short delay to show updated reactions
+      setTimeout(() => handleCheck(), 2000);
+      
     } catch (error) {
       console.error(`Error ${type}ing cast:`, error);
+      setError(`Failed to ${type} post: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setActionLoading(prev => ({ ...prev, [type]: false }));
     }
   }
 
@@ -108,6 +165,12 @@ function PostTool() {
       {error && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-700">{successMessage}</p>
         </div>
       )}
 
@@ -159,23 +222,31 @@ function PostTool() {
             <div className="flex space-x-2">
               <button
                 onClick={() => handleReaction('like')}
-                className={`px-3 py-1 rounded text-sm ${
+                disabled={actionLoading.like}
+                className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                   stats?.liked 
                     ? 'bg-red-100 text-red-700' 
                     : 'bg-gray-100 text-gray-700 hover:bg-red-50'
                 }`}
               >
-                ❤️ {stats?.liked ? 'Liked' : 'Like'}
+                {actionLoading.like ? '⏳' : '❤️'} {
+                  actionLoading.like ? 'Liking...' : 
+                  stats?.liked ? 'Liked' : 'Like'
+                }
               </button>
               <button
                 onClick={() => handleReaction('recast')}
-                className={`px-3 py-1 rounded text-sm ${
+                disabled={actionLoading.recast}
+                className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                   stats?.recasted 
                     ? 'bg-green-100 text-green-700' 
                     : 'bg-gray-100 text-gray-700 hover:bg-green-50'
                 }`}
               >
-                🔄 {stats?.recasted ? 'Recasted' : 'Recast'}
+                {actionLoading.recast ? '⏳' : '🔄'} {
+                  actionLoading.recast ? 'Recasting...' : 
+                  stats?.recasted ? 'Recasted' : 'Recast'
+                }
               </button>
             </div>
           </div>

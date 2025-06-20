@@ -36,7 +36,7 @@ function PostTool() {
     setError(null);
 
     try {
-      // Use the server proxy to access with the paid API key
+      // First get the cast data using URL
       const res = await fetch('/api/neynar/cast-lookup', {
         method: 'POST',
         headers: {
@@ -56,9 +56,38 @@ function PostTool() {
       const { cast } = await res.json();
       setCastData(cast);
       
-      // Log the full viewer_context for debugging
-      console.log("Full viewer_context with paid API:", JSON.stringify(cast.viewer_context, null, 2));
+      // Now get the viewer context using the cast hash (this should include recasted_with_comment)
+      if (cast.hash && viewerFid) {
+        const hashRes = await fetch('/api/neynar/cast-lookup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            identifier: cast.hash,
+            type: 'hash',
+            viewer_fid: viewerFid
+          })
+        });
+        
+        if (hashRes.ok) {
+          const { cast: hashCast } = await hashRes.json();
+          console.log("Hash-based viewer_context:", JSON.stringify(hashCast.viewer_context, null, 2));
+          
+          const regularRecast = !!hashCast.viewer_context?.recasted;
+          const quotedRecast = !!hashCast.viewer_context?.recasted_with_comment;
+          
+          setStats({
+            liked: !!hashCast.viewer_context?.liked,
+            recasted: regularRecast || quotedRecast,
+            regularRecast: regularRecast,
+            quotedRecast: quotedRecast,
+          });
+          return;
+        }
+      }
       
+      // Fallback to original data if hash lookup fails
       const regularRecast = !!cast.viewer_context?.recasted;
       const quotedRecast = !!cast.viewer_context?.recasted_with_comment;
       

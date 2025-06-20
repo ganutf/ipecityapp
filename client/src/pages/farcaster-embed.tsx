@@ -44,9 +44,24 @@ function PostTool() {
       
       const { cast } = await res.json();
       setCastData(cast);
+      
+      // Debug log to see the viewer_context structure
+      console.log('Full viewer_context:', JSON.stringify(cast.viewer_context, null, 2));
+      
+      // Check for all possible recast states
+      const isRecasted = !!(
+        cast.viewer_context?.recasted || 
+        cast.viewer_context?.recasted_with_comment ||
+        cast.viewer_context?.quoted ||
+        cast.viewer_context?.quote_recasted ||
+        cast.viewer_context?.quote_cast ||
+        cast.viewer_context?.has_recasted ||
+        cast.viewer_context?.has_quoted
+      );
+      
       setStats({
         liked: !!cast.viewer_context?.liked,
-        recasted: !!(cast.viewer_context?.recasted || cast.viewer_context?.recasted_with_comment),
+        recasted: isRecasted,
       });
     } catch (error) {
       console.error("Error fetching cast:", error);

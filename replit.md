@@ -86,11 +86,12 @@ The application follows a monorepo structure with clear separation between clien
   - Like and recast functionality with real-time updates
   - Post preview with author info, content, and engagement stats
   - Loading states and error handling for all interactions
-- June 20, 2025. Refactored to use official NeynarAPIClient SDK:
+- June 20, 2025. Refactored to use official NeynarAPIClient SDK v2:
   - Proper SDK instantiation with Configuration object
-  - Type-safe API calls using v2.farcaster methods
+  - Updated to use v2 API methods (publishReactionToCast, publishCast, etc.)
   - Enhanced error handling with proper status codes
   - Better code maintainability and type safety
+  - Following official Neynar v1 to v2 migration guide
 
 ## User Preferences
 

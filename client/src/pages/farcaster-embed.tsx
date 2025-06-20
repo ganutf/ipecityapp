@@ -44,20 +44,17 @@ function PostTool() {
   }
 
   async function handleCheck() {
-    if (!url) return;
+    if (!url || !viewerFid) return;
     setChecking(true);
     setError(null);
 
     try {
-      const res = await fetch(
-        `https://api.neynar.com/v2/farcaster/cast?identifier=${encodeURIComponent(
-          url
-        )}&type=url&viewer_fid=${viewerFid}`,
-        { headers: { "x-api-key": "NEYNAR_API_DOCS" } }
-      );
+      // Use our server endpoint with NeynarAPIClient
+      const res = await fetch(`/api/neynar/cast/${encodeURIComponent(url)}/${viewerFid}?type=url`);
       
       if (!res.ok) {
-        throw new Error(`API Error: ${res.status}`);
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `API Error: ${res.status}`);
       }
       
       const { cast } = await res.json();
@@ -68,7 +65,7 @@ function PostTool() {
       const liked = !!cast.viewer_context?.liked;
       
       // Check for quote recast using our server endpoint
-      const quotedRecast = viewerFid && cast.hash ? await checkQuoteRecast(cast.hash, viewerFid) : false;
+      const quotedRecast = cast.hash ? await checkQuoteRecast(cast.hash, viewerFid) : false;
       
       setStats({
         liked: liked,
@@ -78,7 +75,7 @@ function PostTool() {
       });
     } catch (error) {
       console.error("Error fetching cast:", error);
-      setError("Failed to fetch cast. Please check the URL and try again.");
+      setError(`Failed to fetch cast: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setChecking(false);
     }

@@ -56,40 +56,34 @@ function PostTool() {
       const { cast } = await res.json();
       setCastData(cast);
       
-      // Now get the viewer context using the cast hash (this should include recasted_with_comment)
-      if (cast.hash && viewerFid) {
-        const hashRes = await fetch('/api/neynar/cast-lookup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            identifier: cast.hash,
-            type: 'hash',
-            viewer_fid: viewerFid
-          })
-        });
-        
-        if (hashRes.ok) {
-          const { cast: hashCast } = await hashRes.json();
-          console.log("Hash-based viewer_context:", JSON.stringify(hashCast.viewer_context, null, 2));
-          
-          const regularRecast = !!hashCast.viewer_context?.recasted;
-          const quotedRecast = !!hashCast.viewer_context?.recasted_with_comment;
-          
-          setStats({
-            liked: !!hashCast.viewer_context?.liked,
-            recasted: regularRecast || quotedRecast,
-            regularRecast: regularRecast,
-            quotedRecast: quotedRecast,
+      // Check for quote recasts using the quotes endpoint
+      let quotedRecast = false;
+      if (cast.hash && cast.author?.fid && viewerFid) {
+        try {
+          const quoteRes = await fetch('/api/neynar/check-quote-recast', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              fid: cast.author.fid,
+              hash: cast.hash,
+              viewer_fid: viewerFid
+            })
           });
-          return;
+          
+          if (quoteRes.ok) {
+            const quoteData = await quoteRes.json();
+            quotedRecast = quoteData.hasQuoted;
+            console.log("Quote recast check:", quoteData);
+          }
+        } catch (quoteError) {
+          console.log("Quote check failed:", quoteError);
         }
       }
       
-      // Fallback to original data if hash lookup fails
+      // Use the viewer context for regular recasts and our quote check for quote recasts
       const regularRecast = !!cast.viewer_context?.recasted;
-      const quotedRecast = !!cast.viewer_context?.recasted_with_comment;
       
       setStats({
         liked: !!cast.viewer_context?.liked,

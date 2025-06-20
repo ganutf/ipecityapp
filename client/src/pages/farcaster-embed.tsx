@@ -30,6 +30,19 @@ function PostTool() {
   const [actionLoading, setActionLoading] = useState<{ like: boolean; recast: boolean }>({ like: false, recast: false });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  async function checkQuoteRecast(castHash: string, viewerFid: number): Promise<boolean> {
+    try {
+      const quoteRes = await fetch(`/api/neynar/cast/${castHash}/quotes/${viewerFid}`);
+      if (quoteRes.ok) {
+        const { hasQuoted } = await quoteRes.json();
+        return hasQuoted;
+      }
+    } catch (error) {
+      console.error("Error checking quote status:", error);
+    }
+    return false;
+  }
+
   async function handleCheck() {
     if (!url) return;
     setChecking(true);
@@ -50,14 +63,15 @@ function PostTool() {
       const { cast } = await res.json();
       setCastData(cast);
       
-      // Log the full viewer_context for debugging
-      console.log("Full viewer_context:", JSON.stringify(cast.viewer_context, null, 2));
-      
+      // Check viewer context for regular recast
       const regularRecast = !!cast.viewer_context?.recasted;
-      const quotedRecast = !!cast.viewer_context?.recasted_with_comment;
+      const liked = !!cast.viewer_context?.liked;
+      
+      // Check for quote recast using our server endpoint
+      const quotedRecast = viewerFid && cast.hash ? await checkQuoteRecast(cast.hash, viewerFid) : false;
       
       setStats({
-        liked: !!cast.viewer_context?.liked,
+        liked: liked,
         recasted: regularRecast || quotedRecast,
         regularRecast: regularRecast,
         quotedRecast: quotedRecast,

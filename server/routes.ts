@@ -62,6 +62,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if user has quoted a specific cast
+  app.get('/api/neynar/cast/:hash/quotes/:viewerFid', async (req, res) => {
+    try {
+      const { hash, viewerFid } = req.params;
+      
+      const response = await fetch(
+        `https://api.neynar.com/v2/farcaster/cast/quotes?identifier=${encodeURIComponent(hash)}&type=hash&limit=150`,
+        {
+          headers: {
+            'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
+          }
+        }
+      );
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
+      
+      // Check if viewerFid has quoted this cast
+      const userQuoted = data.casts?.some((cast: any) => cast.author?.fid === parseInt(viewerFid)) || false;
+      
+      res.json({ hasQuoted: userQuoted });
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

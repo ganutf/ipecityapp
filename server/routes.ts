@@ -3,11 +3,64 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  // Neynar API proxy endpoints for authenticated operations
+  app.post('/api/neynar/reaction', async (req, res) => {
+    try {
+      const { signer_uuid, reaction_type, target } = req.body;
+      
+      const response = await fetch('https://api.neynar.com/v2/farcaster/reaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
+        },
+        body: JSON.stringify({
+          signer_uuid,
+          reaction_type,
+          target
+        })
+      });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
+      
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/neynar/cast', async (req, res) => {
+    try {
+      const { signer_uuid, text, embeds } = req.body;
+      
+      const response = await fetch('https://api.neynar.com/v2/farcaster/cast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
+        },
+        body: JSON.stringify({
+          signer_uuid,
+          text,
+          embeds
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
+      
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   const httpServer = createServer(app);
 

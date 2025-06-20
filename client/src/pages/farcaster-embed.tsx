@@ -71,13 +71,12 @@ function PostTool() {
         return;
       }
 
-      // For likes, use the reaction endpoint
+      // For likes, use the server proxy endpoint
       if (type === 'like') {
-        const response = await fetch('https://api.neynar.com/v2/farcaster/reaction', {
+        const response = await fetch('/api/neynar/reaction', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': clientId || 'NEYNAR_API_DOCS'
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             signer_uuid: signerUuid,
@@ -87,17 +86,16 @@ function PostTool() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Like failed: ${errorData.message || response.statusText}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Like failed: ${errorData.message || 'API Error'}`);
         }
       } 
-      // For recasts, use the cast endpoint
+      // For recasts, use the server proxy endpoint
       else if (type === 'recast') {
-        const response = await fetch('https://api.neynar.com/v2/farcaster/cast', {
+        const response = await fetch('/api/neynar/cast', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': clientId || 'NEYNAR_API_DOCS'
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             signer_uuid: signerUuid,
@@ -111,9 +109,14 @@ function PostTool() {
           })
         });
 
+        const responseData = await response.json().catch(() => ({}));
+        
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Recast failed: ${errorData.message || response.statusText}`);
+          // If it's an API key issue, provide clearer error message
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('API authentication failed. Please check your Neynar API key configuration.');
+          }
+          throw new Error(`Recast failed: ${responseData.message || 'API Error'}`);
         }
       }
 

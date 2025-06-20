@@ -46,7 +46,7 @@ function PostTool() {
       setCastData(cast);
       setStats({
         liked: !!cast.viewer_context?.liked,
-        recasted: !!cast.viewer_context?.recasted,
+        recasted: !!(cast.viewer_context?.recasted || cast.viewer_context?.recasted_with_comment),
       });
     } catch (error) {
       console.error("Error fetching cast:", error);
@@ -87,6 +87,9 @@ function PostTool() {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
+          if (response.status === 402) {
+            throw new Error('Like failed: Upgrade to a paid plan to access this feature. See which APIs are free at https://dev.neynar.com/pricing. Visit https://neynar.com/#pricing to upgrade');
+          }
           throw new Error(`Like failed: ${errorData.message || 'API Error'}`);
         }
       } 
@@ -224,18 +227,11 @@ function PostTool() {
             
             <div className="flex space-x-2">
               <button
-                onClick={() => handleReaction('like')}
-                disabled={actionLoading.like}
-                className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  stats?.liked 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-red-50'
-                }`}
+                onClick={() => setError('Like functionality requires a paid Neynar plan. Visit https://neynar.com/#pricing to upgrade')}
+                className="px-3 py-1 rounded text-sm bg-gray-200 text-gray-500 cursor-not-allowed"
+                title="Requires paid plan"
               >
-                {actionLoading.like ? '⏳' : '❤️'} {
-                  actionLoading.like ? 'Liking...' : 
-                  stats?.liked ? 'Liked' : 'Like'
-                }
+                ❤️ {stats?.liked ? 'Liked' : 'Like (Pro)'}
               </button>
               <button
                 onClick={() => handleReaction('recast')}

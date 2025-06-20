@@ -1,0 +1,71 @@
+Below is the **minimal change** you need to detect whether the *logged-in user* has already **quote-recasted** (shared-with-comment) a specific cast.
+
+---
+
+### 1 Grab the user’s signer + FID from SIWN
+
+```ts
+import { useNeynarContext } from "@neynar/react";
+
+const { user } = useNeynarContext();      // becomes defined after SIWN
+const viewerFid   = user?.fid;            // numeric Farcaster ID
+const signerUuid  = user?.signer_uuid;    // we still need this for writes
+```
+
+### 2 Fetch the target cast **with `viewer_fid`**
+
+```ts
+// If you already have castData skip this part – just be sure you passed viewer_fid
+const res = await fetch(
+  `https://api.neynar.com/v2/farcaster/cast` +
+  `?identifier=${encodeURIComponent(castHash)}` +
+  `&type=hash&viewer_fid=${viewerFid}`,
+  { headers: { "x-api-key": import.meta.env.VITE_NEYNAR_API_KEY } }
+);
+
+const { cast } = await res.json();   // full cast object + viewer_context
+```
+
+### 3 Check the **viewer\_context** flag
+
+```ts
+const alreadyQuoted = !!cast.viewer_context?.recasted_with_comment;
+
+if (alreadyQuoted) {
+  console.log("🚀  You have already quote-recasted this post");
+} else {
+  console.log("🤷  No quote cast yet");
+}
+```
+
+* `recasted_with_comment` → `true` ⇢ user has published a **quote cast** of this post.
+* `recasted`        → `true` ⇢ user has done a **plain recast** (share with no text).
+* Both flags `false`       ⇢ user hasn’t shared it at all.
+
+### 4 Drop-in function
+
+```ts
+async function userHasQuoted(
+  originalHash: string,
+  viewerFid: number
+): Promise<boolean> {
+  const res = await fetch(
+    `https://api.neynar.com/v2/farcaster/cast?identifier=${encodeURIComponent(
+      originalHash
+    )}&type=hash&viewer_fid=${viewerFid}`,
+    { headers: { "x-api-key": import.meta.env.VITE_NEYNAR_API_KEY } }
+  );
+
+  const { cast } = await res.json();
+  return !!cast.viewer_context?.recasted_with_comment;
+}
+```
+
+Call it from your component after the user signs in:
+
+```ts
+const quoted = await userHasQuoted(castData.hash, viewerFid);
+```
+
+That’s all—no server round-trip or extra endpoints needed.
+The heavy lifting is done by the **viewer\_context** helpers Neynar appends to every cast when you supply `viewer_fid`.

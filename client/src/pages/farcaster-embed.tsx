@@ -19,7 +19,12 @@ function PostTool() {
 
   const [url, setUrl] = useState("");
   const [checking, setChecking] = useState(false);
-  const [stats, setStats] = useState<null | { liked: boolean; recasted: boolean }>(null);
+  const [stats, setStats] = useState<null | { 
+    liked: boolean; 
+    recasted: boolean; 
+    quotedRecast: boolean; 
+    regularRecast: boolean; 
+  }>(null);
   const [castData, setCastData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<{ like: boolean; recast: boolean }>({ like: false, recast: false });
@@ -44,9 +49,18 @@ function PostTool() {
       
       const { cast } = await res.json();
       setCastData(cast);
+      
+      // Log the full viewer_context for debugging
+      console.log("Full viewer_context:", JSON.stringify(cast.viewer_context, null, 2));
+      
+      const regularRecast = !!cast.viewer_context?.recasted;
+      const quotedRecast = !!cast.viewer_context?.recasted_with_comment;
+      
       setStats({
         liked: !!cast.viewer_context?.liked,
-        recasted: !!(cast.viewer_context?.recasted || cast.viewer_context?.recasted_with_comment),
+        recasted: regularRecast || quotedRecast,
+        regularRecast: regularRecast,
+        quotedRecast: quotedRecast,
       });
     } catch (error) {
       console.error("Error fetching cast:", error);
@@ -121,10 +135,19 @@ function PostTool() {
       }
 
       // Update local state optimistically
-      setStats(prev => prev ? {
-        ...prev,
-        [type === 'like' ? 'liked' : 'recasted']: !prev[type === 'like' ? 'liked' : 'recasted']
-      } : null);
+      if (type === 'like') {
+        setStats(prev => prev ? {
+          ...prev,
+          liked: !prev.liked
+        } : null);
+      } else if (type === 'recast') {
+        setStats(prev => prev ? {
+          ...prev,
+          recasted: true,
+          regularRecast: true, // We're doing a regular recast through the API
+          quotedRecast: prev.quotedRecast // Keep existing quote status
+        } : null);
+      }
 
       // Show success message
       setSuccessMessage(`Post ${type}d successfully!`);
@@ -190,6 +213,12 @@ function PostTool() {
         <div className="mt-4 text-sm text-gray-800 space-y-1">
           <p>❤️ Liked: {stats.liked ? "yes" : "no"}</p>
           <p>🔄 Recasted: {stats.recasted ? "yes" : "no"}</p>
+          {stats.recasted && (
+            <div className="ml-4 text-xs text-gray-600">
+              {stats.regularRecast && <span>• Regular recast</span>}
+              {stats.quotedRecast && <span>• Quote recast</span>}
+            </div>
+          )}
         </div>
       )}
 

@@ -36,18 +36,12 @@ function PostTool() {
     setError(null);
 
     try {
-      // First get the cast data using URL
-      const res = await fetch('/api/neynar/cast-lookup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          identifier: url,
-          type: 'url',
-          viewer_fid: viewerFid
-        })
-      });
+      const res = await fetch(
+        `https://api.neynar.com/v2/farcaster/cast?identifier=${encodeURIComponent(
+          url
+        )}&type=url&viewer_fid=${viewerFid}`,
+        { headers: { "x-api-key": "NEYNAR_API_DOCS" } }
+      );
       
       if (!res.ok) {
         throw new Error(`API Error: ${res.status}`);
@@ -56,34 +50,11 @@ function PostTool() {
       const { cast } = await res.json();
       setCastData(cast);
       
-      // Check for quote recasts using the quotes endpoint
-      let quotedRecast = false;
-      if (cast.hash && cast.author?.fid && viewerFid) {
-        try {
-          const quoteRes = await fetch('/api/neynar/check-quote-recast', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              fid: cast.author.fid,
-              hash: cast.hash,
-              viewer_fid: viewerFid
-            })
-          });
-          
-          if (quoteRes.ok) {
-            const quoteData = await quoteRes.json();
-            quotedRecast = quoteData.hasQuoted;
-            console.log("Quote recast check:", quoteData);
-          }
-        } catch (quoteError) {
-          console.log("Quote check failed:", quoteError);
-        }
-      }
+      // Log the full viewer_context for debugging
+      console.log("Full viewer_context:", JSON.stringify(cast.viewer_context, null, 2));
       
-      // Use the viewer context for regular recasts and our quote check for quote recasts
       const regularRecast = !!cast.viewer_context?.recasted;
+      const quotedRecast = !!cast.viewer_context?.recasted_with_comment;
       
       setStats({
         liked: !!cast.viewer_context?.liked,

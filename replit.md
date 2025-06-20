@@ -86,6 +86,8 @@ The application follows a monorepo structure with clear separation between clien
   - Like and recast functionality with real-time updates
   - Post preview with author info, content, and engagement stats
   - Loading states and error handling for all interactions
+  - Server-side API proxy for secure authenticated operations
+  - Proper Farcaster recast behavior (creates new cast embedding original)
 
 ## User Preferences
 

@@ -133,7 +133,7 @@ function PostTool() {
 
       // Show success message with network propagation note for recasts
       if (type === 'recast') {
-        setSuccessMessage('Recast successful! It may take a few moments to appear in your feed.');
+        setSuccessMessage('Recast successful! Check your profile - it creates a new cast embedding this post.');
       } else {
         setSuccessMessage('Like successful!');
       }
@@ -203,7 +203,7 @@ function PostTool() {
           <p>🔄 Recasted: {stats.recasted ? "yes" : "no"}</p>
           {pendingActions.recast && (
             <p className="text-blue-600 text-xs italic">
-              Note: Recasts may take 10-30 seconds to appear due to network propagation
+              Note: Farcaster recasts create a new cast in your feed embedding this post
             </p>
           )}
         </div>

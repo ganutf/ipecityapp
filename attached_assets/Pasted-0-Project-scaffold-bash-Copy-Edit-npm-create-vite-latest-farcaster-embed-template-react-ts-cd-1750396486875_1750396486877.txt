@@ -1,0 +1,161 @@
+0 · Project scaffold
+bash
+Copy
+Edit
+npm create vite@latest farcaster-embed -- --template react-ts
+cd farcaster-embed
+npm i          # install Vite deps
+npm i @farcaster/auth-kit @neynar/react
+npm i -D tailwindcss postcss autoprefixer        # optional: nice styling
+npx tailwindcss init -p
+If you don’t care about Tailwind, drop all the Tailwind classes below and keep vanilla CSS.
+
+1 · Environment variables (Replit “Secrets”)
+key	value	scope
+VITE_NEYNAR_CLIENT_ID	your Client ID from dev.neynar.com → Clients	front-end
+VITE_NEYNAR_SIGNER_UUID	click “Signers → Create signer”, copy the signer_uuid	front-end (public)
+NEYNAR_API_KEY	your write key (same dashboard)	server only if you add a backend proxy
+
+(For a pure front-end demo you can omit the last row and the SDK will use the public “Docs” key for reads; writes piggy-back on the pre-made signer and need no secret key in the browser.)
+
+2 · main.tsx
+tsx
+Copy
+Edit
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import { AuthKitProvider } from "@farcaster/auth-kit";
+import { NeynarContextProvider, Theme } from "@neynar/react";
+import "@farcaster/auth-kit/styles.css";
+import "@neynar/react/dist/style.css";
+import "./index.css";          // Tailwind reset
+
+const authCfg = {
+  relay: "https://relay.farcaster.xyz",
+  rpcUrl: "https://mainnet.optimism.io",
+  domain: window.location.hostname,
+  siweUri: window.location.origin,
+};
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <NeynarContextProvider
+      settings={{
+        clientId: import.meta.env.VITE_NEYNAR_CLIENT_ID,
+        defaultTheme: Theme.Light,
+      }}
+    >
+      <AuthKitProvider config={authCfg}>
+        <App />
+      </AuthKitProvider>
+    </NeynarContextProvider>
+  </React.StrictMode>
+);
+3 · App.tsx
+tsx
+Copy
+Edit
+import { useState } from "react";
+import {
+  NeynarAuthButton,
+  NeynarCastCard,
+  useNeynarContext,
+} from "@neynar/react";
+import { SignInButton, useProfile } from "@farcaster/auth-kit";
+
+export default function App() {
+  return (
+    <main className="font-sans min-h-screen bg-gray-50 flex flex-col items-center p-6">
+      <header className="fixed top-4 right-4 flex gap-2">
+        <SignInButton />
+      </header>
+      <h1 className="text-2xl font-bold mb-6 mt-16">Farcaster Post Embed</h1>
+      <PostTool />
+    </main>
+  );
+}
+
+function PostTool() {
+  /* ------------- identities ------------- */
+  const { isAuthenticated, profile } = useProfile();
+  const { user: neynarUser } = useNeynarContext(); // contains signer_uuid if SIWN finished
+  const viewerFid = profile?.fid;
+
+  /* ------------- local state ------------- */
+  const [url, setUrl] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [stats, setStats] = useState<null | { liked: boolean; recasted: boolean }>(null);
+
+  async function handleCheck() {
+    if (!url) return;
+    setChecking(true);
+
+    try {
+      const res = await fetch(
+        `https://api.neynar.com/v2/farcaster/cast?identifier=${encodeURIComponent(
+          url
+        )}&type=url&viewer_fid=${viewerFid}`,
+        { headers: { "x-api-key": "NEYNAR_API_DOCS" } }
+      );
+      const { cast } = await res.json();
+      setStats({
+        liked: !!cast.viewer_context?.liked,
+        recasted: !!cast.viewer_context?.recasted,
+      });
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  if (!isAuthenticated)
+    return <p className="text-gray-600">➡️ Please sign in first.</p>;
+
+  return (
+    <div className="w-full max-w-lg bg-white shadow p-6 rounded-xl">
+      {/* SIWN button – once per session */}
+      <NeynarAuthButton primary className="mb-4" />
+
+      <input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="paste any Warpcast/Farcaster URL"
+        className="w-full border rounded-lg px-3 py-2 mb-3"
+      />
+      <button
+        onClick={handleCheck}
+        disabled={!url || checking}
+        className="bg-purple-600 text-white px-4 py-2 rounded-lg w-full disabled:bg-purple-300"
+      >
+        {checking ? "Checking…" : "Fetch"}
+      </button>
+
+      {stats && (
+        <div className="mt-4 text-sm text-gray-800 space-y-1">
+          <p>❤️ Liked: {stats.liked ? "yes" : "no"}</p>
+          <p>🔄 Recasted: {stats.recasted ? "yes" : "no"}</p>
+        </div>
+      )}
+
+      {url && (
+        <div className="mt-6">
+          <NeynarCastCard
+            type="url"
+            identifier={url}
+            viewerFid={viewerFid}
+            /* pre-created signer enables likes/recasts on free plan */
+            signerUuid={import.meta.env.VITE_NEYNAR_SIGNER_UUID}
+            allowReactions
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+4 · How likes & recasts work here
+NeynarCastCard detects signerUuid → POSTs to
+POST /v2/farcaster/reaction whenever the user clicks ❤️ / 🔄.
+
+Because the signer was created in the dashboard, the call succeeds on the free tier.
+
+After the hub indexes the new reaction (~1 s) reload / re-fetch shows the updated status.

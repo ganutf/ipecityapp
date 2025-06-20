@@ -92,6 +92,11 @@ The application follows a monorepo structure with clear separation between clien
   - Enhanced error handling with proper status codes
   - Better code maintainability and type safety
   - Following official Neynar v1 to v2 migration guide
+- June 20, 2025. **STABLE VERSION** - Fixed quote recast detection:
+  - Corrected API limit from 150 to 100 (Neynar maximum)
+  - Verified quote recast functionality working properly
+  - All features tested and confirmed working with paid Neynar plan
+  - Cast fetching, like/recast interactions, and quote detection operational
 
 ## User Preferences
 

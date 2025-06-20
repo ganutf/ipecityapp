@@ -1,9 +1,8 @@
+import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AuthKitProvider } from "@farcaster/auth-kit";
-import { NeynarContextProvider, Theme } from "@neynar/react";
 import "@farcaster/auth-kit/styles.css";
-import "@neynar/react/dist/style.css";
 import "./index.css";
 
 const authConfig = {
@@ -13,17 +12,10 @@ const authConfig = {
   siweUri: window.location.origin,
 };
 
-const neynarClientId = import.meta.env.VITE_NEYNAR_CLIENT_ID || "";
-
 createRoot(document.getElementById("root")!).render(
-  <NeynarContextProvider
-    settings={{
-      clientId: neynarClientId,
-      defaultTheme: Theme.Light,
-    }}
-  >
+  <React.StrictMode>
     <AuthKitProvider config={authConfig}>
       <App />
     </AuthKitProvider>
-  </NeynarContextProvider>
+  </React.StrictMode>
 );

@@ -1,39 +1,104 @@
-import { users, type User, type InsertUser } from "@shared/schema";
-
-// modify the interface with any CRUD methods
-// you might need
+import { 
+  members, 
+  pulses, 
+  pulseExecutions,
+  type Member,
+  type InsertMember,
+  type Pulse,
+  type InsertPulse,
+  type PulseExecution,
+  type InsertPulseExecution,
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc, asc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Members
+  getMember(farcasterFid: number): Promise<Member | undefined>;
+  getMemberByUsername(username: string): Promise<Member | undefined>;
+  createMember(member: InsertMember): Promise<Member>;
+  createMembersBatch(members: InsertMember[]): Promise<Member[]>;
+  getAllMembers(): Promise<Member[]>;
+  
+  // Pulses
+  getPulse(id: number): Promise<Pulse | undefined>;
+  getPulseByDate(date: string): Promise<Pulse | undefined>;
+  getAllPulses(): Promise<Pulse[]>;
+  createPulse(pulse: InsertPulse): Promise<Pulse>;
+  
+  // Pulse Executions
+  getPulseExecution(pulseId: number, memberFarcasterFid: number, actionType: string): Promise<PulseExecution | undefined>;
+  getMemberExecutions(memberFarcasterFid: number): Promise<PulseExecution[]>;
+  createPulseExecution(execution: InsertPulseExecution): Promise<PulseExecution>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  currentId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.currentId = 1;
+export class DatabaseStorage implements IStorage {
+  // Members
+  async getMember(farcasterFid: number): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.farcasterFid, farcasterFid));
+    return member;
   }
 
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+  async getMemberByUsername(username: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.farcasterUsername, username));
+    return member;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createMember(member: InsertMember): Promise<Member> {
+    const [newMember] = await db.insert(members).values(member).returning();
+    return newMember;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async createMembersBatch(membersList: InsertMember[]): Promise<Member[]> {
+    const newMembers = await db.insert(members).values(membersList).returning();
+    return newMembers;
+  }
+
+  async getAllMembers(): Promise<Member[]> {
+    return await db.select().from(members).orderBy(asc(members.name));
+  }
+
+  // Pulses
+  async getPulse(id: number): Promise<Pulse | undefined> {
+    const [pulse] = await db.select().from(pulses).where(eq(pulses.id, id));
+    return pulse;
+  }
+
+  async getPulseByDate(date: string): Promise<Pulse | undefined> {
+    const [pulse] = await db.select().from(pulses).where(eq(pulses.date, date));
+    return pulse;
+  }
+
+  async getAllPulses(): Promise<Pulse[]> {
+    return await db.select().from(pulses).orderBy(desc(pulses.date));
+  }
+
+  async createPulse(pulse: InsertPulse): Promise<Pulse> {
+    const [newPulse] = await db.insert(pulses).values(pulse).returning();
+    return newPulse;
+  }
+
+  // Pulse Executions
+  async getPulseExecution(pulseId: number, memberFarcasterFid: number, actionType: string): Promise<PulseExecution | undefined> {
+    const [execution] = await db.select().from(pulseExecutions)
+      .where(and(
+        eq(pulseExecutions.pulseId, pulseId),
+        eq(pulseExecutions.memberFarcasterFid, memberFarcasterFid),
+        eq(pulseExecutions.actionType, actionType)
+      ));
+    return execution;
+  }
+
+  async getMemberExecutions(memberFarcasterFid: number): Promise<PulseExecution[]> {
+    return await db.select().from(pulseExecutions)
+      .where(eq(pulseExecutions.memberFarcasterFid, memberFarcasterFid))
+      .orderBy(desc(pulseExecutions.executedAt));
+  }
+
+  async createPulseExecution(execution: InsertPulseExecution): Promise<PulseExecution> {
+    const [newExecution] = await db.insert(pulseExecutions).values(execution).returning();
+    return newExecution;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

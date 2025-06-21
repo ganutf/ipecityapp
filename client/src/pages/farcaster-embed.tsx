@@ -8,7 +8,17 @@ export default function FarcasterEmbed() {
     <main className="font-sans min-h-screen bg-gray-50 flex flex-col items-center p-6">
       <header className="w-full max-w-lg flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Ipê City Pulse</h1>
-        <SignInButton />
+        {isAuthenticated && profile?.pfpUrl ? (
+          <SignInButton>
+            <img 
+              src={profile.pfpUrl} 
+              alt={profile.displayName || profile.username || 'Profile'}
+              className="w-10 h-10 rounded-full border-2 border-purple-600 cursor-pointer hover:border-purple-700 transition-colors"
+            />
+          </SignInButton>
+        ) : (
+          <SignInButton />
+        )}
       </header>
       <PostTool />
     </main>

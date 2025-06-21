@@ -5,6 +5,8 @@ import {
   Configuration,
   isApiErrorResponse,
 } from "@neynar/nodejs-sdk";
+import { storage } from "./storage";
+import { insertPulseSchema, insertMemberSchema, insertPulseExecutionSchema } from "@shared/schema";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";

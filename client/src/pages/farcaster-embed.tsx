@@ -2,12 +2,22 @@ import { useState } from "react";
 import { SignInButton, useProfile } from "@farcaster/auth-kit";
 
 export default function FarcasterEmbed() {
+  const { isAuthenticated, profile } = useProfile();
+
   return (
     <main className="font-sans min-h-screen bg-gray-50 flex flex-col items-center p-6">
-      <header className="fixed top-4 right-4 flex gap-2">
-        <SignInButton />
+      <header className="w-full max-w-lg flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Ipê City Pulse</h1>
+        {isAuthenticated && profile?.pfpUrl ? (
+          <img 
+            src={profile.pfpUrl} 
+            alt={profile.displayName || profile.username}
+            className="w-10 h-10 rounded-full border-2 border-purple-600"
+          />
+        ) : (
+          <SignInButton />
+        )}
       </header>
-      <h1 className="text-2xl font-bold mb-6 mt-16">Farcaster Post Embed</h1>
       <PostTool />
     </main>
   );
@@ -169,15 +179,6 @@ function PostTool() {
 
   return (
     <div className="w-full max-w-lg bg-white shadow p-6 rounded-xl">
-      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-700">Connected as: {profile?.displayName || profile?.username}</p>
-        <p className="text-xs text-blue-600">FID: {viewerFid}</p>
-      </div>
-
-      <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-        <p className="text-sm text-green-800">All interactions available</p>
-      </div>
-
       <input
         value={url}
         onChange={(e) => setUrl(e.target.value)}

@@ -31,7 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body: JSON.stringify({
           signer_uuid,
           reaction_type,
-          target_cast_hash: target,
+          target: target,
         })
       });
 

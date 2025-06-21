@@ -161,25 +161,37 @@ export default function FarcasterEmbed() {
 
                     {/* Execution Status */}
                     {(past || today) && (
-                      <div className="flex items-center space-x-4 text-sm">
-                        <div className="flex items-center space-x-1">
-                          <span className={`w-3 h-3 rounded-full ${
-                            executionStatus.liked ? 'bg-red-500' : 'bg-gray-300'
-                          }`}></span>
-                          <span className={executionStatus.liked ? 'text-green-600 font-medium' : 'text-gray-500'}>
-                            {executionStatus.liked ? 'Liked ✓' : 'Not liked'}
+                      <div className="flex items-center space-x-6 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                            executionStatus.liked ? 'bg-red-500' : 'bg-gray-200 border-2 border-gray-300'
+                          }`}>
+                            {executionStatus.liked && (
+                              <span className="text-white text-xs font-bold">✓</span>
+                            )}
+                          </div>
+                          <span className={`font-medium ${
+                            executionStatus.liked ? 'text-red-600' : 'text-gray-500'
+                          }`}>
+                            {executionStatus.liked ? 'Liked' : 'Like pending'}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <span className={`w-3 h-3 rounded-full ${
-                            executionStatus.recasted ? 'bg-green-500' : 'bg-gray-300'
-                          }`}></span>
-                          <span className={executionStatus.recasted ? 'text-green-600 font-medium' : 'text-gray-500'}>
-                            {executionStatus.recasted ? 'Recasted ✓' : 'Not recasted'}
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                            executionStatus.recasted ? 'bg-green-500' : 'bg-gray-200 border-2 border-gray-300'
+                          }`}>
+                            {executionStatus.recasted && (
+                              <span className="text-white text-xs font-bold">✓</span>
+                            )}
+                          </div>
+                          <span className={`font-medium ${
+                            executionStatus.recasted ? 'text-green-600' : 'text-gray-500'
+                          }`}>
+                            {executionStatus.recasted ? 'Recasted' : 'Recast pending'}
                           </span>
                         </div>
                         {today && (
-                          <span className="text-green-600 font-medium">
+                          <span className="text-green-600 font-medium text-xs">
                             → Use embedded post above to interact
                           </span>
                         )}

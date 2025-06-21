@@ -107,6 +107,10 @@ The application follows a monorepo structure with clear separation between clien
     * Per-user signer_uuid delivery instead of global env var
     * Auto-registered & gas-sponsored signers  
     * Better UX with simplified authentication flow
+- June 21, 2025. Bug Fixes and TypeScript Resolution:
+  - Fixed like functionality by correcting reaction API target field format
+  - Resolved TypeScript error by removing non-existent PostCastReqBodyEmbeds import
+  - All core features verified working: authentication, cast fetching, interactions, quote detection
 
 ## User Preferences
 

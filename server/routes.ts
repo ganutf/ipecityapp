@@ -1,162 +1,110 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
+import {
+  NeynarAPIClient,
+  Configuration,
+  isApiErrorResponse,
+} from "@neynar/nodejs-sdk";
+
+/* local unions for clarity */
+type Reaction = "like" | "recast";
+type CastParam = "hash" | "url";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  /* 1️⃣  Boot the SDK v2 with Configuration */
-  const config = new Configuration({
-    apiKey: process.env.NEYNAR_API_KEY ?? "NEYNAR_API_DOCS",
-    baseOptions: {
-      headers: {
-        "x-neynar-experimental": true,
-      },
-    },
-  });
-  const neynarClient = new NeynarAPIClient(config);
+  /* ────────────────────────────────  SDK  ──────────────────────────────── */
+  const neynar = new NeynarAPIClient(
+    new Configuration({
+      apiKey: process.env.NEYNAR_API_KEY ?? "NEYNAR_API_DOCS",
+      baseOptions: { headers: { "x-neynar-experimental": true } },
+    })
+  );
 
-  /* --------------------------------------------------------- */
-  /* 2️⃣  LIKE / PLAIN-RECAST  (ReactionAdd)                    */
-  /* --------------------------------------------------------- */
+  /* ──────────────────  LIKE / plain RECAST  ────────────────── */
   app.post("/api/neynar/reaction", async (req, res) => {
     try {
-      const { signer_uuid, reaction_type, target } = req.body;
+      const { signer_uuid, reaction_type, target } = req.body as {
+        signer_uuid: string;
+        reaction_type: Reaction;     // "like" | "recast"
+        target: string;              // cast hash
+      };
 
-      // Use direct API call for reliable reactions
-      const response = await fetch('https://api.neynar.com/v2/farcaster/reaction', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEYNAR_API_KEY ?? 'NEYNAR_API_DOCS'
-        },
-        body: JSON.stringify({
-          signer_uuid,
-          reaction_type,
-          target: target,
-        })
+      const out = await neynar.publishReaction({
+        signerUuid:   signer_uuid,
+        reactionType: reaction_type,
+        target,
       });
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        return res.status(response.status).json(result);
-      }
-      
-      res.json(result);
-    } catch (err: any) {
-      console.error("Reaction error:", err);
-      res.status(500).json({ 
-        error: err.message || 'Failed to publish reaction'
-      });
+      res.json(out);
+    } catch (e) {
+      const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
+      res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });
 
-  /* --------------------------------------------------------- */
-  /* 3️⃣  QUOTE-CAST (or any new cast)                          */
-  /* --------------------------------------------------------- */
+  /* ───────────────────  QUOTE-CAST / new cast  ─────────────────── */
   app.post("/api/neynar/cast", async (req, res) => {
     try {
-      const { signer_uuid, text = "", embeds } = req.body;
+      const { signer_uuid, text = "", embeds } = req.body as {
+        signer_uuid: string;
+        text?: string;
+        embeds?: any[];
+      };
 
-      // Use direct API call for reliable cast publishing
-      const response = await fetch('https://api.neynar.com/v2/farcaster/cast', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEYNAR_API_KEY ?? 'NEYNAR_API_DOCS'
-        },
-        body: JSON.stringify({
-          signer_uuid,
-          text,
-          embeds,
-        })
+      const out = await neynar.publishCast({
+        signerUuid: signer_uuid,
+        text,
+        embeds,
       });
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        return res.status(response.status).json(result);
-      }
-      
-      res.json(result);
-    } catch (err: any) {
-      console.error("Cast error:", err);
-      res.status(500).json({ 
-        error: err.message || 'Failed to publish cast'
-      });
+      res.json(out);
+    } catch (e) {
+      const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
+      res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });
 
-  /* --------------------------------------------------------- */
-  /* 4️⃣  DID THIS VIEWER QUOTE-RECAST?                         */
-  /* --------------------------------------------------------- */
+  /* ───────────────  DID viewer QUOTE-RECAST this cast?  ─────────────── */
   app.get("/api/neynar/cast/:hash/quotes/:viewerFid", async (req, res) => {
     try {
       const { hash, viewerFid } = req.params;
 
-      // Use direct API call since SDK method doesn't exist
-      const response = await fetch(
-        `https://api.neynar.com/v2/farcaster/cast/quotes?identifier=${encodeURIComponent(hash)}&type=hash&limit=100`,
-        {
-          headers: {
-            'x-api-key': process.env.NEYNAR_API_KEY ?? 'NEYNAR_API_DOCS'
-          }
-        }
+      /* quotes endpoint not wrapped in SDK yet */
+      const r = await fetch(
+        `https://api.neynar.com/v2/farcaster/cast/quotes` +
+          `?identifier=${encodeURIComponent(hash)}&type=hash&limit=100`,
+        { headers: { "x-api-key": process.env.NEYNAR_API_KEY ?? "NEYNAR_API_DOCS" } }
       );
+      const data = await r.json();
+      if (!r.ok) return res.status(r.status).json(data);
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        return res.status(response.status).json(data);
-      }
-
-      const hasQuoted = data.casts?.some(
-        (c: any) => c.author?.fid === Number(viewerFid)
-      ) || false;
+      const hasQuoted =
+        data.casts?.some((c: any) => c.author?.fid === Number(viewerFid)) ?? false;
 
       res.json({ hasQuoted });
-    } catch (err: any) {
-      console.error("Quote-check error:", err);
-      res.status(500).json({ 
-        error: err.message || 'Failed to check quotes'
-      });
+    } catch (e) {
+      res.status(500).json({ error: (e as Error).message });
     }
   });
 
-  /* --------------------------------------------------------- */
-  /* 5️⃣  FETCH CAST + VIEWER CONTEXT                           */
-  /* --------------------------------------------------------- */
+  /* ────────────────  FETCH cast + viewer context  ──────────────── */
   app.get("/api/neynar/cast/:identifier/:viewerFid", async (req, res) => {
     try {
       const { identifier, viewerFid } = req.params;
-      const type = (req.query.type as string) ?? "url"; // "url" | "hash"
+      const type = (req.query.type as CastParam) ?? "url";
 
-      // Use direct API call for reliability
-      const response = await fetch(
-        `https://api.neynar.com/v2/farcaster/cast?identifier=${encodeURIComponent(identifier)}&type=${type}&viewer_fid=${viewerFid}`,
-        {
-          headers: {
-            'x-api-key': process.env.NEYNAR_API_KEY ?? 'NEYNAR_API_DOCS'
-          }
-        }
-      );
-
-      const result = await response.json();
-      
-      if (!response.ok) {
-        return res.status(response.status).json(result);
-      }
-
-      res.json(result);
-    } catch (err: any) {
-      console.error("Cast lookup error:", err);
-      res.status(err.status || 500).json({ 
-        error: err.message || 'Failed to fetch cast'
+      const out = await neynar.lookupCastByHashOrWarpcastUrl({
+        identifier,
+        type,
+        viewerFid: Number(viewerFid),
       });
+
+      res.json(out);
+    } catch (e) {
+      const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
+      res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });
 
-  /* --------------------------------------------------------- */
-  /* 6️⃣  Export HTTP server                                    */
-  /* --------------------------------------------------------- */
+  /* ───────────────────────────────────────────────────────────── */
   return createServer(app);
 }

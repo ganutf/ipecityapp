@@ -36,19 +36,18 @@ export default function PulseListPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center py-12">
         <p className="text-gray-600">Please sign in to view pulses.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-2xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-2xl font-bold mb-2">Community Pulses</h1>
-          <p className="text-gray-600">Track your engagement with community activities</p>
-        </header>
+    <div className="w-full max-w-2xl mx-auto">
+      <header className="mb-8">
+        <h1 className="text-2xl font-bold mb-2">Community Pulses</h1>
+        <p className="text-gray-600">Track your engagement with community activities</p>
+      </header>
 
         {pulsesLoading || executionsLoading ? (
           <div className="flex justify-center py-8">
@@ -174,7 +173,6 @@ export default function PulseListPage() {
             )}
           </div>
         )}
-      </div>
     </div>
   );
 }

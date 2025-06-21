@@ -110,7 +110,7 @@ export default function AdminPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center py-12">
         <p className="text-gray-600">Please sign in to access admin panel.</p>
       </div>
     );
@@ -118,19 +118,18 @@ export default function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center py-12">
         <p className="text-gray-600">Access denied. Admin privileges required.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage pulses and community members</p>
-        </header>
+    <div className="w-full">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+        <p className="text-gray-600">Manage pulses and community members</p>
+      </header>
 
         {/* Create New Pulse */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
@@ -282,7 +281,6 @@ export default function AdminPage() {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }

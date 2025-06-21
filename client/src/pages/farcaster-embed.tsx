@@ -6,7 +6,6 @@ import type { Pulse, Member } from "@shared/schema";
 
 export default function FarcasterEmbed() {
   const { isAuthenticated, profile } = useProfile();
-  const queryClient = useQueryClient();
   const viewerFid = profile?.fid;
 
   // Check if user is approved member
@@ -27,109 +26,62 @@ export default function FarcasterEmbed() {
     enabled: isAuthenticated && memberCheck?.isMember && !currentPulseData?.pulse,
   });
 
-  const isAdmin = profile?.username === "jeanhansen" || profile?.displayName?.toLowerCase().includes("jean hansen");
-
   if (!isAuthenticated) {
     return (
-      <main className="font-sans min-h-screen bg-gray-50 flex flex-col items-center p-6">
-        <header className="w-full max-w-lg flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Ipê City Pulse</h1>
-          <SignInButton />
-        </header>
-        <div className="text-center py-12">
-          <p className="text-gray-600 mb-4">Welcome to Ipê City Pulse</p>
-          <p className="text-gray-500">Please sign in to access community engagement activities.</p>
-        </div>
-      </main>
+      <div className="text-center py-12">
+        <p className="text-gray-600 mb-4">Welcome to Ipê City Pulse</p>
+        <p className="text-gray-500">Please sign in to access community engagement activities.</p>
+      </div>
     );
   }
 
   if (!memberCheck?.isMember && !memberCheck?.approved) {
     return (
-      <main className="font-sans min-h-screen bg-gray-50 flex flex-col items-center p-6">
-        <header className="w-full max-w-lg flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Ipê City Pulse</h1>
-          <SignInButton>
-            <img 
-              src={profile?.pfpUrl} 
-              alt={profile?.displayName || profile?.username || 'Profile'}
-              className="w-10 h-10 rounded-full border-2 border-purple-600 cursor-pointer hover:border-purple-700 transition-colors"
-            />
-          </SignInButton>
-        </header>
-        <div className="text-center py-12">
-          <p className="text-gray-600 mb-4">Access Restricted</p>
-          <p className="text-gray-500">This application is for approved community members only.</p>
-          <p className="text-gray-500 mt-2">Contact an administrator if you believe this is an error.</p>
-        </div>
-      </main>
+      <div className="text-center py-12">
+        <p className="text-gray-600 mb-4">Access Restricted</p>
+        <p className="text-gray-500">This application is for approved community members only.</p>
+        <p className="text-gray-500 mt-2">Contact an administrator if you believe this is an error.</p>
+      </div>
     );
   }
 
+  if (pulseLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  if (currentPulseData?.pulse) {
+    return <PostTool pulse={currentPulseData.pulse} member={memberCheck.member} />;
+  }
+
   return (
-    <main className="font-sans min-h-screen bg-gray-50 flex flex-col items-center p-6">
-      <header className="w-full max-w-lg flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Ipê City Pulse</h1>
-        <div className="flex items-center space-x-4">
-          <nav className="flex space-x-2">
-            <Link href="/pulses">
-              <a className="text-sm text-gray-600 hover:text-purple-600 px-2 py-1 rounded">
-                History
-              </a>
-            </Link>
-            {isAdmin && (
-              <Link href="/admin">
-                <a className="text-sm text-gray-600 hover:text-purple-600 px-2 py-1 rounded">
-                  Admin
-                </a>
-              </Link>
-            )}
-          </nav>
-          <SignInButton>
-            <img 
-              src={profile?.pfpUrl} 
-              alt={profile?.displayName || profile?.username || 'Profile'}
-              className="w-10 h-10 rounded-full border-2 border-purple-600 cursor-pointer hover:border-purple-700 transition-colors"
-            />
-          </SignInButton>
-        </div>
-      </header>
-      
-      {pulseLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-        </div>
-      ) : currentPulseData?.pulse ? (
-        <PostTool pulse={currentPulseData.pulse} member={memberCheck.member} />
-      ) : (
-        <div className="w-full max-w-lg">
-          <div className="bg-white rounded-lg shadow p-6 text-center">
-            <h2 className="text-lg font-semibold mb-4">No Active Pulse Today</h2>
-            <p className="text-gray-600 mb-6">There's no community engagement activity scheduled for today.</p>
-            
-            <Link href="/pulses">
-              <a className="inline-block bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-                View All Pulses
-              </a>
-            </Link>
-            
-            {allPulsesData?.pulses?.length > 0 && (
-              <div className="mt-6 text-left">
-                <h3 className="font-medium mb-3">Recent & Upcoming Pulses:</h3>
-                <div className="space-y-2">
-                  {allPulsesData.pulses.slice(0, 3).map((pulse: Pulse) => (
-                    <div key={pulse.id} className="text-sm text-gray-600 border-l-2 border-gray-200 pl-3">
-                      <p className="font-medium">{pulse.description}</p>
-                      <p className="text-xs">{new Date(pulse.date).toLocaleDateString()}</p>
-                    </div>
-                  ))}
+    <div className="w-full max-w-lg mx-auto">
+      <div className="bg-white rounded-lg shadow p-6 text-center">
+        <h2 className="text-lg font-semibold mb-4">No Active Pulse Today</h2>
+        <p className="text-gray-600 mb-6">There's no community engagement activity scheduled for today.</p>
+        
+        <Link href="/pulses" className="inline-block bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+          View All Pulses
+        </Link>
+        
+        {allPulsesData?.pulses?.length > 0 && (
+          <div className="mt-6 text-left">
+            <h3 className="font-medium mb-3">Recent & Upcoming Pulses:</h3>
+            <div className="space-y-2">
+              {allPulsesData.pulses.slice(0, 3).map((pulse: Pulse) => (
+                <div key={pulse.id} className="text-sm text-gray-600 border-l-2 border-gray-200 pl-3">
+                  <p className="font-medium">{pulse.description}</p>
+                  <p className="text-xs">{new Date(pulse.date).toLocaleDateString()}</p>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-    </main>
+        )}
+      </div>
+    </div>
   );
 }
 

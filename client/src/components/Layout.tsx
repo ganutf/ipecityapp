@@ -8,8 +8,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isAdmin = profile?.username === "jeanhansen" || profile?.displayName?.toLowerCase().includes("jean hansen");
 
   const navItems = [
-    { path: "/", label: "Home", showWhen: "always" },
-    { path: "/pulses", label: "History", showWhen: "member" },
+    { path: "/", label: "Pulses", showWhen: "member" },
     { path: "/admin", label: "Admin", showWhen: "admin" },
   ];
 

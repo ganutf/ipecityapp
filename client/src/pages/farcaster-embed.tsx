@@ -14,17 +14,48 @@ export default function FarcasterEmbed() {
     enabled: isAuthenticated && !!viewerFid,
   });
 
-  // Get current pulse
-  const { data: currentPulseData, isLoading: pulseLoading } = useQuery({
-    queryKey: ["/api/pulses/current"],
+  // Get all pulses
+  const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
+    queryKey: ["/api/pulses"],
     enabled: isAuthenticated && memberCheck?.isMember,
   });
 
-  // Get all pulses for fallback
-  const { data: allPulsesData } = useQuery({
-    queryKey: ["/api/pulses"],
-    enabled: isAuthenticated && memberCheck?.isMember && !currentPulseData?.pulse,
+  // Get user's executions
+  const { data: executionsData, isLoading: executionsLoading } = useQuery({
+    queryKey: [`/api/executions/${viewerFid}`],
+    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember,
   });
+
+  // Helper functions for date comparison
+  const isToday = (date: string) => {
+    const today = new Date();
+    const pulseDate = new Date(date);
+    return today.toDateString() === pulseDate.toDateString();
+  };
+
+  const isPastDate = (date: string) => {
+    const today = new Date();
+    const pulseDate = new Date(date);
+    today.setHours(0, 0, 0, 0);
+    pulseDate.setHours(0, 0, 0, 0);
+    return pulseDate < today;
+  };
+
+  const getUserExecutionStatus = (pulseId: number) => {
+    if (!executionsData?.executions) return { liked: false, recasted: false };
+    
+    const executions = executionsData.executions.filter(
+      (exec: any) => exec.pulseId === pulseId
+    );
+    
+    return {
+      liked: executions.some((exec: any) => exec.actionType === 'like'),
+      recasted: executions.some((exec: any) => exec.actionType === 'recast'),
+    };
+  };
+
+  // Find today's active pulse
+  const activePulse = pulsesData?.pulses?.find((pulse: Pulse) => isToday(pulse.date));
 
   if (!isAuthenticated) {
     return (
@@ -45,7 +76,7 @@ export default function FarcasterEmbed() {
     );
   }
 
-  if (pulseLoading) {
+  if (pulsesLoading || executionsLoading) {
     return (
       <div className="flex justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
@@ -53,33 +84,125 @@ export default function FarcasterEmbed() {
     );
   }
 
-  if (currentPulseData?.pulse) {
-    return <PostTool pulse={currentPulseData.pulse} member={memberCheck.member} />;
-  }
-
   return (
-    <div className="w-full max-w-lg mx-auto">
-      <div className="bg-white rounded-lg shadow p-6 text-center">
-        <h2 className="text-lg font-semibold mb-4">No Active Pulse Today</h2>
-        <p className="text-gray-600 mb-6">There's no community engagement activity scheduled for today.</p>
-        
-        <Link href="/pulses" className="inline-block bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
-          View All Pulses
-        </Link>
-        
-        {allPulsesData?.pulses?.length > 0 && (
-          <div className="mt-6 text-left">
-            <h3 className="font-medium mb-3">Recent & Upcoming Pulses:</h3>
-            <div className="space-y-2">
-              {allPulsesData.pulses.slice(0, 3).map((pulse: Pulse) => (
-                <div key={pulse.id} className="text-sm text-gray-600 border-l-2 border-gray-200 pl-3">
-                  <p className="font-medium">{pulse.description}</p>
-                  <p className="text-xs">{new Date(pulse.date).toLocaleDateString()}</p>
-                </div>
-              ))}
-            </div>
+    <div className="w-full max-w-4xl mx-auto">
+      {/* Active Pulse Section */}
+      {activePulse ? (
+        <div className="mb-8">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <h2 className="text-xl font-bold text-green-800 mb-2">🎯 Today's Active Pulse</h2>
+            <p className="text-green-700">Complete your engagement task for today!</p>
           </div>
-        )}
+          <PostTool pulse={activePulse} member={memberCheck.member} />
+        </div>
+      ) : (
+        <div className="mb-8">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">No Active Pulse Today</h2>
+            <p className="text-gray-600">Check back tomorrow for new community engagement activities!</p>
+          </div>
+        </div>
+      )}
+
+      {/* All Pulses History */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-xl font-semibold mb-1">Community Pulses</h3>
+          <p className="text-gray-600">Track your engagement with all community activities</p>
+        </div>
+
+        <div className="p-6">
+          {pulsesData?.pulses?.length > 0 ? (
+            <div className="space-y-4">
+              {pulsesData.pulses.map((pulse: Pulse) => {
+                const executionStatus = getUserExecutionStatus(pulse.id);
+                const past = isPastDate(pulse.date);
+                const today = isToday(pulse.date);
+                
+                return (
+                  <div 
+                    key={pulse.id} 
+                    className={`border rounded-lg p-4 ${
+                      today ? 'border-green-300 bg-green-50' : 
+                      past ? 'border-gray-200 bg-gray-50' : 
+                      'border-blue-200 bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 mb-1">{pulse.description}</h4>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {new Date(pulse.date).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                        <a 
+                          href={pulse.farcasterUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 break-all"
+                        >
+                          {pulse.farcasterUrl}
+                        </a>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-3 py-1 text-sm rounded-full font-medium ${
+                          today ? 'bg-green-100 text-green-800' :
+                          past ? 'bg-gray-100 text-gray-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {today ? 'Active Today' : past ? 'Completed' : 'Upcoming'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Execution Status */}
+                    {(past || today) && (
+                      <div className="flex items-center space-x-4 text-sm">
+                        <div className="flex items-center space-x-1">
+                          <span className={`w-3 h-3 rounded-full ${
+                            executionStatus.liked ? 'bg-red-500' : 'bg-gray-300'
+                          }`}></span>
+                          <span className={executionStatus.liked ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                            {executionStatus.liked ? 'Liked ✓' : 'Not liked'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <span className={`w-3 h-3 rounded-full ${
+                            executionStatus.recasted ? 'bg-green-500' : 'bg-gray-300'
+                          }`}></span>
+                          <span className={executionStatus.recasted ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                            {executionStatus.recasted ? 'Recasted ✓' : 'Not recasted'}
+                          </span>
+                        </div>
+                        {today && (
+                          <span className="text-green-600 font-medium">
+                            → Use embedded post above to interact
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Future Pulse Info */}
+                    {!past && !today && (
+                      <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mt-2">
+                        This pulse will be available on {new Date(pulse.date).toLocaleDateString()}.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg mb-2">No pulses available yet</p>
+              <p className="text-gray-400">Check back soon for community engagement activities!</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

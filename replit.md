@@ -125,6 +125,12 @@ The application follows a monorepo structure with clear separation between clien
   - Created unified Layout component with consistent navigation menu
   - Improved navigation with active state indicators and better UX
   - Fixed nested anchor tag HTML validation warnings
+- June 21, 2025. Unified Home and History Pages:
+  - Combined main page and history into single comprehensive pulse view
+  - Active pulse highlighted at top with full embedded post functionality
+  - All pulses displayed chronologically with completion status tracking
+  - Improved date comparison logic for accurate active pulse detection
+  - Removed separate history page in favor of unified experience
 
 ## User Preferences
 

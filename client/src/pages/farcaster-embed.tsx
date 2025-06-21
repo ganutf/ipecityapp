@@ -30,15 +30,23 @@ export default function FarcasterEmbed() {
   const isToday = (date: string) => {
     const today = new Date();
     const pulseDate = new Date(date);
-    return today.toDateString() === pulseDate.toDateString();
+    
+    // Normalize both dates to compare only the date part (YYYY-MM-DD)
+    const todayStr = today.toISOString().split('T')[0];
+    const pulseDateStr = pulseDate.toISOString().split('T')[0];
+    
+    return todayStr === pulseDateStr;
   };
 
   const isPastDate = (date: string) => {
     const today = new Date();
     const pulseDate = new Date(date);
-    today.setHours(0, 0, 0, 0);
-    pulseDate.setHours(0, 0, 0, 0);
-    return pulseDate < today;
+    
+    // Normalize both dates to compare only the date part (YYYY-MM-DD)
+    const todayStr = today.toISOString().split('T')[0];
+    const pulseDateStr = pulseDate.toISOString().split('T')[0];
+    
+    return pulseDateStr < todayStr;
   };
 
   const getUserExecutionStatus = (pulseId: number) => {
@@ -55,7 +63,11 @@ export default function FarcasterEmbed() {
   };
 
   // Find today's active pulse
-  const activePulse = pulsesData?.pulses?.find((pulse: Pulse) => isToday(pulse.date));
+  const activePulse = pulsesData?.pulses?.find((pulse: Pulse) => {
+    const isActive = isToday(pulse.date);
+    console.log(`Checking pulse ${pulse.id} with date ${pulse.date}: isActive = ${isActive}`);
+    return isActive;
+  });
 
   if (!isAuthenticated) {
     return (

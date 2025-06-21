@@ -131,6 +131,11 @@ The application follows a monorepo structure with clear separation between clien
   - All pulses displayed chronologically with completion status tracking
   - Improved date comparison logic for accurate active pulse detection
   - Removed separate history page in favor of unified experience
+- June 21, 2025. Interface Cleanup:
+  - Removed status indicators below refresh button for cleaner interface
+  - Enhanced pulse list status indicators with visual checkmarks
+  - Removed unnecessary refresh button since posts auto-load
+  - Streamlined user interaction flow
 
 ## User Preferences
 

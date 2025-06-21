@@ -422,16 +422,9 @@ function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         placeholder="Farcaster URL will load automatically"
-        className="w-full border rounded-lg px-3 py-2 mb-3"
+        className="w-full border rounded-lg px-3 py-2 mb-4"
         readOnly
       />
-      <button
-        onClick={handleCheck}
-        disabled={!url || checking}
-        className="bg-purple-600 text-white px-4 py-2 rounded-lg w-full disabled:bg-purple-300 mb-4"
-      >
-        {checking ? "Loading…" : "Refresh Post"}
-      </button>
 
       {error && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This application is a Farcaster post embedding tool that allows users to authenticate with Farcaster, input post URLs, and interact with posts (like, recast, comment) using the Neynar API. It's built as a modern full-stack web application with React frontend and Express backend, designed for deployment on Replit.
+Ipê City Pulse is a community engagement tracking platform that manages daily Farcaster post interactions for approved community members. Admins create "pulses" (engagement tasks) with specific dates and descriptions, while members authenticate via Farcaster to view and complete current tasks. The system tracks like/recast completion status and provides historical views of community participation. Built as a modern full-stack web application with React frontend, Express backend, and PostgreSQL database.
 
 ## System Architecture
 
@@ -111,6 +111,14 @@ The application follows a monorepo structure with clear separation between clien
   - Fixed like functionality by correcting reaction API target field format
   - Resolved TypeScript error by removing non-existent PostCastReqBodyEmbeds import
   - All core features verified working: authentication, cast fetching, interactions, quote detection
+- June 21, 2025. Community Engagement System Implementation:
+  - Expanded app into full community pulse tracking platform
+  - Added PostgreSQL database with members, pulses, and pulse_executions tables
+  - Implemented admin dashboard for pulse creation and member management
+  - Added member access control and CSV import functionality
+  - Created pulse history page showing user completion status
+  - Auto-loading current pulse based on date with engagement tracking
+  - Navigation between main app, admin panel, and pulse history
 
 ## User Preferences
 

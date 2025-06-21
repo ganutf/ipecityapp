@@ -107,6 +107,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /* --------------------------------------------------------- */
+  /* 6️⃣  PULSE MANAGEMENT                                      */
+  /* --------------------------------------------------------- */
+  
+  // Get current pulse (today's date)
+  app.get("/api/pulses/current", async (req, res) => {
+    try {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      const pulse = await storage.getPulseByDate(today);
+      res.json({ pulse });
+    } catch (err: any) {
+      console.error("Current pulse error:", err);
+      res.status(500).json({ error: err.message || 'Failed to get current pulse' });
+    }
+  });
+
+  // Get all pulses
+  app.get("/api/pulses", async (req, res) => {
+    try {
+      const pulses = await storage.getAllPulses();
+      res.json({ pulses });
+    } catch (err: any) {
+      console.error("Get pulses error:", err);
+      res.status(500).json({ error: err.message || 'Failed to get pulses' });
+    }
+  });
+
+  // Create new pulse (admin only)
+  app.post("/api/pulses", async (req, res) => {
+    try {
+      const validatedData = insertPulseSchema.parse(req.body);
+      const pulse = await storage.createPulse(validatedData);
+      res.json({ success: true, pulse });
+    } catch (err: any) {
+      console.error("Create pulse error:", err);
+      res.status(500).json({ error: err.message || 'Failed to create pulse' });
+    }
+  });
+
+  // Get member executions for a specific user
+  app.get("/api/executions/:farcasterFid", async (req, res) => {
+    try {
+      const farcasterFid = parseInt(req.params.farcasterFid);
+      const executions = await storage.getMemberExecutions(farcasterFid);
+      res.json({ executions });
+    } catch (err: any) {
+      console.error("Get executions error:", err);
+      res.status(500).json({ error: err.message || 'Failed to get executions' });
+    }
+  });
+
+  // Record pulse execution
+  app.post("/api/executions", async (req, res) => {
+    try {
+      const validatedData = insertPulseExecutionSchema.parse(req.body);
+      const execution = await storage.createPulseExecution(validatedData);
+      res.json({ success: true, execution });
+    } catch (err: any) {
+      console.error("Create execution error:", err);
+      res.status(500).json({ error: err.message || 'Failed to record execution' });
+    }
+  });
+
+  // Import members via CSV (admin only)
+  app.post("/api/members/import", async (req, res) => {
+    try {
+      const { members } = req.body;
+      if (!Array.isArray(members)) {
+        return res.status(400).json({ error: 'Members must be an array' });
+      }
+      
+      const validatedMembers = members.map(member => insertMemberSchema.parse(member));
+      const createdMembers = await storage.createMembersBatch(validatedMembers);
+      res.json({ success: true, members: createdMembers });
+    } catch (err: any) {
+      console.error("Import members error:", err);
+      res.status(500).json({ error: err.message || 'Failed to import members' });
+    }
+  });
+
+  // Get all members (admin only)
+  app.get("/api/members", async (req, res) => {
+    try {
+      const members = await storage.getAllMembers();
+      res.json({ members });
+    } catch (err: any) {
+      console.error("Get members error:", err);
+      res.status(500).json({ error: err.message || 'Failed to get members' });
+    }
+  });
+
+  // Check if user is approved member
+  app.get("/api/members/check/:farcasterFid", async (req, res) => {
+    try {
+      const farcasterFid = parseInt(req.params.farcasterFid);
+      const member = await storage.getMember(farcasterFid);
+      res.json({ 
+        isMember: !!member,
+        approved: member?.approved || false,
+        member: member || null
+      });
+    } catch (err: any) {
+      console.error("Check member error:", err);
+      res.status(500).json({ error: err.message || 'Failed to check member status' });
+    }
+  });
+
   /* ───────────────────────────────────────────────────────────── */
   return createServer(app);
 }

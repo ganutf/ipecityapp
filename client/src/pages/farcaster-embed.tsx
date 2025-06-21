@@ -445,18 +445,7 @@ function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
         </div>
       )}
 
-      {stats && (
-        <div className="mt-4 text-sm text-gray-800 space-y-1">
-          <p>❤️ Liked: {stats.liked ? "yes" : "no"}</p>
-          <p>🔄 Recasted: {stats.recasted ? "yes" : "no"}</p>
-          {stats.recasted && (
-            <div className="ml-4 text-xs text-gray-600">
-              {stats.regularRecast && <span>• Regular recast</span>}
-              {stats.quotedRecast && <span>• Quote recast</span>}
-            </div>
-          )}
-        </div>
-      )}
+
 
       {castData && (
         <div className="mt-6 p-4 border border-gray-200 rounded-lg">

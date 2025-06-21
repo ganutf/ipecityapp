@@ -63,11 +63,7 @@ export default function FarcasterEmbed() {
   };
 
   // Find today's active pulse
-  const activePulse = pulsesData?.pulses?.find((pulse: Pulse) => {
-    const isActive = isToday(pulse.date);
-    console.log(`Checking pulse ${pulse.id} with date ${pulse.date}: isActive = ${isActive}`);
-    return isActive;
-  });
+  const activePulse = pulsesData?.pulses?.find((pulse: Pulse) => isToday(pulse.date));
 
   if (!isAuthenticated) {
     return (
@@ -144,7 +140,7 @@ export default function FarcasterEmbed() {
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900 mb-1">{pulse.description}</h4>
                         <p className="text-sm text-gray-600 mb-2">
-                          {new Date(pulse.date).toLocaleDateString('en-US', {
+                          {new Date(pulse.date + 'T00:00:00').toLocaleDateString('en-US', {
                             weekday: 'long',
                             year: 'numeric',
                             month: 'long',
@@ -213,7 +209,7 @@ export default function FarcasterEmbed() {
                     {/* Future Pulse Info */}
                     {!past && !today && (
                       <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mt-2">
-                        This pulse will be available on {new Date(pulse.date).toLocaleDateString()}.
+                        This pulse will be available on {new Date(pulse.date + 'T00:00:00').toLocaleDateString()}.
                       </div>
                     )}
                   </div>
@@ -426,7 +422,7 @@ function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
         <h3 className="font-medium text-purple-800 mb-1">Today's Pulse</h3>
         <p className="text-sm text-purple-700">{pulse.description}</p>
         <p className="text-xs text-purple-600 mt-1">
-          Date: {new Date(pulse.date).toLocaleDateString()}
+          Date: {new Date(pulse.date + 'T00:00:00').toLocaleDateString()}
         </p>
       </div>
 

@@ -136,6 +136,11 @@ The application follows a monorepo structure with clear separation between clien
   - Enhanced pulse list status indicators with visual checkmarks
   - Removed unnecessary refresh button since posts auto-load
   - Streamlined user interaction flow
+- June 21, 2025. Date Logic Fixes:
+  - Fixed date comparison logic to properly identify active pulses using ISO date strings
+  - Corrected date display formatting to show accurate dates from database
+  - Fixed timezone issues causing date display to be off by one day
+  - App now correctly shows no active pulse when none exists for current date
 
 ## User Preferences
 

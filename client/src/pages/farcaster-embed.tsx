@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useProfile } from "@farcaster/auth-kit";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
@@ -345,7 +344,7 @@ function PostTool({
   member: Member;
   signerUuid: string | null;
 }) {
-  const { profile } = useProfile();
+  const { profile } = usePersistentAuth();
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
 
@@ -412,7 +411,12 @@ function PostTool({
   });
 
   async function handleCheck() {
-    if (!pulse.farcasterUrl || !viewerFid) return;
+    if (!pulse.farcasterUrl || !viewerFid) {
+      console.log("Missing data for handleCheck:", { url: pulse.farcasterUrl, fid: viewerFid });
+      return;
+    }
+    
+    console.log("Starting handleCheck for:", pulse.farcasterUrl);
     setChecking(true);
     setError(null);
 
@@ -427,6 +431,7 @@ function PostTool({
       }
 
       const { cast } = await res.json();
+      console.log("Cast data received:", cast);
       setCastData(cast);
 
       const regularRecast = !!cast.viewer_context?.recasted;
@@ -551,11 +556,13 @@ function PostTool({
 
   // Auto-load the current pulse
   useEffect(() => {
-    if (pulse.farcasterUrl) {
+    if (pulse.farcasterUrl && viewerFid) {
       setUrl(pulse.farcasterUrl);
       handleCheck();
     }
-  }, [pulse.farcasterUrl]);
+  }, [pulse.farcasterUrl, viewerFid]);
+
+  console.log("PostTool render - checking:", checking, "castData:", !!castData, "error:", error);
 
   return (
     <div className="w-full max-w-lg bg-white shadow p-6 rounded-xl">
@@ -584,6 +591,13 @@ function PostTool({
       {successMessage && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-700">{successMessage}</p>
+        </div>
+      )}
+
+      {checking && (
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-sm text-blue-700">Loading post...</p>
         </div>
       )}
 

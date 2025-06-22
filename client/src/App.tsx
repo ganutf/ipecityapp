@@ -8,7 +8,6 @@ import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
-import { PersistLogin } from "@/hooks/use-persistent-auth";
 
 const config = {
   relay: "https://relay.farcaster.xyz",
@@ -32,7 +31,6 @@ function Router() {
 function App() {
   return (
     <AuthKitProvider config={config}>
-      <PersistLogin />
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />

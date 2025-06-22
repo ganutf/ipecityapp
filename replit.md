@@ -177,13 +177,6 @@ The application follows a monorepo structure with clear separation between clien
   - Signer generation happens automatically on first sign-in (improved UX)
   - Individual signers stored and reused for subsequent actions
   - Proactive signer setup prevents delays during post interactions
-- June 22, 2025. Fixed Session Persistence with AuthStore Integration:
-  - Implemented proper session restoration using AuthKit's internal useAuthStore
-  - PersistLogin component now hydrates AuthKit's memory state on app load
-  - Session verification using AppClient.verifySignInMessage before restoration
-  - Moved PersistLogin immediately after AuthKitProvider for early initialization
-  - All components use standard useProfile hook with restored session state
-  - Proper SIWF message + signature persistence and verification flow
 
 ## User Preferences
 

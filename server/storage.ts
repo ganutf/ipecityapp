@@ -2,6 +2,7 @@ import {
   members, 
   pulses, 
   pulseExecutions,
+  userSigners,
   type Member,
   type InsertMember,
   type Pulse,
@@ -9,6 +10,8 @@ import {
   type UpdatePulse,
   type PulseExecution,
   type InsertPulseExecution,
+  type UserSigner,
+  type InsertUserSigner,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -117,6 +120,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pulses.id, id))
       .returning();
     return updatedPulse;
+  }
+
+  async getUserSigner(farcasterFid: number): Promise<UserSigner | undefined> {
+    const [signer] = await db
+      .select()
+      .from(userSigners)
+      .where(eq(userSigners.farcasterFid, farcasterFid));
+    return signer;
+  }
+
+  async createUserSigner(signer: InsertUserSigner): Promise<UserSigner> {
+    const [newSigner] = await db.insert(userSigners).values(signer).returning();
+    return newSigner;
   }
 }
 

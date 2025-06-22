@@ -8,6 +8,7 @@ import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
+import { useEffect } from "react";
 
 const config = {
   rpcUrl: "https://mainnet.optimism.io",
@@ -28,6 +29,10 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    document.title = "Ipê City Pulse";
+  }, []);
+
   return (
     <AuthKitProvider config={config}>
       <QueryClientProvider client={queryClient}>

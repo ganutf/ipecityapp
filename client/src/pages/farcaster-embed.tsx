@@ -17,21 +17,22 @@ export default function FarcasterEmbed() {
   /* -- membership --------------------------------------------------- */
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
-    enabled: Boolean(isAuthenticated && viewerFid),
+    enabled: !!(isAuthenticated && viewerFid),
   });
 
   /* -- signer creation / retrieval ---------------------------------- */
   const { data: signerData } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
-    enabled: Boolean(isAuthenticated && viewerFid && memberCheck?.isMember),
+    enabled: !!(isAuthenticated && viewerFid && memberCheck?.isMember),
     staleTime: Infinity,
-    onSuccess(data) {
-      // ① persist for future page-loads
-      if (data?.signer_uuid) {
-        localStorage.setItem(SIGNER_KEY, data.signer_uuid);
-      }
-    },
   });
+
+  // Persist signer data when it changes
+  useEffect(() => {
+    if (signerData?.signer_uuid) {
+      localStorage.setItem(SIGNER_KEY, signerData.signer_uuid);
+    }
+  }, [signerData?.signer_uuid]);
 
   // ② choose live signer (if query resolved) or cached one
   const signerUuid =
@@ -40,12 +41,12 @@ export default function FarcasterEmbed() {
   /* -- pulses & executions ------------------------------------------ */
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: Boolean(isAuthenticated && memberCheck?.isMember),
+    enabled: !!(isAuthenticated && memberCheck?.isMember),
   });
 
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
-    enabled: Boolean(isAuthenticated && viewerFid && memberCheck?.isMember),
+    enabled: !!(isAuthenticated && viewerFid && memberCheck?.isMember),
   });
 
   /* -- date helpers -------------------------------------------------- */

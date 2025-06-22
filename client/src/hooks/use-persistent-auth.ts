@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useProfile, useSignInMessage } from "@farcaster/auth-kit";
-import { useAuthStore } from "@farcaster/auth-kit";
-import { AppClient } from "@farcaster/auth-kit/client";
 
 const STORAGE_KEY = "ipe.auth";
 const SIGNER_KEY  = "ipe.signer";     // <- if you create signer_uuid’s
@@ -33,7 +31,6 @@ export function usePersistentAuth() {
   const [restoredProfile, setRestoredProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const once = useRef(false);
-  const setAuthState = useAuthStore((s) => s.setAuthState);
 
   /* -- Restore on first mount -------------------------------------- */
   useEffect(() => {
@@ -54,36 +51,15 @@ export function usePersistentAuth() {
           return setIsLoading(false);
         }
 
-        /* Verify SIWF message — optional but recommended */
-        const client = new AppClient({ relay: "https://relay.farcaster.xyz" });
-        const { success, fid } = await client.verifySignInMessage({
-          message,
-          signature,
-          nonce: JSON.parse(message).nonce,
-          domain: window.location.hostname,
-          acceptAuthAddress: true,
-        });
-
-        if (success) {
-          setAuthState({ fid, message, signature });      // 👈 re-hydrate
-          setRestoredProfile(cachedProfile);
-
-          /* Restore signer_uuid if you saved one ---------------------------------- */
-          const savedSigner = localStorage.getItem(SIGNER_KEY);
-          if (savedSigner) {
-            const { setSignerUuid } = await import("@neynar/nodejs-sdk");
-            setSignerUuid(savedSigner);
-          }
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
+        /* For now, trust the cached profile without additional verification */
+        setRestoredProfile(cachedProfile);
       } catch {
         localStorage.removeItem(STORAGE_KEY);
       } finally {
         setIsLoading(false);
       }
     })();
-  }, [setAuthState]);
+  }, []);
 
   /* -- Clear cache when user actually logs out --------------------- */
   useEffect(() => {

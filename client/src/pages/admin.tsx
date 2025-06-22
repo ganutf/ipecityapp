@@ -130,6 +130,37 @@ export default function AdminPage() {
     createPulseMutation.mutate(newPulse);
   };
 
+  const handleEditStart = (pulse: Pulse) => {
+    setEditingPulse(pulse.id);
+    setEditData({
+      farcasterUrl: pulse.farcasterUrl,
+      date: pulse.date,
+      description: pulse.description,
+    });
+  };
+
+  const handleEditCancel = () => {
+    setEditingPulse(null);
+    setEditData({ farcasterUrl: "", date: "", description: "" });
+  };
+
+  const handleEditSave = () => {
+    if (editingPulse) {
+      updatePulseMutation.mutate({
+        id: editingPulse,
+        data: editData,
+      });
+    }
+  };
+
+  const isFuturePulse = (pulse: Pulse) => {
+    const today = new Date();
+    const pulseDate = new Date(pulse.date + 'T00:00:00');
+    today.setHours(0, 0, 0, 0);
+    pulseDate.setHours(0, 0, 0, 0);
+    return pulseDate > today;
+  };
+
   const handleImportCSV = () => {
     try {
       const lines = csvData.trim().split('\n');

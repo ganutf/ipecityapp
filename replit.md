@@ -141,6 +141,12 @@ The application follows a monorepo structure with clear separation between clien
   - Corrected date display formatting to show accurate dates from database
   - Fixed timezone issues causing date display to be off by one day
   - App now correctly shows no active pulse when none exists for current date
+- June 22, 2025. Admin Pulse Editing Implementation:
+  - Added edit functionality for future pulses in admin dashboard
+  - Only future pulses can be edited (past/current pulses are protected)
+  - Editable fields: date, description, and Farcaster URL
+  - In-place editing with save/cancel functionality
+  - Real-time database updates with proper validation
 
 ## User Preferences
 

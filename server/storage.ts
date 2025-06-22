@@ -6,6 +6,7 @@ import {
   type InsertMember,
   type Pulse,
   type InsertPulse,
+  type UpdatePulse,
   type PulseExecution,
   type InsertPulseExecution,
 } from "@shared/schema";
@@ -99,6 +100,15 @@ export class DatabaseStorage implements IStorage {
   async createPulseExecution(execution: InsertPulseExecution): Promise<PulseExecution> {
     const [newExecution] = await db.insert(pulseExecutions).values(execution).returning();
     return newExecution;
+  }
+
+  async updatePulse(id: number, pulseData: UpdatePulse): Promise<Pulse> {
+    const [updatedPulse] = await db
+      .update(pulses)
+      .set(pulseData)
+      .where(eq(pulses.id, id))
+      .returning();
+    return updatedPulse;
   }
 }
 

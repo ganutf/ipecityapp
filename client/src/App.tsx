@@ -16,8 +16,6 @@ const config = {
   siweUri: window.location.origin,
 };
 
-console.log('🔧 AuthKit Config:', config);
-
 function Router() {
   return (
     <Layout>

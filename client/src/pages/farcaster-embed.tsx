@@ -11,13 +11,7 @@ const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
 export default function FarcasterEmbed() {
   const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
   
-  // Debug the profile data
-  console.log('📱 Page Profile:', { 
-    isAuthenticated, 
-    profileFid: profile?.fid, 
-    profileName: profile?.displayName || profile?.username,
-    fullProfile: profile
-  });
+
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
 
@@ -121,20 +115,7 @@ export default function FarcasterEmbed() {
     );
   }
 
-  // Debug member check
-  console.log('👥 Member Check:', {
-    isAuthenticated,
-    hasValidFid,
-    viewerFid,
-    memberCheck,
-    authLoading,
-    profileDebug: { 
-      fid: profile?.fid, 
-      name: profile?.displayName || profile?.username,
-      profileExists: !!profile,
-      profileKeys: profile ? Object.keys(profile) : []
-    }
-  });
+
 
   if (isAuthenticated && hasValidFid && !authLoading && memberCheck && (!memberCheck?.isMember || !memberCheck?.approved)) {
     return (

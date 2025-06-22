@@ -20,45 +20,22 @@ export function usePersistentAuth() {
 
   // Initialize and check localStorage immediately on mount
   useEffect(() => {
-    console.log('🚀 Running localStorage restoration effect');
     const restoreAuth = () => {
       try {
         const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-        console.log('🔍 Checking localStorage on mount:', stored ? 'HAS DATA' : 'NULL');
-        console.log('🔍 AUTH_STORAGE_KEY:', AUTH_STORAGE_KEY);
-        if (stored) {
-          console.log('📄 Raw localStorage data:', stored);
-        }
         
         if (stored) {
           const authData = JSON.parse(stored);
           const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
           
-          console.log('📋 Parsed auth data:', { 
-            fid: authData.fid, 
-            username: authData.username,
-            displayName: authData.displayName,
-            isExpired 
-          });
-          
           if (!isExpired && authData.fid) {
-            console.log('✅ Restoring auth from localStorage:', {
-              fid: authData.fid,
-              username: authData.username,
-              displayName: authData.displayName
-            });
-            console.log('🎭 Setting restored profile from localStorage:', authData);
             setRestoredProfile(authData);
             return true;
           } else {
-            console.log('❌ Auth data expired, removing');
             localStorage.removeItem(AUTH_STORAGE_KEY);
           }
-        } else {
-          console.log('🆕 No stored auth data found');
         }
       } catch (error) {
-        console.error('💥 Failed to restore auth data:', error);
         localStorage.removeItem(AUTH_STORAGE_KEY);
       }
       return false;
@@ -70,9 +47,6 @@ export function usePersistentAuth() {
 
   // Save to localStorage when AuthKit authentication succeeds  
   useEffect(() => {
-    console.log('🎯 AuthKit effect running');
-    console.log('🎯 AuthKit state changed:', { kitAuth, kitProfile: !!kitProfile, fid: kitProfile?.fid });
-    
     if (kitAuth && kitProfile?.fid) {
       const authData: StoredAuthData = {
         fid: kitProfile.fid,
@@ -83,27 +57,11 @@ export function usePersistentAuth() {
         timestamp: Date.now()
       };
       
-      console.log('💾 Saving auth to localStorage:', {
-        fid: authData.fid,
-        username: authData.username,
-        displayName: authData.displayName
-      });
-      
       try {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
-        console.log('💾 Save successful');
-        
-        // Immediate verification
-        const verify = localStorage.getItem(AUTH_STORAGE_KEY);
-        if (verify) {
-          console.log('✅ Verification successful');
-          console.log('🎭 Setting restored profile:', authData);
-          setRestoredProfile(authData);
-        } else {
-          console.error('❌ Verification failed');
-        }
+        setRestoredProfile(authData);
       } catch (error) {
-        console.error('💥 localStorage save error:', error);
+        console.error('localStorage save error:', error);
       }
     }
   }, [kitAuth, kitProfile]);
@@ -113,26 +71,7 @@ export function usePersistentAuth() {
   // Use restoredProfile if kitProfile is empty or if we have valid restored data
   const profile = (kitProfile && kitProfile.fid) ? kitProfile : restoredProfile;
   
-  // Debug profile assignment
-  console.log('🎭 Profile Assignment:', {
-    kitProfileHasFid: !!(kitProfile && kitProfile.fid),
-    restoredProfileHasFid: !!(restoredProfile && restoredProfile.fid),
-    finalProfileHasFid: !!(profile && profile.fid),
-    finalProfileName: profile?.displayName || profile?.username
-  });
 
-  // Debug logging
-  const debugInfo = {
-    kitAuth,
-    kitProfile: !!kitProfile,
-    restoredProfile: !!restoredProfile,
-    isInitialized,
-    finalAuth: isAuthenticated,
-    profileFid: profile?.fid,
-    profileName: profile?.displayName || profile?.username,
-    profileData: profile
-  };
-  console.log('🔐 Auth State:', debugInfo);
 
   return {
     isAuthenticated,
@@ -143,8 +82,6 @@ export function usePersistentAuth() {
 
 // Export logout function to be used in components
 export function logout() {
-  console.log('🚪 Explicit logout triggered');
   localStorage.removeItem(AUTH_STORAGE_KEY);
-  // Force a page reload to clear all state
   window.location.href = window.location.origin;
 }

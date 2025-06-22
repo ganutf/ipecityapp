@@ -146,14 +146,6 @@ export default function FarcasterEmbed() {
       {/* Active Pulse Section */}
       {activePulse ? (
         <div className="mb-8">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <h2 className="text-xl font-bold text-green-800 mb-2">
-              🎯 Today's Active Pulse
-            </h2>
-            <p className="text-green-700">
-              Complete your engagement task for today!
-            </p>
-          </div>
           <PostTool
             pulse={activePulse}
             member={memberCheck?.member}
@@ -560,43 +552,46 @@ function PostTool({
   }, [pulse.farcasterUrl, viewerFid]);
 
   return (
-    <div className="w-full max-w-lg bg-white shadow p-6 rounded-xl">
-      <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-        <h3 className="font-medium text-purple-800 mb-1">Today's Pulse</h3>
-        <p className="text-sm text-purple-700">{pulse.description}</p>
-        <p className="text-xs text-purple-600 mt-1">
-          Date: {new Date(pulse.date + "T00:00:00").toLocaleDateString()}
+    <div className="w-full max-w-lg bg-green-50 border border-green-200 shadow rounded-xl">
+      <div className="p-6 border-b border-green-200 bg-green-100 rounded-t-xl">
+        <h2 className="text-xl font-bold text-green-800 mb-2 flex items-center">
+          🎯 Today's Active Pulse
+        </h2>
+        <p className="text-green-700 mb-2">{pulse.description}</p>
+        <p className="text-sm text-green-600">
+          Complete your engagement task for today!
         </p>
       </div>
-
-      <input
+      
+      <div className="p-6">
+        <input
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         placeholder="Farcaster URL will load automatically"
         className="w-full border rounded-lg px-3 py-2 mb-4"
         readOnly
-      />
+        />
 
-      {error && (
+        {error && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
+          </div>
+        )}
 
-      {successMessage && (
+        {successMessage && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-700">{successMessage}</p>
-        </div>
-      )}
+          </div>
+        )}
 
-      {checking && (
+        {checking && (
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
           <p className="text-sm text-blue-700">Loading post...</p>
-        </div>
-      )}
+          </div>
+        )}
 
-      {castData && (
+        {castData && (
         <div className="mt-6 p-4 border border-gray-200 rounded-lg">
           <div className="flex items-center space-x-3 mb-3">
             <img
@@ -672,8 +667,9 @@ function PostTool({
               </button>
             </div>
           </div>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

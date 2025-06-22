@@ -185,6 +185,7 @@ The application follows a monorepo structure with clear separation between clien
   - Removed "Editable" labels from admin page and implemented color-coded status system
   - Applied consistent color scheme: green for today, blue for future, gray for past pulses
   - Changed pulse ordering back to newest first (descending by date) for better user experience
+  - Unified active pulse interface into single green frame combining header and post content
 
 ## User Preferences
 

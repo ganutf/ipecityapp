@@ -29,10 +29,19 @@ export function usePersistentAuth() {
           const authData = JSON.parse(stored);
           const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
           
-          console.log('📋 Parsed auth data:', { fid: authData.fid, isExpired });
+          console.log('📋 Parsed auth data:', { 
+            fid: authData.fid, 
+            username: authData.username,
+            displayName: authData.displayName,
+            isExpired 
+          });
           
           if (!isExpired && authData.fid) {
-            console.log('✅ Restoring auth from localStorage:', authData.fid);
+            console.log('✅ Restoring auth from localStorage:', {
+              fid: authData.fid,
+              username: authData.username,
+              displayName: authData.displayName
+            });
             setRestoredProfile(authData);
             return true;
           } else {

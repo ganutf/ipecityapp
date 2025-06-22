@@ -61,7 +61,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {isAuthenticated ? (
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
-                Hello, {profile?.displayName || profile?.username}
+                Hello, {profile?.displayName || profile?.username || '?'}
+              </span>
+              <span className="text-xs text-gray-400 ml-2">
+                (FID: {profile?.fid || 'none'})
               </span>
               <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
                 {profile?.pfpUrl ? (

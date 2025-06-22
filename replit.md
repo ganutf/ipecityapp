@@ -174,8 +174,9 @@ The application follows a monorepo structure with clear separation between clien
   - Added user_signers table to store individual Farcaster signers
   - Implemented automatic signer creation for new users via Neynar API
   - Users can now like and recast posts after initial signer setup
-  - Signer generation happens automatically on first interaction attempt
+  - Signer generation happens automatically on first sign-in (improved UX)
   - Individual signers stored and reused for subsequent actions
+  - Proactive signer setup prevents delays during post interactions
 
 ## User Preferences
 

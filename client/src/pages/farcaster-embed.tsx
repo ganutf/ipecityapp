@@ -14,6 +14,13 @@ export default function FarcasterEmbed() {
     enabled: isAuthenticated && !!viewerFid,
   });
 
+  // Auto-create signer when user first signs in
+  const { data: signerData } = useQuery({
+    queryKey: [`/api/neynar/signer/${viewerFid}`],
+    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember,
+    staleTime: Infinity, // Don't refetch signer once created
+  });
+
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
@@ -320,24 +327,13 @@ function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
   }
 
   async function handleReaction(type: 'like' | 'recast') {
-    if (!castData || !viewerFid) return;
+    if (!castData || !viewerFid || !signerData?.signer_uuid) return;
 
     setActionLoading(prev => ({ ...prev, [type]: true }));
     setError(null);
 
     try {
-      // Check if user has a signer - this is the main issue
-      const signerResponse = await fetch(`/api/neynar/signer/${viewerFid}`);
-      
-      if (!signerResponse.ok) {
-        if (signerResponse.status === 404) {
-          setError('You need to set up your Farcaster signer to perform actions. Please contact admin for setup.');
-          return;
-        }
-        throw new Error('Failed to check signer status');
-      }
-      
-      const { signer_uuid } = await signerResponse.json();
+      const signer_uuid = signerData.signer_uuid;
 
       if (type === 'like') {
         const response = await fetch('/api/neynar/reaction', {

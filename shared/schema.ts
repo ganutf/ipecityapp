@@ -68,6 +68,14 @@ export const pulseExecutions = pgTable("pulse_executions", {
   executedAt: timestamp("executed_at").defaultNow(),
 });
 
+// User signers - individual Farcaster signers per user
+export const userSigners = pgTable("user_signers", {
+  id: serial("id").primaryKey(),
+  farcasterFid: integer("farcaster_fid").unique().notNull(),
+  signerUuid: varchar("signer_uuid").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const membersRelations = relations(members, ({ many }) => ({
   pulseExecutions: many(pulseExecutions),
@@ -84,6 +92,13 @@ export const pulseExecutionsRelations = relations(pulseExecutions, ({ one }) => 
   }),
   member: one(members, {
     fields: [pulseExecutions.memberFarcasterFid],
+    references: [members.farcasterFid],
+  }),
+}));
+
+export const userSignersRelations = relations(userSigners, ({ one }) => ({
+  member: one(members, {
+    fields: [userSigners.farcasterFid],
     references: [members.farcasterFid],
   }),
 }));
@@ -109,6 +124,11 @@ export const insertPulseExecutionSchema = createInsertSchema(pulseExecutions).om
   executedAt: true,
 });
 
+export const insertUserSignerSchema = createInsertSchema(userSigners).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type Member = typeof members.$inferSelect;
 export type InsertMember = z.infer<typeof insertMemberSchema>;
@@ -117,6 +137,8 @@ export type InsertPulse = z.infer<typeof insertPulseSchema>;
 export type UpdatePulse = z.infer<typeof updatePulseSchema>;
 export type PulseExecution = typeof pulseExecutions.$inferSelect;
 export type InsertPulseExecution = z.infer<typeof insertPulseExecutionSchema>;
+export type UserSigner = typeof userSigners.$inferSelect;
+export type InsertUserSigner = z.infer<typeof insertUserSignerSchema>;
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;

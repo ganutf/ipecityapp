@@ -1,37 +1,36 @@
 import { useState, useEffect } from "react";
-import { SignInButton } from "@farcaster/auth-kit";
+import { SignInButton, useProfile } from "@farcaster/auth-kit";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
-import { useSessionPersistence } from "@/hooks/use-session-persistence";
 
 export default function FarcasterEmbed() {
-  const { isAuthenticated, profile, isLoading } = useSessionPersistence();
+  const { isAuthenticated, profile } = useProfile();
   const viewerFid = profile?.fid;
 
   // Check if user is approved member
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && !isLoading,
+    enabled: isAuthenticated && !!viewerFid,
   });
 
   // Auto-create signer when user first signs in
   const { data: signerData } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember && !isLoading,
+    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember,
     staleTime: Infinity, // Don't refetch signer once created
   });
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: isAuthenticated && memberCheck?.isMember && !isLoading,
+    enabled: isAuthenticated && memberCheck?.isMember,
   });
 
   // Get user's executions
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember && !isLoading,
+    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember,
   });
 
   // Helper functions for date comparison
@@ -72,14 +71,6 @@ export default function FarcasterEmbed() {
 
   // Find today's active pulse
   const activePulse = pulsesData?.pulses?.find((pulse: Pulse) => isToday(pulse.date));
-
-  if (isLoading) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-600">Loading...</p>
-      </div>
-    );
-  }
 
   if (!isAuthenticated) {
     return (
@@ -245,7 +236,7 @@ export default function FarcasterEmbed() {
 }
 
 function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
-  const { profile } = useSessionPersistence();
+  const { profile } = useProfile();
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
 

@@ -66,6 +66,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-xs text-gray-400 ml-2">
                 (FID: {profile?.fid || 'none'})
               </span>
+              <span className="text-xs text-gray-300 ml-1">
+                Debug: {JSON.stringify(profile)}
+              </span>
               <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
                 {profile?.pfpUrl ? (
                   <img 

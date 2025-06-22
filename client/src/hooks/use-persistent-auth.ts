@@ -47,6 +47,7 @@ export function usePersistentAuth() {
               username: authData.username,
               displayName: authData.displayName
             });
+            console.log('🎭 Setting restored profile from localStorage:', authData);
             setRestoredProfile(authData);
             return true;
           } else {
@@ -96,6 +97,7 @@ export function usePersistentAuth() {
         const verify = localStorage.getItem(AUTH_STORAGE_KEY);
         if (verify) {
           console.log('✅ Verification successful');
+          console.log('🎭 Setting restored profile:', authData);
           setRestoredProfile(authData);
         } else {
           console.error('❌ Verification failed');
@@ -109,6 +111,13 @@ export function usePersistentAuth() {
   // Determine effective authentication state
   const isAuthenticated = kitAuth || (!!restoredProfile && isInitialized);
   const profile = kitProfile || restoredProfile;
+  
+  // Debug profile assignment
+  console.log('🎭 Profile Assignment:', {
+    kitProfile: kitProfile,
+    restoredProfile: restoredProfile,
+    finalProfile: profile
+  });
 
   // Debug logging
   const debugInfo = {
@@ -118,7 +127,8 @@ export function usePersistentAuth() {
     isInitialized,
     finalAuth: isAuthenticated,
     profileFid: profile?.fid,
-    profileName: profile?.displayName || profile?.username
+    profileName: profile?.displayName || profile?.username,
+    profileData: profile
   };
   console.log('🔐 Auth State:', debugInfo);
 

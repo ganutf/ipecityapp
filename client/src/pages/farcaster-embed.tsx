@@ -15,7 +15,8 @@ export default function FarcasterEmbed() {
   console.log('📱 Page Profile:', { 
     isAuthenticated, 
     profileFid: profile?.fid, 
-    profileName: profile?.displayName || profile?.username 
+    profileName: profile?.displayName || profile?.username,
+    fullProfile: profile
   });
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
@@ -127,7 +128,12 @@ export default function FarcasterEmbed() {
     viewerFid,
     memberCheck,
     authLoading,
-    profileDebug: { fid: profile?.fid, name: profile?.displayName || profile?.username }
+    profileDebug: { 
+      fid: profile?.fid, 
+      name: profile?.displayName || profile?.username,
+      profileExists: !!profile,
+      profileKeys: profile ? Object.keys(profile) : []
+    }
   });
 
   if (isAuthenticated && hasValidFid && !authLoading && memberCheck && (!memberCheck?.isMember || !memberCheck?.approved)) {

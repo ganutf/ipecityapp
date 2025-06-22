@@ -116,9 +116,20 @@ export default function AdminPage() {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
       setCsvData("");
+      toast({
+        title: "Success",
+        description: `Successfully imported ${data.members?.length || 0} members`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -163,24 +174,82 @@ export default function AdminPage() {
 
   const handleImportCSV = () => {
     try {
+      if (!csvData.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter CSV data",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const lines = csvData.trim().split('\n');
+      if (lines.length < 2) {
+        toast({
+          title: "Error", 
+          description: "CSV must contain at least a header and one data row",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const headers = lines[0].split(',').map(h => h.trim());
       
-      // Expected headers: farcasterFid, farcasterUsername, name, ipePassport
-      const members = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.trim());
-        return {
-          farcasterFid: parseInt(values[0]),
-          farcasterUsername: values[1] || null,
-          name: values[2],
-          ipePassport: values[3] || null,
-          approved: true
-        };
-      });
+      // Validate required headers
+      const requiredHeaders = ['farcasterFid', 'farcasterUsername', 'name', 'ipePassport'];
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+      if (missingHeaders.length > 0) {
+        toast({
+          title: "Error",
+          description: `Missing required headers: ${missingHeaders.join(', ')}`,
+          variant: "destructive",
+        });
+        return;
+      }
 
+      const members = lines.slice(1)
+        .filter(line => line.trim()) // Skip empty lines
+        .map(line => {
+          const values = line.split(',').map(v => v.trim());
+          const memberData: any = {};
+          
+          headers.forEach((header, index) => {
+            memberData[header] = values[index] || null;
+          });
+
+          // Convert farcasterFid to number
+          const farcasterFid = parseInt(memberData.farcasterFid);
+          if (isNaN(farcasterFid)) {
+            throw new Error(`Invalid farcasterFid: ${memberData.farcasterFid}`);
+          }
+
+          return {
+            farcasterFid,
+            farcasterUsername: memberData.farcasterUsername || null,
+            name: memberData.name,
+            ipePassport: memberData.ipePassport || null,
+            approved: true
+          };
+        });
+
+      if (members.length === 0) {
+        toast({
+          title: "Error",
+          description: "No valid member data found in CSV",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Importing members:', members);
       importMembersMutation.mutate(members);
     } catch (error) {
-      alert("Error parsing CSV. Please check the format.");
+      console.error('CSV import error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error parsing CSV. Please check the format.",
+        variant: "destructive",
+      });
     }
   };
 

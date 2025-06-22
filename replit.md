@@ -183,6 +183,7 @@ The application follows a monorepo structure with clear separation between clien
   - Sessions now properly maintain authentication state across page refreshes
   - Follows Farcaster app best practices for persistent authentication
   - Eliminated database errors caused by undefined FID values
+  - Removed duplicate sign-in buttons for cleaner UI (header button only)
 
 ## User Preferences
 

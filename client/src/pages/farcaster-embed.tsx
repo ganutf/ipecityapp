@@ -85,8 +85,7 @@ export default function FarcasterEmbed() {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600 mb-4">Welcome to Ipê City Pulse</p>
-        <p className="text-gray-500 mb-6">Please sign in to access community engagement activities.</p>
-        <SignInButton />
+        <p className="text-gray-500">Please sign in to access community engagement activities.</p>
       </div>
     );
   }

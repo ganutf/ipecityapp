@@ -52,6 +52,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMembersBatch(membersList: InsertMember[]): Promise<Member[]> {
+    if (!membersList || membersList.length === 0) {
+      throw new Error('Cannot create members batch: empty or invalid member list');
+    }
+    
     const newMembers = await db.insert(members).values(membersList).returning();
     return newMembers;
   }

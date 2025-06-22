@@ -191,8 +191,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/members/import", async (req, res) => {
     try {
       const { members } = req.body;
+      
       if (!Array.isArray(members)) {
         return res.status(400).json({ error: 'Members must be an array' });
+      }
+      
+      if (members.length === 0) {
+        return res.status(400).json({ error: 'No members provided for import' });
       }
       
       const validatedMembers = members.map(member => insertMemberSchema.parse(member));

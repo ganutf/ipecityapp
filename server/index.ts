@@ -79,28 +79,6 @@ app.use((req, res, next) => {
     validateEnvironment();
     await testDatabaseConnection();
 
-    // Health check endpoint
-    app.get('/health', async (req, res) => {
-      try {
-        // Test database connection
-        await db.execute('SELECT 1 as test');
-        res.status(200).json({ 
-          status: 'healthy', 
-          timestamp: new Date().toISOString(),
-          database: 'connected',
-          environment: process.env.NODE_ENV || 'development'
-        });
-      } catch (error) {
-        enhancedLog(`Health check failed: ${error.message}`, 'error');
-        res.status(503).json({ 
-          status: 'unhealthy', 
-          timestamp: new Date().toISOString(),
-          database: 'disconnected',
-          error: error.message
-        });
-      }
-    });
-
     const server = await registerRoutes(app);
 
     // Enhanced error handling middleware

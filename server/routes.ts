@@ -13,6 +13,29 @@ type Reaction = "like" | "recast";
 type CastParam = "hash" | "url";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  /* ────────────────────────────────  HEALTH CHECK  ──────────────────────────────── */
+  // Health check endpoint for deployment monitoring
+  app.get('/health', async (req, res) => {
+    try {
+      // Test database connection
+      await storage.getAllMembers();
+      res.status(200).json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        database: 'connected',
+        environment: process.env.NODE_ENV || 'development'
+      });
+    } catch (error) {
+      console.error(`Health check failed: ${error.message}`);
+      res.status(503).json({ 
+        status: 'unhealthy', 
+        timestamp: new Date().toISOString(),
+        database: 'disconnected',
+        error: error.message
+      });
+    }
+  });
+
   /* ────────────────────────────────  SDK  ──────────────────────────────── */
   const neynar = new NeynarAPIClient(
     new Configuration({

@@ -9,8 +9,12 @@ export default function FarcasterEmbed() {
   const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
   const viewerFid = profile?.fid;
 
+  console.log('FarcasterEmbed render:', { isAuthenticated, profile, authLoading, viewerFid });
+
+
+
   // Check if user is approved member
-  const { data: memberCheck } = useQuery({
+  const { data: memberCheck, isLoading: memberLoading } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
     enabled: Boolean(isAuthenticated && viewerFid && !authLoading),
   });

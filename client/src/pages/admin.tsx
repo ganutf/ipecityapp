@@ -13,6 +13,22 @@ export default function AdminPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Initialize all state hooks first (must be at top level)
+  const [newPulse, setNewPulse] = useState({
+    farcasterUrl: "",
+    date: "",
+    description: "",
+  });
+
+  const [csvData, setCsvData] = useState("");
+  const [editingPulse, setEditingPulse] = useState<number | null>(null);
+  const [editData, setEditData] = useState({
+    farcasterUrl: "",
+    date: "",
+    description: "",
+  });
+
+  // Check if user is admin (FID 2790)
   const isAdmin = profile?.fid === 2790;
 
   // Show loading while auth is initializing
@@ -27,19 +43,14 @@ export default function AdminPage() {
     );
   }
 
-  const [newPulse, setNewPulse] = useState({
-    farcasterUrl: "",
-    date: "",
-    description: "",
-  });
-
-  const [csvData, setCsvData] = useState("");
-  const [editingPulse, setEditingPulse] = useState<number | null>(null);
-  const [editData, setEditData] = useState({
-    farcasterUrl: "",
-    date: "",
-    description: "",
-  });
+  if (!isAuthenticated || !isAdmin) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Access Restricted</h2>
+        <p className="text-gray-600">Admin access required.</p>
+      </div>
+    );
+  }
 
   // Fetch all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({

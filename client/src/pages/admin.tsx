@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useProfile } from "@farcaster/auth-kit";
 import type { Pulse, Member } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 export default function AdminPage() {
-  const { isAuthenticated, profile } = usePersistentAuth();
+  const { isAuthenticated, profile } = useProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -33,13 +33,13 @@ export default function AdminPage() {
   // Fetch all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: Boolean(isAuthenticated && isAdmin),
+    enabled: isAuthenticated && isAdmin,
   });
 
   // Fetch all members
   const { data: membersData, isLoading: membersLoading } = useQuery({
     queryKey: ["/api/members"],
-    enabled: Boolean(isAuthenticated && isAdmin),
+    enabled: isAuthenticated && isAdmin,
   });
 
   // Create pulse mutation

@@ -1,80 +1,68 @@
-import { useEffect, useRef, useState } from "react";
-import { useProfile, useSignInMessage } from "@farcaster/auth-kit";
+import { useEffect, useState } from 'react';
+import { useProfile } from '@farcaster/auth-kit';
 
-const STORAGE_KEY = "ipe.auth";
-const SIGNER_KEY  = "ipe.signer";     // <- if you create signer_uuid’s
-
-/* ------------------------------------------------------------------ */
-/*  A.  COMPONENT THAT SAVES AUTH DATA RIGHT AFTER FIRST LOGIN        */
-/* ------------------------------------------------------------------ */
-export function PersistLogin() {
-  const { isAuthenticated, profile } = useProfile();
-  const { message, signature } = useSignInMessage();
-
-  useEffect(() => {
-    if (isAuthenticated && profile && message && signature) {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ profile, message, signature, timestamp: Date.now() })
-      );
-    }
-  }, [isAuthenticated, profile, message, signature]);
-
-  return null;
+interface StoredAuthData {
+  profile: any;
+  isAuthenticated: boolean;
+  timestamp: number;
 }
 
-/* ------------------------------------------------------------------ */
-/*  B.  HOOK YOUR PAGES SHOULD USE                                    */
-/* ------------------------------------------------------------------ */
+const AUTH_STORAGE_KEY = 'farcaster_auth_data';
+const AUTH_EXPIRY_HOURS = 24;
+
 export function usePersistentAuth() {
   const { isAuthenticated, profile } = useProfile();
-  const [restoredProfile, setRestoredProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const once = useRef(false);
+  const [restoredAuth, setRestoredAuth] = useState<StoredAuthData | null>(null);
 
-  /* -- Restore on first mount -------------------------------------- */
+  // Save auth data to localStorage when authenticated
   useEffect(() => {
-    if (once.current) return;
-    once.current = true;
+    if (isAuthenticated && profile) {
+      const authData: StoredAuthData = {
+        profile,
+        isAuthenticated: true,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+      setRestoredAuth(authData);
+    }
+  }, [isAuthenticated, profile]);
 
-    (async () => {
-      try {
-        const cached = localStorage.getItem(STORAGE_KEY);
-        if (!cached) return setIsLoading(false);
-
-        const { profile: cachedProfile, message, signature, timestamp } =
-          JSON.parse(cached);
-
-        const expired = Date.now() - timestamp > 24 * 60 * 60 * 1000; // 24 h
-        if (expired || !message || !signature) {
-          localStorage.removeItem(STORAGE_KEY);
-          return setIsLoading(false);
+  // Restore auth data on app load
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (stored) {
+        const authData: StoredAuthData = JSON.parse(stored);
+        const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
+        
+        if (!isExpired) {
+          setRestoredAuth(authData);
+        } else {
+          localStorage.removeItem(AUTH_STORAGE_KEY);
         }
-
-        /* For now, trust the cached profile without additional verification */
-        setRestoredProfile(cachedProfile);
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      } finally {
-        setIsLoading(false);
       }
-    })();
+    } catch (error) {
+      console.error('Failed to restore auth data:', error);
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  /* -- Clear cache when user actually logs out --------------------- */
+  // Clear stored data when logged out
   useEffect(() => {
     if (!isAuthenticated && !isLoading) {
-      localStorage.removeItem(STORAGE_KEY);
-      setRestoredProfile(null);
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      setRestoredAuth(null);
     }
   }, [isAuthenticated, isLoading]);
 
-  const effectiveProfile = profile ?? restoredProfile;
-  const effectiveAuth    = isAuthenticated || (!!restoredProfile && !isLoading);
-
-  return {
-    isAuthenticated: effectiveAuth,
-    profile: effectiveProfile,
-    isLoading: isLoading && !isAuthenticated,
+  const effectiveAuth = {
+    isAuthenticated: isAuthenticated || (restoredAuth?.isAuthenticated && !isLoading),
+    profile: profile || restoredAuth?.profile,
+    isLoading
   };
+
+  return effectiveAuth;
 }

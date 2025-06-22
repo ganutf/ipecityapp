@@ -1,33 +1,12 @@
-import { SignInButton, useProfile } from "@farcaster/auth-kit";
+import { SignInButton } from "@farcaster/auth-kit";
 import { Link, useLocation } from "wouter";
-import { useServerAuth } from "@/hooks/use-persistent-auth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated: serverAuth, profile: serverProfile } = useServerAuth();
-  const { isAuthenticated: kitAuth } = useProfile();
+  const { isAuthenticated, profile } = usePersistentAuth();
   const [location] = useLocation();
-  const queryClient = useQueryClient();
-  
-  // Use server auth state if available
-  const isAuthenticated = serverAuth || kitAuth;
-  const profile = serverProfile;
   
   const isAdmin = profile?.fid === 2790; // Jean Hansen's FID
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/session'] });
-      window.location.reload(); // Full reload to clear AuthKit state
-    },
-  });
 
   const navItems = [
     { path: "/", label: "Pulses", showWhen: "member" },

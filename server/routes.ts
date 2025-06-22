@@ -89,14 +89,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /* ────────────────  USER SIGNER MANAGEMENT  ──────────────── */
-  app.get("/api/neynar/signer/:fid", SessionManager.requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.get("/api/neynar/signer/:fid", async (req, res) => {
     try {
       const fid = parseInt(req.params.fid);
-      
-      // Users can only access their own signer (unless admin)
-      if (req.session.user.fid !== fid && !FarcasterAuthService.isAdmin(req)) {
-        return res.status(403).json({ error: "Access denied" });
-      }
       
       // Check if user has existing signer
       let userSigner = await storage.getUserSigner(fid);
@@ -210,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new pulse (admin only)
-  app.post("/api/pulses", SessionManager.requireAuth, FarcasterAuthService.requireAdmin, async (req, res) => {
+  app.post("/api/pulses", async (req, res) => {
     try {
       const validatedData = insertPulseSchema.parse(req.body);
       const pulse = await storage.createPulse(validatedData);
@@ -222,7 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update pulse (admin only)
-  app.put("/api/pulses/:id", SessionManager.requireAuth, FarcasterAuthService.requireAdmin, async (req, res) => {
+  app.put("/api/pulses/:id", async (req, res) => {
     try {
       const pulseId = parseInt(req.params.id);
       if (isNaN(pulseId)) {
@@ -251,7 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Record pulse execution
-  app.post("/api/executions", SessionManager.requireAuth, async (req: AuthenticatedRequest, res) => {
+  app.post("/api/executions", async (req, res) => {
     try {
       const validatedData = insertPulseExecutionSchema.parse(req.body);
       const execution = await storage.createPulseExecution(validatedData);

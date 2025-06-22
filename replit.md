@@ -189,6 +189,7 @@ The application follows a monorepo structure with clear separation between clien
   - Separated pulse list into "Upcoming" and "Previous" sections with optimized ordering:
     * Upcoming: ordered by date ascending (next pulse first)
     * Previous: ordered by date descending (most recent completed pulse first)
+  - Improved spacing and centered active pulse section for better visual hierarchy
 
 ## User Preferences
 

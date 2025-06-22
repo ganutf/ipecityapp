@@ -145,7 +145,7 @@ export default function FarcasterEmbed() {
     <div className="w-full max-w-4xl mx-auto">
       {/* Active Pulse Section */}
       {activePulse ? (
-        <div className="mb-8">
+        <div className="mb-12 flex justify-center">
           <PostTool
             pulse={activePulse}
             member={memberCheck?.member}
@@ -153,8 +153,8 @@ export default function FarcasterEmbed() {
           />
         </div>
       ) : (
-        <div className="mb-8">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+        <div className="mb-12 flex justify-center">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center max-w-lg">
             <h2 className="text-lg font-semibold text-gray-700 mb-2">
               No Active Pulse Today
             </h2>

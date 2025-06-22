@@ -411,12 +411,8 @@ function PostTool({
   });
 
   async function handleCheck() {
-    if (!pulse.farcasterUrl || !viewerFid) {
-      console.log("Missing data for handleCheck:", { url: pulse.farcasterUrl, fid: viewerFid });
-      return;
-    }
+    if (!pulse.farcasterUrl || !viewerFid) return;
     
-    console.log("Starting handleCheck for:", pulse.farcasterUrl);
     setChecking(true);
     setError(null);
 
@@ -431,7 +427,6 @@ function PostTool({
       }
 
       const { cast } = await res.json();
-      console.log("Cast data received:", cast);
       setCastData(cast);
 
       const regularRecast = !!cast.viewer_context?.recasted;
@@ -561,8 +556,6 @@ function PostTool({
       handleCheck();
     }
   }, [pulse.farcasterUrl, viewerFid]);
-
-  console.log("PostTool render - checking:", checking, "castData:", !!castData, "error:", error);
 
   return (
     <div className="w-full max-w-lg bg-white shadow p-6 rounded-xl">

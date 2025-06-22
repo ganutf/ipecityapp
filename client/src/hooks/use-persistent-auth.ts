@@ -1,68 +1,61 @@
-import { useEffect, useState } from 'react';
-import { useProfile } from '@farcaster/auth-kit';
+import { useEffect, useRef } from "react";
+import { useProfile, useSignInMessage } from "@farcaster/auth-kit";
+import { AppClient } from "@farcaster/auth-kit/client";
+import { useAuthStore } from "@farcaster/auth-kit";
 
-interface StoredAuthData {
-  profile: any;
-  isAuthenticated: boolean;
-  timestamp: number;
+const STORAGE_KEY = "ipe.auth";
+
+export function PersistLogin() {
+  /* ----------  A.  WRITE to localStorage right after first login ---------- */
+  const { isAuthenticated } = useProfile();
+  const { message, signature } = useSignInMessage();
+
+  useEffect(() => {
+    if (isAuthenticated && message && signature) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ message, signature })
+      );
+    }
+  }, [isAuthenticated, message, signature]);
+
+  /* ----------  B.  READ & VERIFY once on first paint ---------------------- */
+  const setAuthState = useAuthStore((s) => s.setAuthState);
+  const once = useRef(false);
+
+  useEffect(() => {
+    if (once.current) return;          // guards React-StrictMode double-mount
+    once.current = true;
+
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (!cached) return;
+
+    (async () => {
+      try {
+        const { message, signature } = JSON.parse(cached);
+        const appClient = new AppClient({ relay: "https://relay.farcaster.xyz" });
+
+        const { success, fid } = await appClient.verifySignInMessage({
+          message,
+          signature,
+          nonce : JSON.parse(message).nonce,
+          domain: window.location.hostname,
+          acceptAuthAddress: true
+        });
+
+        success
+          ? setAuthState({ fid, message, signature })   // <- re-hydrate!
+          : localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    })();
+  }, [setAuthState]);
+
+  return null; // this component renders nothing
 }
 
-const AUTH_STORAGE_KEY = 'farcaster_auth_data';
-const AUTH_EXPIRY_HOURS = 24;
-
+/* Helper hook your pages can import */
 export function usePersistentAuth() {
-  const { isAuthenticated, profile } = useProfile();
-  const [isLoading, setIsLoading] = useState(true);
-  const [restoredAuth, setRestoredAuth] = useState<StoredAuthData | null>(null);
-
-  // Save auth data to localStorage when authenticated
-  useEffect(() => {
-    if (isAuthenticated && profile) {
-      const authData: StoredAuthData = {
-        profile,
-        isAuthenticated: true,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
-      setRestoredAuth(authData);
-    }
-  }, [isAuthenticated, profile]);
-
-  // Restore auth data on app load
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        const authData: StoredAuthData = JSON.parse(stored);
-        const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
-        
-        if (!isExpired) {
-          setRestoredAuth(authData);
-        } else {
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to restore auth data:', error);
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Clear stored data when logged out
-  useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      setRestoredAuth(null);
-    }
-  }, [isAuthenticated, isLoading]);
-
-  const effectiveAuth = {
-    isAuthenticated: isAuthenticated || (restoredAuth?.isAuthenticated && !isLoading),
-    profile: profile || restoredAuth?.profile,
-    isLoading
-  };
-
-  return effectiveAuth;
+  return useProfile(); // returns { isAuthenticated, profile, isLoading }
 }

@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, profile, isLoading } = usePersistentAuth();
+  const { isAuthenticated, profile } = usePersistentAuth();
   const [location] = useLocation();
   
   const isAdmin = profile?.username === "jeanhansen" || profile?.displayName?.toLowerCase().includes("jean hansen");

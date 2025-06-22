@@ -1,0 +1,152 @@
+### How to make **AuthKit** sessions survive a page-refresh
+
+*Practical checklist you can paste into Replit’s “TODO” side-panel or follow commit-by-commit.*
+
+---
+
+#### 1 Add the “session store” hook
+
+1. **Create** `src/hooks/usePersistentAuth.ts`.
+2. Paste the code below (it both **persists** and **restores** the login):
+
+```ts
+// src/hooks/use-persistent-auth.ts
+import { useEffect, useRef } from "react";
+import { useProfile, useSignInMessage } from "@farcaster/auth-kit";
+import { AppClient } from "@farcaster/auth-kit/client";
+import { useAuthStore } from "@farcaster/auth-kit";
+
+const STORAGE_KEY = "ipe.auth";
+
+export function PersistLogin() {
+  /* ----------  A.  WRITE to localStorage right after first login ---------- */
+  const { isAuthenticated } = useProfile();
+  const { message, signature } = useSignInMessage();
+
+  useEffect(() => {
+    if (isAuthenticated && message && signature) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ message, signature })
+      );
+    }
+  }, [isAuthenticated, message, signature]);
+
+  /* ----------  B.  READ & VERIFY once on first paint ---------------------- */
+  const setAuthState = useAuthStore((s) => s.setAuthState);
+  const once = useRef(false);
+
+  useEffect(() => {
+    if (once.current) return;          // guards React-StrictMode double-mount
+    once.current = true;
+
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (!cached) return;
+
+    (async () => {
+      try {
+        const { message, signature } = JSON.parse(cached);
+        const appClient = new AppClient({ relay: "https://relay.farcaster.xyz" });
+
+        const { success, fid } = await appClient.verifySignInMessage({
+          message,
+          signature,
+          nonce : JSON.parse(message).nonce,
+          domain: window.location.hostname,
+          acceptAuthAddress: true
+        });
+
+        success
+          ? setAuthState({ fid, message, signature })   // <- re-hydrate!
+          : localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    })();
+  }, [setAuthState]);
+
+  return null; // this component renders nothing
+}
+
+/* Helper hook your pages can import */
+export function usePersistentAuth() {
+  return useProfile(); // returns { isAuthenticated, profile, isLoading }
+}
+```
+
+---
+
+#### 2 Mount the hook early in the tree
+
+1. Open `src/App.tsx`.
+2. **Move** the `<PersistLogin />` directly under `<AuthKitProvider>`
+   (before any component that calls `usePersistentAuth()`).
+
+```tsx
+function App() {
+  return (
+    <AuthKitProvider config={config}>
+      <PersistLogin />            {/* hydrate BEFORE the rest mounts */}
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AuthKitProvider>
+  );
+}
+```
+
+---
+
+#### 3 (If you use writes) persist the `signer_uuid` as well
+
+1. Where you create the signer (your `/api/neynar/signer/:fid` query) add:
+
+```ts
+if (data.signer_uuid) {
+  localStorage.setItem("ipe.signer", data.signer_uuid);
+}
+```
+
+2. Right after restoring the auth (inside the `PersistLogin` hook) add:
+
+```ts
+const savedSigner = localStorage.getItem("ipe.signer");
+if (savedSigner) {
+  import("@neynar/nodejs-sdk").then(({ setSignerUuid }) => {
+    setSignerUuid(savedSigner);
+  });
+}
+```
+
+---
+
+#### 4 Clean up your page components
+
+* Replace every `useProfile()` with `usePersistentAuth()` (so they use the hydrated state).
+* Remove the old “please sign in” fallback that triggered because `isAuthenticated` was always `false` after refresh.
+
+---
+
+#### 5 Test in Replit
+
+1. **Run → “Preview”**.
+2. Sign in once, then hit **Ctrl + R** inside the preview tab.
+   *Expected*: still signed in, queries fire, UI shows the current Pulse.
+3. **Stop & start** the repl container; open the URL again → still signed in.
+
+---
+
+#### 6 Optional hardening before production
+
+| Concern         | Quick fix                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| Shared computer | Add a “Remember me” checkbox; only call `localStorage.setItem` when it’s checked.              |
+| Expiry          | Read `expirationTime` from the SIWF message and automatically delete the cache when it’s past. |
+| XSS             | In production prefer an HttpOnly cookie (Next-Auth, `iron-session`) instead of `localStorage`. |
+
+---
+
+You now have fully persistent Farcaster auth in a plain React/Vite app on Replit. Drop the notes above into your next commit message or the built-in “TODOs” and you’re set. **vlw!**

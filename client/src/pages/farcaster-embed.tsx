@@ -1,37 +1,36 @@
 import { useState, useEffect } from "react";
-import { SignInButton } from "@farcaster/auth-kit";
+import { SignInButton, useProfile } from "@farcaster/auth-kit";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 export default function FarcasterEmbed() {
-  const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
+  const { isAuthenticated, profile } = useProfile();
   const viewerFid = profile?.fid;
 
   // Check if user is approved member
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && !authLoading,
+    enabled: isAuthenticated && !!viewerFid,
   });
 
   // Auto-create signer when user first signs in
   const { data: signerData } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
+    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember,
     staleTime: Infinity, // Don't refetch signer once created
   });
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: isAuthenticated && memberCheck?.isMember && !authLoading,
+    enabled: isAuthenticated && memberCheck?.isMember,
   });
 
   // Get user's executions
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
+    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember,
   });
 
   // Helper functions for date comparison

@@ -136,10 +136,13 @@ export default function FarcasterEmbed() {
     );
   }
 
-  if (pulsesLoading || executionsLoading) {
+  if (authLoading || (isAuthenticated && hasValidFid && (!memberCheck || !memberCheck.member || pulsesLoading || executionsLoading || signerData === undefined))) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className="max-w-2xl mx-auto p-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Loading pulse data...</p>
+        </div>
       </div>
     );
   }

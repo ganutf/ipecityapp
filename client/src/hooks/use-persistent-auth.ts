@@ -82,7 +82,8 @@ export function usePersistentAuth() {
     restoredProfile: !!restoredProfile,
     isInitialized,
     finalAuth: isAuthenticated,
-    profileFid: profile?.fid
+    profileFid: profile?.fid,
+    profileName: profile?.displayName || profile?.username
   });
 
   return {

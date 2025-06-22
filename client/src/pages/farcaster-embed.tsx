@@ -159,7 +159,7 @@ export default function FarcasterEmbed() {
           </div>
           <PostTool
             pulse={activePulse}
-            member={memberCheck.member}
+            member={memberCheck?.member}
             signerUuid={signerUuid}
           />
         </div>

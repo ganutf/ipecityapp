@@ -101,11 +101,28 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   };
                   console.log('🧪 Manual test auth:', testData);
                   localStorage.setItem('farcaster_auth_data', JSON.stringify(testData));
+                  console.log('🧪 Saved to localStorage, reloading...');
                   window.location.reload();
                 }}
                 className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
               >
                 Test
+              </button>
+              <button
+                onClick={() => {
+                  const stored = localStorage.getItem('farcaster_auth_data');
+                  console.log('🔍 Direct localStorage check:', stored);
+                  console.log('🔍 All localStorage keys:', Object.keys(localStorage));
+                  if (stored) {
+                    const parsed = JSON.parse(stored);
+                    console.log('📋 Parsed data:', parsed);
+                  } else {
+                    console.log('❌ No data found in localStorage');
+                  }
+                }}
+                className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+              >
+                Check
               </button>
             </div>
           )}

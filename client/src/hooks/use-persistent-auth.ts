@@ -20,10 +20,15 @@ export function usePersistentAuth() {
 
   // Initialize and check localStorage immediately on mount
   useEffect(() => {
+    console.log('🚀 Running localStorage restoration effect');
     const restoreAuth = () => {
       try {
         const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-        console.log('🔍 Checking localStorage on mount:', stored);
+        console.log('🔍 Checking localStorage on mount:', stored ? 'HAS DATA' : 'NULL');
+        console.log('🔍 AUTH_STORAGE_KEY:', AUTH_STORAGE_KEY);
+        if (stored) {
+          console.log('📄 Raw localStorage data:', stored);
+        }
         
         if (stored) {
           const authData = JSON.parse(stored);
@@ -62,8 +67,9 @@ export function usePersistentAuth() {
     setIsInitialized(true);
   }, []);
 
-  // Save to localStorage when AuthKit authentication succeeds
+  // Save to localStorage when AuthKit authentication succeeds  
   useEffect(() => {
+    console.log('🎯 AuthKit effect running');
     console.log('🎯 AuthKit state changed:', { kitAuth, kitProfile: !!kitProfile, fid: kitProfile?.fid });
     
     if (kitAuth && kitProfile?.fid) {

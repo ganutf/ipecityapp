@@ -1,78 +1,72 @@
 import { useState, useEffect } from "react";
-import { SignInButton } from "@farcaster/auth-kit";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { SignInButton } from "@farcaster/auth-kit";
 
+const SIGNER_KEY = "ipe.signer"; // localStorage slot for signer_uuid
+
+/* ------------------------------------------------------------------ */
+/*  ⬇ Main page component                                             */
+/* ------------------------------------------------------------------ */
 export default function FarcasterEmbed() {
   const { isAuthenticated, profile } = usePersistentAuth();
   const viewerFid = profile?.fid;
 
-  // Check if user is approved member
+  /* -- membership --------------------------------------------------- */
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
     enabled: Boolean(isAuthenticated && viewerFid),
   });
 
-  // Auto-create signer when user first signs in
+  /* -- signer creation / retrieval ---------------------------------- */
   const { data: signerData } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled: Boolean(isAuthenticated && viewerFid && memberCheck?.isMember),
     staleTime: Infinity,
+    onSuccess(data) {
+      // ① persist for future page-loads
+      if (data?.signer_uuid) {
+        localStorage.setItem(SIGNER_KEY, data.signer_uuid);
+      }
+    },
   });
 
-  // Get all pulses
+  // ② choose live signer (if query resolved) or cached one
+  const signerUuid =
+    signerData?.signer_uuid || localStorage.getItem(SIGNER_KEY) || null;
+
+  /* -- pulses & executions ------------------------------------------ */
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
     enabled: Boolean(isAuthenticated && memberCheck?.isMember),
   });
 
-  // Get user's executions
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
     enabled: Boolean(isAuthenticated && viewerFid && memberCheck?.isMember),
   });
 
-  // Helper functions for date comparison
-  const isToday = (date: string) => {
-    const today = new Date();
-    const pulseDate = new Date(date);
-    
-    // Normalize both dates to compare only the date part (YYYY-MM-DD)
-    const todayStr = today.toISOString().split('T')[0];
-    const pulseDateStr = pulseDate.toISOString().split('T')[0];
-    
-    return todayStr === pulseDateStr;
-  };
+  /* -- date helpers -------------------------------------------------- */
+  const isToday = (d: string) =>
+    new Date().toISOString().slice(0, 10) === new Date(d).toISOString().slice(0, 10);
 
-  const isPastDate = (date: string) => {
-    const today = new Date();
-    const pulseDate = new Date(date);
-    
-    // Normalize both dates to compare only the date part (YYYY-MM-DD)
-    const todayStr = today.toISOString().split('T')[0];
-    const pulseDateStr = pulseDate.toISOString().split('T')[0];
-    
-    return pulseDateStr < todayStr;
-  };
+  const isPastDate = (d: string) =>
+    new Date(d).toISOString().slice(0, 10) < new Date().toISOString().slice(0, 10);
 
   const getUserExecutionStatus = (pulseId: number) => {
     if (!executionsData?.executions) return { liked: false, recasted: false };
-    
-    const executions = executionsData.executions.filter(
-      (exec: any) => exec.pulseId === pulseId
-    );
-    
+    const ex = executionsData.executions.filter((e: any) => e.pulseId === pulseId);
     return {
-      liked: executions.some((exec: any) => exec.actionType === 'like'),
-      recasted: executions.some((exec: any) => exec.actionType === 'recast'),
+      liked: ex.some((e: any) => e.actionType === "like"),
+      recasted: ex.some((e: any) => e.actionType === "recast"),
     };
   };
 
-  // Find today's active pulse
-  const activePulse = pulsesData?.pulses?.find((pulse: Pulse) => isToday(pulse.date));
+  const activePulse = pulsesData?.pulses?.find((p: Pulse) => isToday(p.date));
 
+  /* -- guards -------------------------------------------------------- */
   if (!isAuthenticated) {
     return (
       <div className="text-center py-12">
@@ -87,7 +81,6 @@ export default function FarcasterEmbed() {
       <div className="text-center py-12">
         <p className="text-gray-600 mb-4">Access Restricted</p>
         <p className="text-gray-500">This application is for approved community members only.</p>
-        <p className="text-gray-500 mt-2">Contact an administrator if you believe this is an error.</p>
       </div>
     );
   }
@@ -100,16 +93,24 @@ export default function FarcasterEmbed() {
     );
   }
 
+  /* ------------------------------------------------------------------ */
+  /*  Render                                                           */
+  /* ------------------------------------------------------------------ */
   return (
     <div className="w-full max-w-4xl mx-auto">
-      {/* Active Pulse Section */}
+      {/* Active Pulse */}
       {activePulse ? (
         <div className="mb-8">
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <h2 className="text-xl font-bold text-green-800 mb-2">🎯 Today's Active Pulse</h2>
             <p className="text-green-700">Complete your engagement task for today!</p>
           </div>
-          <PostTool pulse={activePulse} member={memberCheck.member} />
+          {/* pass signerUuid so PostTool can write immediately */}
+          <PostTool
+            pulse={activePulse}
+            member={memberCheck.member}
+            signerUuid={signerUuid}
+          />
         </div>
       ) : (
         <div className="mb-8">
@@ -120,104 +121,72 @@ export default function FarcasterEmbed() {
         </div>
       )}
 
-      {/* All Pulses History */}
+      {/* History */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-xl font-semibold mb-1">Community Pulses</h3>
-          <p className="text-gray-600">Track your engagement with all community activities</p>
         </div>
 
         <div className="p-6">
-          {pulsesData?.pulses?.length > 0 ? (
+          {pulsesData?.pulses?.length ? (
             <div className="space-y-4">
               {pulsesData.pulses.map((pulse: Pulse) => {
-                const executionStatus = getUserExecutionStatus(pulse.id);
+                const status = getUserExecutionStatus(pulse.id);
                 const past = isPastDate(pulse.date);
                 const today = isToday(pulse.date);
-                
                 return (
-                  <div 
-                    key={pulse.id} 
+                  <div
+                    key={pulse.id}
                     className={`border rounded-lg p-4 ${
-                      today ? 'border-green-300 bg-green-50' : 
-                      past ? 'border-gray-200 bg-gray-50' : 
-                      'border-blue-200 bg-blue-50'
+                      today
+                        ? "border-green-300 bg-green-50"
+                        : past
+                        ? "border-gray-200 bg-gray-50"
+                        : "border-blue-200 bg-blue-50"
                     }`}
                   >
                     <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-1">{pulse.description}</h4>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {new Date(pulse.date + 'T00:00:00').toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
+                      <div>
+                        <h4 className="font-semibold">{pulse.description}</h4>
+                        <p className="text-sm text-gray-600 mb-1">
+                          {new Date(pulse.date).toLocaleDateString(undefined, {
+                            weekday: "long",
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
                           })}
                         </p>
-                        <a 
-                          href={pulse.farcasterUrl} 
-                          target="_blank" 
+                        <a
+                          href={pulse.farcasterUrl}
+                          target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:text-blue-800 break-all"
+                          className="text-xs text-blue-600 break-all"
                         >
                           {pulse.farcasterUrl}
                         </a>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-3 py-1 text-sm rounded-full font-medium ${
-                          today ? 'bg-green-100 text-green-800' :
-                          past ? 'bg-gray-100 text-gray-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {today ? 'Active Today' : past ? 'Completed' : 'Upcoming'}
-                        </span>
-                      </div>
+                      <span
+                        className={`px-3 py-1 text-sm rounded-full ${
+                          today
+                            ? "bg-green-100 text-green-800"
+                            : past
+                            ? "bg-gray-100 text-gray-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
+                      >
+                        {today ? "Active Today" : past ? "Completed" : "Upcoming"}
+                      </span>
                     </div>
 
-                    {/* Execution Status */}
                     {(past || today) && (
                       <div className="flex items-center space-x-6 text-sm">
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                            executionStatus.liked ? 'bg-red-500' : 'bg-gray-200 border-2 border-gray-300'
-                          }`}>
-                            {executionStatus.liked && (
-                              <span className="text-white text-xs font-bold">✓</span>
-                            )}
-                          </div>
-                          <span className={`font-medium ${
-                            executionStatus.liked ? 'text-red-600' : 'text-gray-500'
-                          }`}>
-                            {executionStatus.liked ? 'Liked' : 'Like pending'}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                            executionStatus.recasted ? 'bg-green-500' : 'bg-gray-200 border-2 border-gray-300'
-                          }`}>
-                            {executionStatus.recasted && (
-                              <span className="text-white text-xs font-bold">✓</span>
-                            )}
-                          </div>
-                          <span className={`font-medium ${
-                            executionStatus.recasted ? 'text-green-600' : 'text-gray-500'
-                          }`}>
-                            {executionStatus.recasted ? 'Recasted' : 'Recast pending'}
-                          </span>
-                        </div>
+                        <StatusDot ok={status.liked} label="Liked" color="red" />
+                        <StatusDot ok={status.recasted} label="Recasted" color="green" />
                         {today && (
-                          <span className="text-green-600 font-medium text-xs">
+                          <span className="text-xs text-green-600">
                             → Use embedded post above to interact
                           </span>
                         )}
-                      </div>
-                    )}
-
-                    {/* Future Pulse Info */}
-                    {!past && !today && (
-                      <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mt-2">
-                        This pulse will be available on {new Date(pulse.date + 'T00:00:00').toLocaleDateString()}.
                       </div>
                     )}
                   </div>
@@ -225,10 +194,7 @@ export default function FarcasterEmbed() {
               })}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg mb-2">No pulses available yet</p>
-              <p className="text-gray-400">Check back soon for community engagement activities!</p>
-            </div>
+            <div className="text-center py-12 text-gray-500">No pulses available yet</div>
           )}
         </div>
       </div>
@@ -236,291 +202,173 @@ export default function FarcasterEmbed() {
   );
 }
 
-function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
+/* ------------------------------------------------------------------ */
+/*  ⬇ Helper for status indicators                                    */
+/* ------------------------------------------------------------------ */
+function StatusDot({
+  ok,
+  label,
+  color,
+}: {
+  ok: boolean;
+  label: string;
+  color: "red" | "green";
+}) {
+  return (
+    <div className="flex items-center space-x-2">
+      <div
+        className={`w-4 h-4 rounded-full flex items-center justify-center ${
+          ok ? `bg-${color}-500` : "bg-gray-200 border-2 border-gray-300"
+        }`}
+      >
+        {ok && <span className="text-white text-xs font-bold">✓</span>}
+      </div>
+      <span className={`font-medium ${ok ? `text-${color}-600` : "text-gray-500"}`}>
+        {ok ? label : `${label} pending`}
+      </span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  ⬇ PostTool – receives signerUuid                                  */
+/* ------------------------------------------------------------------ */
+function PostTool({
+  pulse,
+  member,
+  signerUuid,
+}: {
+  pulse: Pulse;
+  member: Member;
+  signerUuid: string | null;
+}) {
   const { profile } = usePersistentAuth();
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
 
-  const [url, setUrl] = useState("");
-  const [checking, setChecking] = useState(false);
-  const [stats, setStats] = useState<null | { 
-    liked: boolean; 
-    recasted: boolean; 
-    quotedRecast: boolean; 
-    regularRecast: boolean; 
-  }>(null);
   const [castData, setCastData] = useState<any>(null);
+  const [stats, setStats] = useState<{
+    liked: boolean;
+    recasted: boolean;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<{ like: boolean; recast: boolean }>({ like: false, recast: false });
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState<{ like: boolean; recast: boolean }>({
+    like: false,
+    recast: false,
+  });
 
-  async function checkQuoteRecast(castHash: string, viewerFid: number): Promise<boolean> {
+  /* -- fetch viewer status ----------------------------------------- */
+  async function refreshStatus() {
+    if (!pulse.farcasterUrl || !viewerFid) return;
     try {
-      const quoteRes = await fetch(`/api/neynar/cast/${castHash}/quotes/${viewerFid}`);
-      if (quoteRes.ok) {
-        const { hasQuoted } = await quoteRes.json();
-        console.log("Quote status:", hasQuoted);
-        return hasQuoted;
-      }
-    } catch (error) {
-      console.error("Error checking quote status:", error);
+      const res = await fetch(
+        `/api/neynar/cast/${encodeURIComponent(pulse.farcasterUrl)}/${viewerFid}?type=url`,
+      );
+      const { cast } = await res.json();
+      setCastData(cast);
+      setStats({
+        liked: !!cast.viewer_context?.liked,
+        recasted:
+          !!cast.viewer_context?.recasted ||
+          (await fetch(`/api/neynar/cast/${cast.hash}/quotes/${viewerFid}`)).ok,
+      });
+    } catch (e: any) {
+      setError(e.message ?? "Failed to fetch cast");
     }
-    return false;
   }
 
-  // Record pulse execution
-  const recordExecutionMutation = useMutation({
-    mutationFn: async ({ actionType }: { actionType: 'like' | 'recast' }) => {
-      const response = await fetch('/api/executions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+  useEffect(() => {
+    refreshStatus();
+  }, [pulse.farcasterUrl]);
+
+  /* -- record execution -------------------------------------------- */
+  const record = useMutation({
+    mutationFn: (actionType: "like" | "recast") =>
+      fetch("/api/executions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pulseId: pulse.id,
           memberFarcasterFid: viewerFid,
-          actionType
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to record execution');
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/executions/${viewerFid}`] });
-    },
+          actionType,
+        }),
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: [`/api/executions/${viewerFid}`] }),
   });
 
-  async function handleCheck() {
-    if (!pulse.farcasterUrl || !viewerFid) return;
-    setChecking(true);
-    setError(null);
-
+  /* -- like / recast ------------------------------------------------ */
+  async function act(type: "like" | "recast") {
+    if (!castData || !viewerFid || !signerUuid) return;
+    setLoading((p) => ({ ...p, [type]: true }));
     try {
-      const res = await fetch(`/api/neynar/cast/${encodeURIComponent(pulse.farcasterUrl)}/${viewerFid}?type=url`);
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `API Error: ${res.status}`);
+      if (type === "like") {
+        await fetch("/api/neynar/reaction", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            signer_uuid: signerUuid,
+            reaction_type: "like",
+            target: castData.hash,
+          }),
+        });
+      } else {
+        await fetch("/api/neynar/cast", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            signer_uuid: signerUuid,
+            text: "",
+            embeds: [
+              {
+                cast_id: { hash: castData.hash, fid: castData.author.fid },
+              },
+            ],
+          }),
+        });
       }
-      
-      const { cast } = await res.json();
-      setCastData(cast);
-      
-      const regularRecast = !!cast.viewer_context?.recasted;
-      const liked = !!cast.viewer_context?.liked;
-      const quotedRecast = cast.hash ? await checkQuoteRecast(cast.hash, viewerFid) : false;
-      
-      setStats({
-        liked: liked,
-        recasted: regularRecast || quotedRecast,
-        regularRecast: regularRecast,
-        quotedRecast: quotedRecast,
-      });
-    } catch (error) {
-      console.error("Error fetching cast:", error);
-      setError(`Failed to fetch cast: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      record.mutate(type);
+      await refreshStatus();
+    } catch (e: any) {
+      setError(e.message ?? `Failed to ${type}`);
     } finally {
-      setChecking(false);
+      setLoading((p) => ({ ...p, [type]: false }));
     }
   }
 
-  async function handleReaction(type: 'like' | 'recast') {
-    if (!castData || !viewerFid || !signerData?.signer_uuid) return;
-
-    setActionLoading(prev => ({ ...prev, [type]: true }));
-    setError(null);
-
-    try {
-      const signer_uuid = signerData.signer_uuid;
-
-      if (type === 'like') {
-        const response = await fetch('/api/neynar/reaction', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            signer_uuid: signer_uuid,
-            reaction_type: 'like',
-            target: castData.hash
-          })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(`Like failed: ${errorData.message || 'API Error'}`);
-        }
-      } 
-      else if (type === 'recast') {
-        const response = await fetch('/api/neynar/cast', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            signer_uuid: signer_uuid,
-            text: '',
-            embeds: [{
-              cast_id: {
-                hash: castData.hash,
-                fid: castData.author.fid
-              }
-            }]
-          })
-        });
-
-        const responseData = await response.json().catch(() => ({}));
-        
-        if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            throw new Error('API authentication failed. Please check your Neynar API key configuration.');
-          }
-          throw new Error(`Recast failed: ${responseData.message || 'API Error'}`);
-        }
-      }
-
-      if (type === 'like') {
-        setStats(prev => prev ? {
-          ...prev,
-          liked: !prev.liked
-        } : null);
-      } else if (type === 'recast') {
-        setStats(prev => prev ? {
-          ...prev,
-          recasted: true,
-          regularRecast: true,
-          quotedRecast: prev.quotedRecast
-        } : null);
-      }
-
-      // Record the execution in database
-      recordExecutionMutation.mutate({ actionType: type });
-
-      setSuccessMessage(`Post ${type}d successfully!`);
-      setTimeout(() => setSuccessMessage(null), 3000);
-      setTimeout(() => handleCheck(), 2000);
-      
-    } catch (error) {
-      console.error(`Error ${type}ing cast:`, error);
-      setError(`Failed to ${type} post: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setActionLoading(prev => ({ ...prev, [type]: false }));
-    }
+  if (error) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-700 text-sm">{error}</p>
+      </div>
+    );
   }
 
-  // Auto-load the current pulse
-  useEffect(() => {
-    if (pulse.farcasterUrl) {
-      setUrl(pulse.farcasterUrl);
-      handleCheck();
-    }
-  }, [pulse.farcasterUrl]);
+  if (!castData || !stats) return null;
 
   return (
     <div className="w-full max-w-lg bg-white shadow p-6 rounded-xl">
-      <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-        <h3 className="font-medium text-purple-800 mb-1">Today's Pulse</h3>
-        <p className="text-sm text-purple-700">{pulse.description}</p>
-        <p className="text-xs text-purple-600 mt-1">
-          Date: {new Date(pulse.date + 'T00:00:00').toLocaleDateString()}
-        </p>
+      <p className="mb-4">{castData.text}</p>
+      <div className="flex space-x-2">
+        <button
+          disabled={loading.like}
+          onClick={() => act("like")}
+          className={`px-3 py-1 rounded text-sm ${
+            stats.liked ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          {loading.like ? "⏳" : "❤️"} {stats.liked ? "Liked" : "Like"}
+        </button>
+        <button
+          disabled={loading.recast}
+          onClick={() => act("recast")}
+          className={`px-3 py-1 rounded text-sm ${
+            stats.recasted ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          {loading.recast ? "⏳" : "🔄"} {stats.recasted ? "Recasted" : "Recast"}
+        </button>
       </div>
-
-      <input
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        placeholder="Farcaster URL will load automatically"
-        className="w-full border rounded-lg px-3 py-2 mb-4"
-        readOnly
-      />
-
-      {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-700">{successMessage}</p>
-        </div>
-      )}
-
-
-
-      {castData && (
-        <div className="mt-6 p-4 border border-gray-200 rounded-lg">
-          <div className="flex items-center space-x-3 mb-3">
-            <img 
-              src={castData.author.pfp_url} 
-              alt={castData.author.display_name}
-              className="w-10 h-10 rounded-full"
-            />
-            <div>
-              <p className="font-semibold">{castData.author.display_name}</p>
-              <p className="text-sm text-gray-500">@{castData.author.username}</p>
-            </div>
-          </div>
-          <p className="text-gray-800 mb-4">{castData.text}</p>
-          
-          {castData.embeds && castData.embeds.length > 0 && (
-            <div className="mb-4">
-              {castData.embeds.map((embed: any, index: number) => (
-                embed.url && embed.url.match(/\.(jpeg|jpg|gif|png)$/i) && (
-                  <img 
-                    key={index}
-                    src={embed.url} 
-                    alt="Embedded content"
-                    className="max-w-full h-auto rounded-lg mb-2"
-                  />
-                )
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
-              <span>❤️ {castData.reactions.likes_count}</span>
-              <span>🔄 {castData.reactions.recasts_count}</span>
-              <span>💬 {castData.replies.count}</span>
-            </div>
-            
-            <div className="flex space-x-2">
-              <button
-                onClick={() => handleReaction('like')}
-                disabled={actionLoading.like}
-                className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  stats?.liked 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-red-50'
-                }`}
-              >
-                {actionLoading.like ? '⏳' : '❤️'} {
-                  actionLoading.like ? 'Liking...' : 
-                  stats?.liked ? 'Liked' : 'Like'
-                }
-              </button>
-              <button
-                onClick={() => handleReaction('recast')}
-                disabled={actionLoading.recast}
-                className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  stats?.recasted 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-green-50'
-                }`}
-              >
-                {actionLoading.recast ? '⏳' : '🔄'} {
-                  actionLoading.recast ? 'Recasting...' : 
-                  stats?.recasted ? 'Recasted' : 'Recast'
-                }
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

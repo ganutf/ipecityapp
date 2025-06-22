@@ -32,7 +32,7 @@ function Router() {
 function App() {
   return (
     <AuthKitProvider config={config}>
-      <PersistLogin />
+      <PersistLogin />          {/*  ← right here, before anything else */}
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
@@ -42,5 +42,6 @@ function App() {
     </AuthKitProvider>
   );
 }
+
 
 export default App;

@@ -58,14 +58,34 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </nav>
           )}
           
-          {isAuthenticated && profile?.pfpUrl ? (
-            <SignInButton>
-              <img 
-                src={profile.pfpUrl} 
-                alt={profile.displayName || profile.username || 'Profile'}
-                className="w-10 h-10 rounded-full border-2 border-purple-600 cursor-pointer hover:border-purple-700 transition-colors"
-              />
-            </SignInButton>
+          {isAuthenticated ? (
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">
+                Hello, {profile?.displayName || profile?.username}
+              </span>
+              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                {profile?.pfpUrl ? (
+                  <img 
+                    src={profile.pfpUrl} 
+                    alt="Profile" 
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-purple-600 text-sm font-semibold">
+                    {(profile?.displayName || profile?.username || '?')[0].toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('farcaster_auth_data');
+                  window.location.reload();
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
           ) : (
             <SignInButton />
           )}

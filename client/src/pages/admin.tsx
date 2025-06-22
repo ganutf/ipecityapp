@@ -9,12 +9,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
 
 export default function AdminPage() {
-  const { isAuthenticated, profile } = useProfile();
+  const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Check if user is admin (FID 2790)
   const isAdmin = profile?.fid === 2790;
+
+  // Show loading while auth is initializing
+  if (isLoading) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const [newPulse, setNewPulse] = useState({
     farcasterUrl: "",

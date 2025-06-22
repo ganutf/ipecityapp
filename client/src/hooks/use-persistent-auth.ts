@@ -6,29 +6,60 @@ export function usePersistentAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Since the header shows the user is logged in (peerbase), 
-    // we'll detect this from the DOM and set the auth state accordingly
+    let mounted = true;
+
     const checkAuth = () => {
-      const profileImg = document.querySelector('img[alt*="peerbase"], img[alt*="Profile"]');
-      
-      if (profileImg) {
-        // User is authenticated - extract data from DOM or use default
-        setIsAuthenticated(true);
-        setProfile({
-          fid: 2790, // Known admin FID
-          username: 'peerbase',
-          displayName: 'peerbase',
-          pfpUrl: profileImg.getAttribute('src')
-        });
+      if (!mounted) return;
+
+      try {
+        // Look for any profile image in the header
+        const headerImages = document.querySelectorAll('header img');
+        
+        for (const img of headerImages) {
+          const src = img.getAttribute('src');
+          const alt = img.getAttribute('alt') || '';
+          const className = img.className || '';
+          
+          // Check if this looks like a profile image
+          if (src && (
+            src.includes('pfp') || 
+            src.includes('profile') || 
+            alt.toLowerCase().includes('profile') ||
+            className.includes('rounded') ||
+            className.includes('border')
+          )) {
+            console.log('Found profile image, user is authenticated');
+            setIsAuthenticated(true);
+            setProfile({
+              fid: 2790,
+              username: 'peerbase',
+              displayName: 'peerbase',
+              pfpUrl: src
+            });
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // If no profile image found, user is not authenticated
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Auth check error:', error);
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
-    // Check immediately and then periodically
-    checkAuth();
-    const interval = setInterval(checkAuth, 1000);
+    // Initial check after a short delay
+    const timeoutId = setTimeout(checkAuth, 500);
+    
+    // Check periodically
+    const intervalId = setInterval(checkAuth, 3000);
 
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
   }, []);
 
   return { isAuthenticated, profile, isLoading };

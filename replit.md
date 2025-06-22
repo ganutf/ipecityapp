@@ -178,6 +178,7 @@ The application follows a monorepo structure with clear separation between clien
   - Added loading indicator during post fetch operations
   - Removed FID display from navigation menu for cleaner user interface
   - All post interactions (like, recast, quote detection) working properly
+  - Changed pulse ordering to chronological (ascending by date) instead of newest first
 
 ## User Preferences
 

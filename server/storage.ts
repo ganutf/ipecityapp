@@ -83,7 +83,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllPulses(): Promise<Pulse[]> {
-    return await db.select().from(pulses).orderBy(desc(pulses.date));
+    return await db.select().from(pulses).orderBy(pulses.date);
   }
 
   async createPulse(pulse: InsertPulse): Promise<Pulse> {

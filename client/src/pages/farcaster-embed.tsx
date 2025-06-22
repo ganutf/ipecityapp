@@ -1,36 +1,37 @@
 import { useState, useEffect } from "react";
-import { SignInButton, useProfile } from "@farcaster/auth-kit";
+import { SignInButton } from "@farcaster/auth-kit";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 export default function FarcasterEmbed() {
-  const { isAuthenticated, profile } = useProfile();
+  const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const viewerFid = profile?.fid;
 
   // Check if user is approved member
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid,
+    enabled: isAuthenticated && !!viewerFid && !isLoading,
   });
 
   // Auto-create signer when user first signs in
   const { data: signerData } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember,
+    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember && !isLoading,
     staleTime: Infinity, // Don't refetch signer once created
   });
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: isAuthenticated && memberCheck?.isMember,
+    enabled: isAuthenticated && memberCheck?.isMember && !isLoading,
   });
 
   // Get user's executions
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember,
+    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember && !isLoading,
   });
 
   // Helper functions for date comparison
@@ -71,6 +72,14 @@ export default function FarcasterEmbed() {
 
   // Find today's active pulse
   const activePulse = pulsesData?.pulses?.find((pulse: Pulse) => isToday(pulse.date));
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -236,7 +245,7 @@ export default function FarcasterEmbed() {
 }
 
 function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
-  const { profile } = useProfile();
+  const { profile } = usePersistentAuth();
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
 

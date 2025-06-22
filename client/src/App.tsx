@@ -8,13 +8,13 @@ import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
+import { PersistLogin } from "@/hooks/use-persistent-auth";
 
 const config = {
   relay: "https://relay.farcaster.xyz",
   rpcUrl: "https://mainnet.optimism.io",
   domain: window.location.hostname,
   siweUri: window.location.origin,
-  storage: localStorage,
 };
 
 function Router() {
@@ -34,6 +34,7 @@ function App() {
     <AuthKitProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
+          <PersistLogin />
           <Toaster />
           <Router />
         </TooltipProvider>

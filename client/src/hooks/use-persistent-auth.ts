@@ -110,13 +110,15 @@ export function usePersistentAuth() {
 
   // Determine effective authentication state
   const isAuthenticated = kitAuth || (!!restoredProfile && isInitialized);
-  const profile = kitProfile || restoredProfile;
+  // Use restoredProfile if kitProfile is empty or if we have valid restored data
+  const profile = (kitProfile && kitProfile.fid) ? kitProfile : restoredProfile;
   
   // Debug profile assignment
   console.log('🎭 Profile Assignment:', {
-    kitProfile: kitProfile,
-    restoredProfile: restoredProfile,
-    finalProfile: profile
+    kitProfileHasFid: !!(kitProfile && kitProfile.fid),
+    restoredProfileHasFid: !!(restoredProfile && restoredProfile.fid),
+    finalProfileHasFid: !!(profile && profile.fid),
+    finalProfileName: profile?.displayName || profile?.username
   });
 
   // Debug logging

@@ -17,13 +17,13 @@ export default function FarcasterEmbed() {
   /* -- membership --------------------------------------------------- */
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
-    enabled: !!(isAuthenticated && viewerFid),
+    enabled: Boolean(isAuthenticated && viewerFid),
   });
 
   /* -- signer creation / retrieval ---------------------------------- */
   const { data: signerData } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
-    enabled: !!(isAuthenticated && viewerFid && memberCheck?.isMember),
+    enabled: Boolean(isAuthenticated && viewerFid && memberCheck?.isMember),
     staleTime: Infinity,
   });
 
@@ -41,12 +41,12 @@ export default function FarcasterEmbed() {
   /* -- pulses & executions ------------------------------------------ */
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: !!(isAuthenticated && memberCheck?.isMember),
+    enabled: Boolean(isAuthenticated && memberCheck?.isMember),
   });
 
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
-    enabled: !!(isAuthenticated && viewerFid && memberCheck?.isMember),
+    enabled: Boolean(isAuthenticated && viewerFid && memberCheck?.isMember),
   });
 
   /* -- date helpers -------------------------------------------------- */

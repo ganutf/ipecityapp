@@ -33,13 +33,13 @@ export default function AdminPage() {
   // Fetch all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: !!(isAuthenticated && isAdmin),
+    enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Fetch all members
   const { data: membersData, isLoading: membersLoading } = useQuery({
     queryKey: ["/api/members"],
-    enabled: !!(isAuthenticated && isAdmin),
+    enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Create pulse mutation

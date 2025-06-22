@@ -159,6 +159,11 @@ The application follows a monorepo structure with clear separation between clien
   - Changed admin check from username to FID-based authentication
   - Admin access now verified by FID 2790 instead of username comparison
   - More reliable authentication that doesn't depend on username changes
+- June 22, 2025. Session Persistence Fix:
+  - Fixed duplicate AuthKitProvider configuration causing logout on refresh
+  - Consolidated auth configuration to single provider in App.tsx
+  - Updated domain and siweUri to use dynamic window.location values
+  - Sessions now persist properly across page refreshes
 
 ## User Preferences
 

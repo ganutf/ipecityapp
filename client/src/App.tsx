@@ -10,9 +10,10 @@ import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 
 const config = {
+  relay: "https://relay.farcaster.xyz",
   rpcUrl: "https://mainnet.optimism.io",
-  domain: "ipecity-pulse.replit.app",
-  siweUri: "https://ipecity-pulse.replit.app/login",
+  domain: window.location.hostname,
+  siweUri: window.location.origin,
 };
 
 function Router() {

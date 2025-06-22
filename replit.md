@@ -186,6 +186,9 @@ The application follows a monorepo structure with clear separation between clien
   - Applied consistent color scheme: green for today, blue for future, gray for past pulses
   - Changed pulse ordering back to newest first (descending by date) for better user experience
   - Unified active pulse interface into single green frame combining header and post content
+  - Separated pulse list into "Upcoming" and "Previous" sections with optimized ordering:
+    * Upcoming: ordered by date ascending (next pulse first)
+    * Previous: ordered by date descending (most recent completed pulse first)
 
 ## User Preferences
 

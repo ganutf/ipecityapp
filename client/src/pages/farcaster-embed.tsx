@@ -165,24 +165,31 @@ export default function FarcasterEmbed() {
         </div>
       )}
 
-      {/* All Pulses History */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-xl font-semibold mb-1">Community Pulses</h3>
-          <p className="text-gray-600">
-            Track your engagement with all community activities
-          </p>
-        </div>
+      {/* Upcoming and Previous Pulses */}
+      {pulsesData?.pulses?.length > 0 && (
+        <div className="space-y-8">
+          {/* Upcoming Pulses */}
+          {(() => {
+            const upcomingPulses = pulsesData.pulses
+              .filter((pulse: Pulse) => !isToday(pulse.date) && !isPastDate(pulse.date))
+              .sort((a: Pulse, b: Pulse) => a.date.localeCompare(b.date)); // Ascending for upcoming
+            
+            return upcomingPulses.length > 0 && (
+              <div className="bg-white rounded-lg shadow">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-xl font-semibold mb-1 text-blue-700">Upcoming Pulses</h3>
+                  <p className="text-gray-600">
+                    Future community engagement activities
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {upcomingPulses.map((pulse: Pulse) => {
+                      const executionStatus = getUserExecutionStatus(pulse.id);
+                      const past = false;
+                      const today = false;
 
-        <div className="p-6">
-          {pulsesData?.pulses?.length > 0 ? (
-            <div className="space-y-4">
-              {pulsesData.pulses.filter((pulse: Pulse) => !isToday(pulse.date)).map((pulse: Pulse) => {
-                const executionStatus = getUserExecutionStatus(pulse.id);
-                const past = isPastDate(pulse.date);
-                const today = false; // Already filtered out
-
-                return (
+                      return (
                   <div
                     key={pulse.id}
                     className={`border rounded-lg p-4 ${
@@ -299,8 +306,7 @@ export default function FarcasterEmbed() {
                       </div>
                     )}
 
-                    {/* Future Pulse Info */}
-                    {!past && !today && (
+                      {/* Future Pulse Info */}
                       <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mt-2">
                         This pulse will be available on{" "}
                         {new Date(
@@ -308,23 +314,128 @@ export default function FarcasterEmbed() {
                         ).toLocaleDateString()}
                         .
                       </div>
-                    )}
+                    </div>
+                  );
+                })}
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg mb-2">
-                No pulses available yet
-              </p>
-              <p className="text-gray-400">
-                Check back soon for community engagement activities!
-              </p>
-            </div>
-          )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Previous Pulses */}
+          {(() => {
+            const previousPulses = pulsesData.pulses
+              .filter((pulse: Pulse) => !isToday(pulse.date) && isPastDate(pulse.date))
+              .sort((a: Pulse, b: Pulse) => b.date.localeCompare(a.date)); // Descending for previous
+            
+            return previousPulses.length > 0 && (
+              <div className="bg-white rounded-lg shadow">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-xl font-semibold mb-1 text-gray-700">Previous Pulses</h3>
+                  <p className="text-gray-600">
+                    Past community engagement activities
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {previousPulses.map((pulse: Pulse) => {
+                      const executionStatus = getUserExecutionStatus(pulse.id);
+                      const past = true;
+                      const today = false;
+
+                      return (
+                        <div
+                          key={pulse.id}
+                          className="border rounded-lg p-4 border-gray-200 bg-gray-50"
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 mb-1">
+                                {pulse.description}
+                              </h4>
+                              <p className="text-sm font-medium mb-2 text-gray-500">
+                                {new Date(
+                                  pulse.date + "T00:00:00",
+                                ).toLocaleDateString("en-US", {
+                                  weekday: "long",
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                })}
+                              </p>
+                              <a
+                                href={pulse.farcasterUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 text-sm break-all"
+                              >
+                                {pulse.farcasterUrl}
+                              </a>
+                            </div>
+                          </div>
+
+                          {/* Execution Status for Past Pulses */}
+                          <div className="flex items-center space-x-6 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <div
+                                className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                  executionStatus.liked
+                                    ? "bg-red-500"
+                                    : "bg-gray-200 border-2 border-gray-300"
+                                }`}
+                              >
+                                {executionStatus.liked && (
+                                  <span className="text-white text-xs font-bold">
+                                    ✓
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                className={`font-medium ${
+                                  executionStatus.liked
+                                    ? "text-red-600"
+                                    : "text-gray-400"
+                                }`}
+                              >
+                                {executionStatus.liked ? "Liked" : "Not liked"}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div
+                                className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                  executionStatus.recasted
+                                    ? "bg-green-500"
+                                    : "bg-gray-200 border-2 border-gray-300"
+                                }`}
+                              >
+                                {executionStatus.recasted && (
+                                  <span className="text-white text-xs font-bold">
+                                    ✓
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                className={`font-medium ${
+                                  executionStatus.recasted
+                                    ? "text-green-600"
+                                    : "text-gray-400"
+                                }`}
+                              >
+                                {executionStatus.recasted ? "Recasted" : "Not recasted"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
-      </div>
+      )}
     </div>
   );
 }

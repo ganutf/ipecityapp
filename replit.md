@@ -184,6 +184,7 @@ The application follows a monorepo structure with clear separation between clien
   - Follows Farcaster app best practices for persistent authentication
   - Eliminated database errors caused by undefined FID values
   - Removed duplicate sign-in buttons for cleaner UI (header button only)
+  - Fixed runtime error by updating PostTool component to use session persistence hook
 
 ## User Preferences
 

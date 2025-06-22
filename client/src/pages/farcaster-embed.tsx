@@ -245,7 +245,7 @@ export default function FarcasterEmbed() {
 }
 
 function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
-  const { profile } = useProfile();
+  const { profile } = useSessionPersistence();
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
 

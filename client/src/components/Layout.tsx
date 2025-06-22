@@ -1,8 +1,9 @@
-import { SignInButton, useProfile } from "@farcaster/auth-kit";
+import { SignInButton } from "@farcaster/auth-kit";
 import { Link, useLocation } from "wouter";
+import { useSessionPersistence } from "@/hooks/use-session-persistence";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, profile } = useProfile();
+  const { isAuthenticated, profile } = useSessionPersistence();
   const [location] = useLocation();
   
   const isAdmin = profile?.username === "jeanhansen" || profile?.displayName?.toLowerCase().includes("jean hansen");

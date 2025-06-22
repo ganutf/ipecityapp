@@ -177,10 +177,11 @@ The application follows a monorepo structure with clear separation between clien
   - Signer generation happens automatically on first sign-in (improved UX)
   - Individual signers stored and reused for subsequent actions
   - Proactive signer setup prevents delays during post interactions
-- June 22, 2025. Session Persistence Fix:
-  - Fixed session persistence by configuring AuthKit with localStorage storage
-  - Removed custom persistent auth implementation in favor of built-in AuthKit storage
+- June 22, 2025. Session Persistence Implementation:
+  - Implemented proper session persistence using SIWF message + signature caching
+  - Added session restoration with signature verification on app load
   - Sessions now properly maintain authentication state across page refreshes
+  - Follows Farcaster app best practices for persistent authentication
   - Eliminated database errors caused by undefined FID values
 
 ## User Preferences

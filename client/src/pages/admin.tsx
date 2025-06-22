@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useProfile } from "@farcaster/auth-kit";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Pulse, Member } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -7,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
+import { useSessionPersistence } from "@/hooks/use-session-persistence";
 
 export default function AdminPage() {
-  const { isAuthenticated, profile } = useProfile();
+  const { isAuthenticated, profile } = useSessionPersistence();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 

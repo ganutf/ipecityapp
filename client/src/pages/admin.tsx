@@ -285,30 +285,100 @@ export default function AdminPage() {
             <p>Loading pulses...</p>
           ) : (
             <div className="space-y-4">
-              {pulsesData?.pulses?.map((pulse: Pulse) => (
-                <div key={pulse.id} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{pulse.description}</h3>
-                      <p className="text-sm text-gray-600">Date: {pulse.date}</p>
-                      <p className="text-sm text-gray-600">
-                        URL: <a href={pulse.farcasterUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                          {pulse.farcasterUrl}
-                        </a>
-                      </p>
-                    </div>
-                    <span className={`px-2 py-1 text-xs rounded ${
-                      new Date(pulse.date) < new Date() ? 'bg-gray-100 text-gray-800' :
-                      new Date(pulse.date).toDateString() === new Date().toDateString() ? 'bg-green-100 text-green-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {new Date(pulse.date) < new Date() ? 'Past' :
-                       new Date(pulse.date).toDateString() === new Date().toDateString() ? 'Today' :
-                       'Future'}
-                    </span>
+              {pulsesData?.pulses?.map((pulse: Pulse) => {
+                const isEditing = editingPulse === pulse.id;
+                const isFuture = isFuturePulse(pulse);
+                
+                return (
+                  <div key={pulse.id} className="border rounded-lg p-4">
+                    {isEditing ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                          <Textarea
+                            value={editData.description}
+                            onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
+                            rows={2}
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <Input
+                              type="date"
+                              value={editData.date}
+                              onChange={(e) => setEditData(prev => ({ ...prev, date: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Farcaster URL</label>
+                            <Input
+                              type="url"
+                              value={editData.farcasterUrl}
+                              onChange={(e) => setEditData(prev => ({ ...prev, farcasterUrl: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleEditSave} disabled={updatePulseMutation.isPending} size="sm">
+                            <Save className="w-4 h-4 mr-1" />
+                            Save
+                          </Button>
+                          <Button onClick={handleEditCancel} variant="outline" size="sm">
+                            <X className="w-4 h-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{pulse.description}</h4>
+                            <p className="text-sm text-gray-600">
+                              Date: {new Date(pulse.date + 'T00:00:00').toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              URL: <a href={pulse.farcasterUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                {pulse.farcasterUrl}
+                              </a>
+                            </p>
+                            <p className="text-xs text-gray-500">Created by: {pulse.createdBy}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 text-xs rounded ${
+                              !isFuture && new Date(pulse.date + 'T00:00:00').toDateString() !== new Date().toDateString() ? 'bg-gray-100 text-gray-800' :
+                              new Date(pulse.date + 'T00:00:00').toDateString() === new Date().toDateString() ? 'bg-green-100 text-green-800' :
+                              'bg-blue-100 text-blue-800'
+                            }`}>
+                              {!isFuture && new Date(pulse.date + 'T00:00:00').toDateString() !== new Date().toDateString() ? 'Past' :
+                               new Date(pulse.date + 'T00:00:00').toDateString() === new Date().toDateString() ? 'Today' :
+                               'Future'}
+                            </span>
+                            {isFuture && (
+                              <Button onClick={() => handleEditStart(pulse)} variant="outline" size="sm">
+                                <Pencil className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {!isFuture && new Date(pulse.date + 'T00:00:00').toDateString() !== new Date().toDateString() && (
+                          <p className="text-xs text-orange-600 mt-1">Past pulse - editing disabled</p>
+                        )}
+                        {new Date(pulse.date + 'T00:00:00').toDateString() === new Date().toDateString() && (
+                          <p className="text-xs text-orange-600 mt-1">Current pulse - editing disabled</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {pulsesData?.pulses?.length === 0 && (
                 <p className="text-gray-500 text-center py-8">No pulses created yet.</p>
               )}

@@ -172,6 +172,12 @@ The application follows a monorepo structure with clear separation between clien
   - Completely rebuilt corrupted admin.tsx file with proper hook ordering
   - All useState, useQuery, and useMutation calls now placed before conditional returns
   - Admin dashboard functional with pulse management and member import capabilities
+- June 22, 2025. Post Loading and UI Cleanup:
+  - Fixed Farcaster post content loading in active pulse section
+  - Removed conflicting useProfile import and fixed useEffect dependencies
+  - Added loading indicator during post fetch operations
+  - Removed FID display from navigation menu for cleaner user interface
+  - All post interactions (like, recast, quote detection) working properly
 
 ## User Preferences
 

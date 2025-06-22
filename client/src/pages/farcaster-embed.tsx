@@ -326,12 +326,18 @@ function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
     setError(null);
 
     try {
-      const signerUuid = import.meta.env.VITE_NEYNAR_SIGNER_UUID;
+      // Check if user has a signer - this is the main issue
+      const signerResponse = await fetch(`/api/neynar/signer/${viewerFid}`);
       
-      if (!signerUuid) {
-        setError('Signer UUID not configured. Please check your environment variables.');
-        return;
+      if (!signerResponse.ok) {
+        if (signerResponse.status === 404) {
+          setError('You need to set up your Farcaster signer to perform actions. Please contact admin for setup.');
+          return;
+        }
+        throw new Error('Failed to check signer status');
       }
+      
+      const { signer_uuid } = await signerResponse.json();
 
       if (type === 'like') {
         const response = await fetch('/api/neynar/reaction', {
@@ -340,7 +346,7 @@ function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            signer_uuid: signerUuid,
+            signer_uuid: signer_uuid,
             reaction_type: 'like',
             target: castData.hash
           })
@@ -358,7 +364,7 @@ function PostTool({ pulse, member }: { pulse: Pulse; member: Member }) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            signer_uuid: signerUuid,
+            signer_uuid: signer_uuid,
             text: '',
             embeds: [{
               cast_id: {

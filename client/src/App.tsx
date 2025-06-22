@@ -14,6 +14,8 @@ const config = {
   rpcUrl: "https://mainnet.optimism.io",
   domain: window.location.hostname,
   siweUri: window.location.origin,
+  // Enable session persistence
+  storage: 'localStorage' as const,
 };
 
 function Router() {

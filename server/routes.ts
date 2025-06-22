@@ -88,6 +88,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /* ────────────────  USER SIGNER MANAGEMENT  ──────────────── */
+  app.get("/api/neynar/signer/:fid", async (req, res) => {
+    try {
+      const fid = parseInt(req.params.fid);
+      
+      // For now, return the global signer for admin user (FID 2790)
+      // Other users will get a 404 until they have individual signers set up
+      if (fid === 2790) {
+        const signer_uuid = process.env.VITE_NEYNAR_SIGNER_UUID;
+        if (!signer_uuid) {
+          return res.status(500).json({ error: 'Signer not configured' });
+        }
+        return res.json({ signer_uuid });
+      }
+      
+      // TODO: Implement individual signer storage and retrieval
+      // For now, other users cannot perform actions
+      res.status(404).json({ 
+        error: 'Signer not found for this user. Individual signers not yet implemented.' 
+      });
+    } catch (e) {
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
   /* ───────────────  DID viewer QUOTE-RECAST this cast?  ─────────────── */
   app.get("/api/neynar/cast/:hash/quotes/:viewerFid", async (req, res) => {
     try {

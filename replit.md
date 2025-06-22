@@ -164,6 +164,12 @@ The application follows a monorepo structure with clear separation between clien
   - Consolidated auth configuration to single provider in App.tsx
   - Updated domain and siweUri to use dynamic window.location values
   - Sessions now persist properly across page refreshes
+- June 22, 2025. Signer Management Implementation:
+  - Added per-user signer check to prevent shared signer issues
+  - Currently only admin (FID 2790) can perform like/recast actions
+  - Other users get clear error message about signer setup needed
+  - Foundation laid for individual signer implementation
+  - Fixed authentication session persistence with localStorage storage
 
 ## User Preferences
 

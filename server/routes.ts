@@ -92,9 +92,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/neynar/signer/:fid", async (req, res) => {
     try {
       const fid = parseInt(req.params.fid);
-      if (isNaN(fid)) {
-        return res.status(400).json({ error: 'Invalid farcaster FID provided' });
-      }
       
       // Check if user has existing signer
       let userSigner = await storage.getUserSigner(fid);
@@ -240,9 +237,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/executions/:farcasterFid", async (req, res) => {
     try {
       const farcasterFid = parseInt(req.params.farcasterFid);
-      if (isNaN(farcasterFid)) {
-        return res.status(400).json({ error: 'Invalid farcaster FID provided' });
-      }
       const executions = await storage.getMemberExecutions(farcasterFid);
       res.json({ executions });
     } catch (err: any) {
@@ -300,9 +294,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/members/check/:farcasterFid", async (req, res) => {
     try {
       const farcasterFid = parseInt(req.params.farcasterFid);
-      if (isNaN(farcasterFid)) {
-        return res.status(400).json({ error: 'Invalid farcaster FID provided' });
-      }
       const member = await storage.getMember(farcasterFid);
       res.json({ 
         isMember: !!member,

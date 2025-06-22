@@ -1,66 +1,68 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useProfile } from '@farcaster/auth-kit';
+
+interface StoredAuthData {
+  profile: any;
+  isAuthenticated: boolean;
+  timestamp: number;
+}
+
+const AUTH_STORAGE_KEY = 'farcaster_auth_data';
+const AUTH_EXPIRY_HOURS = 24;
 
 export function usePersistentAuth() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [profile, setProfile] = useState<any>(null);
+  const { isAuthenticated, profile } = useProfile();
   const [isLoading, setIsLoading] = useState(true);
+  const [restoredAuth, setRestoredAuth] = useState<StoredAuthData | null>(null);
 
+  // Save auth data to localStorage when authenticated
   useEffect(() => {
-    let mounted = true;
+    if (isAuthenticated && profile) {
+      const authData: StoredAuthData = {
+        profile,
+        isAuthenticated: true,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+      setRestoredAuth(authData);
+    }
+  }, [isAuthenticated, profile]);
 
-    const checkAuth = () => {
-      if (!mounted) return;
-
-      try {
-        // Look for any profile image in the header
-        const headerImages = document.querySelectorAll('header img');
+  // Restore auth data on app load
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (stored) {
+        const authData: StoredAuthData = JSON.parse(stored);
+        const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
         
-        for (const img of headerImages) {
-          const src = img.getAttribute('src');
-          const alt = img.getAttribute('alt') || '';
-          const className = img.className || '';
-          
-          // Check if this looks like a profile image
-          if (src && (
-            src.includes('pfp') || 
-            src.includes('profile') || 
-            alt.toLowerCase().includes('profile') ||
-            className.includes('rounded') ||
-            className.includes('border')
-          )) {
-            console.log('Found profile image, user is authenticated');
-            setIsAuthenticated(true);
-            setProfile({
-              fid: 2790,
-              username: 'peerbase',
-              displayName: 'peerbase',
-              pfpUrl: src
-            });
-            setIsLoading(false);
-            return;
-          }
+        if (!isExpired) {
+          setRestoredAuth(authData);
+        } else {
+          localStorage.removeItem(AUTH_STORAGE_KEY);
         }
-
-        // If no profile image found, user is not authenticated
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Auth check error:', error);
-        setIsLoading(false);
       }
-    };
-
-    // Initial check after a short delay
-    const timeoutId = setTimeout(checkAuth, 500);
-    
-    // Check periodically
-    const intervalId = setInterval(checkAuth, 3000);
-
-    return () => {
-      mounted = false;
-      clearTimeout(timeoutId);
-      clearInterval(intervalId);
-    };
+    } catch (error) {
+      console.error('Failed to restore auth data:', error);
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  return { isAuthenticated, profile, isLoading };
+  // Clear stored data when logged out
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      setRestoredAuth(null);
+    }
+  }, [isAuthenticated, isLoading]);
+
+  const effectiveAuth = {
+    isAuthenticated: isAuthenticated || (restoredAuth?.isAuthenticated && !isLoading),
+    profile: profile || restoredAuth?.profile,
+    isLoading
+  };
+
+  return effectiveAuth;
 }

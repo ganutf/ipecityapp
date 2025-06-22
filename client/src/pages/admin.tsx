@@ -246,9 +246,18 @@ export default function AdminPage() {
               {pulsesData?.pulses?.map((pulse: Pulse) => {
                 const isEditing = editingPulse === pulse.id;
                 const canEdit = isFuturePulse(pulse);
+                const today = new Date().toISOString().split('T')[0];
+                const isPast = pulse.date < today;
+                const isToday = pulse.date === today;
                 
                 return (
-                  <div key={pulse.id} className="border rounded-lg p-4">
+                  <div key={pulse.id} className={`border rounded-lg p-4 ${
+                    isToday
+                      ? "border-green-300 bg-green-50"
+                      : isPast
+                        ? "border-gray-200 bg-gray-50"
+                        : "border-blue-200 bg-blue-50"
+                  }`}>
                     {isEditing ? (
                       <div className="space-y-3">
                         <Input
@@ -291,12 +300,20 @@ export default function AdminPage() {
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
-                            <span className="font-medium">Date: {pulse.date}</span>
-                            {canEdit && (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                Editable
-                              </span>
-                            )}
+                            <span className={`font-medium ${
+                              isToday
+                                ? "text-green-700"
+                                : isPast
+                                  ? "text-gray-600"
+                                  : "text-blue-700"
+                            }`}>
+                              Date: {new Date(pulse.date + "T00:00:00").toLocaleDateString("en-US", {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </span>
                           </div>
                           <p className="text-gray-600 mb-2">{pulse.description}</p>
                           <p className="text-sm text-gray-500 break-all">{pulse.farcasterUrl}</p>

@@ -179,6 +179,11 @@ The application follows a monorepo structure with clear separation between clien
   - Removed FID display from navigation menu for cleaner user interface
   - All post interactions (like, recast, quote detection) working properly
   - Changed pulse ordering to chronological (ascending by date) instead of newest first
+- June 22, 2025. Interface Improvements:
+  - Removed today's active pulse from the pulse history list (only shows in top section)
+  - Enhanced date highlighting in pulse list with color coding
+  - Removed "Editable" labels from admin page and implemented color-coded status system
+  - Applied consistent color scheme: green for today, blue for future, gray for past pulses
 
 ## User Preferences
 

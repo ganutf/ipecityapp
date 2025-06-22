@@ -185,10 +185,10 @@ export default function FarcasterEmbed() {
         <div className="p-6">
           {pulsesData?.pulses?.length > 0 ? (
             <div className="space-y-4">
-              {pulsesData.pulses.map((pulse: Pulse) => {
+              {pulsesData.pulses.filter((pulse: Pulse) => !isToday(pulse.date)).map((pulse: Pulse) => {
                 const executionStatus = getUserExecutionStatus(pulse.id);
                 const past = isPastDate(pulse.date);
-                const today = isToday(pulse.date);
+                const today = false; // Already filtered out
 
                 return (
                   <div
@@ -206,7 +206,9 @@ export default function FarcasterEmbed() {
                         <h4 className="font-semibold text-gray-900 mb-1">
                           {pulse.description}
                         </h4>
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className={`text-sm font-medium mb-2 ${
+                          past ? "text-gray-500" : "text-blue-700"
+                        }`}>
                           {new Date(
                             pulse.date + "T00:00:00",
                           ).toLocaleDateString("en-US", {

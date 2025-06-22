@@ -1,0 +1,114 @@
+Im using siwf but when I refresh the page, i get logged out.EditThis is a common issue with SIWF implementations. The problem is that SIWF authentication state isn't being persisted across page refreshes. Here are the solutions:
+Frontend Persistence
+Store Auth State in localStorage/sessionStorage
+javascript// After successful SIWF authentication
+const authData = {
+  fid: user.fid,
+  username: user.username,
+  pfpUrl: user.pfpUrl,
+  token: jwtToken, // if using JWT
+  timestamp: Date.now()
+};
+
+localStorage.setItem('farcaster_auth', JSON.stringify(authData));
+React Context with Persistence
+javascriptconst AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check for stored auth on app load
+    const storedAuth = localStorage.getItem('farcaster_auth');
+    if (storedAuth) {
+      const authData = JSON.parse(storedAuth);
+      // Verify token is still valid
+      if (authData.timestamp + (7 * 24 * 60 * 60 * 1000) > Date.now()) {
+        setUser(authData);
+      } else {
+        localStorage.removeItem('farcaster_auth');
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  const login = (userData) => {
+    setUser(userData);
+    localStorage.setItem('farcaster_auth', JSON.stringify(userData));
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('farcaster_auth');
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+Backend Session Management
+Issue JWT After SIWF Verification
+javascript// After verifying SIWF signature
+app.post('/auth/siwf', async (req, res) => {
+  const { message, signature, nonce } = req.body;
+  
+  // Verify SIWF signature
+  const isValid = await verifySIWFSignature(message, signature);
+  
+  if (isValid) {
+    const token = jwt.sign(
+      { fid: user.fid, username: user.username },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.json({ token, user });
+  }
+});
+Verify Token on Protected Routes
+javascriptconst authenticateToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+  
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+};
+Complete Flow Example
+javascript// In your main App component
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+// Protected Route component
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <Navigate to="/login" />;
+  
+  return children;
+};
+Common Gotchas
+
+Token Expiration: Set reasonable expiry times and handle refresh
+Security: Don't store sensitive data in localStorage on shared devices
+Cleanup: Clear auth state on logout
+Validation: Always verify tokens server-side, even if stored client-side
+
+The key is treating SIWF as the initial authentication step, then maintaining session state like any traditional web app. Most developers miss the persistence layer after the initial SIWF success.

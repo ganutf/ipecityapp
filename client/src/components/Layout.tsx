@@ -3,10 +3,22 @@ import { Link, useLocation } from "wouter";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, profile } = usePersistentAuth();
+  const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const [location] = useLocation();
   
   const isAdmin = profile?.fid === 2790; // Jean Hansen's FID
+  
+  // Don't render navigation until auth is determined
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const navItems = [
     { path: "/", label: "Pulses", showWhen: "member" },

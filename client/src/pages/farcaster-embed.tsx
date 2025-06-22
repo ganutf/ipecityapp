@@ -9,17 +9,17 @@ import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
 
 export default function FarcasterEmbed() {
-  const {
-    isAuthenticated,
-    profile,
-    isLoading: authLoading,
-  } = usePersistentAuth();
+  const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
   const viewerFid = profile?.fid;
+  const queryClient = useQueryClient();
+
+  // Only proceed with queries if we have a valid FID
+  const hasValidFid = !!viewerFid && typeof viewerFid === 'number' && !isNaN(viewerFid);
 
   // Check if user is approved member
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && !authLoading,
+    enabled: isAuthenticated && hasValidFid && !authLoading,
   });
 
   const { data: signerData } = useQuery({
@@ -46,8 +46,7 @@ export default function FarcasterEmbed() {
   // Get user's executions
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
-    enabled:
-      isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
+    enabled: isAuthenticated && hasValidFid && memberCheck?.isMember && !authLoading,
   });
 
   // Helper functions for date comparison
@@ -90,6 +89,18 @@ export default function FarcasterEmbed() {
   const activePulse = pulsesData?.pulses?.find((pulse: Pulse) =>
     isToday(pulse.date),
   );
+
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

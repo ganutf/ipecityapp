@@ -18,33 +18,38 @@ export function usePersistentAuth() {
   const [restoredProfile, setRestoredProfile] = useState<StoredAuthData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize and restore from localStorage once on mount
+  // Initialize and check localStorage immediately on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      console.log('Checking localStorage:', stored);
-      
-      if (stored) {
-        const authData = JSON.parse(stored);
-        const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
+    const restoreAuth = () => {
+      try {
+        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        console.log('🔍 Checking localStorage on mount:', stored);
         
-        console.log('Parsed auth data:', { authData, isExpired });
-        
-        if (!isExpired && authData.fid) {
-          console.log('Restoring profile from localStorage:', authData.fid);
-          setRestoredProfile(authData);
+        if (stored) {
+          const authData = JSON.parse(stored);
+          const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
+          
+          console.log('📋 Parsed auth data:', { fid: authData.fid, isExpired });
+          
+          if (!isExpired && authData.fid) {
+            console.log('✅ Restoring auth from localStorage:', authData.fid);
+            setRestoredProfile(authData);
+            return true;
+          } else {
+            console.log('❌ Auth data expired, removing');
+            localStorage.removeItem(AUTH_STORAGE_KEY);
+          }
         } else {
-          console.log('Auth data expired, removing');
-          localStorage.removeItem(AUTH_STORAGE_KEY);
+          console.log('🆕 No stored auth data found');
         }
-      } else {
-        console.log('No stored auth data found');
+      } catch (error) {
+        console.error('💥 Failed to restore auth data:', error);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
       }
-    } catch (error) {
-      console.error('Failed to restore auth data:', error);
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-    }
-    
+      return false;
+    };
+
+    restoreAuth();
     setIsInitialized(true);
   }, []);
 
@@ -60,24 +65,18 @@ export function usePersistentAuth() {
         timestamp: Date.now()
       };
       
-      console.log('Saving to localStorage:', authData);
+      console.log('💾 Saving auth to localStorage:', authData.fid);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
       setRestoredProfile(authData);
     }
   }, [kitAuth, kitProfile]);
-
-  // Don't clear localStorage on page refresh - only on explicit logout
-  useEffect(() => {
-    // Only clear if we explicitly detect a logout action
-    // We'll handle this in the logout button instead
-  }, []);
 
   // Determine effective authentication state
   const isAuthenticated = kitAuth || (!!restoredProfile && isInitialized);
   const profile = kitProfile || restoredProfile;
 
   // Debug logging
-  console.log('Auth Debug:', {
+  console.log('🔐 Auth State:', {
     kitAuth,
     kitProfile: !!kitProfile,
     restoredProfile: !!restoredProfile,
@@ -91,4 +90,12 @@ export function usePersistentAuth() {
     profile,
     isLoading: !isInitialized
   };
+}
+
+// Export logout function to be used in components
+export function logout() {
+  console.log('🚪 Explicit logout triggered');
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+  // Force a page reload to clear all state
+  window.location.href = window.location.origin;
 }

@@ -114,7 +114,7 @@ export default function FarcasterEmbed() {
   }
 
   // Debug member check
-  console.log('Member Check Debug:', {
+  console.log('👥 Member Check:', {
     isAuthenticated,
     hasValidFid,
     viewerFid,

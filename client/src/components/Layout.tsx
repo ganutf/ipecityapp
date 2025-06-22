@@ -1,6 +1,6 @@
 import { SignInButton } from "@farcaster/auth-kit";
 import { Link, useLocation } from "wouter";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { usePersistentAuth, logout } from "@/hooks/use-persistent-auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
@@ -77,12 +77,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
               <button
-                onClick={() => {
-                  console.log('Explicit logout clicked');
-                  localStorage.removeItem('farcaster_auth_data');
-                  // Also clear any AuthKit state
-                  window.location.href = '/';
-                }}
+                onClick={logout}
                 className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >
                 Logout

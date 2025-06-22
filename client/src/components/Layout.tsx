@@ -78,8 +78,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={() => {
+                  console.log('Explicit logout clicked');
                   localStorage.removeItem('farcaster_auth_data');
-                  window.location.reload();
+                  // Also clear any AuthKit state
+                  window.location.href = '/';
                 }}
                 className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >

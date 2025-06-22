@@ -113,7 +113,16 @@ export default function FarcasterEmbed() {
     );
   }
 
-  if (!memberCheck?.isMember && !memberCheck?.approved) {
+  // Debug member check
+  console.log('Member Check Debug:', {
+    isAuthenticated,
+    hasValidFid,
+    viewerFid,
+    memberCheck,
+    authLoading
+  });
+
+  if (isAuthenticated && hasValidFid && !authLoading && memberCheck && (!memberCheck?.isMember || !memberCheck?.approved)) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600 mb-4">Access Restricted</p>

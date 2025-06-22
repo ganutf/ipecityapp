@@ -20,20 +20,25 @@ export function usePersistentAuth() {
 
   // Initialize and restore from localStorage once on mount
   useEffect(() => {
-    let storedAuth: StoredAuthData | null = null;
-    
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      console.log('Checking localStorage:', stored);
+      
       if (stored) {
         const authData = JSON.parse(stored);
         const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
         
+        console.log('Parsed auth data:', { authData, isExpired });
+        
         if (!isExpired && authData.fid) {
-          storedAuth = authData;
+          console.log('Restoring profile from localStorage:', authData.fid);
           setRestoredProfile(authData);
         } else {
+          console.log('Auth data expired, removing');
           localStorage.removeItem(AUTH_STORAGE_KEY);
         }
+      } else {
+        console.log('No stored auth data found');
       }
     } catch (error) {
       console.error('Failed to restore auth data:', error);
@@ -55,26 +60,31 @@ export function usePersistentAuth() {
         timestamp: Date.now()
       };
       
+      console.log('Saving to localStorage:', authData);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
       setRestoredProfile(authData);
     }
   }, [kitAuth, kitProfile]);
 
-  // Handle logout - only clear if we know the user actively logged out
+  // Don't clear localStorage on page refresh - only on explicit logout
   useEffect(() => {
-    if (isInitialized && kitAuth === false && !kitProfile && restoredProfile) {
-      // Only clear if AuthKit was previously authenticated and now is not
-      const hasStoredData = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (hasStoredData) {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-        setRestoredProfile(null);
-      }
-    }
-  }, [kitAuth, kitProfile, isInitialized, restoredProfile]);
+    // Only clear if we explicitly detect a logout action
+    // We'll handle this in the logout button instead
+  }, []);
 
   // Determine effective authentication state
   const isAuthenticated = kitAuth || (!!restoredProfile && isInitialized);
   const profile = kitProfile || restoredProfile;
+
+  // Debug logging
+  console.log('Auth Debug:', {
+    kitAuth,
+    kitProfile: !!kitProfile,
+    restoredProfile: !!restoredProfile,
+    isInitialized,
+    finalAuth: isAuthenticated,
+    profileFid: profile?.fid
+  });
 
   return {
     isAuthenticated,

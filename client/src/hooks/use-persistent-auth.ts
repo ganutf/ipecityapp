@@ -10,33 +10,28 @@ interface StoredAuthData {
   timestamp: number;
 }
 
-interface AuthState {
-  isAuthenticated: boolean;
-  profile: StoredAuthData | null;
-  isLoading: boolean;
-}
-
 const AUTH_STORAGE_KEY = 'farcaster_auth_data';
 const AUTH_EXPIRY_HOURS = 24 * 7; // 7 days
 
-export function usePersistentAuth(): AuthState {
+export function usePersistentAuth() {
   const { isAuthenticated: kitAuth, profile: kitProfile } = useProfile();
-  const [storedAuth, setStoredAuth] = useState<StoredAuthData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [restoredProfile, setRestoredProfile] = useState<StoredAuthData | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Restore auth data from localStorage on app load
+  // Initialize and restore from localStorage once on mount
   useEffect(() => {
+    let storedAuth: StoredAuthData | null = null;
+    
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
-        const authData: StoredAuthData = JSON.parse(stored);
+        const authData = JSON.parse(stored);
         const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
         
         if (!isExpired && authData.fid) {
-          console.log('Restored auth from localStorage:', authData.fid);
-          setStoredAuth(authData);
+          storedAuth = authData;
+          setRestoredProfile(authData);
         } else {
-          console.log('Stored auth expired, clearing');
           localStorage.removeItem(AUTH_STORAGE_KEY);
         }
       }
@@ -45,11 +40,10 @@ export function usePersistentAuth(): AuthState {
       localStorage.removeItem(AUTH_STORAGE_KEY);
     }
     
-    // Always set loading false after checking storage
-    setIsLoading(false);
+    setIsInitialized(true);
   }, []);
 
-  // Save AuthKit data to localStorage when authenticated
+  // Save to localStorage when AuthKit authentication succeeds
   useEffect(() => {
     if (kitAuth && kitProfile?.fid) {
       const authData: StoredAuthData = {
@@ -61,27 +55,30 @@ export function usePersistentAuth(): AuthState {
         timestamp: Date.now()
       };
       
-      console.log('Saving auth to localStorage:', authData.fid);
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
-      setStoredAuth(authData);
+      setRestoredProfile(authData);
     }
   }, [kitAuth, kitProfile]);
 
-  // Clear stored data when AuthKit logs out
+  // Handle logout - only clear if we know the user actively logged out
   useEffect(() => {
-    if (kitAuth === false) {
-      console.log('AuthKit logged out, clearing localStorage');
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      setStoredAuth(null);
+    if (isInitialized && kitAuth === false && !kitProfile && restoredProfile) {
+      // Only clear if AuthKit was previously authenticated and now is not
+      const hasStoredData = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (hasStoredData) {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        setRestoredProfile(null);
+      }
     }
-  }, [kitAuth]);
+  }, [kitAuth, kitProfile, isInitialized, restoredProfile]);
 
-  // Determine effective auth state
-  const effectiveAuth = {
-    isAuthenticated: kitAuth || (!!storedAuth && !isLoading),
-    profile: kitProfile || storedAuth,
-    isLoading: isLoading
+  // Determine effective authentication state
+  const isAuthenticated = kitAuth || (!!restoredProfile && isInitialized);
+  const profile = kitProfile || restoredProfile;
+
+  return {
+    isAuthenticated,
+    profile,
+    isLoading: !isInitialized
   };
-
-  return effectiveAuth;
 }

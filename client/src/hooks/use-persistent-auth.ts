@@ -87,8 +87,22 @@ export function usePersistentAuth() {
         username: authData.username,
         displayName: authData.displayName
       });
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
-      setRestoredProfile(authData);
+      
+      try {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+        console.log('💾 Save successful');
+        
+        // Immediate verification
+        const verify = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (verify) {
+          console.log('✅ Verification successful');
+          setRestoredProfile(authData);
+        } else {
+          console.error('❌ Verification failed');
+        }
+      } catch (error) {
+        console.error('💥 localStorage save error:', error);
+      }
     }
   }, [kitAuth, kitProfile]);
 

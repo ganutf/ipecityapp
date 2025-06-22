@@ -91,18 +91,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <SignInButton />
               <button
                 onClick={() => {
-                  const testData = {
-                    fid: 2790,
-                    username: "jhansen",
-                    displayName: "Jean Hansen",
-                    pfpUrl: "",
-                    custodyAddress: "",
-                    timestamp: Date.now()
-                  };
-                  console.log('🧪 Manual test auth:', testData);
-                  localStorage.setItem('farcaster_auth_data', JSON.stringify(testData));
-                  console.log('🧪 Saved to localStorage, reloading...');
-                  window.location.reload();
+                  try {
+                    const testData = {
+                      fid: 2790,
+                      username: "jhansen",
+                      displayName: "Jean Hansen",
+                      pfpUrl: "",
+                      custodyAddress: "",
+                      timestamp: Date.now()
+                    };
+                    console.log('🧪 Manual test auth:', testData);
+                    console.log('🧪 Attempting to save to localStorage...');
+                    localStorage.setItem('farcaster_auth_data', JSON.stringify(testData));
+                    console.log('🧪 Save completed');
+                    
+                    // Immediately verify
+                    const verify = localStorage.getItem('farcaster_auth_data');
+                    console.log('🧪 Verification check:', verify ? 'SUCCESS' : 'FAILED');
+                    
+                    if (verify) {
+                      console.log('🧪 Reloading page...');
+                      window.location.reload();
+                    } else {
+                      console.error('❌ localStorage save failed!');
+                      alert('localStorage save failed - check console for details');
+                    }
+                  } catch (error) {
+                    console.error('💥 localStorage error:', error);
+                    alert('localStorage error: ' + error.message);
+                  }
                 }}
                 className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
               >

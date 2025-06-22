@@ -6,7 +6,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const [location] = useLocation();
   
-  const isAdmin = profile?.username === "jeanhansen" || profile?.displayName?.toLowerCase().includes("jean hansen");
+  const isAdmin = profile?.fid === 2790;
 
   const navItems = [
     { path: "/", label: "Pulses", showWhen: "member" },

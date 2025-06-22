@@ -64,6 +64,8 @@ export function usePersistentAuth() {
 
   // Save to localStorage when AuthKit authentication succeeds
   useEffect(() => {
+    console.log('🎯 AuthKit state changed:', { kitAuth, kitProfile: !!kitProfile, fid: kitProfile?.fid });
+    
     if (kitAuth && kitProfile?.fid) {
       const authData: StoredAuthData = {
         fid: kitProfile.fid,
@@ -74,7 +76,11 @@ export function usePersistentAuth() {
         timestamp: Date.now()
       };
       
-      console.log('💾 Saving auth to localStorage:', authData.fid);
+      console.log('💾 Saving auth to localStorage:', {
+        fid: authData.fid,
+        username: authData.username,
+        displayName: authData.displayName
+      });
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
       setRestoredProfile(authData);
     }
@@ -85,7 +91,7 @@ export function usePersistentAuth() {
   const profile = kitProfile || restoredProfile;
 
   // Debug logging
-  console.log('🔐 Auth State:', {
+  const debugInfo = {
     kitAuth,
     kitProfile: !!kitProfile,
     restoredProfile: !!restoredProfile,
@@ -93,7 +99,8 @@ export function usePersistentAuth() {
     finalAuth: isAuthenticated,
     profileFid: profile?.fid,
     profileName: profile?.displayName || profile?.username
-  });
+  };
+  console.log('🔐 Auth State:', debugInfo);
 
   return {
     isAuthenticated,

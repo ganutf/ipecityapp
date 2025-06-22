@@ -10,6 +10,13 @@ const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
 
 export default function FarcasterEmbed() {
   const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
+  
+  // Debug the profile data
+  console.log('📱 Page Profile:', { 
+    isAuthenticated, 
+    profileFid: profile?.fid, 
+    profileName: profile?.displayName || profile?.username 
+  });
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
 

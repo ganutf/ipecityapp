@@ -12,26 +12,26 @@ export default function FarcasterEmbed() {
   // Check if user is approved member
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && !authLoading,
+    enabled: Boolean(isAuthenticated && viewerFid && !authLoading),
   });
 
   // Auto-create signer when user first signs in
   const { data: signerData } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
+    enabled: Boolean(isAuthenticated && viewerFid && memberCheck?.isMember && !authLoading),
     staleTime: Infinity, // Don't refetch signer once created
   });
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: isAuthenticated && memberCheck?.isMember && !authLoading,
+    enabled: Boolean(isAuthenticated && memberCheck?.isMember && !authLoading),
   });
 
   // Get user's executions
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
-    enabled: isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
+    enabled: Boolean(isAuthenticated && viewerFid && memberCheck?.isMember && !authLoading),
   });
 
   // Helper functions for date comparison

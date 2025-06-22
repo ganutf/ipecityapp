@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useProfile } from '@farcaster/auth-kit';
+import { useEffect, useState } from "react";
+import { useProfile } from "@farcaster/auth-kit";
 
 interface StoredAuthData {
   profile: any;
@@ -7,7 +7,7 @@ interface StoredAuthData {
   timestamp: number;
 }
 
-const AUTH_STORAGE_KEY = 'farcaster_auth_data';
+const AUTH_STORAGE_KEY = "farcaster_auth_data";
 const AUTH_EXPIRY_HOURS = 24;
 
 export function usePersistentAuth() {
@@ -21,7 +21,7 @@ export function usePersistentAuth() {
       const authData: StoredAuthData = {
         profile,
         isAuthenticated: true,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
       setRestoredAuth(authData);
@@ -34,8 +34,9 @@ export function usePersistentAuth() {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
         const authData: StoredAuthData = JSON.parse(stored);
-        const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
-        
+        const isExpired =
+          Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
+
         if (!isExpired) {
           setRestoredAuth(authData);
         } else {
@@ -43,7 +44,7 @@ export function usePersistentAuth() {
         }
       }
     } catch (error) {
-      console.error('Failed to restore auth data:', error);
+      console.error("Failed to restore auth data:", error);
       localStorage.removeItem(AUTH_STORAGE_KEY);
     } finally {
       setIsLoading(false);
@@ -59,9 +60,10 @@ export function usePersistentAuth() {
   }, [isAuthenticated, isLoading]);
 
   const effectiveAuth = {
-    isAuthenticated: isAuthenticated || (restoredAuth?.isAuthenticated && !isLoading),
+    isAuthenticated:
+      isAuthenticated || (restoredAuth?.isAuthenticated && !isLoading),
     profile: profile || restoredAuth?.profile,
-    isLoading
+    isLoading,
   };
 
   return effectiveAuth;

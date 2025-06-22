@@ -1,61 +1,77 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useProfile, useSignInMessage } from "@farcaster/auth-kit";
-import { AppClient } from "@farcaster/auth-kit/client";
-import { useAuthStore } from "@farcaster/auth-kit";
 
 const STORAGE_KEY = "ipe.auth";
 
 export function PersistLogin() {
-  /* ----------  A.  WRITE to localStorage right after first login ---------- */
-  const { isAuthenticated } = useProfile();
+  const { isAuthenticated, profile } = useProfile();
   const { message, signature } = useSignInMessage();
 
+  // Store auth data when user signs in
   useEffect(() => {
-    if (isAuthenticated && message && signature) {
+    if (isAuthenticated && profile && message && signature) {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ message, signature })
+        JSON.stringify({ 
+          profile, 
+          message, 
+          signature,
+          timestamp: Date.now()
+        })
       );
     }
-  }, [isAuthenticated, message, signature]);
+  }, [isAuthenticated, profile, message, signature]);
 
-  /* ----------  B.  READ & VERIFY once on first paint ---------------------- */
-  const setAuthState = useAuthStore((s) => s.setAuthState);
-  const once = useRef(false);
-
-  useEffect(() => {
-    if (once.current) return;          // guards React-StrictMode double-mount
-    once.current = true;
-
-    const cached = localStorage.getItem(STORAGE_KEY);
-    if (!cached) return;
-
-    (async () => {
-      try {
-        const { message, signature } = JSON.parse(cached);
-        const appClient = new AppClient({ relay: "https://relay.farcaster.xyz" });
-
-        const { success, fid } = await appClient.verifySignInMessage({
-          message,
-          signature,
-          nonce : JSON.parse(message).nonce,
-          domain: window.location.hostname,
-          acceptAuthAddress: true
-        });
-
-        success
-          ? setAuthState({ fid, message, signature })   // <- re-hydrate!
-          : localStorage.removeItem(STORAGE_KEY);
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    })();
-  }, [setAuthState]);
-
-  return null; // this component renders nothing
+  return null;
 }
 
-/* Helper hook your pages can import */
+/* Enhanced hook with session restoration */
 export function usePersistentAuth() {
-  return useProfile(); // returns { isAuthenticated, profile, isLoading }
+  const { isAuthenticated, profile } = useProfile();
+  const [restoredProfile, setRestoredProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const once = useRef(false);
+
+  // Try to restore session on first load
+  useEffect(() => {
+    if (once.current) return;
+    once.current = true;
+
+    try {
+      const cached = localStorage.getItem(STORAGE_KEY);
+      if (cached) {
+        const { profile: cachedProfile, timestamp } = JSON.parse(cached);
+        const isExpired = Date.now() - timestamp > 24 * 60 * 60 * 1000; // 24 hours
+        
+        if (!isExpired && cachedProfile) {
+          setRestoredProfile(cachedProfile);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to restore session:', error);
+      localStorage.removeItem(STORAGE_KEY);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Clear cache when logged out
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      localStorage.removeItem(STORAGE_KEY);
+      setRestoredProfile(null);
+    }
+  }, [isAuthenticated, isLoading]);
+
+  // Use live auth state if available, otherwise use restored state
+  const effectiveProfile = profile || restoredProfile;
+  const effectiveAuth = isAuthenticated || (restoredProfile && !isLoading);
+
+  return {
+    isAuthenticated: effectiveAuth,
+    profile: effectiveProfile,
+    isLoading: isLoading && !isAuthenticated
+  };
 }

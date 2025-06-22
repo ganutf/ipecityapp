@@ -32,6 +32,10 @@ export interface IStorage {
   getPulseExecution(pulseId: number, memberFarcasterFid: number, actionType: string): Promise<PulseExecution | undefined>;
   getMemberExecutions(memberFarcasterFid: number): Promise<PulseExecution[]>;
   createPulseExecution(execution: InsertPulseExecution): Promise<PulseExecution>;
+  
+  // User Signers
+  getUserSigner(farcasterFid: number): Promise<UserSigner | undefined>;
+  createUserSigner(signer: InsertUserSigner): Promise<UserSigner>;
 }
 
 export class DatabaseStorage implements IStorage {

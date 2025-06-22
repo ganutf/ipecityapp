@@ -170,6 +170,12 @@ The application follows a monorepo structure with clear separation between clien
   - Other users get clear error message about signer setup needed
   - Foundation laid for individual signer implementation
   - Fixed authentication session persistence with localStorage storage
+- June 22, 2025. Automatic Signer Generation:
+  - Added user_signers table to store individual Farcaster signers
+  - Implemented automatic signer creation for new users via Neynar API
+  - Users can now like and recast posts after initial signer setup
+  - Signer generation happens automatically on first interaction attempt
+  - Individual signers stored and reused for subsequent actions
 
 ## User Preferences
 

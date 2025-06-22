@@ -93,21 +93,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const fid = parseInt(req.params.fid);
       
-      // For now, return the global signer for admin user (FID 2790)
-      // Other users will get a 404 until they have individual signers set up
-      if (fid === 2790) {
-        const signer_uuid = process.env.VITE_NEYNAR_SIGNER_UUID;
-        if (!signer_uuid) {
-          return res.status(500).json({ error: 'Signer not configured' });
+      // Check if user has existing signer
+      let userSigner = await storage.getUserSigner(fid);
+      
+      if (!userSigner) {
+        // Auto-create signer for new users
+        try {
+          const createSignerResponse = await fetch('https://api.neynar.com/v2/farcaster/signer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
+            },
+            body: JSON.stringify({})
+          });
+          
+          if (!createSignerResponse.ok) {
+            throw new Error('Failed to create signer');
+          }
+          
+          const signerData = await createSignerResponse.json();
+          
+          // Store the new signer
+          userSigner = await storage.createUserSigner({
+            farcasterFid: fid,
+            signerUuid: signerData.signer_uuid
+          });
+          
+          console.log(`Created new signer for FID ${fid}: ${signerData.signer_uuid}`);
+        } catch (error) {
+          console.error('Failed to create signer:', error);
+          return res.status(500).json({ 
+            error: 'Failed to create signer. Please try again later.' 
+          });
         }
-        return res.json({ signer_uuid });
       }
       
-      // TODO: Implement individual signer storage and retrieval
-      // For now, other users cannot perform actions
-      res.status(404).json({ 
-        error: 'Signer not found for this user. Individual signers not yet implemented.' 
-      });
+      res.json({ signer_uuid: userSigner.signerUuid });
     } catch (e) {
       res.status(500).json({ error: (e as Error).message });
     }

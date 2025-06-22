@@ -1,61 +1,61 @@
 import { useEffect, useState } from 'react';
 
-interface StoredAuthData {
-  profile: any;
+interface AuthState {
   isAuthenticated: boolean;
-  timestamp: number;
+  profile: any;
 }
 
-const AUTH_STORAGE_KEY = 'farcaster_auth_data';
-const AUTH_EXPIRY_HOURS = 24;
-
 export function usePersistentAuth() {
-  // Since useProfile is causing issues, we'll rely entirely on localStorage for now
-  const [authState, setAuthState] = useState<{ isAuthenticated: boolean; profile: any }>({
+  const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     profile: null
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing auth data and listen for auth events
   useEffect(() => {
-    const checkAuthState = () => {
+    // Simple check for existing data
+    const checkAuth = () => {
       try {
-        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        // Check if there's any stored auth data
+        const stored = localStorage.getItem('farcaster_auth_data');
         if (stored) {
-          const authData: StoredAuthData = JSON.parse(stored);
-          const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
-          
-          if (!isExpired) {
-            setAuthState({
-              isAuthenticated: authData.isAuthenticated,
-              profile: authData.profile
-            });
-          } else {
-            localStorage.removeItem(AUTH_STORAGE_KEY);
-            setAuthState({ isAuthenticated: false, profile: null });
-          }
+          const data = JSON.parse(stored);
+          setAuthState({
+            isAuthenticated: true,
+            profile: data.profile || data
+          });
         }
       } catch (error) {
-        console.error('Failed to restore auth data:', error);
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-        setAuthState({ isAuthenticated: false, profile: null });
+        console.error('Auth check failed:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    checkAuthState();
+    checkAuth();
 
-    // Listen for auth events from AuthKit (simplified approach)
-    const handleStorageChange = () => {
-      checkAuthState();
+    // Listen for auth events from window
+    const handleAuthSuccess = (event: any) => {
+      if (event.detail?.userData) {
+        const userData = event.detail.userData;
+        localStorage.setItem('farcaster_auth_data', JSON.stringify({
+          profile: userData,
+          timestamp: Date.now()
+        }));
+        setAuthState({
+          isAuthenticated: true,
+          profile: userData
+        });
+      }
     };
 
-    window.addEventListener('storage', handleStorageChange);
+    // Listen for multiple auth event types
+    window.addEventListener('authkit:createAccount.success', handleAuthSuccess);
+    window.addEventListener('authkit:signIn.success', handleAuthSuccess);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('authkit:createAccount.success', handleAuthSuccess);
+      window.removeEventListener('authkit:signIn.success', handleAuthSuccess);
     };
   }, []);
 

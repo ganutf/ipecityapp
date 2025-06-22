@@ -190,6 +190,9 @@ The application follows a monorepo structure with clear separation between clien
     * Upcoming: ordered by date ascending (next pulse first)
     * Previous: ordered by date descending (most recent completed pulse first)
   - Improved spacing and centered active pulse section for better visual hierarchy
+- June 22, 2025. Admin Panel Layout Enhancement:
+  - Arranged admin forms in side-by-side layout for better space utilization
+  - "Create New Pulse" on left, "Import Members" on right using responsive grid
 
 ## User Preferences
 

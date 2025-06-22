@@ -126,7 +126,8 @@ export default function FarcasterEmbed() {
     hasValidFid,
     viewerFid,
     memberCheck,
-    authLoading
+    authLoading,
+    profileDebug: { fid: profile?.fid, name: profile?.displayName || profile?.username }
   });
 
   if (isAuthenticated && hasValidFid && !authLoading && memberCheck && (!memberCheck?.isMember || !memberCheck?.approved)) {

@@ -195,6 +195,8 @@ The application follows a monorepo structure with clear separation between clien
   - Session persistence now working - logout button and user authentication state maintained
   - Fixed loading states to properly wait for all required data before rendering components
   - Enhanced PostTool component safety checks to prevent crashes with missing member data
+  - Added manual authentication test button to isolate localStorage persistence issues
+  - Debugging AuthKit authentication flow - API calls work with FID 2790 but localStorage not persisting
 
 ## User Preferences
 

@@ -87,7 +87,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           ) : (
-            <SignInButton />
+            <div className="flex items-center space-x-2">
+              <SignInButton />
+              <button
+                onClick={() => {
+                  const testData = {
+                    fid: 2790,
+                    username: "jhansen",
+                    displayName: "Jean Hansen",
+                    pfpUrl: "",
+                    custodyAddress: "",
+                    timestamp: Date.now()
+                  };
+                  console.log('🧪 Manual test auth:', testData);
+                  localStorage.setItem('farcaster_auth_data', JSON.stringify(testData));
+                  window.location.reload();
+                }}
+                className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+              >
+                Test
+              </button>
+            </div>
           )}
         </div>
       </header>

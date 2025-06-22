@@ -25,6 +25,7 @@ export interface IStorage {
   getPulseByDate(date: string): Promise<Pulse | undefined>;
   getAllPulses(): Promise<Pulse[]>;
   createPulse(pulse: InsertPulse): Promise<Pulse>;
+  updatePulse(id: number, pulse: UpdatePulse): Promise<Pulse>;
   
   // Pulse Executions
   getPulseExecution(pulseId: number, memberFarcasterFid: number, actionType: string): Promise<PulseExecution | undefined>;

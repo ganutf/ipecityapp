@@ -99,6 +99,11 @@ export const insertPulseSchema = createInsertSchema(pulses).omit({
   createdAt: true,
 });
 
+export const updatePulseSchema = createInsertSchema(pulses).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
 export const insertPulseExecutionSchema = createInsertSchema(pulseExecutions).omit({
   id: true,
   executedAt: true,
@@ -109,6 +114,7 @@ export type Member = typeof members.$inferSelect;
 export type InsertMember = z.infer<typeof insertMemberSchema>;
 export type Pulse = typeof pulses.$inferSelect;
 export type InsertPulse = z.infer<typeof insertPulseSchema>;
+export type UpdatePulse = z.infer<typeof updatePulseSchema>;
 export type PulseExecution = typeof pulseExecutions.$inferSelect;
 export type InsertPulseExecution = z.infer<typeof insertPulseExecutionSchema>;
 

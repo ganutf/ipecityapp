@@ -6,7 +6,7 @@ import {
   isApiErrorResponse,
 } from "@neynar/nodejs-sdk";
 import { storage } from "./storage";
-import { insertPulseSchema, insertMemberSchema, insertPulseExecutionSchema } from "@shared/schema";
+import { insertPulseSchema, updatePulseSchema, insertMemberSchema, insertPulseExecutionSchema } from "@shared/schema";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -143,6 +143,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       console.error("Create pulse error:", err);
       res.status(500).json({ error: err.message || 'Failed to create pulse' });
+    }
+  });
+
+  // Update pulse (admin only)
+  app.put("/api/pulses/:id", async (req, res) => {
+    try {
+      const pulseId = parseInt(req.params.id);
+      if (isNaN(pulseId)) {
+        return res.status(400).json({ error: 'Invalid pulse ID' });
+      }
+
+      const validatedData = updatePulseSchema.parse(req.body);
+      const pulse = await storage.updatePulse(pulseId, validatedData);
+      res.json({ success: true, pulse });
+    } catch (err: any) {
+      console.error("Update pulse error:", err);
+      res.status(500).json({ error: err.message || 'Failed to update pulse' });
     }
   });
 

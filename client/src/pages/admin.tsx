@@ -2,10 +2,16 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useProfile } from "@farcaster/auth-kit";
 import type { Pulse, Member } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Pencil, Save, X } from "lucide-react";
 
 export default function AdminPage() {
   const { isAuthenticated, profile } = useProfile();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Check if user is admin (jean hansen)
   const isAdmin = profile?.username === "jeanhansen" || profile?.displayName?.toLowerCase().includes("jean hansen");
@@ -17,6 +23,12 @@ export default function AdminPage() {
   });
 
   const [csvData, setCsvData] = useState("");
+  const [editingPulse, setEditingPulse] = useState<number | null>(null);
+  const [editData, setEditData] = useState({
+    farcasterUrl: "",
+    date: "",
+    description: "",
+  });
 
   // Fetch all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
@@ -52,6 +64,39 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
       setNewPulse({ farcasterUrl: "", date: "", description: "" });
+    },
+  });
+
+  // Update pulse mutation
+  const updatePulseMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await fetch(`/api/pulses/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update pulse');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
+      setEditingPulse(null);
+      toast({
+        title: "Success",
+        description: "Pulse updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 

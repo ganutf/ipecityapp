@@ -155,6 +155,10 @@ The application follows a monorepo structure with clear separation between clien
   - Fixed CSV import validation to prevent server crashes
   - Added database connection testing on startup
   - Implemented process signal handlers for clean shutdown
+- June 22, 2025. Admin Authentication Update:
+  - Changed admin check from username to FID-based authentication
+  - Admin access now verified by FID 2790 instead of username comparison
+  - More reliable authentication that doesn't depend on username changes
 
 ## User Preferences
 

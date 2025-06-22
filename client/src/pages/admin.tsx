@@ -13,8 +13,8 @@ export default function AdminPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Check if user is admin (jean hansen)
-  const isAdmin = profile?.username === "jeanhansen" || profile?.displayName?.toLowerCase().includes("jean hansen");
+  // Check if user is admin (FID 2790)
+  const isAdmin = profile?.fid === 2790;
 
   const [newPulse, setNewPulse] = useState({
     farcasterUrl: "",

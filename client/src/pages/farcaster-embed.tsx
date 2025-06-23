@@ -23,10 +23,17 @@ export default function FarcasterEmbed() {
     enabled: isAuthenticated && hasValidFid && !authLoading,
   });
 
+  const { data: oauthStatus } = useQuery({
+    queryKey: [`/api/oauth/status/${viewerFid}`],
+    enabled:
+      isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
+    staleTime: 30000,
+  });
+
   const { data: signerData } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled:
-      isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
+      isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading && !oauthStatus?.connected,
     refetchInterval: (data) => data?.status === 'generated' ? 10000 : false, // Poll every 10s when generated
     refetchIntervalInBackground: false,
     staleTime: 30000,
@@ -38,8 +45,9 @@ export default function FarcasterEmbed() {
   });
 
   const signerUuid = signerData?.signer_uuid || (signerData?.status === 'approved' ? localStorage.getItem(SIGNER_KEY) : null) || null;
-  const signerStatus = signerData?.status;
+  const signerStatus = oauthStatus?.connected ? 'approved' : signerData?.status;
   const approvalUrl = signerData?.approval_url;
+  const isConnectedApp = oauthStatus?.connected;
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
@@ -118,45 +126,51 @@ export default function FarcasterEmbed() {
   }
 
   // Show signer approval notice if needed
-  if (signerStatus === 'generated') {
-    // Use mobile-first Warpcast URL format
-    const warpcastMobileUrl = `https://warpcast.com/~/add-cast-action?url=https://api.neynar.com/v2/farcaster/action/signer/${signerUuid}`;
-    
+  if (!isConnectedApp && signerStatus !== 'approved') {
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-yellow-800 mb-4">Signer Approval Required</h2>
-          <p className="text-yellow-700 mb-6">
-            To like and recast posts, you need to approve your signer. This is a one-time setup.
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-blue-800 mb-4">Authorize Ipê City Pulse</h2>
+          <p className="text-blue-700 mb-6">
+            To like and recast posts, you need to authorize this app to post on your behalf. This is a one-time setup using Farcaster's secure signer system.
           </p>
-          <div className="space-y-3">
-            <a
-              href={warpcastMobileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors"
-            >
-              Approve Signer in Warpcast
-            </a>
-            <div className="text-xs text-yellow-700 bg-yellow-100 p-3 rounded">
-              <p><strong>For mobile users:</strong> Copy this URL and open it in your mobile browser:</p>
-              <input
-                type="text"
-                value={warpcastMobileUrl}
-                readOnly
-                className="w-full mt-2 p-2 text-xs border rounded bg-white"
-                onClick={(e) => e.target.select()}
-              />
+          <button
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/oauth/connect/${viewerFid}`);
+                const data = await response.json();
+                if (data.auth_url) {
+                  window.open(data.auth_url, '_blank');
+                  // Refresh status after user returns
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 5000);
+                }
+              } catch (error) {
+                console.error('Failed to get approval URL:', error);
+              }
+            }}
+            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            Authorize in Warpcast
+          </button>
+          <div className="mt-4 text-xs text-blue-600 bg-blue-100 p-3 rounded">
+            <p><strong>What this does:</strong></p>
+            <ul className="text-left mt-2 space-y-1">
+              <li>• Creates a secure signer for your account</li>
+              <li>• Allows the app to like and recast posts on your behalf</li>
+              <li>• Opens Warpcast where you can approve the signer</li>
+              <li>• You maintain full control and can revoke access anytime</li>
+            </ul>
+          </div>
+          
+          {signerStatus === 'generated' && signerUuid && (
+            <div className="mt-4 text-xs text-blue-600 bg-blue-100 p-3 rounded">
+              <p><strong>Status:</strong> Signer created, waiting for approval</p>
+              <p><strong>Signer ID:</strong> {signerUuid}</p>
+              <p>Return here after approving in Warpcast - status updates every 10 seconds</p>
             </div>
-          </div>
-          <p className="text-sm text-yellow-600 mt-4">
-            After approval in Warpcast, return here - we'll detect it automatically.
-          </p>
-          <div className="mt-4 text-xs text-yellow-600 bg-yellow-100 p-3 rounded">
-            <p><strong>Status:</strong> {signerStatus}</p>
-            <p><strong>Signer UUID:</strong> {signerUuid}</p>
-            <p>Checking for approval every 10 seconds...</p>
-          </div>
+          )}
         </div>
       </div>
     );

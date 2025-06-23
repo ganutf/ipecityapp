@@ -92,7 +92,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  /* ────────────────  USER SIGNER MANAGEMENT  ──────────────── */
+  /* ────────────────  CONNECTED APPS OAUTH  ──────────────── */
+  
+  // Initiate OAuth flow for Connected Apps
+  app.get("/api/oauth/connect/:fid", async (req, res) => {
+    try {
+      const fid = parseInt(req.params.fid);
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/oauth/callback`;
+      
+      // For now, let's implement a simpler approach using Neynar's managed signers
+      // which doesn't require separate OAuth app registration
+      
+      // Check if we already have a signer for this user
+      let userSigner = await storage.getUserSigner(fid);
+      
+      if (!userSigner) {
+        // Create a new managed signer via Neynar
+        const createResponse = await fetch('https://api.neynar.com/v2/farcaster/signer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
+          },
+          body: JSON.stringify({}) // empty payload for dedicated signer
+        });
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json().catch(() => ({}));
+          return res.status(500).json({ error: errorData.error || 'Failed to create signer' });
+        }
+
+        const signerData = await createResponse.json();
+        const warpcastApprovalUrl = `https://warpcast.com/~/add-cast-action?url=https://api.neynar.com/v2/farcaster/action/signer/${signerData.signer_uuid}`;
+
+        userSigner = await storage.createUserSigner({
+          farcasterFid: fid,
+          signerUuid: signerData.signer_uuid,
+          approvalUrl: warpcastApprovalUrl,
+          status: signerData.status || 'generated'
+        });
+        
+        console.log(`Created signer for FID ${fid}: ${signerData.signer_uuid}`);
+      }
+      
+      const approvalUrl = userSigner.approvalUrl || `https://warpcast.com/~/add-cast-action?url=https://api.neynar.com/v2/farcaster/action/signer/${userSigner.signerUuid}`;
+      
+      res.json({ 
+        auth_url: approvalUrl,
+        signer_uuid: userSigner.signerUuid,
+        status: userSigner.status
+      });
+    } catch (e) {
+      console.error('OAuth connect error:', e);
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  // Handle signer approval callback (simplified)
+  app.get("/api/oauth/callback", async (req, res) => {
+    try {
+      // This endpoint can be used for future OAuth implementations
+      // For now, redirect back to the app
+      res.redirect('/?signer_check=true');
+    } catch (e) {
+      console.error('Callback error:', e);
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  // Check OAuth connection status
+  app.get("/api/oauth/status/:fid", async (req, res) => {
+    try {
+      const fid = parseInt(req.params.fid);
+      const userSigner = await storage.getUserSigner(fid);
+      
+      res.json({
+        connected: userSigner?.status === 'approved',
+        needs_connection: !userSigner || userSigner.status !== 'approved'
+      });
+    } catch (e) {
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
+  /* ────────────────  LEGACY SIGNER MANAGEMENT  ──────────────── */
   app.get("/api/neynar/signer/:fid", async (req, res) => {
     try {
       const fid = parseInt(req.params.fid);

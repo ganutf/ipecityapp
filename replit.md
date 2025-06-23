@@ -199,6 +199,13 @@ The application follows a monorepo structure with clear separation between clien
   - Created approval notice with direct link to approve signer
   - Prevents like/recast attempts when signer is not approved
   - Added better error handling and logging for debugging signer issues
+- June 23, 2025. Connected Apps Architecture (Simplified Implementation):
+  - Investigated Farcaster Connected Apps OAuth flow
+  - Discovered developer portal URL issue - official OAuth setup not readily available
+  - Implemented simplified approach using Neynar managed signers
+  - Maintained user-friendly "Connect with Farcaster" interface
+  - Automatic signer creation with Warpcast approval flow
+  - Preserved fallback to manual signer approval when needed
 
 ## User Preferences
 

@@ -132,8 +132,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
-      res.json({ signer_uuid: userSigner.signerUuid });
+
+      // Check signer status
+      try {
+        const statusResponse = await fetch(`https://api.neynar.com/v2/farcaster/signer?signer_uuid=${userSigner.signerUuid}`, {
+          headers: {
+            'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
+          }
+        });
+
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          console.log(`Signer ${userSigner.signerUuid} status: ${statusData.status}`);
+          
+          res.json({ 
+            signer_uuid: userSigner.signerUuid,
+            status: statusData.status,
+            approval_url: statusData.approval_url
+          });
+        } else {
+          res.json({ signer_uuid: userSigner.signerUuid });
+        }
+      } catch (error) {
+        console.log('Failed to check signer status, returning signer UUID anyway');
+        res.json({ signer_uuid: userSigner.signerUuid });
+      }
     } catch (e) {
       res.status(500).json({ error: (e as Error).message });
     }

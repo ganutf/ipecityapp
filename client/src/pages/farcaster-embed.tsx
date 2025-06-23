@@ -115,6 +115,31 @@ export default function FarcasterEmbed() {
     );
   }
 
+  // Show signer approval notice if needed
+  if (signerStatus === 'generated' && approvalUrl) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-12">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-yellow-800 mb-4">Signer Approval Required</h2>
+          <p className="text-yellow-700 mb-6">
+            To like and recast posts, you need to approve your signer. This is a one-time setup.
+          </p>
+          <a
+            href={approvalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-yellow-700 transition-colors"
+          >
+            Approve Signer
+          </a>
+          <p className="text-sm text-yellow-600 mt-4">
+            After approval, refresh this page to start engaging with posts.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 
 
   if (isAuthenticated && hasValidFid && !authLoading && memberCheck && (!memberCheck?.isMember || !memberCheck?.approved)) {

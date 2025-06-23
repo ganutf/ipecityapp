@@ -153,8 +153,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signerData = await createResponse.json();
       console.log('New signer data from Neynar:', JSON.stringify(signerData, null, 2));
       
-      // Neynar sometimes doesn't return approval_url, but we can construct the Warpcast link
-      const warpcastApprovalUrl = `https://client.warpcast.com/deeplinks/signed-key-request?key=${signerData.signer_uuid}`;
+      // Construct the proper Warpcast approval URL using Neynar's action endpoint
+      const warpcastApprovalUrl = `https://warpcast.com/~/add-cast-action?url=https://api.neynar.com/v2/farcaster/action/signer/${signerData.signer_uuid}`;
       
       const { signer_uuid, approval_url, status } = signerData;
 
@@ -168,6 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Created new signer for FID ${fid}: ${signer_uuid} with status: ${status || 'generated'}`);
       console.log(`Warpcast approval URL: ${warpcastApprovalUrl}`);
+      console.log(`Direct Neynar approval URL: https://api.neynar.com/v2/farcaster/action/signer/${signer_uuid}`);
 
       res.json({
         signer_uuid,

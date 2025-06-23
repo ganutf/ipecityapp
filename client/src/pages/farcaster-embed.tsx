@@ -119,8 +119,8 @@ export default function FarcasterEmbed() {
 
   // Show signer approval notice if needed
   if (signerStatus === 'generated') {
-    // Use correct Warpcast signer approval URL format
-    const warpcastSignerUrl = `https://client.warpcast.com/deeplinks/signed-key-request?key=${signerUuid}`;
+    // Use mobile-first Warpcast URL format
+    const warpcastMobileUrl = `https://warpcast.com/~/add-cast-action?url=https://api.neynar.com/v2/farcaster/action/signer/${signerUuid}`;
     
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
@@ -131,31 +131,31 @@ export default function FarcasterEmbed() {
           </p>
           <div className="space-y-3">
             <a
-              href={warpcastSignerUrl}
+              href={warpcastMobileUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="block bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors"
             >
               Approve Signer in Warpcast
             </a>
-            {approvalUrl && (
-              <a
-                href={approvalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors text-sm"
-              >
-                Alternative: Neynar Approval
-              </a>
-            )}
+            <div className="text-xs text-yellow-700 bg-yellow-100 p-3 rounded">
+              <p><strong>For mobile users:</strong> Copy this URL and open it in your mobile browser:</p>
+              <input
+                type="text"
+                value={warpcastMobileUrl}
+                readOnly
+                className="w-full mt-2 p-2 text-xs border rounded bg-white"
+                onClick={(e) => e.target.select()}
+              />
+            </div>
           </div>
           <p className="text-sm text-yellow-600 mt-4">
-            Click the button above to open Warpcast and approve your signer. Return here after approval.
+            After approval in Warpcast, return here - we'll detect it automatically.
           </p>
           <div className="mt-4 text-xs text-yellow-600 bg-yellow-100 p-3 rounded">
             <p><strong>Status:</strong> {signerStatus}</p>
-            <p><strong>Signer Key:</strong> {signerUuid}</p>
-            <p>Auto-checking for approval every 10 seconds...</p>
+            <p><strong>Signer UUID:</strong> {signerUuid}</p>
+            <p>Checking for approval every 10 seconds...</p>
           </div>
         </div>
       </div>

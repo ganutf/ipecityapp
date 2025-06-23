@@ -91,14 +91,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /* ────────────────  USER SIGNER MANAGEMENT  ──────────────── */
   app.get("/api/neynar/signer/:fid", async (req, res) => {
     try {
-      // Use admin's approved signer for all users to avoid approval issues
-      // In production, each user would need to approve their own signer
-      const adminSignerUuid = "82a7dac4-aed9-4f0f-b9c5-5b6f8a9d2e7c";
+      const fid = parseInt(req.params.fid);
       
-      res.json({ 
-        signer_uuid: adminSignerUuid,
-        note: "Using admin signer for demonstration purposes"
-      });
+      // Check if user has existing signer
+      let userSigner = await storage.getUserSigner(fid);
+      
+      if (!userSigner) {
+        // Auto-create signer for new users
+        try {
+          const createSignerResponse = await fetch('https://api.neynar.com/v2/farcaster/signer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
+            },
+            body: JSON.stringify({})
+          });
+          
+          if (!createSignerResponse.ok) {
+            throw new Error('Failed to create signer');
+          }
+          
+          const signerData = await createSignerResponse.json();
+          
+          // Store the new signer
+          userSigner = await storage.createUserSigner({
+            farcasterFid: fid,
+            signerUuid: signerData.signer_uuid
+          });
+          
+          console.log(`Created new signer for FID ${fid}: ${signerData.signer_uuid}`);
+        } catch (error) {
+          console.error('Failed to create signer:', error);
+          return res.status(500).json({ 
+            error: 'Failed to create signer. Please try again later.' 
+          });
+        }
+      }
+      
+      res.json({ signer_uuid: userSigner.signerUuid });
     } catch (e) {
       res.status(500).json({ error: (e as Error).message });
     }
@@ -176,11 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new pulse (admin only)
   app.post("/api/pulses", async (req, res) => {
     try {
-      const pulseData = {
-        ...req.body,
-        createdBy: "admin" // Default admin identifier
-      };
-      const validatedData = insertPulseSchema.parse(pulseData);
+      const validatedData = insertPulseSchema.parse(req.body);
       const pulse = await storage.createPulse(validatedData);
       res.json({ success: true, pulse });
     } catch (err: any) {

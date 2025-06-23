@@ -1,0 +1,125 @@
+Below is the full **“signer-approval” playbook**—backend + frontend—so your users can get from **“no signer” → “approved signer”** in one click and you can safely let them like / recast.  (The code snippets slot straight into the architecture you posted.)
+
+---
+
+## 1 Create (or fetch) a signer on the backend
+
+```ts
+// /api/neynar/signer/[fid].ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const fid = parseInt(req.query.fid as string, 10);
+
+  // Look up a cached signer for this FID
+  const cached = await prisma.userSigner.findUnique({ where: { fid } });
+
+  // --- A) signer already exists – refresh its status and return -------------
+  if (cached) {
+    const apiRes = await fetch(
+      `https://api.neynar.com/v2/farcaster/signer/${cached.signerUuid}`,
+      { headers: { 'x-api-key': process.env.NEYNAR_API_KEY! } },
+    );
+    const { status } = await apiRes.json();
+    if (status !== cached.status) {
+      await prisma.userSigner.update({ where: { fid }, data: { status } });
+    }
+    return res.json({ ...cached, status });
+  }
+
+  // --- B) no signer yet – create one ----------------------------------------
+  const createRes = await fetch('https://api.neynar.com/v2/farcaster/signer', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': process.env.NEYNAR_API_KEY! },
+    body: JSON.stringify({}),          // empty payload → dedicated user signer
+  });
+
+  if (!createRes.ok) {
+    const { error } = await createRes.json();
+    return res.status(500).json({ error });
+  }
+
+  const { signer_uuid, approval_url, status } = await createRes.json();
+
+  await prisma.userSigner.create({
+    data: { fid, signerUuid: signer_uuid, approvalUrl: approval_url, status },
+  });
+
+  res.json({ signer_uuid, approval_url, status });
+}
+```
+
+**Why:**
+Creating once and then caching avoids hammering Neynar; refreshing the status on each page visit means you always know when the user finally approved. ([docs.neynar.com][1], [docs.neynar.com][2])
+
+---
+
+## 2 Surface the approval link in your React component
+
+Your component already does this; the only ergonomic tweak is to **wrap the plain `approval_url` in Warpcast’s deep-link** so the modal pops immediately:
+
+```ts
+if (signerStatus === 'generated') {
+  const deepLink = `https://warpcast.com/~/add-cast-action?url=${encodeURIComponent(approvalUrl)}`;
+
+  return (
+    <div className="py-12 text-center">
+      <h2>Signer approval required</h2>
+      <a className="btn-primary" href={deepLink} target="_blank">Approve in Warpcast</a>
+      <p className="mt-3 text-sm">Come back after signing – we’ll detect it automatically.</p>
+    </div>
+  );
+}
+```
+
+Warpcast takes the user to the on-chain “Add signer” screen; once they confirm, the Neynar signer’s `status` flips to `approved`. ([docs.farcaster.xyz][3], [docs.farcaster.xyz][4])
+
+---
+
+## 3 Poll (briefly) for status so the page updates itself
+
+```ts
+const { data: signerData } = useQuery({
+  queryKey: [`/api/neynar/signer/${viewerFid}`],
+  enabled: isAuthenticated && hasValidFid && memberCheck?.isMember,
+  refetchInterval: signerStatus === 'generated' ? 10_000 : false, // 10 s
+  staleTime: 30_000,
+});
+```
+
+*Ten-second polling stops as soon as the status becomes `approved`.*
+If you’d rather avoid polling, add a **“Refresh status”** button that invalidates the query cache.
+
+---
+
+## 4 Gate every write with `signerStatus === 'approved'`
+
+You already do that inside `handleReaction`.  Good!  Keep the same guard for any future write endpoints (`/cast`, `/frames`, etc.).
+
+---
+
+## 5 UX niceties (optional but recommended)
+
+| Improvement                 | Snippet                                                                                                                                                    |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Toast after approval**    | In the query’s `onSuccess` hook, when `data.status === 'approved' && previousStatus === 'generated'`, show a toast: “Signer approved – you can now react!” |
+| **Store UUID once**         | After `status === 'approved'`, save `localStorage.setItem(SIGNER_KEY, signer_uuid)` so subsequent sessions skip the network round-trip.                    |
+| **Handle expired requests** | Neynar will return `status = "expired"` if the approval link sat unused for ≈10 min. Detect that and call the *create-signer* path again.                  |
+
+---
+
+### That’s all you need
+
+1. **Backend** creates/refreshes signer and returns `signer_uuid`, `approval_url`, `status`.
+2. **Frontend** shows the Warpcast approval link when `status === 'generated'`.
+3. Poll or refresh until `status === 'approved'`.
+4. Gate every write call behind that check.
+
+Your existing `FarcasterEmbed` component only needs the small additions above; no changes are required in `usePersistentAuth`.
+
+Happy casting! 🚀
+
+[1]: https://docs.neynar.com/docs/how-to-let-users-connect-farcaster-accounts-with-write-access-for-free-using-sign-in-with-neynar-siwn?utm_source=chatgpt.com "SIWN: Connect Farcaster accounts - Neynar API"
+[2]: https://docs.neynar.com/docs/farcaster-bot-with-dedicated-signers?utm_source=chatgpt.com "Farcaster Bot with Dedicated Signers - Neynar API"
+[3]: https://docs.farcaster.xyz/reference/warpcast/signer-requests?utm_source=chatgpt.com "Signer Requests - Farcaster Docs"
+[4]: https://docs.farcaster.xyz/reference/actions/spec?utm_source=chatgpt.com "Actions Specification - Farcaster Docs"

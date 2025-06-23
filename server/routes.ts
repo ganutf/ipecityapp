@@ -97,69 +97,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const fid = parseInt(req.params.fid);
       
-      // Check if user has existing signer
+      // Look up cached signer for this FID
       let userSigner = await storage.getUserSigner(fid);
       
-      if (!userSigner) {
-        // Auto-create signer for new users
+      // A) Signer already exists – refresh its status and return
+      if (userSigner) {
         try {
-          const createSignerResponse = await fetch('https://api.neynar.com/v2/farcaster/signer', {
-            method: 'POST',
+          const statusResponse = await fetch(`https://api.neynar.com/v2/farcaster/signer/${userSigner.signerUuid}`, {
             headers: {
-              'Content-Type': 'application/json',
               'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
-            },
-            body: JSON.stringify({})
+            }
           });
-          
-          if (!createSignerResponse.ok) {
-            throw new Error('Failed to create signer');
+
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            console.log(`Signer ${userSigner.signerUuid} status: ${statusData.status}`);
+            
+            // Update status if it changed
+            if (statusData.status !== userSigner.status) {
+              await storage.updateUserSignerStatus(fid, statusData.status);
+            }
+            
+            return res.json({
+              signer_uuid: userSigner.signerUuid,
+              approval_url: userSigner.approvalUrl,
+              status: statusData.status
+            });
           }
-          
-          const signerData = await createSignerResponse.json();
-          
-          // Store the new signer
-          userSigner = await storage.createUserSigner({
-            farcasterFid: fid,
-            signerUuid: signerData.signer_uuid
-          });
-          
-          console.log(`Created new signer for FID ${fid}: ${signerData.signer_uuid}`);
         } catch (error) {
-          console.error('Failed to create signer:', error);
-          return res.status(500).json({ 
-            error: 'Failed to create signer. Please try again later.' 
-          });
+          console.log('Failed to check signer status, returning cached data');
         }
-      }
-
-      // Check signer status
-      try {
-        const statusResponse = await fetch(`https://api.neynar.com/v2/farcaster/signer?signer_uuid=${userSigner.signerUuid}`, {
-          headers: {
-            'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
-          }
+        
+        return res.json({
+          signer_uuid: userSigner.signerUuid,
+          approval_url: userSigner.approvalUrl,
+          status: userSigner.status
         });
-
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          console.log(`Signer ${userSigner.signerUuid} status: ${statusData.status}`);
-          console.log('Full signer data:', JSON.stringify(statusData, null, 2));
-          
-          res.json({ 
-            signer_uuid: userSigner.signerUuid,
-            status: statusData.status,
-            approval_url: statusData.approval_url || statusData.deeplink_url
-          });
-        } else {
-          console.log('Signer status check failed:', statusResponse.status);
-          res.json({ signer_uuid: userSigner.signerUuid });
-        }
-      } catch (error) {
-        console.log('Failed to check signer status, returning signer UUID anyway');
-        res.json({ signer_uuid: userSigner.signerUuid });
       }
+
+      // B) No signer yet – create one
+      const createResponse = await fetch('https://api.neynar.com/v2/farcaster/signer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEYNAR_API_KEY || 'NEYNAR_API_DOCS'
+        },
+        body: JSON.stringify({}) // empty payload → dedicated user signer
+      });
+
+      if (!createResponse.ok) {
+        const errorData = await createResponse.json().catch(() => ({}));
+        return res.status(500).json({ error: errorData.error || 'Failed to create signer' });
+      }
+
+      const { signer_uuid, approval_url, status } = await createResponse.json();
+
+      // Store the new signer
+      userSigner = await storage.createUserSigner({
+        farcasterFid: fid,
+        signerUuid: signer_uuid,
+        approvalUrl: approval_url,
+        status: status
+      });
+
+      console.log(`Created new signer for FID ${fid}: ${signer_uuid} with status: ${status}`);
+
+      res.json({
+        signer_uuid,
+        approval_url,
+        status
+      });
     } catch (e) {
+      console.error('Error in signer endpoint:', e);
       res.status(500).json({ error: (e as Error).message });
     }
   });

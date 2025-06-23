@@ -27,15 +27,16 @@ export default function FarcasterEmbed() {
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled:
       isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
-    staleTime: Infinity,
+    refetchInterval: (data) => data?.status === 'generated' ? 10000 : false, // Poll every 10s when generated
+    staleTime: 30000,
     onSuccess(data) {
-      if (data?.signer_uuid) {
+      if (data?.signer_uuid && data?.status === 'approved') {
         localStorage.setItem(SIGNER_KEY, data.signer_uuid);
       }
     },
   });
 
-  const signerUuid = signerData?.signer_uuid || localStorage.getItem(SIGNER_KEY) || null;
+  const signerUuid = signerData?.signer_uuid || (signerData?.status === 'approved' ? localStorage.getItem(SIGNER_KEY) : null) || null;
   const signerStatus = signerData?.status;
   const approvalUrl = signerData?.approval_url;
 
@@ -116,8 +117,8 @@ export default function FarcasterEmbed() {
   }
 
   // Show signer approval notice if needed
-  if (signerStatus === 'generated') {
-    const warpcastApprovalUrl = `https://warpcast.com/~/add-cast-action?url=https://api.neynar.com/v2/farcaster/action/signer/${signerUuid}`;
+  if (signerStatus === 'generated' && approvalUrl) {
+    const deepLink = `https://warpcast.com/~/add-cast-action?url=${encodeURIComponent(approvalUrl)}`;
     
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
@@ -126,32 +127,20 @@ export default function FarcasterEmbed() {
           <p className="text-yellow-700 mb-6">
             To like and recast posts, you need to approve your signer. This is a one-time setup.
           </p>
-          <div className="space-y-4">
-            {approvalUrl && (
-              <a
-                href={approvalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-yellow-700 transition-colors"
-              >
-                Approve Signer (Primary)
-              </a>
-            )}
-            <a
-              href={warpcastApprovalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors"
-            >
-              Approve via Warpcast
-            </a>
-          </div>
+          <a
+            href={deepLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+          >
+            Approve in Warpcast
+          </a>
           <p className="text-sm text-yellow-600 mt-4">
-            After approval, refresh this page to start engaging with posts.
+            Come back after signing – we'll detect it automatically.
           </p>
           <div className="mt-4 text-xs text-yellow-600 bg-yellow-100 p-3 rounded">
-            <p><strong>Signer ID:</strong> {signerUuid}</p>
             <p><strong>Status:</strong> {signerStatus}</p>
+            <p>Checking for approval every 10 seconds...</p>
           </div>
         </div>
       </div>

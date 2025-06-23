@@ -207,7 +207,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new pulse (admin only)
   app.post("/api/pulses", async (req, res) => {
     try {
-      const validatedData = insertPulseSchema.parse(req.body);
+      const pulseData = {
+        ...req.body,
+        createdBy: "admin" // Default admin identifier
+      };
+      const validatedData = insertPulseSchema.parse(pulseData);
       const pulse = await storage.createPulse(validatedData);
       res.json({ success: true, pulse });
     } catch (err: any) {

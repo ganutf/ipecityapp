@@ -28,6 +28,7 @@ export default function FarcasterEmbed() {
     enabled:
       isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
     refetchInterval: (data) => data?.status === 'generated' ? 10000 : false, // Poll every 10s when generated
+    refetchIntervalInBackground: false,
     staleTime: 30000,
     onSuccess(data) {
       if (data?.signer_uuid && data?.status === 'approved') {

@@ -116,7 +116,9 @@ export default function FarcasterEmbed() {
   }
 
   // Show signer approval notice if needed
-  if (signerStatus === 'generated' && approvalUrl) {
+  if (signerStatus === 'generated') {
+    const warpcastApprovalUrl = `https://warpcast.com/~/add-cast-action?url=https://api.neynar.com/v2/farcaster/action/signer/${signerUuid}`;
+    
     return (
       <div className="max-w-2xl mx-auto text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
@@ -124,17 +126,33 @@ export default function FarcasterEmbed() {
           <p className="text-yellow-700 mb-6">
             To like and recast posts, you need to approve your signer. This is a one-time setup.
           </p>
-          <a
-            href={approvalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-yellow-700 transition-colors"
-          >
-            Approve Signer
-          </a>
+          <div className="space-y-4">
+            {approvalUrl && (
+              <a
+                href={approvalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-yellow-700 transition-colors"
+              >
+                Approve Signer (Primary)
+              </a>
+            )}
+            <a
+              href={warpcastApprovalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+            >
+              Approve via Warpcast
+            </a>
+          </div>
           <p className="text-sm text-yellow-600 mt-4">
             After approval, refresh this page to start engaging with posts.
           </p>
+          <div className="mt-4 text-xs text-yellow-600 bg-yellow-100 p-3 rounded">
+            <p><strong>Signer ID:</strong> {signerUuid}</p>
+            <p><strong>Status:</strong> {signerStatus}</p>
+          </div>
         </div>
       </div>
     );

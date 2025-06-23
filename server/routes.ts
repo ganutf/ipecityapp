@@ -144,13 +144,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (statusResponse.ok) {
           const statusData = await statusResponse.json();
           console.log(`Signer ${userSigner.signerUuid} status: ${statusData.status}`);
+          console.log('Full signer data:', JSON.stringify(statusData, null, 2));
           
           res.json({ 
             signer_uuid: userSigner.signerUuid,
             status: statusData.status,
-            approval_url: statusData.approval_url
+            approval_url: statusData.approval_url || statusData.deeplink_url
           });
         } else {
+          console.log('Signer status check failed:', statusResponse.status);
           res.json({ signer_uuid: userSigner.signerUuid });
         }
       } catch (error) {

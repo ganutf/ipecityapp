@@ -153,21 +153,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signerData = await createResponse.json();
       console.log('New signer data from Neynar:', JSON.stringify(signerData, null, 2));
       
+      // Neynar sometimes doesn't return approval_url, but we can construct the Warpcast link
+      const warpcastApprovalUrl = `https://client.warpcast.com/deeplinks/signed-key-request?key=${signerData.signer_uuid}`;
+      
       const { signer_uuid, approval_url, status } = signerData;
 
       // Store the new signer
       userSigner = await storage.createUserSigner({
         farcasterFid: fid,
         signerUuid: signer_uuid,
-        approvalUrl: approval_url || null,
+        approvalUrl: approval_url || warpcastApprovalUrl,
         status: status || 'generated'
       });
 
       console.log(`Created new signer for FID ${fid}: ${signer_uuid} with status: ${status || 'generated'}`);
+      console.log(`Warpcast approval URL: ${warpcastApprovalUrl}`);
 
       res.json({
         signer_uuid,
-        approval_url: approval_url || null,
+        approval_url: approval_url || warpcastApprovalUrl,
         status: status || 'generated'
       });
     } catch (e) {

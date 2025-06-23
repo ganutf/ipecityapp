@@ -35,8 +35,9 @@ export default function FarcasterEmbed() {
     },
   });
 
-  const signerUuid =
-    signerData?.signer_uuid || localStorage.getItem(SIGNER_KEY) || null; // ← NEW
+  const signerUuid = signerData?.signer_uuid || localStorage.getItem(SIGNER_KEY) || null;
+  const signerStatus = signerData?.status;
+  const approvalUrl = signerData?.approval_url;
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
@@ -150,6 +151,7 @@ export default function FarcasterEmbed() {
             pulse={activePulse}
             member={memberCheck?.member}
             signerUuid={signerUuid}
+            signerStatus={signerStatus}
           />
         </div>
       ) : (
@@ -444,10 +446,12 @@ function PostTool({
   pulse,
   member,
   signerUuid,
+  signerStatus,
 }: {
   pulse: Pulse;
   member: Member;
   signerUuid: string | null;
+  signerStatus?: string;
 }) {
   const { profile } = usePersistentAuth();
   const viewerFid = profile?.fid;
@@ -558,6 +562,11 @@ function PostTool({
 
   async function handleReaction(type: "like" | "recast") {
     if (!castData || !viewerFid || !signerUuid) return;
+    
+    if (signerStatus !== 'approved') {
+      setError('Signer not approved. Please approve your signer first.');
+      return;
+    }
 
     setActionLoading((prev) => ({ ...prev, [type]: true }));
     setError(null);

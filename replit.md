@@ -193,6 +193,12 @@ The application follows a monorepo structure with clear separation between clien
 - June 22, 2025. Admin Panel Layout Enhancement:
   - Changed admin forms to vertical stacked layout as requested
   - "Create New Pulse" section appears first, followed by "Import Members" section
+- June 23, 2025. Signer Approval System Implementation:
+  - Fixed liking/recasting functionality by implementing proper signer approval flow
+  - Added signer status checking to detect when approval is needed
+  - Created approval notice with direct link to approve signer
+  - Prevents like/recast attempts when signer is not approved
+  - Added better error handling and logging for debugging signer issues
 
 ## User Preferences
 

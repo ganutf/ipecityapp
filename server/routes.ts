@@ -150,22 +150,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: errorData.error || 'Failed to create signer' });
       }
 
-      const { signer_uuid, approval_url, status } = await createResponse.json();
+      const signerData = await createResponse.json();
+      console.log('New signer data from Neynar:', JSON.stringify(signerData, null, 2));
+      
+      const { signer_uuid, approval_url, status } = signerData;
 
       // Store the new signer
       userSigner = await storage.createUserSigner({
         farcasterFid: fid,
         signerUuid: signer_uuid,
-        approvalUrl: approval_url,
-        status: status
+        approvalUrl: approval_url || null,
+        status: status || 'generated'
       });
 
-      console.log(`Created new signer for FID ${fid}: ${signer_uuid} with status: ${status}`);
+      console.log(`Created new signer for FID ${fid}: ${signer_uuid} with status: ${status || 'generated'}`);
 
       res.json({
         signer_uuid,
-        approval_url,
-        status
+        approval_url: approval_url || null,
+        status: status || 'generated'
       });
     } catch (e) {
       console.error('Error in signer endpoint:', e);

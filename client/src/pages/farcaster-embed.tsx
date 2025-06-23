@@ -580,7 +580,8 @@ function PostTool({
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(`Like failed: ${errorData.message || "API Error"}`);
+          console.error("Like response error:", errorData);
+          throw new Error(`Like failed: ${errorData.error || errorData.message || "API Error"}`);
         }
       } else if (type === "recast") {
         const response = await fetch("/api/neynar/cast", {

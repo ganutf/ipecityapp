@@ -53,15 +53,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         target: string;              // cast hash
       };
 
+      console.log(`Publishing ${reaction_type} reaction with signer: ${signer_uuid}, target: ${target}`);
+
       const out = await neynar.publishReaction({
-        signerUuid:   signer_uuid,
+        signerUuid: signer_uuid,
         reactionType: reaction_type,
         target,
       });
 
+      console.log(`${reaction_type} reaction successful:`, out);
       res.json(out);
-    } catch (e) {
-      const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
+    } catch (e: any) {
+      console.error(`Error publishing ${req.body.reaction_type} reaction:`, e);
+      const msg = isApiErrorResponse(e) ? e.response.data : e.message;
       res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });

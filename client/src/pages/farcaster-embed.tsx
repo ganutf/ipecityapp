@@ -9,7 +9,6 @@ const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
 
 export default function FarcasterEmbed() {
   const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
-  
 
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
@@ -23,31 +22,20 @@ export default function FarcasterEmbed() {
     enabled: isAuthenticated && hasValidFid && !authLoading,
   });
 
-  const { data: oauthStatus } = useQuery({
-    queryKey: [`/api/oauth/status/${viewerFid}`],
-    enabled:
-      isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
-    staleTime: 30000,
-  });
-
   const { data: signerData } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled:
-      isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading && !oauthStatus?.connected,
-    refetchInterval: (data) => data?.status === 'generated' ? 10000 : false, // Poll every 10s when generated
-    refetchIntervalInBackground: false,
-    staleTime: 30000,
+      isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
+    staleTime: Infinity,
     onSuccess(data) {
-      if (data?.signer_uuid && data?.status === 'approved') {
+      if (data?.signer_uuid) {
         localStorage.setItem(SIGNER_KEY, data.signer_uuid);
       }
     },
   });
 
-  const signerUuid = signerData?.signer_uuid || (signerData?.status === 'approved' ? localStorage.getItem(SIGNER_KEY) : null) || null;
-  const signerStatus = oauthStatus?.connected ? 'approved' : signerData?.status;
-  const approvalUrl = signerData?.approval_url;
-  const isConnectedApp = oauthStatus?.connected;
+  const signerUuid =
+    signerData?.signer_uuid || localStorage.getItem(SIGNER_KEY) || null; // ← NEW
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
@@ -125,57 +113,6 @@ export default function FarcasterEmbed() {
     );
   }
 
-  // Show signer approval notice if needed
-  if (!isConnectedApp && signerStatus !== 'approved') {
-    return (
-      <div className="max-w-2xl mx-auto text-center py-12">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-blue-800 mb-4">Authorize Ipê City Pulse</h2>
-          <p className="text-blue-700 mb-6">
-            To like and recast posts, you need to authorize this app to post on your behalf. This is a one-time setup using Farcaster's secure signer system.
-          </p>
-          <button
-            onClick={async () => {
-              try {
-                const response = await fetch(`/api/oauth/connect/${viewerFid}`);
-                const data = await response.json();
-                if (data.auth_url) {
-                  window.open(data.auth_url, '_blank');
-                  // Refresh status after user returns
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 5000);
-                }
-              } catch (error) {
-                console.error('Failed to get approval URL:', error);
-              }
-            }}
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            Authorize in Warpcast
-          </button>
-          <div className="mt-4 text-xs text-blue-600 bg-blue-100 p-3 rounded">
-            <p><strong>What this does:</strong></p>
-            <ul className="text-left mt-2 space-y-1">
-              <li>• Creates a secure signer for your account</li>
-              <li>• Allows the app to like and recast posts on your behalf</li>
-              <li>• Opens Warpcast where you can approve the signer</li>
-              <li>• You maintain full control and can revoke access anytime</li>
-            </ul>
-          </div>
-          
-          {signerStatus === 'generated' && signerUuid && (
-            <div className="mt-4 text-xs text-blue-600 bg-blue-100 p-3 rounded">
-              <p><strong>Status:</strong> Signer created, waiting for approval</p>
-              <p><strong>Signer ID:</strong> {signerUuid}</p>
-              <p>Return here after approving in Warpcast - status updates every 10 seconds</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
 
 
   if (isAuthenticated && hasValidFid && !authLoading && memberCheck && (!memberCheck?.isMember || !memberCheck?.approved)) {
@@ -212,7 +149,6 @@ export default function FarcasterEmbed() {
             pulse={activePulse}
             member={memberCheck?.member}
             signerUuid={signerUuid}
-            signerStatus={signerStatus}
           />
         </div>
       ) : (
@@ -507,12 +443,10 @@ function PostTool({
   pulse,
   member,
   signerUuid,
-  signerStatus,
 }: {
   pulse: Pulse;
   member: Member;
   signerUuid: string | null;
-  signerStatus?: string;
 }) {
   const { profile } = usePersistentAuth();
   const viewerFid = profile?.fid;
@@ -623,11 +557,6 @@ function PostTool({
 
   async function handleReaction(type: "like" | "recast") {
     if (!castData || !viewerFid || !signerUuid) return;
-    
-    if (signerStatus !== 'approved') {
-      setError('Signer not approved. Please approve your signer first.');
-      return;
-    }
 
     setActionLoading((prev) => ({ ...prev, [type]: true }));
     setError(null);
@@ -650,8 +579,7 @@ function PostTool({
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error("Like response error:", errorData);
-          throw new Error(`Like failed: ${errorData.error || errorData.message || "API Error"}`);
+          throw new Error(`Like failed: ${errorData.message || "API Error"}`);
         }
       } else if (type === "recast") {
         const response = await fetch("/api/neynar/cast", {

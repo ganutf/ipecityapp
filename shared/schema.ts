@@ -73,10 +73,7 @@ export const userSigners = pgTable("user_signers", {
   id: serial("id").primaryKey(),
   farcasterFid: integer("farcaster_fid").unique().notNull(),
   signerUuid: varchar("signer_uuid").notNull(),
-  approvalUrl: varchar("approval_url", { length: 500 }),
-  status: varchar("status", { length: 50 }).default("generated"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Relations

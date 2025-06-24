@@ -148,6 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Creating new sponsored signer for FID:', fid);
         const signerData = await getSignedKey(true); // sponsored = true
         console.log('Created and registered signer:', signerData);
+        console.log('Using approval URL:', signerData.signedKey?.signer_approval_url);
         
         // Store the signer in database
         const newSigner = await storage.createUserSigner({
@@ -155,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signerUuid: signerData.signer_uuid,
           publicKey: signerData.public_key || '',
           status: signerData.signedKey?.status || signerData.status || 'pending_approval',
-          approvalUrl: signerData.deep_link_url || signerData.signedKey?.signer_approval_url || `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${signerData.public_key}`
+          approvalUrl: signerData.signedKey?.signer_approval_url || signerData.deep_link_url || `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${signerData.public_key}`
         });
 
         res.json({

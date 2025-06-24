@@ -25,11 +25,15 @@ export const getSignedKey = async (is_sponsored: boolean = true) => {
     sponsor,
   });
 
+  // Log the signed key response to debug
+  console.log('Signed key response:', JSON.stringify(signedKey, null, 2));
+  
   return {
     signer_uuid: createSigner.signer_uuid,
     public_key: createSigner.public_key,
     status: signedKey.status,
     deep_link_url: signedKey.signer_approval_url,
+    correct_approval_url: signedKey.signer_approval_url, // Add this for debugging
     signedKey
   };
 };

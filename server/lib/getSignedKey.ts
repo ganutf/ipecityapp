@@ -26,7 +26,10 @@ export const getSignedKey = async (is_sponsored: boolean = true) => {
   });
 
   return {
-    ...createSigner,
+    signer_uuid: createSigner.signer_uuid,
+    public_key: createSigner.public_key,
+    status: signedKey.status,
+    deep_link_url: signedKey.signer_approval_url,
     signedKey
   };
 };

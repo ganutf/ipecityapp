@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signerUuid: signerData.signer_uuid,
           publicKey: signerData.public_key || '',
           status: signerData.signedKey?.status || signerData.status || 'pending_approval',
-          approvalUrl: signerData.signedKey?.signer_approval_url || signerData.deep_link_url || `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${signerData.public_key}`
+          approvalUrl: signerData.deep_link_url || signerData.signedKey?.signer_approval_url || `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${signerData.public_key}`
         });
 
         res.json({

@@ -165,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Registering sponsored signed key with Neynar...');
         const registeredKey = await neynar.registerSignedKey({
           signerUuid: createResponse.signer_uuid,
-          appFid: 2790, // Your app's FID
+          appFid: 1109894, // Your app's FID
           deadline,
           signature,
           sponsor // Include sponsor signature
@@ -438,7 +438,7 @@ async function generateSignature(
   }
 
   const FARCASTER_DEVELOPER_MNEMONIC = process.env.FARCASTER_DEVELOPER_MNEMONIC;
-  const APP_FID = 2790; // Your app's FID
+  const APP_FID = 1109894; // Your app's FID
 
   const account = mnemonicToAccount(FARCASTER_DEVELOPER_MNEMONIC);
   const appAccountKey = new ViemLocalEip712Signer(account as any);

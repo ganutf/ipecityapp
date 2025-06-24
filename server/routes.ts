@@ -163,10 +163,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Register the sponsored signer using the developer managed signer method
         const registeredSigner = await neynar.registerSignedKeyForDeveloperManagedSigner({
-          signerUuid: createResponse.signer_uuid,
-          signature,
-          deadline,
-          sponsorship: sponsor
+          registerDeveloperManagedSignedKeyReqBody: {
+            signerUuid: createResponse.signer_uuid,
+            appFid: 2790, // Your app's FID
+            signature,
+            deadline,
+            sponsorship: sponsor
+          }
         });
 
         console.log('Registered sponsored signer:', registeredSigner);

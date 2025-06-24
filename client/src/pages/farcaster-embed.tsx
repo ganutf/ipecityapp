@@ -125,23 +125,82 @@ export default function FarcasterEmbed() {
     );
   }
 
-  // Show loading screen while signer is being created and approved automatically
-  if (isAuthenticated && memberCheck?.isMember && signerLoading) {
+  // Show signer approval screen when needed
+  if (isAuthenticated && memberCheck?.isMember && signerData && (signerStatus === 'generated' || signerStatus === 'pending_approval') && approvalUrl) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
           <h2 className="text-2xl font-bold mb-4 text-gray-900">
-            Setting up your account
+            Approve Your Signer
           </h2>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600 mb-6">
-            Creating and approving your signer automatically...
+            To participate in pulse activities, you need to approve a signer for your account.
           </p>
+          <div className="mb-4 p-3 bg-yellow-50 rounded-lg text-sm">
+            <p className="text-yellow-800 font-medium mb-2">Instructions:</p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-yellow-800 font-medium mb-2">Option 1: Mobile Device</p>
+                <ol className="text-yellow-700 space-y-1 list-decimal list-inside text-xs">
+                  <li>Scan the QR code with your phone camera</li>
+                  <li>This will open the Farcaster app on your mobile device</li>
+                  <li>Approve the signer request</li>
+                  <li>Return here and click "Check Status"</li>
+                </ol>
+              </div>
+              <div>
+                <p className="text-yellow-800 font-medium mb-2">Option 2: Direct Link</p>
+                <ol className="text-yellow-700 space-y-1 list-decimal list-inside text-xs">
+                  <li>Click "Open Farcaster" below</li>
+                  <li>If you have Farcaster installed, it will open</li>
+                  <li>Approve the signer request</li>
+                  <li>Return here and click "Check Status"</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+          
+          {qrCodeUrl && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm font-medium text-gray-700 mb-3">Scan with your phone:</p>
+              <div className="flex justify-center">
+                <img src={qrCodeUrl} alt="QR Code for Farcaster approval" className="rounded-lg shadow-sm" />
+              </div>
+            </div>
+          )}
           <div className="mb-6 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
-              This process is automated and should complete shortly.
+              Status: <span className="font-semibold">{signerStatus === 'generated' ? 'Ready for approval' : signerStatus}</span>
             </p>
           </div>
+          <a
+            href={approvalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium mb-4"
+          >
+            Open Farcaster
+          </a>
+          <br />
+          <button
+            onClick={() => {
+              fetch(`/api/neynar/signer/check/${viewerFid}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                  if (data.status === 'approved') {
+                    window.location.reload();
+                  } else {
+                    alert('Signer not yet approved. Please complete the approval process first.');
+                  }
+                })
+                .catch(() => {
+                  window.location.reload();
+                });
+            }}
+            className="text-sm text-gray-600 hover:text-gray-800 underline"
+          >
+            Check Status
+          </button>
         </div>
       </div>
     );

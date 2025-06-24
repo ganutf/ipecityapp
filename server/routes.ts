@@ -151,24 +151,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createResponse = await neynar.createSigner();
         console.log('Created signer:', createResponse);
         
-        // Generate signature using developer mnemonic for sponsored signer
-        console.log('Generating sponsored signature for public key:', createResponse.public_key);
-        const { deadline, signature, sponsor } = await generateSignature(
+        // Generate signature for signer registration
+        console.log('Generating signature for public key:', createResponse.public_key);
+        const { deadline, signature } = await generateSignature(
           createResponse.public_key,
           fid,
-          true // sponsored = true - FID 2790 pays for this signer
+          false // Standard signer - user pays for approval
         );
         
-        console.log('Generated sponsored signature:', { deadline, signature, sponsor });
+        console.log('Generated signature:', { deadline, signature });
 
-        // Register the sponsored signed key with Neynar
-        console.log('Registering sponsored signed key with Neynar...');
+        // Register the signed key with Neynar
+        console.log('Registering signed key with Neynar...');
         const registeredKey = await neynar.registerSignedKey({
           signerUuid: createResponse.signer_uuid,
-          appFid: 1109894, // Your app's FID
+          appFid: 2790, // Use FID 2790 for app registration
           deadline,
-          signature,
-          sponsor // Include sponsor signature
+          signature
         });
 
         console.log('Registered signed key successfully:', registeredKey);
@@ -189,52 +188,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signer_uuid: newSigner.signerUuid,
           status: newSigner.status,
           signer_approval_url: newSigner.approvalUrl,
-          message: 'Signer created and registered - approval required via QR code or mobile app'
+          message: 'Signer created - user will be charged for approval'
         });
       }
     } catch (e) {
       console.error('Signer endpoint error:', e);
       const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
       
-      // If signature verification fails, fallback to non-sponsored signer
-      if (msg && typeof msg === 'object' && msg.message?.includes('Unable to verify signature')) {
-        console.log('Signature verification failed, creating non-sponsored signer for FID:', req.params.fid);
-        try {
-          const createResponse = await neynar.createSigner();
-          const { deadline, signature } = await generateSignature(
-            createResponse.public_key,
-            Number(req.params.fid),
-            false // not sponsored
-          );
 
-          const registeredKey = await neynar.registerSignedKey({
-            signerUuid: createResponse.signer_uuid,
-            appFid: 1109894,
-            deadline,
-            signature
-          });
-
-          const approvalUrl = registeredKey.signer_approval_url || `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.public_key}`;
-          
-          const newSigner = await storage.createUserSigner({
-            farcasterFid: Number(req.params.fid),
-            signerUuid: createResponse.signer_uuid,
-            publicKey: createResponse.public_key || '',
-            status: registeredKey.status || 'pending_approval',
-            approvalUrl: approvalUrl
-          });
-
-          return res.json({
-            signer_uuid: newSigner.signerUuid,
-            status: newSigner.status,
-            signer_approval_url: newSigner.approvalUrl,
-            message: 'Signer created - user will be charged for approval (sponsorship unavailable)'
-          });
-        } catch (fallbackError) {
-          console.error('Fallback signer creation failed:', fallbackError);
-          return res.status(500).json({ error: 'Failed to create signer' });
-        }
-      }
       
       res.status(e.statusCode ?? 500).json({ error: msg });
     }

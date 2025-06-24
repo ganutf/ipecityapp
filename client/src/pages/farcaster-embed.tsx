@@ -22,20 +22,16 @@ export default function FarcasterEmbed() {
     enabled: isAuthenticated && hasValidFid && !authLoading,
   });
 
-  const { data: signerData } = useQuery({
+  const { data: signerData, isLoading: signerLoading } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled:
       isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
     staleTime: Infinity,
-    onSuccess(data) {
-      if (data?.signer_uuid) {
-        localStorage.setItem(SIGNER_KEY, data.signer_uuid);
-      }
-    },
   });
 
-  const signerUuid =
-    signerData?.signer_uuid || localStorage.getItem(SIGNER_KEY) || null; // ← NEW
+  const signerUuid = signerData?.signer_uuid || null;
+  const signerStatus = signerData?.status || 'pending_approval';
+  const approvalUrl = signerData?.signer_approval_url;
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({

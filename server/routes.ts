@@ -115,13 +115,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signerUuid: response.signer_uuid,
           publicKey: response.public_key,
           status: response.status,
-          signerApprovalUrl: response.signer_approval_url
+          approvalUrl: response.signer_approval_url
         });
 
         res.json({
           signer_uuid: newSigner.signerUuid,
           status: newSigner.status,
-          signer_approval_url: newSigner.signerApprovalUrl
+          signer_approval_url: newSigner.approvalUrl
         });
       }
     } catch (e) {

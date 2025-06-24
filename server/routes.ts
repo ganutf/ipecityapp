@@ -172,8 +172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         console.log('Registered signed key successfully:', registeredKey);
         
-        // Generate correct approval URL for Farcaster using public_key as token
-        const approvalUrl = `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.public_key}`;
+        // Use the approval URL provided by Neynar
+        const approvalUrl = registeredKey.signer_approval_url || `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.public_key}`;
         
         // Store the signer in database
         const newSigner = await storage.createUserSigner({

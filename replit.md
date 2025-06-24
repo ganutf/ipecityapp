@@ -200,12 +200,12 @@ The application follows a monorepo structure with clear separation between clien
   - Updated database schema to track individual signer status and approval URLs
   - Improved user experience with clear approval instructions and refresh functionality
   - Enhanced error handling and logging for signer management operations
-  - **COMPLETED**: Individual signer system with QR code approval
-  - Each user gets their own signer (no shared admin signer)
-  - Users approve via QR code and pay their own warps (1 warp typically)
-  - Added comprehensive approval UI with QR code and direct link options
+  - **COMPLETED**: Implemented sponsored signer system with QR code approval
+  - Users get individual sponsored signers - app pays instead of users
+  - Added comprehensive approval UI with both QR code and direct link options
   - Status checking functionality to verify approval completion
-  - System updated to work with new Farcaster developer mnemonic
+  - Proper signed key registration with developer mnemonic signatures
+  - Cost-free approval process for users (app sponsors the warps)
 
 ## User Preferences
 

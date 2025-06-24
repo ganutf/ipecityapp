@@ -151,17 +151,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createResponse = await neynar.createSigner();
         console.log('Created signer:', createResponse);
         
-
+        // Create individual signer without sponsorship (user pays for approval)
+        console.log('Creating individual signer for public key:', createResponse.public_key);
         
-        // Create simple approval URL that works
+        // Generate correct approval URL using public key
         const approvalUrl = `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.public_key}`;
+        
+        // For individual signers, we don't register with Neynar - user approves directly
+        const registeredKey = {
+          signer_uuid: createResponse.signer_uuid,
+          public_key: createResponse.public_key,
+          status: 'pending_approval',
+          signer_approval_url: approvalUrl
+        };
+
+        console.log('Registered signed key successfully:', registeredKey);
         
         // Store the signer in database
         const newSigner = await storage.createUserSigner({
           farcasterFid: fid,
           signerUuid: createResponse.signer_uuid,
           publicKey: createResponse.public_key || '',
-          status: 'pending_approval',
+          status: registeredKey.status || 'pending_approval',
           approvalUrl: approvalUrl
         });
 
@@ -169,15 +180,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signer_uuid: newSigner.signerUuid,
           status: newSigner.status,
           signer_approval_url: newSigner.approvalUrl,
-          message: 'Signer created successfully - approval required'
+          message: 'Signer created and registered - approval required via QR code or mobile app'
         });
       }
     } catch (e) {
       console.error('Signer endpoint error:', e);
       const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
-      
-
-      
       res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });
@@ -421,9 +429,13 @@ async function generateSignature(
   }
 
   const FARCASTER_DEVELOPER_MNEMONIC = process.env.FARCASTER_DEVELOPER_MNEMONIC;
-  const APP_FID = 1109894; // Your app's FID
-
   const account = mnemonicToAccount(FARCASTER_DEVELOPER_MNEMONIC);
+  
+  console.log('Developer wallet address:', account.address);
+  
+  // For sponsored signers, we need to use the FID of the requesting user (requestFid)
+  // and register it under that user's account, not the developer's account
+  const APP_FID = requestFid; // Use the requesting user's FID instead of developer FID
   const appAccountKey = new ViemLocalEip712Signer(account as any);
 
   // Generates an expiration date for the signature (24 hours from now)

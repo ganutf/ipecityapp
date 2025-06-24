@@ -109,6 +109,38 @@ export default function FarcasterEmbed() {
     );
   }
 
+  // Show signer approval screen if needed
+  if (isAuthenticated && memberCheck?.isMember && signerData && signerStatus !== 'approved' && approvalUrl) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">
+            Approve Your Signer
+          </h2>
+          <p className="text-gray-600 mb-6">
+            To participate in pulse activities, you need to approve a signer for your account. This allows the app to interact with Farcaster on your behalf.
+          </p>
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              Status: <span className="font-semibold">{signerStatus}</span>
+            </p>
+          </div>
+          <a
+            href={approvalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+          >
+            Approve Signer
+          </a>
+          <p className="text-xs text-gray-500 mt-4">
+            After approval, refresh this page to continue
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 
 
   if (isAuthenticated && hasValidFid && !authLoading && memberCheck && (!memberCheck?.isMember || !memberCheck?.approved)) {

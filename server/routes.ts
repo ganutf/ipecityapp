@@ -96,25 +96,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid FID' });
       }
 
+      console.log(`Looking for signer for FID: ${fid}`);
+
       // Check if user already has a signer
-      let userSigner = await storage.getUserSigner(fid);
+      let userSigner;
+      try {
+        userSigner = await storage.getUserSigner(fid);
+        console.log('Existing signer found:', userSigner);
+      } catch (dbError) {
+        console.error('Database error when fetching signer:', dbError);
+        return res.status(500).json({ error: 'Database connection error' });
+      }
       
       if (userSigner) {
         // Return existing signer
         res.json({ 
           signer_uuid: userSigner.signerUuid,
-          status: userSigner.status
+          status: userSigner.status || 'pending_approval',
+          signer_approval_url: userSigner.approvalUrl
         });
       } else {
         // Create new sponsored signer
+        console.log('Creating new sponsored signer for FID:', fid);
         const response = await neynar.createSigner();
+        console.log('Neynar response:', response);
         
         // Store the signer in database
         const newSigner = await storage.createUserSigner({
           farcasterFid: fid,
           signerUuid: response.signer_uuid,
-          publicKey: response.public_key,
-          status: response.status,
+          publicKey: response.public_key || '',
+          status: response.status || 'pending_approval',
           approvalUrl: response.signer_approval_url
         });
 
@@ -125,6 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     } catch (e) {
+      console.error('Signer endpoint error:', e);
       const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
       res.status(e.statusCode ?? 500).json({ error: msg });
     }

@@ -124,7 +124,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserSigner(farcasterFid: number): Promise<UserSigner | undefined> {
-    const [signer] = await this.db
+    const [signer] = await db
       .select()
       .from(userSigners)
       .where(eq(userSigners.farcasterFid, farcasterFid));
@@ -132,12 +132,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUserSigner(signer: InsertUserSigner): Promise<UserSigner> {
-    const [newSigner] = await this.db.insert(userSigners).values(signer).returning();
+    const [newSigner] = await db.insert(userSigners).values(signer).returning();
     return newSigner;
   }
 
   async updateUserSignerStatus(farcasterFid: number, status: string): Promise<UserSigner> {
-    const [updatedSigner] = await this.db
+    const [updatedSigner] = await db
       .update(userSigners)
       .set({ status })
       .where(eq(userSigners.farcasterFid, farcasterFid))

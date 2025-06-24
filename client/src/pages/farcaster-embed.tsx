@@ -120,6 +120,15 @@ export default function FarcasterEmbed() {
           <p className="text-gray-600 mb-6">
             To participate in pulse activities, you need to approve a signer for your account. This allows the app to interact with Farcaster on your behalf.
           </p>
+          <div className="mb-4 p-3 bg-yellow-50 rounded-lg text-sm">
+            <p className="text-yellow-800 font-medium mb-2">Instructions:</p>
+            <ol className="text-yellow-700 space-y-1 list-decimal list-inside">
+              <li>Click "Open Farcaster to Approve" below</li>
+              <li>This will open your Farcaster client (Warpcast app or web)</li>
+              <li>Approve the signer request in your Farcaster client</li>
+              <li>Return here and click "I've approved it, check status"</li>
+            </ol>
+          </div>
           <div className="mb-6 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
               Status: <span className="font-semibold">{signerStatus === 'generated' ? 'Ready for approval' : signerStatus}</span>
@@ -131,14 +140,28 @@ export default function FarcasterEmbed() {
             rel="noopener noreferrer"
             className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium mb-4"
           >
-            Approve Signer
+            Open Farcaster to Approve
           </a>
           <br />
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              // Check signer status and refresh if approved
+              fetch(`/api/neynar/signer/check/${viewerFid}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                  if (data.status === 'approved') {
+                    window.location.reload();
+                  } else {
+                    alert('Signer not yet approved. Please complete the approval process first.');
+                  }
+                })
+                .catch(() => {
+                  window.location.reload(); // Fallback to simple refresh
+                });
+            }}
             className="text-sm text-gray-600 hover:text-gray-800 underline"
           >
-            I've approved it, refresh page
+            I've approved it, check status
           </button>
         </div>
       </div>

@@ -121,13 +121,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const response = await neynar.createSigner();
         console.log('Neynar response:', response);
         
+        // For sponsored signers, the approval URL uses 'token' parameter and farcaster.xyz domain
+        const approvalUrl = `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${response.signer_uuid}`;
+        
         // Store the signer in database
         const newSigner = await storage.createUserSigner({
           farcasterFid: fid,
           signerUuid: response.signer_uuid,
           publicKey: response.public_key || '',
           status: response.status || 'pending_approval',
-          approvalUrl: response.signer_approval_url
+          approvalUrl: approvalUrl
         });
 
         res.json({
@@ -143,22 +146,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Register sponsored signer endpoint
-  app.post("/api/neynar/signer/register", async (req, res) => {
+  // Check signer status and update if approved
+  app.post("/api/neynar/signer/check/:fid", async (req, res) => {
     try {
-      const { signer_uuid, fid } = req.body as {
-        signer_uuid: string;
-        fid: number;
-      };
+      const fid = parseInt(req.params.fid);
+      if (isNaN(fid)) {
+        return res.status(400).json({ error: 'Invalid FID' });
+      }
 
-      // Register the signer with Neynar - this happens when user manually approves the signer
-      // For sponsored signers, we don't need to call registerSignedKeyForSponsoredApp
-      // The approval happens through the approval URL provided when creating the signer
-      
-      // Update signer status in database when we detect it's been approved
-      await storage.updateUserSignerStatus(fid, 'approved');
+      const userSigner = await storage.getUserSigner(fid);
+      if (!userSigner) {
+        return res.status(404).json({ error: 'Signer not found' });
+      }
 
-      res.json({ success: true, message: 'Signer status updated to approved' });
+      // Check signer status with Neynar
+      try {
+        const signerInfo = await neynar.lookupSigner(userSigner.signerUuid);
+        console.log('Signer info from Neynar:', signerInfo);
+        
+        // Update status if it has changed
+        if (signerInfo.status !== userSigner.status) {
+          await storage.updateUserSignerStatus(fid, signerInfo.status);
+          res.json({ 
+            status: signerInfo.status, 
+            updated: true,
+            signer_uuid: userSigner.signerUuid 
+          });
+        } else {
+          res.json({ 
+            status: userSigner.status, 
+            updated: false,
+            signer_uuid: userSigner.signerUuid 
+          });
+        }
+      } catch (neynarError) {
+        console.log('Neynar lookup error:', neynarError);
+        // If we can't check with Neynar, return current status
+        res.json({ 
+          status: userSigner.status, 
+          updated: false,
+          signer_uuid: userSigner.signerUuid,
+          note: 'Could not verify with Neynar'
+        });
+      }
     } catch (e) {
       const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
       res.status(e.statusCode ?? 500).json({ error: msg });

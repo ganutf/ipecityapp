@@ -39,6 +39,7 @@ export interface IStorage {
   // User Signers
   getUserSigner(farcasterFid: number): Promise<UserSigner | undefined>;
   createUserSigner(signer: InsertUserSigner): Promise<UserSigner>;
+  updateUserSignerStatus(farcasterFid: number, status: string): Promise<UserSigner>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -133,6 +134,20 @@ export class DatabaseStorage implements IStorage {
   async createUserSigner(signer: InsertUserSigner): Promise<UserSigner> {
     const [newSigner] = await db.insert(userSigners).values(signer).returning();
     return newSigner;
+  }
+
+  async updateUserSignerStatus(farcasterFid: number, status: string): Promise<UserSigner> {
+    const [updatedSigner] = await db
+      .update(userSigners)
+      .set({ status })
+      .where(eq(userSigners.farcasterFid, farcasterFid))
+      .returning();
+    
+    if (!updatedSigner) {
+      throw new Error(`UserSigner not found for FID ${farcasterFid}`);
+    }
+    
+    return updatedSigner;
   }
 }
 

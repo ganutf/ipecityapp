@@ -91,16 +91,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /* ────────────────  USER SIGNER MANAGEMENT  ──────────────── */
   app.get("/api/neynar/signer/:fid", async (req, res) => {
     try {
-      // Use admin's approved signer for all users to avoid approval issues
-      // In production, each user would need to approve their own signer
-      const adminSignerUuid = "82a7dac4-aed9-4f0f-b9c5-5b6f8a9d2e7c";
+      const fid = parseInt(req.params.fid);
+      if (isNaN(fid)) {
+        return res.status(400).json({ error: 'Invalid FID' });
+      }
+
+      // Check if user already has a signer
+      let userSigner = await storage.getUserSigner(fid);
       
-      res.json({ 
-        signer_uuid: adminSignerUuid,
-        note: "Using admin signer for demonstration purposes"
-      });
+      if (userSigner) {
+        // Return existing signer
+        res.json({ 
+          signer_uuid: userSigner.signerUuid,
+          status: userSigner.status
+        });
+      } else {
+        // Create new sponsored signer
+        const response = await neynar.createSigner();
+        
+        // Store the signer in database
+        const newSigner = await storage.createUserSigner({
+          farcasterFid: fid,
+          signerUuid: response.signer_uuid,
+          publicKey: response.public_key,
+          status: response.status,
+          signerApprovalUrl: response.signer_approval_url
+        });
+
+        res.json({
+          signer_uuid: newSigner.signerUuid,
+          status: newSigner.status,
+          signer_approval_url: newSigner.signerApprovalUrl
+        });
+      }
     } catch (e) {
-      res.status(500).json({ error: (e as Error).message });
+      const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
+      res.status(e.statusCode ?? 500).json({ error: msg });
+    }
+  });
+
+  // Register sponsored signer endpoint
+  app.post("/api/neynar/signer/register", async (req, res) => {
+    try {
+      const { signer_uuid, fid } = req.body as {
+        signer_uuid: string;
+        fid: number;
+      };
+
+      // Register the signer with Neynar
+      const response = await neynar.registerSignedKeyForSponsoredApp({
+        signerUuid: signer_uuid,
+        fid: fid
+      });
+
+      // Update signer status in database
+      await storage.updateUserSignerStatus(fid, 'approved');
+
+      res.json(response);
+    } catch (e) {
+      const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
+      res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });
 

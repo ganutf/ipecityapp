@@ -73,6 +73,9 @@ export const userSigners = pgTable("user_signers", {
   id: serial("id").primaryKey(),
   farcasterFid: integer("farcaster_fid").unique().notNull(),
   signerUuid: varchar("signer_uuid").notNull(),
+  publicKey: varchar("public_key").notNull(),
+  status: varchar("status").notNull(), // "pending_approval", "approved", "revoked", etc.
+  signerApprovalUrl: varchar("signer_approval_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

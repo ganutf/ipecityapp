@@ -8,6 +8,9 @@ import {
 import { storage } from "./storage";
 import { insertPulseSchema, updatePulseSchema, insertMemberSchema, insertPulseExecutionSchema } from "@shared/schema";
 import QRCode from "qrcode";
+import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
+import { bytesToHex, hexToBytes } from "viem";
+import { mnemonicToAccount } from "viem/accounts";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -144,25 +147,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Create new sponsored signer
         console.log('Creating new sponsored signer for FID:', fid);
-        const response = await neynar.createSigner();
-        console.log('Neynar response:', response);
+        const createResponse = await neynar.createSigner();
+        console.log('Created signer:', createResponse);
         
-        // For sponsored signers, the approval URL uses 'token' parameter and farcaster.xyz domain
-        const approvalUrl = `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${response.signer_uuid}`;
+        // Generate signature using developer mnemonic
+        const { deadline, signature, sponsor } = await generateSignature(
+          createResponse.public_key,
+          fid,
+          true // is_sponsored = true
+        );
+
+        // Register the sponsored signer
+        const registeredSigner = await neynar.registerSignedKey({
+          signerUuid: createResponse.signer_uuid,
+          appFid: fid,
+          deadline,
+          signature,
+          sponsor
+        });
+
+        console.log('Registered sponsored signer:', registeredSigner);
         
-        // Store the signer in database
+        // Store the signer in database with approved status
         const newSigner = await storage.createUserSigner({
           farcasterFid: fid,
-          signerUuid: response.signer_uuid,
-          publicKey: response.public_key || '',
-          status: response.status || 'pending_approval',
-          approvalUrl: approvalUrl
+          signerUuid: createResponse.signer_uuid,
+          publicKey: createResponse.public_key || '',
+          status: 'approved', // Automatically approved via sponsorship
+          approvalUrl: null // No manual approval needed
         });
 
         res.json({
           signer_uuid: newSigner.signerUuid,
           status: newSigner.status,
-          signer_approval_url: newSigner.approvalUrl
+          message: 'Sponsored signer automatically approved'
         });
       }
     } catch (e) {
@@ -398,4 +416,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /* ───────────────────────────────────────────────────────────── */
   return createServer(app);
+}
+
+// Generate signature for sponsored signer using developer mnemonic
+async function generateSignature(
+  publicKey: string,
+  requestFid: number,
+  isSponsored = false
+) {
+  if (typeof process.env.FARCASTER_DEVELOPER_MNEMONIC === "undefined") {
+    throw new Error("FARCASTER_DEVELOPER_MNEMONIC is not defined");
+  }
+
+  const FARCASTER_DEVELOPER_MNEMONIC = process.env.FARCASTER_DEVELOPER_MNEMONIC;
+  const APP_FID = 2790; // Your app's FID
+
+  const account = mnemonicToAccount(FARCASTER_DEVELOPER_MNEMONIC);
+  const appAccountKey = new ViemLocalEip712Signer(account as any);
+
+  // Generates an expiration date for the signature (24 hours from now)
+  const deadline = Math.floor(Date.now() / 1000) + 86400;
+
+  const uintAddress = hexToBytes(publicKey as `0x${string}`);
+
+  const signature = await appAccountKey.signKeyRequest({
+    requestFid: BigInt(requestFid),
+    key: uintAddress,
+    deadline: BigInt(deadline),
+  });
+
+  if (signature.isErr()) {
+    throw new Error("Failed to generate signature");
+  }
+
+  const sigHex = bytesToHex(signature.value);
+
+  let sponsor;
+
+  if (isSponsored) {
+    const sponsorSignature = await account.signMessage({
+      message: { raw: sigHex },
+    });
+
+    sponsor = {
+      signature: sponsorSignature,
+      fid: APP_FID,
+    };
+  }
+
+  return { deadline, signature: sigHex, sponsor };
 }

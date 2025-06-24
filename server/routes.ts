@@ -148,7 +148,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Creating new sponsored signer for FID:', fid);
         const signerData = await getSignedKey(true); // sponsored = true
         console.log('Created and registered signer:', signerData);
-        console.log('Using approval URL:', signerData.signedKey?.signer_approval_url);
         
         // Store the signer in database
         const newSigner = await storage.createUserSigner({

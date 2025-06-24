@@ -23,11 +23,15 @@ export default function FarcasterEmbed() {
     enabled: isAuthenticated && hasValidFid && !authLoading,
   });
 
-  const { data: signerData, isLoading: signerLoading } = useQuery({
+  const { data: signerData, isLoading: signerLoading, refetch: refetchSigner } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled:
       isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
-    staleTime: Infinity,
+    staleTime: 5000, // Refresh every 5 seconds while signer is pending
+    refetchInterval: (data) => {
+      // Poll every 3 seconds if signer is pending approval, otherwise don't poll
+      return data?.status === 'pending_approval' || data?.status === 'generated' ? 3000 : false;
+    },
   });
 
   const signerUuid = signerData?.signer_uuid || null;
@@ -125,8 +129,8 @@ export default function FarcasterEmbed() {
     );
   }
 
-  // Show signer approval screen when needed
-  if (isAuthenticated && memberCheck?.isMember && signerData && (signerStatus === 'generated' || signerStatus === 'pending_approval') && approvalUrl) {
+  // Show signer approval screen when needed (only if signer is not approved)
+  if (isAuthenticated && memberCheck?.isMember && signerData && (signerStatus === 'generated' || signerStatus === 'pending_approval') && signerStatus !== 'approved' && approvalUrl) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
@@ -183,19 +187,20 @@ export default function FarcasterEmbed() {
           </a>
           <br />
           <button
-            onClick={() => {
-              fetch(`/api/neynar/signer/check/${viewerFid}`, { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                  if (data.status === 'approved') {
-                    window.location.reload();
-                  } else {
-                    alert('Signer not yet approved. Please complete the approval process first.');
-                  }
-                })
-                .catch(() => {
-                  window.location.reload();
-                });
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/neynar/signer/check/${viewerFid}`, { method: 'POST' });
+                const data = await response.json();
+                if (data.status === 'approved') {
+                  // Refetch the signer data to update the UI immediately
+                  await refetchSigner();
+                } else {
+                  alert('Signer not yet approved. Please complete the approval process first.');
+                }
+              } catch (error) {
+                console.error('Error checking signer status:', error);
+                await refetchSigner();
+              }
             }}
             className="text-sm text-gray-600 hover:text-gray-800 underline"
           >

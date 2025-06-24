@@ -156,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { deadline, signature, sponsor } = await generateSignature(
           createResponse.public_key,
           fid,
-          true // sponsored = true
+          true // sponsored = true - FID 2790 pays for this signer
         );
         
         console.log('Generated sponsored signature:', { deadline, signature, sponsor });

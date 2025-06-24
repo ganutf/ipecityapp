@@ -137,12 +137,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Database connection error' });
       }
       
-      if (userSigner && userSigner.status === 'approved') {
-        // Return existing approved signer
+      if (userSigner) {
+        // Return existing signer (approved or pending)
         res.json({ 
           signer_uuid: userSigner.signerUuid,
           status: userSigner.status,
-          message: 'Existing sponsored signer found'
+          signer_approval_url: userSigner.approvalUrl,
+          message: userSigner.status === 'approved' ? 'Existing approved signer found' : 'Existing signer requires approval'
         });
       } else {
         // Create new signer with QR code approval flow

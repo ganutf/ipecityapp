@@ -151,8 +151,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createResponse = await neynar.createSigner();
         console.log('Created signer:', createResponse);
         
-        // Generate correct approval URL for Warpcast
-        const approvalUrl = `https://warpcast.com/~/signer-requests/${createResponse.signer_uuid}`;
+        // Generate correct approval URL for Farcaster
+        const approvalUrl = `https://farcaster.xyz/signer/${createResponse.signer_uuid}`;
         
         // Store the signer in database
         const newSigner = await storage.createUserSigner({

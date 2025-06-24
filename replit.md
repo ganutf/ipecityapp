@@ -193,19 +193,16 @@ The application follows a monorepo structure with clear separation between clien
 - June 22, 2025. Admin Panel Layout Enhancement:
   - Changed admin forms to vertical stacked layout as requested
   - "Create New Pulse" section appears first, followed by "Import Members" section
-- June 24, 2025. Sponsored Signer Implementation:
-  - Migrated from shared admin signer to individual Neynar Sponsored Signers per user
-  - Each user now gets their own signer automatically created when they first access the app
+- June 24, 2025. Individual Signer System Implementation:
+  - Migrated from shared admin signer to individual user signers per Farcaster account
+  - Each user gets their own signer automatically created when they first access the app
   - Added signer approval flow with dedicated UI screen for pending approvals
   - Updated database schema to track individual signer status and approval URLs
   - Improved user experience with clear approval instructions and refresh functionality
   - Enhanced error handling and logging for signer management operations
-  - **COMPLETED**: Implemented sponsored signer system with QR code approval
-  - Users get individual sponsored signers - app pays instead of users
-  - Added comprehensive approval UI with both QR code and direct link options
-  - Status checking functionality to verify approval completion
-  - Proper signed key registration with developer mnemonic signatures
-  - Cost-free approval process for users (app sponsors the warps)
+  - **Note**: Sponsored signer implementation requires correct mnemonic for target FID
+  - Current setup: Users approve their own signers (standard Farcaster flow)
+  - For sponsored signers: Need mnemonic that corresponds to the sponsoring FID account
 
 ## User Preferences
 

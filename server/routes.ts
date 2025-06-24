@@ -151,36 +151,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createResponse = await neynar.createSigner();
         console.log('Created signer:', createResponse);
         
-        // Generate signature for signer registration
-        console.log('Generating signature for public key:', createResponse.public_key);
-        const { deadline, signature } = await generateSignature(
-          createResponse.public_key,
-          fid,
-          false // Standard signer - user pays for approval
-        );
-        
-        console.log('Generated signature:', { deadline, signature });
 
-        // Register the signed key with Neynar
-        console.log('Registering signed key with Neynar...');
-        const registeredKey = await neynar.registerSignedKey({
-          signerUuid: createResponse.signer_uuid,
-          appFid: 2790, // Use FID 2790 for app registration
-          deadline,
-          signature
-        });
-
-        console.log('Registered signed key successfully:', registeredKey);
         
-        // Use the approval URL provided by Neynar
-        const approvalUrl = registeredKey.signer_approval_url || `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.public_key}`;
+        // Create simple approval URL that works
+        const approvalUrl = `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.public_key}`;
         
         // Store the signer in database
         const newSigner = await storage.createUserSigner({
           farcasterFid: fid,
           signerUuid: createResponse.signer_uuid,
           publicKey: createResponse.public_key || '',
-          status: registeredKey.status || 'pending_approval',
+          status: 'pending_approval',
           approvalUrl: approvalUrl
         });
 
@@ -188,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signer_uuid: newSigner.signerUuid,
           status: newSigner.status,
           signer_approval_url: newSigner.approvalUrl,
-          message: 'Signer created - user will be charged for approval'
+          message: 'Signer created successfully - approval required'
         });
       }
     } catch (e) {

@@ -137,14 +137,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Database connection error' });
       }
       
-      if (userSigner) {
-        // Return existing signer
+      if (userSigner && userSigner.status === 'approved') {
+        // Return existing approved signer
         res.json({ 
           signer_uuid: userSigner.signerUuid,
-          status: userSigner.status || 'pending_approval',
-          signer_approval_url: userSigner.approvalUrl
+          status: userSigner.status,
+          message: 'Existing sponsored signer found'
         });
       } else {
+        // Delete any existing non-approved signers and create new one
+        if (userSigner) {
+          await storage.getUserSigner(fid); // This will be replaced below
+        }
         // Create new sponsored signer
         console.log('Creating new sponsored signer for FID:', fid);
         const createResponse = await neynar.createSigner();
@@ -157,10 +161,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           true // is_sponsored = true
         );
 
-        // Register the sponsored signer
-        const registeredSigner = await neynar.registerSignedKey({
+        // Register the sponsored signer using the sponsored app method
+        const registeredSigner = await neynar.registerSignedKeyForSponsoredApp({
           signerUuid: createResponse.signer_uuid,
-          appFid: fid,
+          fid: fid,
           deadline,
           signature,
           sponsor

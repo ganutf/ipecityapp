@@ -200,10 +200,11 @@ The application follows a monorepo structure with clear separation between clien
   - Updated database schema to track individual signer status and approval URLs
   - Improved user experience with clear approval instructions and refresh functionality
   - Enhanced error handling and logging for signer management operations
-  - **COMPLETED**: Implemented proper sponsored signer with developer mnemonic
-  - Users now get automatically approved signers without manual approval process
-  - Added signature generation using ViemLocalEip712Signer and developer seed phrase
-  - Full sponsored signer flow: create → sign → register → approve automatically
+  - **UPDATED**: Implemented QR code-based signer approval system
+  - Users get individual signers with QR code for easy mobile approval
+  - Added comprehensive approval UI with both QR code and direct link options
+  - Status checking functionality to verify approval completion
+  - Simplified flow that works reliably with Neynar's current API
 
 ## User Preferences
 

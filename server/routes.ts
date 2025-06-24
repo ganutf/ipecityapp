@@ -145,53 +145,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Existing sponsored signer found'
         });
       } else {
-        // Delete any existing non-approved signers and create new one
-        if (userSigner) {
-          await storage.getUserSigner(fid); // This will be replaced below
-        }
-        // Create new sponsored signer
-        console.log('Creating new sponsored signer for FID:', fid);
+        // Create new signer with QR code approval flow
+        console.log('Creating new signer for FID:', fid);
         const createResponse = await neynar.createSigner();
         console.log('Created signer:', createResponse);
         
-        // Generate signature using developer mnemonic
-        const { deadline, signature, sponsor } = await generateSignature(
-          createResponse.public_key,
-          fid,
-          true // is_sponsored = true
-        );
-
-        // Register the sponsored signer using the developer managed signer method
-        const registeredSigner = await neynar.registerSignedKeyForDeveloperManagedSigner({
-          registerDeveloperManagedSignedKeyReqBody: {
-            signerUuid: createResponse.signer_uuid,
-            appFid: 2790, // Your app's FID
-            signature,
-            deadline,
-            sponsorship: sponsor
-          }
-        });
-
-        console.log('Registered sponsored signer:', registeredSigner);
+        // Generate correct approval URL
+        const approvalUrl = `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.signer_uuid}`;
         
-        // Use the actual status from Neynar response instead of assuming 'approved'
-        const actualStatus = registeredSigner.status || 'pending_approval';
-        console.log('Actual signer status from Neynar:', actualStatus);
-        
-        // Store the signer in database with actual status from Neynar
+        // Store the signer in database
         const newSigner = await storage.createUserSigner({
           farcasterFid: fid,
           signerUuid: createResponse.signer_uuid,
           publicKey: createResponse.public_key || '',
-          status: actualStatus,
-          approvalUrl: actualStatus === 'approved' ? null : registeredSigner.signer_approval_url
+          status: createResponse.status || 'pending_approval',
+          approvalUrl: approvalUrl
         });
 
         res.json({
           signer_uuid: newSigner.signerUuid,
           status: newSigner.status,
           signer_approval_url: newSigner.approvalUrl,
-          message: actualStatus === 'approved' ? 'Sponsored signer automatically approved' : 'Signer created but requires approval'
+          message: 'Signer created - approval required via QR code or mobile app'
         });
       }
     } catch (e) {

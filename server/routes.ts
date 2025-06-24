@@ -165,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Registering sponsored signed key with Neynar...');
         const registeredKey = await neynar.registerSignedKey({
           signerUuid: createResponse.signer_uuid,
-          appFid: 2790, // Your app's FID
+          appFid: fid, // Use the requesting user's FID
           deadline,
           signature,
           sponsor // Include sponsor signature
@@ -438,9 +438,13 @@ async function generateSignature(
   }
 
   const FARCASTER_DEVELOPER_MNEMONIC = process.env.FARCASTER_DEVELOPER_MNEMONIC;
-  const APP_FID = 2790; // Your app's FID
-
   const account = mnemonicToAccount(FARCASTER_DEVELOPER_MNEMONIC);
+  
+  console.log('Developer wallet address:', account.address);
+  
+  // For sponsored signers, we need to use the FID of the requesting user (requestFid)
+  // and register it under that user's account, not the developer's account
+  const APP_FID = requestFid; // Use the requesting user's FID instead of developer FID
   const appAccountKey = new ViemLocalEip712Signer(account as any);
 
   // Generates an expiration date for the signature (24 hours from now)

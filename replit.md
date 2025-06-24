@@ -200,11 +200,12 @@ The application follows a monorepo structure with clear separation between clien
   - Updated database schema to track individual signer status and approval URLs
   - Improved user experience with clear approval instructions and refresh functionality
   - Enhanced error handling and logging for signer management operations
-  - **UPDATED**: Implemented QR code-based signer approval system
-  - Users get individual signers with QR code for easy mobile approval
+  - **COMPLETED**: Implemented sponsored signer system with QR code approval
+  - Users get individual sponsored signers - app pays instead of users
   - Added comprehensive approval UI with both QR code and direct link options
   - Status checking functionality to verify approval completion
-  - Simplified flow that works reliably with Neynar's current API
+  - Proper signed key registration with developer mnemonic signatures
+  - Cost-free approval process for users (app sponsors the warps)
 
 ## User Preferences
 

@@ -151,23 +151,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createResponse = await neynar.createSigner();
         console.log('Created signer:', createResponse);
         
-        // Generate signature using developer mnemonic
-        console.log('Generating signature for public key:', createResponse.public_key);
-        const { deadline, signature } = await generateSignature(
+        // Generate signature using developer mnemonic for sponsored signer
+        console.log('Generating sponsored signature for public key:', createResponse.public_key);
+        const { deadline, signature, sponsor } = await generateSignature(
           createResponse.public_key,
           fid,
-          false // not sponsored
+          true // sponsored = true
         );
         
-        console.log('Generated signature:', { deadline, signature });
+        console.log('Generated sponsored signature:', { deadline, signature, sponsor });
 
-        // Register the signed key with Neynar
-        console.log('Registering signed key with Neynar...');
+        // Register the sponsored signed key with Neynar
+        console.log('Registering sponsored signed key with Neynar...');
         const registeredKey = await neynar.registerSignedKey({
           signerUuid: createResponse.signer_uuid,
           appFid: 2790, // Your app's FID
           deadline,
-          signature
+          signature,
+          sponsor // Include sponsor signature
         });
 
         console.log('Registered signed key successfully:', registeredKey);

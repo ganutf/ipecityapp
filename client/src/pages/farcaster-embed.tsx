@@ -27,11 +27,12 @@ export default function FarcasterEmbed() {
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled:
       isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
-    staleTime: 5000, // Refresh every 5 seconds while signer is pending
+    staleTime: 1000, // Keep data fresh
     refetchInterval: (data) => {
-      // Poll every 3 seconds if signer is pending approval, otherwise don't poll
-      return data?.status === 'pending_approval' || data?.status === 'generated' ? 3000 : false;
+      // Poll every 2 seconds if signer is pending approval, otherwise don't poll
+      return data?.status === 'pending_approval' || data?.status === 'generated' ? 2000 : false;
     },
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   const signerUuid = signerData?.signer_uuid || null;
@@ -130,7 +131,7 @@ export default function FarcasterEmbed() {
   }
 
   // Show signer approval screen when needed (only if signer is not approved)
-  if (isAuthenticated && memberCheck?.isMember && signerData && (signerStatus === 'generated' || signerStatus === 'pending_approval') && signerStatus !== 'approved' && approvalUrl) {
+  if (isAuthenticated && memberCheck?.isMember && signerData && signerStatus !== 'approved' && (signerStatus === 'generated' || signerStatus === 'pending_approval') && approvalUrl) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">

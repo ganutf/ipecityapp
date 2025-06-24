@@ -161,30 +161,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           true // is_sponsored = true
         );
 
-        // Register the sponsored signer using the sponsored app method
-        const registeredSigner = await neynar.registerSignedKeyForSponsoredApp({
+        // Register the sponsored signer using the developer managed signer method
+        const registeredSigner = await neynar.registerSignedKeyForDeveloperManagedSigner({
           signerUuid: createResponse.signer_uuid,
-          fid: fid,
-          deadline,
           signature,
-          sponsor
+          deadline,
+          sponsorship: sponsor
         });
 
         console.log('Registered sponsored signer:', registeredSigner);
         
-        // Store the signer in database with approved status
+        // Use the actual status from Neynar response instead of assuming 'approved'
+        const actualStatus = registeredSigner.status || 'pending_approval';
+        console.log('Actual signer status from Neynar:', actualStatus);
+        
+        // Store the signer in database with actual status from Neynar
         const newSigner = await storage.createUserSigner({
           farcasterFid: fid,
           signerUuid: createResponse.signer_uuid,
           publicKey: createResponse.public_key || '',
-          status: 'approved', // Automatically approved via sponsorship
-          approvalUrl: null // No manual approval needed
+          status: actualStatus,
+          approvalUrl: actualStatus === 'approved' ? null : registeredSigner.signer_approval_url
         });
 
         res.json({
           signer_uuid: newSigner.signerUuid,
           status: newSigner.status,
-          message: 'Sponsored signer automatically approved'
+          signer_approval_url: newSigner.approvalUrl,
+          message: actualStatus === 'approved' ? 'Sponsored signer automatically approved' : 'Signer created but requires approval'
         });
       }
     } catch (e) {

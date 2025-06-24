@@ -146,10 +146,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: userSigner.status === 'approved' ? 'Existing approved signer found' : 'Existing signer requires approval'
         });
       } else {
-        // Create new signer with QR code approval flow
+        // Create new signer and register signed key
         console.log('Creating new signer for FID:', fid);
         const createResponse = await neynar.createSigner();
         console.log('Created signer:', createResponse);
+        
+        // Generate signature using developer mnemonic
+        console.log('Generating signature for public key:', createResponse.public_key);
+        const { deadline, signature } = await generateSignature(
+          createResponse.public_key,
+          fid,
+          false // not sponsored
+        );
+        
+        console.log('Generated signature:', { deadline, signature });
+
+        // Register the signed key with Neynar
+        console.log('Registering signed key with Neynar...');
+        const registeredKey = await neynar.registerSignedKey({
+          signerUuid: createResponse.signer_uuid,
+          appFid: 2790, // Your app's FID
+          deadline,
+          signature
+        });
+
+        console.log('Registered signed key successfully:', registeredKey);
         
         // Generate correct approval URL for Farcaster using public_key as token
         const approvalUrl = `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.public_key}`;
@@ -159,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           farcasterFid: fid,
           signerUuid: createResponse.signer_uuid,
           publicKey: createResponse.public_key || '',
-          status: createResponse.status || 'pending_approval',
+          status: registeredKey.status || 'pending_approval',
           approvalUrl: approvalUrl
         });
 
@@ -167,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signer_uuid: newSigner.signerUuid,
           status: newSigner.status,
           signer_approval_url: newSigner.approvalUrl,
-          message: 'Signer created - approval required via QR code or mobile app'
+          message: 'Signer created and registered - approval required via QR code or mobile app'
         });
       }
     } catch (e) {

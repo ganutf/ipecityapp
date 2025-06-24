@@ -110,7 +110,7 @@ export default function FarcasterEmbed() {
   }
 
   // Show signer approval screen if needed
-  if (isAuthenticated && memberCheck?.isMember && signerData && signerStatus !== 'approved' && approvalUrl) {
+  if (isAuthenticated && memberCheck?.isMember && signerData && (signerStatus === 'generated' || signerStatus === 'pending_approval') && approvalUrl) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
@@ -122,20 +122,24 @@ export default function FarcasterEmbed() {
           </p>
           <div className="mb-6 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
-              Status: <span className="font-semibold">{signerStatus}</span>
+              Status: <span className="font-semibold">{signerStatus === 'generated' ? 'Ready for approval' : signerStatus}</span>
             </p>
           </div>
           <a
             href={approvalUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium mb-4"
           >
             Approve Signer
           </a>
-          <p className="text-xs text-gray-500 mt-4">
-            After approval, refresh this page to continue
-          </p>
+          <br />
+          <button
+            onClick={() => window.location.reload()}
+            className="text-sm text-gray-600 hover:text-gray-800 underline"
+          >
+            I've approved it, refresh page
+          </button>
         </div>
       </div>
     );

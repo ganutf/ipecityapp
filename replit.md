@@ -193,10 +193,13 @@ The application follows a monorepo structure with clear separation between clien
 - June 22, 2025. Admin Panel Layout Enhancement:
   - Changed admin forms to vertical stacked layout as requested
   - "Create New Pulse" section appears first, followed by "Import Members" section
-- June 23, 2025. Signer Management Fix:
-  - Fixed "SignerNotApproved" errors by using admin's approved signer for all users
-  - Resolved pulse creation error by adding required createdBy field
-  - All like and recast interactions now working properly
+- June 24, 2025. Sponsored Signer Implementation:
+  - Migrated from shared admin signer to individual Neynar Sponsored Signers per user
+  - Each user now gets their own signer automatically created when they first access the app
+  - Added signer approval flow with dedicated UI screen for pending approvals
+  - Updated database schema to track individual signer status and approval URLs
+  - Improved user experience with clear approval instructions and refresh functionality
+  - Enhanced error handling and logging for signer management operations
 
 ## User Preferences
 

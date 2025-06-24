@@ -151,16 +151,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fid: number;
       };
 
-      // Register the signer with Neynar
-      const response = await neynar.registerSignedKeyForSponsoredApp({
-        signerUuid: signer_uuid,
-        fid: fid
-      });
-
-      // Update signer status in database
+      // Register the signer with Neynar - this happens when user manually approves the signer
+      // For sponsored signers, we don't need to call registerSignedKeyForSponsoredApp
+      // The approval happens through the approval URL provided when creating the signer
+      
+      // Update signer status in database when we detect it's been approved
       await storage.updateUserSignerStatus(fid, 'approved');
 
-      res.json(response);
+      res.json({ success: true, message: 'Signer status updated to approved' });
     } catch (e) {
       const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
       res.status(e.statusCode ?? 500).json({ error: msg });

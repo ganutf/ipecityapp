@@ -28,8 +28,8 @@ export default function AdminPage() {
     description: "",
   });
 
-  // Check if user is admin (FID 1109894)
-  const isAdmin = profile?.fid === 1109894;
+  // Check if user is admin (FID 2790)
+  const isAdmin = profile?.fid === 2790;
 
   // Fetch all pulses - must be called before any returns
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
@@ -214,7 +214,7 @@ export default function AdminPage() {
               <Textarea
                 value={csvData}
                 onChange={(e) => setCsvData(e.target.value)}
-                placeholder="farcaster_fid,farcaster_username,name,ipe_passport,approved&#10;1109894,jhansen,Jean Hansen,jean.ipecity.eth,true"
+                placeholder="farcaster_fid,farcaster_username,name,ipe_passport,approved&#10;2790,jhansen,Jean Hansen,jean.ipecity.eth,true"
                 rows={8}
                 className="font-mono text-sm"
               />

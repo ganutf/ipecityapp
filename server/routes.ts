@@ -195,6 +195,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (e) {
       console.error('Signer endpoint error:', e);
       const msg = isApiErrorResponse(e) ? e.response.data : (e as Error).message;
+      
+      // If signature verification fails, fallback to non-sponsored signer
+      if (msg && typeof msg === 'object' && msg.message?.includes('Unable to verify signature')) {
+        console.log('Signature verification failed, creating non-sponsored signer for FID:', req.params.fid);
+        try {
+          const createResponse = await neynar.createSigner();
+          const { deadline, signature } = await generateSignature(
+            createResponse.public_key,
+            Number(req.params.fid),
+            false // not sponsored
+          );
+
+          const registeredKey = await neynar.registerSignedKey({
+            signerUuid: createResponse.signer_uuid,
+            appFid: 1109894,
+            deadline,
+            signature
+          });
+
+          const approvalUrl = registeredKey.signer_approval_url || `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.public_key}`;
+          
+          const newSigner = await storage.createUserSigner({
+            farcasterFid: Number(req.params.fid),
+            signerUuid: createResponse.signer_uuid,
+            publicKey: createResponse.public_key || '',
+            status: registeredKey.status || 'pending_approval',
+            approvalUrl: approvalUrl
+          });
+
+          return res.json({
+            signer_uuid: newSigner.signerUuid,
+            status: newSigner.status,
+            signer_approval_url: newSigner.approvalUrl,
+            message: 'Signer created - user will be charged for approval (sponsorship unavailable)'
+          });
+        } catch (fallbackError) {
+          console.error('Fallback signer creation failed:', fallbackError);
+          return res.status(500).json({ error: 'Failed to create signer' });
+        }
+      }
+      
       res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });

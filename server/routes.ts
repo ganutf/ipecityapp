@@ -8,9 +8,7 @@ import {
 import { storage } from "./storage";
 import { insertPulseSchema, updatePulseSchema, insertMemberSchema, insertPulseExecutionSchema } from "@shared/schema";
 import QRCode from "qrcode";
-import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
-import { bytesToHex, hexToBytes } from "viem";
-import { mnemonicToAccount } from "viem/accounts";
+import { getSignedKey } from "./lib/getSignedKey";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -146,41 +144,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: userSigner.status === 'approved' ? 'Existing approved signer found' : 'Existing signer requires approval'
         });
       } else {
-        // Create new signer and register signed key
-        console.log('Creating new signer for FID:', fid);
-        const createResponse = await neynar.createSigner();
-        console.log('Created signer:', createResponse);
-        
-        // Create individual signer without sponsorship (user pays for approval)
-        console.log('Creating individual signer for public key:', createResponse.public_key);
-        
-        // Generate correct approval URL using public key
-        const approvalUrl = `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${createResponse.public_key}`;
-        
-        // For individual signers, we don't register with Neynar - user approves directly
-        const registeredKey = {
-          signer_uuid: createResponse.signer_uuid,
-          public_key: createResponse.public_key,
-          status: 'pending_approval',
-          signer_approval_url: approvalUrl
-        };
-
-        console.log('Registered signed key successfully:', registeredKey);
+        // Create new signer with proper registration and sponsorship
+        console.log('Creating new sponsored signer for FID:', fid);
+        const signerData = await getSignedKey(true); // sponsored = true
+        console.log('Created and registered signer:', signerData);
         
         // Store the signer in database
         const newSigner = await storage.createUserSigner({
           farcasterFid: fid,
-          signerUuid: createResponse.signer_uuid,
-          publicKey: createResponse.public_key || '',
-          status: registeredKey.status || 'pending_approval',
-          approvalUrl: approvalUrl
+          signerUuid: signerData.signer_uuid,
+          publicKey: signerData.public_key || '',
+          status: signerData.status || 'pending_approval',
+          approvalUrl: signerData.deep_link_url || `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${signerData.public_key}`
         });
 
         res.json({
           signer_uuid: newSigner.signerUuid,
           status: newSigner.status,
           signer_approval_url: newSigner.approvalUrl,
-          message: 'Signer created and registered - approval required via QR code or mobile app'
+          message: 'Sponsored signer created and registered - approval required via QR code or mobile app'
         });
       }
     } catch (e) {
@@ -205,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check signer status with Neynar
       try {
-        const signerInfo = await neynar.lookupSigner(userSigner.signerUuid);
+        const signerInfo = await neynar.lookupSigner({ signerUuid: userSigner.signerUuid });
         console.log('Signer info from Neynar:', signerInfo);
         
         // Update status if it has changed
@@ -422,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 async function generateSignature(
   publicKey: string,
   requestFid: number,
-  isSponsored = false
+  isSponsored = true
 ) {
   if (typeof process.env.FARCASTER_DEVELOPER_MNEMONIC === "undefined") {
     throw new Error("FARCASTER_DEVELOPER_MNEMONIC is not defined");

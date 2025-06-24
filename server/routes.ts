@@ -7,6 +7,7 @@ import {
 } from "@neynar/nodejs-sdk";
 import { storage } from "./storage";
 import { insertPulseSchema, updatePulseSchema, insertMemberSchema, insertPulseExecutionSchema } from "@shared/schema";
+import QRCode from "qrcode";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -33,6 +34,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         database: 'disconnected',
         error: error.message
       });
+    }
+  });
+
+  /* ────────────────────────────────  QR CODE GENERATION  ──────────────────────────────── */
+  app.post('/api/qrcode', async (req, res) => {
+    try {
+      const { url } = req.body;
+      if (!url) {
+        return res.status(400).json({ error: 'URL is required' });
+      }
+      
+      const qrCodeDataUrl = await QRCode.toDataURL(url, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      res.set('Content-Type', 'text/plain');
+      res.send(qrCodeDataUrl);
+    } catch (error) {
+      console.error('QR code generation error:', error);
+      res.status(500).json({ error: 'Failed to generate QR code' });
     }
   });
 

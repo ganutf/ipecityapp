@@ -9,6 +9,7 @@ const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
 
 export default function FarcasterEmbed() {
   const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
 
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
@@ -32,6 +33,21 @@ export default function FarcasterEmbed() {
   const signerUuid = signerData?.signer_uuid || null;
   const signerStatus = signerData?.status || 'pending_approval';
   const approvalUrl = signerData?.signer_approval_url;
+
+  // Generate QR code when approval URL is available
+  useEffect(() => {
+    if (approvalUrl) {
+      // Generate QR code via API
+      fetch('/api/qrcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: approvalUrl })
+      })
+      .then(res => res.text())
+      .then(dataUrl => setQrCodeUrl(dataUrl))
+      .catch(console.error);
+    }
+  }, [approvalUrl]);
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
@@ -122,13 +138,36 @@ export default function FarcasterEmbed() {
           </p>
           <div className="mb-4 p-3 bg-yellow-50 rounded-lg text-sm">
             <p className="text-yellow-800 font-medium mb-2">Instructions:</p>
-            <ol className="text-yellow-700 space-y-1 list-decimal list-inside">
-              <li>Click "Open Farcaster to Approve" below</li>
-              <li>This will open your Farcaster client (Warpcast app or web)</li>
-              <li>Approve the signer request in your Farcaster client</li>
-              <li>Return here and click "I've approved it, check status"</li>
-            </ol>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-yellow-800 font-medium mb-2">Option 1: Mobile Device</p>
+                <ol className="text-yellow-700 space-y-1 list-decimal list-inside text-xs">
+                  <li>Scan the QR code with your phone camera</li>
+                  <li>This will open the Farcaster app on your mobile device</li>
+                  <li>Approve the signer request</li>
+                  <li>Return here and click "Check Status"</li>
+                </ol>
+              </div>
+              <div>
+                <p className="text-yellow-800 font-medium mb-2">Option 2: Direct Link</p>
+                <ol className="text-yellow-700 space-y-1 list-decimal list-inside text-xs">
+                  <li>Click "Open Farcaster" below</li>
+                  <li>If you have Farcaster installed, it will open</li>
+                  <li>Approve the signer request</li>
+                  <li>Return here and click "Check Status"</li>
+                </ol>
+              </div>
+            </div>
           </div>
+          
+          {qrCodeUrl && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-sm font-medium text-gray-700 mb-3">Scan with your phone:</p>
+              <div className="flex justify-center">
+                <img src={qrCodeUrl} alt="QR Code for Farcaster approval" className="rounded-lg shadow-sm" />
+              </div>
+            </div>
+          )}
           <div className="mb-6 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
               Status: <span className="font-semibold">{signerStatus === 'generated' ? 'Ready for approval' : signerStatus}</span>
@@ -140,7 +179,7 @@ export default function FarcasterEmbed() {
             rel="noopener noreferrer"
             className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium mb-4"
           >
-            Open Farcaster to Approve
+            Open Farcaster
           </a>
           <br />
           <button
@@ -161,7 +200,7 @@ export default function FarcasterEmbed() {
             }}
             className="text-sm text-gray-600 hover:text-gray-800 underline"
           >
-            I've approved it, check status
+            Check Status
           </button>
         </div>
       </div>

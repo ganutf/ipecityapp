@@ -20,9 +20,22 @@ export interface IStorage {
   // Members
   getMember(farcasterFid: number): Promise<Member | undefined>;
   getMemberByUsername(username: string): Promise<Member | undefined>;
+  getMemberByEmail(email: string): Promise<Member | undefined>;
+  getMemberByIpePassport(passport: string): Promise<Member | undefined>;
   createMember(member: InsertMember): Promise<Member>;
-  createMembersBatch(members: InsertMember[]): Promise<Member[]>;
+  updateMember(farcasterFid: number, member: UpdateMember): Promise<Member>;
   getAllMembers(): Promise<Member[]>;
+  getPendingMembers(): Promise<Member[]>;
+  approveMember(farcasterFid: number): Promise<Member>;
+  denyMember(farcasterFid: number): Promise<Member>;
+  
+  // Registration
+  registerMember(registration: Registration): Promise<Member>;
+  
+  // Email Verification
+  createEmailVerification(verification: InsertEmailVerification): Promise<EmailVerification>;
+  getEmailVerification(farcasterFid: number, code: string): Promise<EmailVerification | undefined>;
+  markEmailVerified(farcasterFid: number): Promise<void>;
   
   // Pulses
   getPulse(id: number): Promise<Pulse | undefined>;

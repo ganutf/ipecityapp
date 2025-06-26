@@ -44,9 +44,18 @@ export const members = pgTable("members", {
   farcasterFid: integer("farcaster_fid").notNull().unique(),
   farcasterUsername: varchar("farcaster_username"),
   name: varchar("name").notNull(),
-  ipePassport: varchar("ipe_passport"), // ENS subdomain ipecity.eth
-  approved: boolean("approved").default(true).notNull(),
+  email: varchar("email").unique().notNull(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  xHandle: varchar("x_handle"),
+  linkedin: varchar("linkedin"),
+  miniBio: text("mini_bio"),
+  profileTags: text("profile_tags").array(),
+  ipePassport: varchar("ipe_passport").unique(), // User-chosen subdomain for <user-id>.ipecity.eth
+  registrationStatus: varchar("registration_status").default("pending").notNull(), // pending, approved, denied
+  approved: boolean("approved").default(false).notNull(),
+  registeredAt: timestamp("registered_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Pulses table - admin-created engagement tasks
@@ -107,8 +116,52 @@ export const userSignersRelations = relations(userSigners, ({ one }) => ({
   }),
 }));
 
+// Email verification table
+export const emailVerifications = pgTable("email_verifications", {
+  id: serial("id").primaryKey(),
+  farcasterFid: integer("farcaster_fid").references(() => members.farcasterFid).notNull(),
+  email: varchar("email").notNull(),
+  verificationCode: varchar("verification_code", { length: 6 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  verified: boolean("verified").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertMemberSchema = createInsertSchema(members).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  registeredAt: true,
+});
+
+export const updateMemberSchema = createInsertSchema(members).omit({
+  id: true,
+  farcasterFid: true,
+  createdAt: true,
+  updatedAt: true,
+  registeredAt: true,
+}).partial();
+
+export const registrationSchema = createInsertSchema(members).pick({
+  farcasterFid: true,
+  farcasterUsername: true,
+  name: true,
+  email: true,
+  xHandle: true,
+  linkedin: true,
+  miniBio: true,
+  profileTags: true,
+  ipePassport: true,
+}).extend({
+  email: z.string().email("Invalid email address"),
+  ipePassport: z.string()
+    .min(3, "Passport must be at least 3 characters")
+    .max(20, "Passport must be at most 20 characters")
+    .regex(/^[a-z0-9]+$/, "Passport can only contain lowercase letters and numbers"),
+});
+
+export const insertEmailVerificationSchema = createInsertSchema(emailVerifications).omit({
   id: true,
   createdAt: true,
 });
@@ -136,6 +189,10 @@ export const insertUserSignerSchema = createInsertSchema(userSigners).omit({
 // Types
 export type Member = typeof members.$inferSelect;
 export type InsertMember = z.infer<typeof insertMemberSchema>;
+export type UpdateMember = z.infer<typeof updateMemberSchema>;
+export type Registration = z.infer<typeof registrationSchema>;
+export type EmailVerification = typeof emailVerifications.$inferSelect;
+export type InsertEmailVerification = z.infer<typeof insertEmailVerificationSchema>;
 export type Pulse = typeof pulses.$inferSelect;
 export type InsertPulse = z.infer<typeof insertPulseSchema>;
 export type UpdatePulse = z.infer<typeof updatePulseSchema>;

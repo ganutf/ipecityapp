@@ -3,8 +3,13 @@ import {
   pulses, 
   pulseExecutions,
   userSigners,
+  emailVerifications,
   type Member,
   type InsertMember,
+  type UpdateMember,
+  type Registration,
+  type EmailVerification,
+  type InsertEmailVerification,
   type Pulse,
   type InsertPulse,
   type UpdatePulse,
@@ -72,13 +77,102 @@ export class DatabaseStorage implements IStorage {
     return newMember;
   }
 
-  async createMembersBatch(membersList: InsertMember[]): Promise<Member[]> {
-    if (!membersList || membersList.length === 0) {
-      throw new Error('Cannot create members batch: empty or invalid member list');
-    }
+  async getMemberByEmail(email: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.email, email));
+    return member;
+  }
+
+  async getMemberByIpePassport(passport: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.ipePassport, passport));
+    return member;
+  }
+
+  async updateMember(farcasterFid: number, memberData: UpdateMember): Promise<Member> {
+    const [updatedMember] = await db
+      .update(members)
+      .set({ ...memberData, updatedAt: new Date() })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return updatedMember;
+  }
+
+  async getPendingMembers(): Promise<Member[]> {
+    return await db.select().from(members).where(eq(members.registrationStatus, 'pending'));
+  }
+
+  async approveMember(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ 
+        registrationStatus: 'approved', 
+        approved: true,
+        updatedAt: new Date() 
+      })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async denyMember(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ 
+        registrationStatus: 'denied', 
+        approved: false,
+        updatedAt: new Date() 
+      })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async registerMember(registration: Registration): Promise<Member> {
+    const [member] = await db
+      .insert(members)
+      .values({
+        ...registration,
+        registrationStatus: 'pending',
+        approved: false,
+        emailVerified: false,
+        registeredAt: new Date(),
+      })
+      .returning();
+    return member;
+  }
+
+  // Email Verification
+  async createEmailVerification(verification: InsertEmailVerification): Promise<EmailVerification> {
+    const [emailVerification] = await db
+      .insert(emailVerifications)
+      .values(verification)
+      .returning();
+    return emailVerification;
+  }
+
+  async getEmailVerification(farcasterFid: number, code: string): Promise<EmailVerification | undefined> {
+    const [verification] = await db
+      .select()
+      .from(emailVerifications)
+      .where(
+        and(
+          eq(emailVerifications.farcasterFid, farcasterFid),
+          eq(emailVerifications.verificationCode, code),
+          eq(emailVerifications.verified, false)
+        )
+      );
+    return verification;
+  }
+
+  async markEmailVerified(farcasterFid: number): Promise<void> {
+    await db
+      .update(emailVerifications)
+      .set({ verified: true })
+      .where(eq(emailVerifications.farcasterFid, farcasterFid));
     
-    const newMembers = await db.insert(members).values(membersList).returning();
-    return newMembers;
+    await db
+      .update(members)
+      .set({ emailVerified: true, updatedAt: new Date() })
+      .where(eq(members.farcasterFid, farcasterFid));
   }
 
   async getAllMembers(): Promise<Member[]> {

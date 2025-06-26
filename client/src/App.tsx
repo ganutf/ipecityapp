@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthKitProvider } from "@farcaster/auth-kit";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
+import RegisterPage from "@/pages/register";
+import PendingPage from "@/pages/pending";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 
@@ -22,6 +24,8 @@ function Router() {
       <Switch>
         <Route path="/" component={FarcasterEmbed} />
         <Route path="/admin" component={AdminPage} />
+        <Route path="/register" component={RegisterPage} />
+        <Route path="/pending" component={PendingPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

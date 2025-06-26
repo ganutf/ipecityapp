@@ -14,7 +14,14 @@ export default function PendingPage() {
     queryKey: ["/api/members/check", profile?.fid],
     enabled: !!profile?.fid,
     refetchInterval: 5000, // Check every 5 seconds for approval
-  });
+  }) as { data?: { 
+    approved: boolean; 
+    status: string; 
+    member?: { 
+      name: string; 
+      ipePassport: string; 
+    } 
+  } };
 
   // Redirect if approved
   if (memberStatus?.approved) {

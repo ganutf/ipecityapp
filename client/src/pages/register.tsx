@@ -67,7 +67,7 @@ export default function RegisterPage() {
   const { data: passportCheck } = useQuery({
     queryKey: ["/api/passport/check", passportValue],
     enabled: !!passportValue && passportValue.length >= 3,
-  });
+  }) as { data?: { available: boolean; reason?: string } };
 
   // Send verification email
   const sendVerificationMutation = useMutation({

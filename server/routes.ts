@@ -348,25 +348,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import members via CSV (admin only)
-  app.post("/api/members/import", async (req, res) => {
+  // Get pending members (admin only)
+  app.get("/api/admin/pending-members", async (req, res) => {
     try {
-      const { members } = req.body;
+      const pendingMembers = await storage.getPendingMembers();
+      res.json({ members: pendingMembers });
+    } catch (error) {
+      console.error("Get pending members error:", error);
+      res.status(500).json({ error: "Failed to get pending members" });
+    }
+  });
+
+  // Approve member (admin only)
+  app.post("/api/admin/approve-member/:fid", async (req, res) => {
+    try {
+      const fid = parseInt(req.params.fid);
+      const member = await storage.approveMember(fid);
       
-      if (!Array.isArray(members)) {
-        return res.status(400).json({ error: 'Members must be an array' });
+      // Send approval email
+      if (member.email && member.ipePassport) {
+        await sendApprovalEmail(member.email, member.ipePassport);
       }
       
-      if (members.length === 0) {
-        return res.status(400).json({ error: 'No members provided for import' });
+      res.json({ success: true, member });
+    } catch (error) {
+      console.error("Approve member error:", error);
+      res.status(500).json({ error: "Failed to approve member" });
+    }
+  });
+
+  // Deny member (admin only)
+  app.post("/api/admin/deny-member/:fid", async (req, res) => {
+    try {
+      const fid = parseInt(req.params.fid);
+      const member = await storage.denyMember(fid);
+      
+      // Send denial email
+      if (member.email) {
+        await sendDenialEmail(member.email);
       }
       
-      const validatedMembers = members.map(member => insertMemberSchema.parse(member));
-      const createdMembers = await storage.createMembersBatch(validatedMembers);
-      res.json({ success: true, members: createdMembers });
-    } catch (err: any) {
-      console.error("Import members error:", err);
-      res.status(500).json({ error: err.message || 'Failed to import members' });
+      res.json({ success: true, member });
+    } catch (error) {
+      console.error("Deny member error:", error);
+      res.status(500).json({ error: "Failed to deny member" });
     }
   });
 

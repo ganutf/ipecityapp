@@ -37,7 +37,8 @@ const registrationSchema = z.object({
   ipePassport: z.string()
     .min(3, "Passport must be at least 3 characters")
     .max(20, "Passport must be at most 20 characters")
-    .regex(/^[a-z0-9]+$/, "Passport can only contain lowercase letters and numbers"),
+    .regex(/^[a-z0-9]+$/, "Passport can only contain lowercase letters and numbers")
+    .optional(),
 });
 
 type RegistrationData = z.infer<typeof registrationSchema>;
@@ -218,6 +219,12 @@ export default function RegisterPage() {
                 <Input value={profile.username} disabled />
               </div>
 
+              {/* Farcaster FID */}
+              <div className="space-y-2">
+                <Label>Farcaster ID (FID)</Label>
+                <Input value={profile.fid?.toString() || ""} disabled />
+              </div>
+
               {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address *</Label>
@@ -278,7 +285,7 @@ export default function RegisterPage() {
 
               {/* Ipê Passport */}
               <div className="space-y-2">
-                <Label htmlFor="ipePassport">Ipê Passport *</Label>
+                <Label htmlFor="ipePassport">Ipê Passport (Optional)</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     id="ipePassport"

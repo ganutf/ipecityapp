@@ -206,6 +206,20 @@ The application follows a monorepo structure with clear separation between clien
   - Added comprehensive approval UI with QR code and direct link options
   - Status checking functionality to verify approval completion
   - System updated to work with new Farcaster developer mnemonic
+- June 26, 2025. **MAJOR UPDATE**: Complete Registration & Approval System Implementation:
+  - **Database Schema Extension**: Added comprehensive member fields including email, social links, bio, profile tags, Ipê passport, and registration status
+  - **Email Verification System**: Integrated SendGrid for email verification with 6-digit codes and 10-minute expiry
+  - **Ipê Passport Integration**: Users can claim unique <user-id>.ipecity.eth subdomains with real-time availability checking
+  - **Registration Flow**: New multi-step registration page with email verification, passport selection, and profile completion
+  - **Admin Approval System**: Replaced CSV import with pending member approval interface showing full registration details
+  - **Access Control**: Implemented route guards with automatic redirection based on registration status (pending/approved/denied)
+  - **Email Notifications**: Automated approval/denial emails with passport confirmation
+  - **Profile Management**: Complete profile system with editable fields and status tracking
+  - **Status Pages**: Dedicated pending approval page with real-time status checking
+  - **Authentication Flow**: Enhanced auth flow that checks member status and redirects appropriately
+  - **Removed CSV Import**: Streamlined admin workflow focusing on individual registration approval
+  - **Enhanced Member Management**: Admin dashboard shows registration status, timestamps, and member details
+  - **Production Ready**: All features tested with comprehensive error handling and user feedback
 
 ## User Preferences
 

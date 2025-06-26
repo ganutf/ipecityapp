@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { SignInButton } from "@farcaster/auth-kit";
 import type { Pulse, Member } from "@shared/schema";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
@@ -215,17 +216,32 @@ export default function FarcasterEmbed() {
 
 
   if (isAuthenticated && hasValidFid && !authLoading && memberCheck && (!memberCheck?.isMember || !memberCheck?.approved)) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-600 mb-4">Access Restricted</p>
-        <p className="text-gray-500">
-          This application is for approved community members only.
-        </p>
-        <p className="text-gray-500 mt-2">
-          Contact an administrator if you believe this is an error.
-        </p>
-      </div>
-    );
+    // Check member status and redirect appropriately
+    const { isMember, status, approved } = memberCheck;
+    
+    if (!isMember) {
+      // User not registered - redirect to registration
+      window.location.href = '/register';
+      return null;
+    }
+    
+    if (status === 'pending') {
+      // Registration pending - redirect to pending page
+      window.location.href = '/pending';
+      return null;
+    }
+    
+    if (status === 'denied') {
+      // Registration denied - redirect to pending page (shows denial message)
+      window.location.href = '/pending';
+      return null;
+    }
+    
+    if (!approved) {
+      // Not approved for some other reason
+      window.location.href = '/pending';
+      return null;
+    }
   }
 
   if (authLoading || (isAuthenticated && hasValidFid && (!memberCheck || !memberCheck.member || pulsesLoading || executionsLoading || signerData === undefined))) {

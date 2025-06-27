@@ -26,6 +26,10 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
   });
 
   useEffect(() => {
+    console.log("AuthGuard - Profile:", profile);
+    console.log("AuthGuard - SignerData:", signerData);
+    console.log("AuthGuard - MemberStatus:", memberStatus);
+
     if (requireAuth && !profile) {
       // Not authenticated, stay on current page (should show sign in)
       return;
@@ -34,7 +38,9 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
     if (profile && profile.fid) {
       // First priority: Check signer status
       if (signerData) {
+        console.log("AuthGuard - Signer status:", signerData.status);
         if (signerData.status === 'pending_approval') {
+          console.log("AuthGuard - Redirecting to signer approval");
           // Signer needs approval, redirect to signer approval page
           setLocation("/signer-approval");
           return;

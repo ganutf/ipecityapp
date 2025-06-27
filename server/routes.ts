@@ -426,9 +426,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send email verification code
   app.post("/api/auth/verify-email", async (req, res) => {
     try {
+      console.log("Email verification request body:", req.body);
       const { farcasterFid, email } = req.body;
+      console.log("Extracted FID:", farcasterFid, "Email:", email);
       
       if (!farcasterFid || !email) {
+        console.log("Missing data - FID:", !!farcasterFid, "Email:", !!email);
         return res.status(400).json({ error: 'FID and email are required' });
       }
 

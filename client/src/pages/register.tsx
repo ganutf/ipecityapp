@@ -156,8 +156,15 @@ export default function RegisterPage() {
 
   const handleSendVerification = () => {
     const email = form.getValues("email");
-    if (email) {
+    console.log("Send verification - FID:", profile?.fid, "Email:", email);
+    if (email && profile?.fid) {
       sendVerificationMutation.mutate(email);
+    } else {
+      toast({
+        title: "Error",
+        description: "Missing FID or email address.",
+        variant: "destructive",
+      });
     }
   };
 

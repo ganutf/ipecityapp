@@ -264,6 +264,12 @@ The application follows a monorepo structure with clear separation between clien
   - **Cache Prevention**: Added no-cache headers to prevent stale status responses
   - **Clean UX**: Removed manual status check buttons for seamless automatic flow
   - **Production Ready**: Complete authentication flow from login → signer approval → registration → admin approval
+- June 27, 2025. **CSV IMPORT REMOVAL**: Streamlined Admin Interface:
+  - **Removed CSV Import Functionality**: Eliminated CSV member import feature from admin dashboard
+  - **Simplified Admin Interface**: Admin page now focuses on pulse management and member approval list
+  - **Cleaner UI**: Removed import forms and related mutation handlers for improved usability
+  - **Updated Documentation**: Removed CSV import references from README and API documentation
+  - **Registration-First Approach**: System now relies entirely on individual user registration and approval workflow
 
 ## User Preferences
 

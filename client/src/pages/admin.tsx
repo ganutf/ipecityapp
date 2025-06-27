@@ -83,8 +83,6 @@ export default function AdminPage() {
     },
   });
 
-
-
   const approveMemberMutation = useMutation({
     mutationFn: async (farcasterFid: number) => {
       const response = await fetch("/api/admin/approve-member", {
@@ -180,10 +178,9 @@ export default function AdminPage() {
                 Farcaster URL
               </label>
               <Input
-                type="url"
                 value={newPulse.farcasterUrl}
                 onChange={(e) => setNewPulse({ ...newPulse, farcasterUrl: e.target.value })}
-                placeholder="https://farcaster.xyz/..."
+                placeholder="https://warpcast.com/username/0x123..."
                 required
               />
             </div>
@@ -205,7 +202,7 @@ export default function AdminPage() {
               <Textarea
                 value={newPulse.description}
                 onChange={(e) => setNewPulse({ ...newPulse, description: e.target.value })}
-                placeholder="Enter pulse description..."
+                placeholder="Describe the pulse activity..."
                 required
               />
             </div>
@@ -218,8 +215,6 @@ export default function AdminPage() {
             </Button>
           </form>
         </div>
-
-
       </div>
 
       {/* Pulses List */}
@@ -235,7 +230,7 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {pulsesData?.pulses?.map((pulse: Pulse) => {
+              {(pulsesData as any)?.pulses?.map((pulse: Pulse) => {
                 const isEditing = editingPulse === pulse.id;
                 const canEdit = isFuturePulse(pulse);
                 const today = new Date().toISOString().split('T')[0];
@@ -291,35 +286,22 @@ export default function AdminPage() {
                     ) : (
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <span className={`font-medium ${
-                              isToday
-                                ? "text-green-700"
-                                : isPast
-                                  ? "text-gray-600"
-                                  : "text-blue-700"
-                            }`}>
-                              Date: {new Date(pulse.date + "T00:00:00").toLocaleDateString("en-US", {
-                                weekday: "short",
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
-                            </span>
-                          </div>
+                          <h3 className="font-semibold">{pulse.date}</h3>
                           <p className="text-gray-600 mb-2">{pulse.description}</p>
-                          <p className="text-sm text-gray-500 break-all">{pulse.farcasterUrl}</p>
+                          <p className="text-sm text-blue-600 break-all">{pulse.farcasterUrl}</p>
                         </div>
-                        {canEdit && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditStart(pulse)}
-                          >
-                            <Pencil className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                        )}
+                        <div className="ml-4">
+                          {canEdit && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditStart(pulse)}
+                            >
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -333,7 +315,7 @@ export default function AdminPage() {
       {/* Members List */}
       <div className="mt-8 bg-white rounded-lg shadow">
         <div className="p-6 border-b">
-          <h2 className="text-xl font-semibold">Members ({membersData?.members?.length || 0})</h2>
+          <h2 className="text-xl font-semibold">Members</h2>
         </div>
         <div className="p-6">
           {membersLoading ? (
@@ -343,9 +325,9 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b">
+              <table className="w-full">
+                <thead className="border-b">
+                  <tr>
                     <th className="text-left py-2">FID</th>
                     <th className="text-left py-2">Username</th>
                     <th className="text-left py-2">Name</th>
@@ -355,7 +337,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {membersData?.members?.map((member: Member) => (
+                  {(membersData as any)?.members?.map((member: Member) => (
                     <tr key={member.id} className="border-b">
                       <td className="py-2">{member.farcasterFid}</td>
                       <td className="py-2">{member.farcasterUsername}</td>

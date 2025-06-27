@@ -69,22 +69,16 @@ npm run dev
 ## Usage
 
 ### Admin Access
-- Only Jean Hansen (jeanhansen) has admin privileges
-- Access admin dashboard to create pulses and import members
+- Only Jean Hansen (FID 2790) has admin privileges
+- Access admin dashboard to create pulses and manage member approvals
 - Edit future pulses (past/current pulses are protected)
 
 ### Member Access
-- Members authenticate via Farcaster
+- Members authenticate via Farcaster with signer approval
+- Complete registration with email verification
 - View current active pulse with embedded post
 - Complete like/recast actions tracked automatically
 - View historical pulse completion status
-
-### CSV Import Format
-For member import in admin dashboard:
-```
-farcasterFid,farcasterUsername,name,ipePassport
-2790,jeanhansen,Jean Hansen,jean.ipecity.eth
-```
 
 ## API Endpoints
 
@@ -92,7 +86,7 @@ farcasterFid,farcasterUsername,name,ipePassport
 - `POST /api/pulses` - Create new pulse (admin)
 - `PUT /api/pulses/:id` - Update pulse (admin, future only)
 - `GET /api/members` - Get all members
-- `POST /api/members/import` - Import members via CSV
+
 - `GET /api/executions/:fid` - Get user's pulse executions
 
 ## Database Schema

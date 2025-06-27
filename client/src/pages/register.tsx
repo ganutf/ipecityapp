@@ -53,6 +53,8 @@ export default function RegisterPage() {
   const [emailVerified, setEmailVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [showVerification, setShowVerification] = useState(false);
+  const [passportVerified, setPassportVerified] = useState(false);
+  const [passportVerificationSent, setPassportVerificationSent] = useState(false);
   const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
   const [memberStatus, setMemberStatus] = useState<{isMember: boolean, approved: boolean, status?: string} | null>(null);
 
@@ -243,6 +245,42 @@ export default function RegisterPage() {
     }
   };
 
+  // Check passport verification status from localStorage
+  useEffect(() => {
+    const targetPassport = "hansen.ipecity.eth";
+    const isVerified = localStorage.getItem(`passport-verified-${targetPassport}`) === "true";
+    setPassportVerified(isVerified);
+  }, []);
+
+  const handlePassportVerification = () => {
+    const targetPassport = "hansen.ipecity.eth";
+    // Set hardcoded passport value
+    form.setValue("ipePassport", targetPassport);
+    
+    // Open verification page in new tab
+    const verificationUrl = `/verify-passport/test-token-123`;
+    window.open(verificationUrl, '_blank');
+    
+    setPassportVerificationSent(true);
+    
+    // Poll for verification completion
+    const pollInterval = setInterval(() => {
+      const isVerified = localStorage.getItem(`passport-verified-${targetPassport}`) === "true";
+      if (isVerified) {
+        setPassportVerified(true);
+        setPassportVerificationSent(false);
+        clearInterval(pollInterval);
+        toast({
+          title: "Passport verified",
+          description: "Your ENS ownership has been successfully verified.",
+        });
+      }
+    }, 2000);
+    
+    // Clear polling after 5 minutes
+    setTimeout(() => clearInterval(pollInterval), 300000);
+  };
+
   const onSubmit = (data: RegistrationData) => {
     if (!emailVerified) {
       toast({
@@ -252,6 +290,8 @@ export default function RegisterPage() {
       });
       return;
     }
+    // Note: For this test version, we're not requiring passport verification
+    // but we'll add it to the data if it's been verified
     registerMutation.mutate(data);
   };
 

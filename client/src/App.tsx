@@ -7,6 +7,7 @@ import { AuthKitProvider } from "@farcaster/auth-kit";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { mainnet } from "wagmi/chains";
+import { http } from "wagmi";
 import { AuthGuard, RequireAuth, RequireApproval } from "@/components/AuthGuard";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
@@ -26,8 +27,11 @@ const authKitConfig = {
 
 const wagmiConfig = getDefaultConfig({
   appName: 'Ipê City Pulse',
-  projectId: 'YOUR_WALLETCONNECT_PROJECT_ID', // We'll use a placeholder for now
+  projectId: 'demo', // Simplified for development
   chains: [mainnet],
+  transports: {
+    [mainnet.id]: http(),
+  },
 });
 
 function Router() {

@@ -7,6 +7,7 @@ import { AuthKitProvider } from "@farcaster/auth-kit";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import RegisterPage from "@/pages/register";
+import SignerApprovalPage from "@/pages/signer-approval";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 
@@ -24,6 +25,7 @@ function Router() {
         <Route path="/" component={FarcasterEmbed} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/register" component={RegisterPage} />
+        <Route path="/signer-approval" component={SignerApprovalPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

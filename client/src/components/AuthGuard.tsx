@@ -13,6 +13,12 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
   const { profile } = useProfile();
   const [, setLocation] = useLocation();
 
+  // Check signer status
+  const { data: signerData } = useQuery({
+    queryKey: ["/api/neynar/signer", profile?.fid],
+    enabled: !!profile?.fid,
+  });
+
   // Check member status
   const { data: memberStatus } = useQuery({
     queryKey: ["/api/members/check", profile?.fid],
@@ -25,7 +31,14 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
       return;
     }
 
-    if (profile && memberStatus) {
+    if (profile && signerData && memberStatus) {
+      // First check signer approval status
+      if (signerData.status === 'pending_approval') {
+        // Signer needs approval, redirect to signer approval page
+        setLocation("/signer-approval");
+        return;
+      }
+
       const { isMember, status, approved } = memberStatus;
 
       if (!isMember) {
@@ -52,7 +65,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         return;
       }
     }
-  }, [profile, memberStatus, requireAuth, requireApproval, setLocation]);
+  }, [profile, signerData, memberStatus, requireAuth, requireApproval, setLocation]);
 
   return <>{children}</>;
 }

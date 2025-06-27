@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Smartphone, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
@@ -11,6 +11,7 @@ import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 export default function SignerApprovalPage() {
   const { profile } = usePersistentAuth();
   const [, setLocation] = useLocation();
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -22,17 +23,27 @@ export default function SignerApprovalPage() {
   });
 
   // Generate QR code
-  const { data: qrData } = useQuery({
-    queryKey: [`/api/qrcode/${signerData?.signer_approval_url}`],
-    queryFn: async () => {
-      if (!(signerData as any)?.signer_approval_url) return null;
-      return apiRequest(`/api/qrcode`, {
-        method: "POST",
-        body: JSON.stringify({ url: (signerData as any).signer_approval_url }),
-      });
-    },
-    enabled: !!(signerData as any)?.signer_approval_url,
-  });
+  useEffect(() => {
+    const generateQR = async () => {
+      if ((signerData as any)?.signer_approval_url) {
+        try {
+          const response = await fetch(`/api/qrcode`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: (signerData as any).signer_approval_url }),
+          });
+          if (response.ok) {
+            const qrDataUrl = await response.text();
+            setQrCodeUrl(qrDataUrl);
+          }
+        } catch (error) {
+          console.error('Failed to generate QR code:', error);
+        }
+      }
+    };
+    
+    generateQR();
+  }, [(signerData as any)?.signer_approval_url]);
 
   // Check signer status mutation
   const checkStatusMutation = useMutation({
@@ -67,12 +78,7 @@ export default function SignerApprovalPage() {
     }
   }, [signerData?.status, setLocation, toast]);
 
-  // Set QR code URL
-  useEffect(() => {
-    if (qrData?.qr) {
-      setQrCodeUrl(qrData.qr);
-    }
-  }, [qrData]);
+
 
   if (!profile) {
     return null;
@@ -129,10 +135,10 @@ export default function SignerApprovalPage() {
               </div>
 
               {/* QR Code */}
-              {(qrData as any)?.qrCode && (
+              {qrCodeUrl && (
                 <div className="bg-white p-4 rounded-lg border inline-block">
                   <img 
-                    src={(qrData as any).qrCode} 
+                    src={qrCodeUrl} 
                     alt="Signer Approval QR Code"
                     className="w-48 h-48 mx-auto"
                   />

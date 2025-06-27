@@ -43,7 +43,7 @@ const registrationSchema = z.object({
 
 type RegistrationData = z.infer<typeof registrationSchema>;
 
-export default function RegisterPage() {
+export default function ProfilePage() {
   const { profile, isLoading } = usePersistentAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();

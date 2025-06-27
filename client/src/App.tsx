@@ -10,7 +10,7 @@ import { mainnet } from "wagmi/chains";
 import { AuthGuard, RequireAuth, RequireApproval } from "@/components/AuthGuard";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
-import RegisterPage from "@/pages/register";
+import ProfilePage from "@/pages/profile";
 import SignerApprovalPage from "@/pages/signer-approval";
 import VerifyPassportPage from "@/pages/verify-passport";
 import NotFound from "@/pages/not-found";
@@ -37,7 +37,7 @@ function Router() {
         <Switch>
           <Route path="/" component={() => <RequireApproval><FarcasterEmbed /></RequireApproval>} />
           <Route path="/admin" component={() => <RequireApproval><AdminPage /></RequireApproval>} />
-          <Route path="/register" component={RegisterPage} />
+          <Route path="/profile" component={ProfilePage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
           <Route path="/verify-passport/:token" component={VerifyPassportPage} />
           <Route component={NotFound} />

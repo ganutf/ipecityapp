@@ -91,6 +91,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="cursor-pointer">
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
                     Logout
                   </DropdownMenuItem>

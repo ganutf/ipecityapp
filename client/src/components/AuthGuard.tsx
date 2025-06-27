@@ -49,26 +49,26 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         const { isMember, status, approved } = memberStatus as any;
 
         if (!isMember) {
-          // User not registered, redirect to registration
-          setLocation("/register");
+          // User not registered, redirect to profile
+          setLocation("/profile");
           return;
         }
 
         if (status === "pending") {
-          // Registration pending, redirect to registration page for inline approval
-          setLocation("/register");
+          // Registration pending, redirect to profile page for inline approval
+          setLocation("/profile");
           return;
         }
 
         if (status === "denied") {
-          // Registration denied, redirect to registration page (shows denial message)
-          setLocation("/register");
+          // Registration denied, redirect to profile page (shows denial message)
+          setLocation("/profile");
           return;
         }
 
         if (requireApproval && !approved) {
           // Approval required but user not approved
-          setLocation("/register");
+          setLocation("/profile");
           return;
         }
       }

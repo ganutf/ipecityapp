@@ -118,6 +118,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /* ────────────────  USER SIGNER MANAGEMENT  ──────────────── */
   app.get("/api/neynar/signer/:fid", async (req, res) => {
+    // Prevent caching to ensure real-time signer status checks
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       const fid = parseInt(req.params.fid);
       if (isNaN(fid)) {
@@ -137,6 +142,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (userSigner) {
+        // If signer is pending, check current status with Neynar
+        if (userSigner.status === 'pending_approval') {
+          try {
+            console.log('Checking signer status with Neynar for UUID:', userSigner.signerUuid);
+            const signerStatus = await neynar.lookupSigner({ signerUuid: userSigner.signerUuid });
+            console.log('Neynar signer status:', signerStatus);
+            
+            if (signerStatus.status === 'approved') {
+              // Update database with approved status
+              await storage.updateUserSignerStatus(fid, 'approved');
+              console.log('Signer approved! Updated database status.');
+              
+              res.json({ 
+                signer_uuid: userSigner.signerUuid,
+                status: 'approved',
+                signer_approval_url: userSigner.approvalUrl,
+                message: 'Signer approved successfully'
+              });
+              return;
+            }
+          } catch (statusError) {
+            console.error('Error checking signer status with Neynar:', statusError);
+            // Fall through to return cached status if Neynar check fails
+          }
+        }
+        
         // Return existing signer (approved or pending)
         res.json({ 
           signer_uuid: userSigner.signerUuid,

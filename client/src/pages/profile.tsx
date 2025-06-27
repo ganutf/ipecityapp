@@ -259,13 +259,19 @@ export default function ProfilePage() {
 
   // Check passport verification status from localStorage
   useEffect(() => {
-    const passport = form.watch("ipePassport");
-    if (passport) {
-      const targetPassport = `${passport}.ipecity.eth`;
-      const isVerified = localStorage.getItem(`passport-verified-${targetPassport}`) === "true";
+    // Check if the connected wallet's ENS domain is verified
+    if (ensName && ensName.endsWith('.ipecity.eth')) {
+      const isVerified = localStorage.getItem(`passport-verified-${ensName}`) === "true";
       setPassportVerified(isVerified);
+      
+      // Auto-fill the passport field with detected domain
+      const passportFromDomain = ensName.replace('.ipecity.eth', '');
+      form.setValue("ipePassport", passportFromDomain);
+    } else {
+      // Clear verification if no valid ENS domain
+      setPassportVerified(false);
     }
-  }, [form.watch("ipePassport")]);
+  }, [ensName, isConnected]);
 
   // Send passport verification email
   const sendPassportVerificationMutation = useMutation({
@@ -327,30 +333,25 @@ export default function ProfilePage() {
 
   // Reset passport verification
   const resetPassportVerification = () => {
+    // Clear verification for any potential ENS domain
+    if (ensName) {
+      localStorage.removeItem(`passport-verified-${ensName}`);
+    }
+    // Also clear any legacy passport verification
     const passport = form.getValues("ipePassport");
     if (passport) {
-      const targetPassport = `${passport}.ipecity.eth`;
-      localStorage.removeItem(`passport-verified-${targetPassport}`);
-      setPassportVerified(false);
-      toast({
-        title: "Verification reset",
-        description: "Passport verification has been cleared. Please verify again with the correct wallet.",
-      });
+      localStorage.removeItem(`passport-verified-${passport}.ipecity.eth`);
     }
+    
+    setPassportVerified(false);
+    toast({
+      title: "Verification reset",
+      description: "Passport verification has been cleared. Please verify again with the correct wallet.",
+    });
   };
 
   // Direct wallet verification for passport
   const handleDirectWalletVerification = async () => {
-    const passport = form.getValues("ipePassport");
-    if (!passport) {
-      toast({
-        title: "Error",
-        description: "Please enter a passport name first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!isConnected || !address) {
       toast({
         title: "Connect Wallet",
@@ -360,28 +361,26 @@ export default function ProfilePage() {
       return;
     }
 
-    const expectedDomain = `${passport}.ipecity.eth`;
-    
-    console.log("Wallet connected:", address);
-    console.log("Expected domain:", expectedDomain);
-    console.log("Current ENS name:", ensName);
-    
-    // Check if connected wallet owns the ENS domain
-    if (ensName !== expectedDomain) {
-      // Clear any incorrect verification status
-      localStorage.removeItem(`passport-verified-${expectedDomain}`);
-      setPassportVerified(false);
-      
+    if (!ensName || !ensName.endsWith('.ipecity.eth')) {
       toast({
-        title: "Domain ownership required",
-        description: `Your wallet must own ${expectedDomain} to verify ownership. Connected wallet owns: ${ensName || 'no ENS domain'}`,
+        title: "Ipê City domain required",
+        description: "Your wallet must own an Ipê City domain (.ipecity.eth) to verify ownership.",
         variant: "destructive",
       });
       return;
     }
 
+    console.log("Wallet connected:", address);
+    console.log("ENS domain:", ensName);
+    
+    // Extract passport name from ENS domain
+    const passportFromDomain = ensName.replace('.ipecity.eth', '');
+    
+    // Update the form with the detected passport
+    form.setValue("ipePassport", passportFromDomain);
+
     // Create signature challenge
-    const challengeMessage = `Verify ownership of ${expectedDomain} for Ipê City registration\n\nFID: ${profile?.fid}\nTimestamp: ${new Date().toISOString()}`;
+    const challengeMessage = `Verify ownership of ${ensName} for Ipê City registration\n\nFID: ${profile?.fid}\nTimestamp: ${new Date().toISOString()}`;
     
     try {
       // Try SIWE format first
@@ -409,7 +408,7 @@ export default function ProfilePage() {
       }
 
       // Mark as verified locally
-      localStorage.setItem(`passport-verified-${expectedDomain}`, "true");
+      localStorage.setItem(`passport-verified-${ensName}`, "true");
       setPassportVerified(true);
       
       toast({
@@ -557,77 +556,101 @@ export default function ProfilePage() {
                 </Card>
               )}
 
-              {/* Ipê Passport */}
-              <div className="space-y-2">
-                <Label htmlFor="ipePassport">Ipê Passport (Optional)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="ipePassport"
-                    {...form.register("ipePassport")}
-                    placeholder="yourname"
-                    className="flex-1"
-                    disabled={passportVerified}
-                  />
-                  <span className="text-muted-foreground">.ipecity.eth</span>
-                </div>
+              {/* Ipê Passport Verification */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Ipê Passport Verification</Label>
                 
-                {/* Passport Verification Options */}
-                {!passportVerified && form.watch("ipePassport") && (
-                  <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
-                    <p className="text-sm font-medium">Verify ownership of {form.watch("ipePassport")}.ipecity.eth:</p>
-                    
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      {/* Email Verification */}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handlePassportVerification}
-                        disabled={passportVerificationSent || sendPassportVerificationMutation.isPending}
-                        className="flex-1"
-                      >
-                        {sendPassportVerificationMutation.isPending ? "Sending..." : 
-                         passportVerificationSent ? "Email Sent" : "Send Email Link"}
-                      </Button>
-                      
-                      {/* Direct Wallet Connection */}
-                      <div className="flex-1">
-                        <ConnectButton.Custom>
-                          {({
-                            account,
-                            chain,
-                            openAccountModal,
-                            openChainModal,
-                            openConnectModal,
-                            mounted,
-                          }) => {
-                            const ready = mounted;
-                            const connected = ready && account && chain;
+                {/* Status Display */}
+                <div className="p-4 border rounded-lg bg-gray-50">
+                  <div className="space-y-3">
+                    {/* Verification Status */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Status:</span>
+                      {passportVerified ? (
+                        <span className="text-green-600 font-medium">✓ Verified</span>
+                      ) : (
+                        <span className="text-gray-600">Not verified</span>
+                      )}
+                    </div>
 
-                            return (
-                              <div
-                                {...(!ready && {
-                                  'aria-hidden': true,
-                                  'style': {
-                                    opacity: 0,
-                                    pointerEvents: 'none',
-                                    userSelect: 'none',
-                                  },
-                                })}
-                              >
-                                {(() => {
-                                  if (!connected) {
-                                    return (
-                                      <Button
-                                        onClick={openConnectModal}
-                                        type="button"
-                                        variant="default"
-                                        className="w-full"
-                                      >
-                                        Connect Wallet
-                                      </Button>
-                                    );
-                                  }
+                    {/* Connected Wallet ENS */}
+                    {isConnected && (
+                      <div className="space-y-2">
+                        <div className="text-sm">
+                          <span className="font-medium">Connected wallet:</span>
+                          <span className="ml-2 text-gray-600">
+                            {address?.slice(0, 6)}...{address?.slice(-4)}
+                          </span>
+                        </div>
+                        {ensName ? (
+                          <div className="text-sm">
+                            <span className="font-medium">ENS domain:</span>
+                            <span className="ml-2 text-blue-600">{ensName}</span>
+                            {ensName.endsWith('.ipecity.eth') ? (
+                              <span className="ml-2 text-green-600">✓ Ipê City domain detected</span>
+                            ) : (
+                              <span className="ml-2 text-orange-600">⚠ Not an Ipê City domain</span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500">
+                            No ENS domain found for this wallet
+                          </div>
+                        )}
+                      </div>
+                    )}
 
+                    {/* Action Button */}
+                    <div className="pt-2">
+                      <ConnectButton.Custom>
+                        {({
+                          account,
+                          chain,
+                          openConnectModal,
+                          mounted,
+                        }) => {
+                          const ready = mounted;
+                          const connected = ready && account && chain;
+
+                          return (
+                            <div
+                              {...(!ready && {
+                                'aria-hidden': true,
+                                'style': {
+                                  opacity: 0,
+                                  pointerEvents: 'none',
+                                  userSelect: 'none',
+                                },
+                              })}
+                            >
+                              {(() => {
+                                if (!connected) {
+                                  return (
+                                    <Button
+                                      onClick={openConnectModal}
+                                      type="button"
+                                      variant="default"
+                                      className="w-full"
+                                    >
+                                      Connect Wallet to Verify
+                                    </Button>
+                                  );
+                                }
+
+                                if (passportVerified) {
+                                  return (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={resetPassportVerification}
+                                      className="w-full"
+                                    >
+                                      Reset Verification
+                                    </Button>
+                                  );
+                                }
+
+                                if (ensName && ensName.endsWith('.ipecity.eth')) {
                                   return (
                                     <Button
                                       type="button"
@@ -635,62 +658,34 @@ export default function ProfilePage() {
                                       onClick={handleDirectWalletVerification}
                                       className="w-full"
                                     >
-                                      Sign to Verify
+                                      Confirm Ownership of {ensName}
                                     </Button>
                                   );
-                                })()}
-                              </div>
-                            );
-                          }}
-                        </ConnectButton.Custom>
-                      </div>
+                                }
+
+                                return (
+                                  <div className="text-center">
+                                    <p className="text-sm text-gray-600 mb-2">
+                                      This wallet doesn't own an Ipê City domain
+                                    </p>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={openConnectModal}
+                                      className="w-full"
+                                    >
+                                      Connect Different Wallet
+                                    </Button>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          );
+                        }}
+                      </ConnectButton.Custom>
                     </div>
-                    
-                    {isConnected && (
-                      <div className="text-xs text-gray-600">
-                        Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
-                        {ensName && (
-                          <span className="ml-2">({ensName})</span>
-                        )}
-                      </div>
-                    )}
                   </div>
-                )}
-                
-                {passportVerified && (
-                  <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" disabled>
-                      ✓ Verified
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={resetPassportVerification}
-                    >
-                      Reset
-                    </Button>
-                  </div>
-                )}
-                
-                {passportValue && passportCheck && (
-                  <p className={`text-sm ${passportCheck.available ? "text-green-600" : "text-red-600"}`}>
-                    {passportCheck.available ? "✓ Available" : `✗ ${passportCheck.reason || "Not available"}`}
-                  </p>
-                )}
-                {passportVerificationSent && !passportVerified && (
-                  <p className="text-sm text-orange-600">
-                    ⏳ Verification email sent - check your inbox and complete verification
-                  </p>
-                )}
-                {passportVerified && (
-                  <p className="text-sm text-green-600">
-                    ✓ Passport ownership verified
-                  </p>
-                )}
-                {form.formState.errors.ipePassport && (
-                  <p className="text-sm text-destructive">{form.formState.errors.ipePassport.message}</p>
-                )}
+                </div>
               </div>
 
               {/* Social Links */}

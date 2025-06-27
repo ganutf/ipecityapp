@@ -270,19 +270,19 @@ The application follows a monorepo structure with clear separation between clien
   - **Cleaner UI**: Removed import forms and related mutation handlers for improved usability
   - **Updated Documentation**: Removed CSV import references from README and API documentation
   - **Registration-First Approach**: System now relies entirely on individual user registration and approval workflow
-- June 27, 2025. **PASSPORT VERIFICATION SYSTEM COMPLETED**: Production ENS Ownership Verification with Direct Wallet Integration:
+- June 27, 2025. **PASSPORT VERIFICATION SYSTEM COMPLETED**: Automatic ENS Detection with Streamlined Verification:
   - **Renamed Register to Profile Page**: Changed /register route to /profile with updated navigation and AuthGuard redirects
   - **Profile Menu Integration**: Added profile link to user dropdown menu in navigation header
-  - **Dual Verification Methods**: Users can verify passport ownership via email link OR direct wallet connection
+  - **Automatic ENS Detection**: System automatically detects Ipê City domains (.ipecity.eth) from connected wallets
+  - **Simplified Interface**: Removed manual subdomain input field - app shows "Ipê Passport Verification" title with clear status
+  - **Smart Status Display**: Shows "Not verified" or "✓ Verified" status with connected wallet and ENS domain information
+  - **Intelligent Button Logic**: Button text changes based on wallet state and ENS ownership detection
+  - **Auto-Fill Form Fields**: Passport field automatically populated from detected ENS domain
   - **RainbowKit Integration**: Implemented ConnectButton.Custom for reliable wallet connection with proper error handling
-  - **Database Schema Ready**: Created passport_verifications table with token management and challenge messages
-  - **SIWE Standard Support**: Uses Sign-In with Ethereum standard with fallback to simple message signing
-  - **Enhanced UI/UX**: Profile page shows both verification options with responsive layout and clear instructions
-  - **Complete API Infrastructure**: Full backend support for passport verification workflow with 24-hour token expiration
   - **Production Security**: Mandatory cryptographic signature verification for ENS domain ownership proof
-  - **Development Ready**: Simplified ENS ownership checks for testing while maintaining production security architecture
+  - **Reset Functionality**: Users can reset verification status to try with different wallets
+  - **Enhanced UX**: Clear feedback when wallet doesn't own Ipê City domain with option to connect different wallet
   - **Local Storage Integration**: Verification status persists across sessions for seamless user experience
-  - **Comprehensive Error Handling**: Clear feedback for connection issues and detailed console logging for debugging
 
 ## User Preferences
 

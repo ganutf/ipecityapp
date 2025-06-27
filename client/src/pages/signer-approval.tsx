@@ -1,19 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Smartphone, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
+import { Smartphone, ExternalLink, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 export default function SignerApprovalPage() {
   const { profile } = usePersistentAuth();
   const [, setLocation] = useLocation();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   // Get signer data
   const { data: signerData, refetch: refetchSigner } = useQuery({
@@ -45,38 +41,14 @@ export default function SignerApprovalPage() {
     generateQR();
   }, [(signerData as any)?.signer_approval_url]);
 
-  // Check signer status mutation
-  const checkStatusMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest(`/api/neynar/signer/${profile?.fid}/status`, {
-        method: "POST",
-      });
-    },
-    onSuccess: () => {
-      refetchSigner();
-      queryClient.invalidateQueries({ queryKey: ["/api/neynar/signer", profile?.fid] });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to check signer status. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Redirect if signer is approved
+  // Auto-redirect when signer is approved
   useEffect(() => {
-    if (signerData?.status === "approved") {
-      toast({
-        title: "Signer Approved!",
-        description: "Your signer has been approved. Continuing with registration...",
-      });
-      setTimeout(() => {
-        setLocation("/register");
-      }, 2000);
+    if ((signerData as any)?.status === 'approved') {
+      setLocation('/register');
     }
-  }, [signerData?.status, setLocation, toast]);
+  }, [(signerData as any)?.status, setLocation]);
+
+
 
 
 
@@ -157,27 +129,6 @@ export default function SignerApprovalPage() {
                 </Button>
               )}
 
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => checkStatusMutation.mutate()}
-                disabled={checkStatusMutation.isPending}
-              >
-                {checkStatusMutation.isPending ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Checking Status...
-                  </>
-                ) : (
-                  'Check Approval Status'
-                )}
-              </Button>
-            </div>
-
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">
-                Status: <span className="font-medium text-yellow-600">Pending Approval</span>
-              </p>
             </div>
           </CardContent>
         </Card>

@@ -72,9 +72,14 @@ export async function sendVerificationEmail(email: string, code: string): Promis
 }
 
 export async function sendApprovalEmail(email: string, ipePassport: string): Promise<boolean> {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const fromEmail = isDevelopment 
+    ? 'onboarding@resend.dev' 
+    : 'team@updates.ipe.city';
+
   return sendEmail({
     to: email,
-    from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+    from: fromEmail,
     subject: 'Welcome to Ipê City Pulse!',
     text: `Your registration has been approved! Your Ipê passport is: ${ipePassport}.ipecity.eth`,
     html: `
@@ -90,9 +95,14 @@ export async function sendApprovalEmail(email: string, ipePassport: string): Pro
 }
 
 export async function sendDenialEmail(email: string): Promise<boolean> {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const fromEmail = isDevelopment 
+    ? 'onboarding@resend.dev' 
+    : 'team@updates.ipe.city';
+
   return sendEmail({
     to: email,
-    from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+    from: fromEmail,
     subject: 'Ipê City Pulse Registration Update',
     text: 'Your registration for Ipê City Pulse was not approved at this time.',
     html: `

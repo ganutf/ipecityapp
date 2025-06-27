@@ -1,6 +1,14 @@
 import { SignInButton } from "@farcaster/auth-kit";
 import { Link, useLocation } from "wouter";
 import { usePersistentAuth, logout } from "@/hooks/use-persistent-auth";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
@@ -64,25 +72,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 Hello, {profile?.displayName || profile?.username || '?'}
               </span>
 
-              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                {profile?.pfpUrl ? (
-                  <img 
-                    src={profile.pfpUrl} 
-                    alt="Profile" 
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-purple-600 text-sm font-semibold">
-                    {(profile?.displayName || profile?.username || '?')[0].toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={logout}
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                Logout
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 rounded-full p-0">
+                    {profile?.pfpUrl ? (
+                      <img 
+                        src={profile.pfpUrl} 
+                        alt="Profile" 
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-purple-600 text-sm font-semibold">
+                          {(profile?.displayName || profile?.username || '?')[0].toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           ) : (
             <SignInButton />

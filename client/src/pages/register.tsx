@@ -215,14 +215,8 @@ export default function RegisterPage() {
             <CardContent className="space-y-6">
               {/* Farcaster Info */}
               <div className="space-y-2">
-                <Label>Farcaster Username</Label>
-                <Input value={profile.username} disabled />
-              </div>
-
-              {/* Farcaster FID */}
-              <div className="space-y-2">
-                <Label>Farcaster ID (FID)</Label>
-                <Input value={profile.fid?.toString() || ""} disabled />
+                <Label>Username</Label>
+                <Input value={`@${profile.username}`} disabled />
               </div>
 
               {/* Email */}

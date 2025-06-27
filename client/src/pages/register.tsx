@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -53,6 +53,8 @@ export default function RegisterPage() {
   const [emailVerified, setEmailVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [showVerification, setShowVerification] = useState(false);
+  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
+  const [memberStatus, setMemberStatus] = useState<{isMember: boolean, approved: boolean, status?: string} | null>(null);
 
   const form = useForm<RegistrationData>({
     resolver: zodResolver(registrationSchema),
@@ -142,11 +144,13 @@ export default function RegisterPage() {
       });
     },
     onSuccess: () => {
+      setRegistrationSubmitted(true);
+      // Start polling for approval status
+      checkMemberStatus();
       toast({
         title: "Registration successful",
         description: "Your registration is now under review.",
       });
-      setLocation("/pending");
     },
     onError: (error: any) => {
       toast({
@@ -156,6 +160,42 @@ export default function RegisterPage() {
       });
     },
   });
+
+  // Check member status
+  const checkMemberStatusMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/members/check/${profile?.fid}`, {
+        method: "GET",
+      });
+    },
+    onSuccess: (data: any) => {
+      setMemberStatus(data);
+      if (data.approved) {
+        toast({
+          title: "Registration approved!",
+          description: "Welcome to Ipê City Pulse. Redirecting to the app...",
+        });
+        setTimeout(() => setLocation("/"), 2000);
+      }
+    },
+  });
+
+  const checkMemberStatus = () => {
+    if (profile?.fid) {
+      checkMemberStatusMutation.mutate();
+    }
+  };
+
+  // Auto-poll for status when registration is submitted
+  useEffect(() => {
+    if (registrationSubmitted && profile?.fid) {
+      const interval = setInterval(() => {
+        checkMemberStatus();
+      }, 10000); // Check every 10 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [registrationSubmitted, profile?.fid]);
 
   const handleSendVerification = () => {
     const email = form.getValues("email");
@@ -377,16 +417,80 @@ export default function RegisterPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={!emailVerified || registerMutation.isPending}
-              >
-                {registerMutation.isPending ? "Submitting..." : "Complete Registration"}
-              </Button>
-            </CardFooter>
+            
+            {/* Registration Form Footer */}
+            {!registrationSubmitted && (
+              <CardFooter>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!emailVerified || registerMutation.isPending}
+                >
+                  {registerMutation.isPending ? "Submitting..." : "Complete Registration"}
+                </Button>
+              </CardFooter>
+            )}
           </form>
+
+          {/* Registration Submitted - Pending Approval State */}
+          {registrationSubmitted && (
+            <CardContent className="pt-0">
+              <div className="border-t pt-6">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-yellow-100 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 border-4 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold text-gray-900">Registration Under Review</h3>
+                    <p className="text-gray-600">
+                      Your application has been submitted and is being reviewed by our team.
+                    </p>
+                  </div>
+
+                  {/* Status Display */}
+                  {memberStatus && (
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Status:</span>
+                        <span className={`font-medium ${
+                          memberStatus.approved 
+                            ? 'text-green-600' 
+                            : 'text-yellow-600'
+                        }`}>
+                          {memberStatus.approved ? 'Approved' : 'Pending Review'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="space-y-3">
+                    <Button
+                      variant="outline"
+                      onClick={checkMemberStatus}
+                      disabled={checkMemberStatusMutation.isPending}
+                      className="w-full"
+                    >
+                      {checkMemberStatusMutation.isPending ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                          Checking Status...
+                        </>
+                      ) : (
+                        'Check Status'
+                      )}
+                    </Button>
+
+                    <p className="text-xs text-gray-500">
+                      Typical review time: 24-48 hours<br/>
+                      You'll receive an email notification when your application is reviewed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
       </div>
     </div>

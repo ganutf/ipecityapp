@@ -35,20 +35,20 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
       }
 
       if (status === "pending") {
-        // Registration pending, redirect to pending page
-        setLocation("/pending");
+        // Registration pending, redirect to registration page for inline approval
+        setLocation("/register");
         return;
       }
 
       if (status === "denied") {
-        // Registration denied, redirect to pending page (shows denial message)
-        setLocation("/pending");
+        // Registration denied, redirect to registration page (shows denial message)
+        setLocation("/register");
         return;
       }
 
       if (requireApproval && !approved) {
         // Approval required but user not approved
-        setLocation("/pending");
+        setLocation("/register");
         return;
       }
     }

@@ -274,15 +274,15 @@ The application follows a monorepo structure with clear separation between clien
   - **Renamed Register to Profile Page**: Changed /register route to /profile with updated navigation and AuthGuard redirects
   - **Profile Menu Integration**: Added profile link to user dropdown menu in navigation header
   - **Dual Verification Methods**: Users can verify passport ownership via email link OR direct wallet connection
-  - **Direct Wallet Connection**: Integrated wagmi/viem with RainbowKit for seamless wallet-based verification
-  - **Real-time ENS Resolution**: Automatic ENS name resolution to verify domain ownership before signature
+  - **RainbowKit Integration**: Implemented ConnectButton.Custom for reliable wallet connection with proper error handling
+  - **Database Schema Ready**: Created passport_verifications table with token management and challenge messages
   - **SIWE Standard Support**: Uses Sign-In with Ethereum standard with fallback to simple message signing
-  - **Enhanced UI/UX**: Profile page shows both verification options side-by-side with wallet connection status
-  - **Complete API Infrastructure**: Full backend support for passport verification workflow with token management
-  - **Production Security**: Mandatory cryptographic signature verification with no testing compromises
-  - **Comprehensive Error Handling**: Clear feedback for wallet connection, ENS ownership, and signature failures
+  - **Enhanced UI/UX**: Profile page shows both verification options with responsive layout and clear instructions
+  - **Complete API Infrastructure**: Full backend support for passport verification workflow with 24-hour token expiration
+  - **Production Security**: Mandatory cryptographic signature verification for ENS domain ownership proof
+  - **Development Ready**: Simplified ENS ownership checks for testing while maintaining production security architecture
   - **Local Storage Integration**: Verification status persists across sessions for seamless user experience
-  - **24-Hour Token Expiration**: Secure token-based verification system with challenge message integrity
+  - **Comprehensive Error Handling**: Clear feedback for connection issues and detailed console logging for debugging
 
 ## User Preferences
 

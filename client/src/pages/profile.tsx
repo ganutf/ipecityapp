@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { useAccount, useConnect, useSignMessage, useEnsName } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const PROFILE_TAGS = [
   'tech founder',
@@ -573,50 +574,60 @@ export default function ProfilePage() {
                       </Button>
                       
                       {/* Direct Wallet Connection */}
-                      {!isConnected ? (
-                        <Button
-                          type="button"
-                          variant="default"
-                          onClick={async () => {
-                            console.log("Connect wallet clicked, available connectors:", connectors.length);
-                            console.log("Connectors:", connectors.map(c => ({ name: c.name, type: c.type })));
-                            
-                            if (connectors.length > 0) {
-                              try {
-                                console.log("Attempting to connect with:", connectors[0].name);
-                                const result = await connect({ connector: connectors[0] });
-                                console.log("Connection result:", result);
-                                console.log("Connection attempt completed");
-                              } catch (error) {
-                                console.error("Connection error:", error);
-                                toast({
-                                  title: "Connection failed",
-                                  description: `Failed to connect wallet: ${error.message || 'Unknown error'}`,
-                                  variant: "destructive",
-                                });
-                              }
-                            } else {
-                              toast({
-                                title: "No wallets available",
-                                description: "Please install a wallet extension like MetaMask.",
-                                variant: "destructive",
-                              });
-                            }
+                      <div className="flex-1">
+                        <ConnectButton.Custom>
+                          {({
+                            account,
+                            chain,
+                            openAccountModal,
+                            openChainModal,
+                            openConnectModal,
+                            mounted,
+                          }) => {
+                            const ready = mounted;
+                            const connected = ready && account && chain;
+
+                            return (
+                              <div
+                                {...(!ready && {
+                                  'aria-hidden': true,
+                                  'style': {
+                                    opacity: 0,
+                                    pointerEvents: 'none',
+                                    userSelect: 'none',
+                                  },
+                                })}
+                              >
+                                {(() => {
+                                  if (!connected) {
+                                    return (
+                                      <Button
+                                        onClick={openConnectModal}
+                                        type="button"
+                                        variant="default"
+                                        className="w-full"
+                                      >
+                                        Connect Wallet
+                                      </Button>
+                                    );
+                                  }
+
+                                  return (
+                                    <Button
+                                      type="button"
+                                      variant="default"
+                                      onClick={handleDirectWalletVerification}
+                                      className="w-full"
+                                    >
+                                      Sign to Verify
+                                    </Button>
+                                  );
+                                })()}
+                              </div>
+                            );
                           }}
-                          className="flex-1"
-                        >
-                          Connect Wallet
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="default"
-                          onClick={handleDirectWalletVerification}
-                          className="flex-1"
-                        >
-                          Verify with Wallet
-                        </Button>
-                      )}
+                        </ConnectButton.Custom>
+                      </div>
                     </div>
                     
                     {isConnected && (

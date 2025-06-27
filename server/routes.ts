@@ -414,11 +414,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         isMember: !!member,
         approved: member?.approved || false,
+        status: member?.registrationStatus || null,
         member: member || null
       });
     } catch (err: any) {
       console.error("Check member error:", err);
       res.status(500).json({ error: err.message || 'Failed to check member status' });
+    }
+  });
+
+  // Send email verification code
+  app.post("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { farcasterFid, email } = req.body;
+      
+      if (!farcasterFid || !email) {
+        return res.status(400).json({ error: 'FID and email are required' });
+      }
+
+      const code = generateVerificationCode();
+      const verification = await storage.createEmailVerification({
+        farcasterFid,
+        email,
+        code,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+      });
+
+      const emailSent = await sendVerificationEmail(email, code);
+      
+      if (!emailSent) {
+        return res.status(500).json({ error: 'Failed to send verification email' });
+      }
+
+      res.json({ success: true, message: 'Verification code sent' });
+    } catch (error) {
+      console.error("Send verification email error:", error);
+      res.status(500).json({ error: "Failed to send verification email" });
+    }
+  });
+
+  // Confirm email verification code
+  app.post("/api/auth/confirm-email", async (req, res) => {
+    try {
+      const { farcasterFid, code } = req.body;
+      
+      if (!farcasterFid || !code) {
+        return res.status(400).json({ error: 'FID and code are required' });
+      }
+
+      const verification = await storage.getEmailVerification(farcasterFid, code);
+      
+      if (!verification) {
+        return res.status(400).json({ error: 'Invalid or expired verification code' });
+      }
+
+      if (verification.expiresAt < new Date()) {
+        return res.status(400).json({ error: 'Verification code has expired' });
+      }
+
+      await storage.markEmailVerified(farcasterFid);
+      
+      res.json({ success: true, message: 'Email verified successfully' });
+    } catch (error) {
+      console.error("Confirm email verification error:", error);
+      res.status(500).json({ error: "Failed to confirm email verification" });
+    }
+  });
+
+  // Register new member
+  app.post("/api/register", async (req, res) => {
+    try {
+      const registrationData = registrationSchema.parse(req.body);
+      const member = await storage.registerMember(registrationData);
+      res.json({ success: true, member });
+    } catch (error) {
+      console.error("Register member error:", error);
+      res.status(500).json({ error: "Failed to register member" });
+    }
+  });
+
+  // Check Ipê passport availability
+  app.get("/api/passport/check/:passport", async (req, res) => {
+    try {
+      const passport = req.params.passport;
+      const existingMember = await storage.getMemberByIpePassport(passport);
+      
+      res.json({ 
+        available: !existingMember,
+        reason: existingMember ? 'This passport is already taken' : undefined
+      });
+    } catch (error) {
+      console.error("Check passport availability error:", error);
+      res.status(500).json({ error: "Failed to check passport availability" });
     }
   });
 

@@ -325,6 +325,20 @@ export default function ProfilePage() {
     }
   };
 
+  // Reset passport verification
+  const resetPassportVerification = () => {
+    const passport = form.getValues("ipePassport");
+    if (passport) {
+      const targetPassport = `${passport}.ipecity.eth`;
+      localStorage.removeItem(`passport-verified-${targetPassport}`);
+      setPassportVerified(false);
+      toast({
+        title: "Verification reset",
+        description: "Passport verification has been cleared. Please verify again with the correct wallet.",
+      });
+    }
+  };
+
   // Direct wallet verification for passport
   const handleDirectWalletVerification = async () => {
     const passport = form.getValues("ipePassport");
@@ -348,21 +362,23 @@ export default function ProfilePage() {
 
     const expectedDomain = `${passport}.ipecity.eth`;
     
-    // For testing purposes, allow verification regardless of ENS ownership
-    // In production, this would check actual ENS ownership
     console.log("Wallet connected:", address);
     console.log("Expected domain:", expectedDomain);
     console.log("Current ENS name:", ensName);
     
-    // Skip ENS ownership check for testing
-    // if (ensName !== expectedDomain) {
-    //   toast({
-    //     title: "Domain ownership required",
-    //     description: `Your wallet must own ${expectedDomain} to verify ownership.`,
-    //     variant: "destructive",
-    //   });
-    //   return;
-    // }
+    // Check if connected wallet owns the ENS domain
+    if (ensName !== expectedDomain) {
+      // Clear any incorrect verification status
+      localStorage.removeItem(`passport-verified-${expectedDomain}`);
+      setPassportVerified(false);
+      
+      toast({
+        title: "Domain ownership required",
+        description: `Your wallet must own ${expectedDomain} to verify ownership. Connected wallet owns: ${ensName || 'no ENS domain'}`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Create signature challenge
     const challengeMessage = `Verify ownership of ${expectedDomain} for Ipê City registration\n\nFID: ${profile?.fid}\nTimestamp: ${new Date().toISOString()}`;
@@ -645,6 +661,14 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <Button type="button" variant="outline" disabled>
                       ✓ Verified
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={resetPassportVerification}
+                    >
+                      Reset
                     </Button>
                   </div>
                 )}

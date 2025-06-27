@@ -1,3 +1,4 @@
+import { useProfile } from "@farcaster/auth-kit";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,10 +7,9 @@ import { Smartphone, ExternalLink, CheckCircle, AlertCircle } from "lucide-react
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 export default function SignerApprovalPage() {
-  const { profile } = usePersistentAuth();
+  const { profile } = useProfile();
   const [, setLocation] = useLocation();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const queryClient = useQueryClient();
@@ -17,7 +17,7 @@ export default function SignerApprovalPage() {
 
   // Get signer data
   const { data: signerData, refetch: refetchSigner } = useQuery({
-    queryKey: [`/api/neynar/signer/${profile?.fid}`],
+    queryKey: ["/api/neynar/signer", profile?.fid],
     enabled: !!profile?.fid,
     refetchInterval: 3000, // Check every 3 seconds for approval
   });
@@ -26,25 +26,25 @@ export default function SignerApprovalPage() {
   const { data: qrData } = useQuery({
     queryKey: ["/api/qrcode"],
     queryFn: async () => {
-      if (!(signerData as any)?.signer_approval_url) return null;
+      if (!signerData?.approvalUrl) return null;
       return apiRequest(`/api/qrcode`, {
         method: "POST",
-        body: JSON.stringify({ url: (signerData as any).signer_approval_url }),
+        body: JSON.stringify({ url: signerData.approvalUrl }),
       });
     },
-    enabled: !!(signerData as any)?.signer_approval_url,
+    enabled: !!signerData?.approvalUrl,
   });
 
   // Check signer status mutation
   const checkStatusMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/neynar/signer/check/${profile?.fid}`, {
+      return apiRequest(`/api/neynar/signer/${profile?.fid}/status`, {
         method: "POST",
       });
     },
     onSuccess: () => {
       refetchSigner();
-      queryClient.invalidateQueries({ queryKey: [`/api/neynar/signer/${profile?.fid}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/neynar/signer", profile?.fid] });
     },
     onError: () => {
       toast({

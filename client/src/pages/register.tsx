@@ -414,22 +414,38 @@ export default function RegisterPage() {
               {/* Ipê Passport */}
               <div className="space-y-2">
                 <Label htmlFor="ipePassport">Ipê Passport (Optional)</Label>
-                <div className="flex items-center gap-2">
+                <div className="flex gap-2">
                   <Input
                     id="ipePassport"
-                    {...form.register("ipePassport")}
-                    placeholder="yourname"
+                    value="hansen.ipecity.eth"
+                    disabled
                     className="flex-1"
                   />
-                  <span className="text-muted-foreground">.ipecity.eth</span>
+                  {!passportVerified && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handlePassportVerification}
+                      disabled={passportVerificationSent}
+                    >
+                      {passportVerificationSent ? "Verifying..." : "Verify Ownership"}
+                    </Button>
+                  )}
+                  {passportVerified && (
+                    <Button type="button" variant="outline" disabled>
+                      ✓ Verified
+                    </Button>
+                  )}
                 </div>
-                {passportValue && passportCheck && (
-                  <p className={`text-sm ${passportCheck.available ? "text-green-600" : "text-red-600"}`}>
-                    {passportCheck.available ? "✓ Available" : `✗ ${passportCheck.reason || "Not available"}`}
+                {passportVerificationSent && !passportVerified && (
+                  <p className="text-sm text-orange-600">
+                    ⏳ Verification email sent - check your inbox and complete verification
                   </p>
                 )}
-                {form.formState.errors.ipePassport && (
-                  <p className="text-sm text-destructive">{form.formState.errors.ipePassport.message}</p>
+                {passportVerified && (
+                  <p className="text-sm text-green-600">
+                    ✓ Passport ownership verified
+                  </p>
                 )}
               </div>
 

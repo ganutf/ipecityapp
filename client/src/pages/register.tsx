@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useProfile } from "@farcaster/auth-kit";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,9 +44,12 @@ const registrationSchema = z.object({
 type RegistrationData = z.infer<typeof registrationSchema>;
 
 export default function RegisterPage() {
-  const { profile } = useProfile();
+  const { profile, isLoading } = usePersistentAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Debug logging
+  console.log("Registration page - Profile:", profile, "Loading:", isLoading);
   const [emailVerified, setEmailVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [showVerification, setShowVerification] = useState(false);
@@ -195,6 +198,19 @@ export default function RegisterPage() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Loading...</CardTitle>
+            <CardDescription>Preparing registration form...</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   if (!profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -222,8 +238,13 @@ export default function RegisterPage() {
             <CardContent className="space-y-6">
               {/* Farcaster Info */}
               <div className="space-y-2">
+                <Label>FID</Label>
+                <Input value={profile.fid || ''} disabled />
+              </div>
+              
+              <div className="space-y-2">
                 <Label>Username</Label>
-                <Input value={`@${profile.username}`} disabled />
+                <Input value={`@${profile.username || 'loading...'}`} disabled />
               </div>
 
               {/* Email */}

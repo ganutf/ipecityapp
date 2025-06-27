@@ -243,6 +243,14 @@ The application follows a monorepo structure with clear separation between clien
   - **Admin Button Integration**: Added functional approve/deny buttons in admin dashboard with real-time member list updates
   - **Seamless Flow**: Users stay on single page throughout entire registration and approval process
   - **Improved AuthGuard**: Updated routing logic to redirect pending/denied users to registration page for inline status
+- June 27, 2025. **AUTHENTICATION FLOW RESTRUCTURE**: Signer Approval Before Registration:
+  - **Restructured Authentication Flow**: Signer approval now happens immediately after Farcaster login, before registration
+  - **New Signer Approval Page**: Created dedicated /signer-approval page with QR code and approval link
+  - **Updated AuthGuard Logic**: Enhanced routing to check signer status first, then registration status
+  - **Improved User Experience**: Technical signer approval handled upfront, then seamless registration process
+  - **Dual-Environment Email System**: Development emails route to delivered@resend.dev, production uses updates.ipe.city
+  - **Enhanced Testing**: Verification codes displayed prominently in console for easy copying during development
+  - **Complete Flow**: Login → Signer Approval → Registration → Admin Approval with inline status tracking
 
 ## User Preferences
 

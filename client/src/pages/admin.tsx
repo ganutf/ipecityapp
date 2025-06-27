@@ -20,7 +20,6 @@ export default function AdminPage() {
     description: "",
   });
 
-  const [csvData, setCsvData] = useState("");
   const [editingPulse, setEditingPulse] = useState<number | null>(null);
   const [editData, setEditData] = useState({
     farcasterUrl: "",
@@ -84,31 +83,7 @@ export default function AdminPage() {
     },
   });
 
-  const importMembersMutation = useMutation({
-    mutationFn: async (csvData: string) => {
-      const response = await fetch("/api/members/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csvData }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to import members");
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-      setCsvData("");
-      toast({ 
-        title: "Success", 
-        description: `Imported ${data.imported} members, skipped ${data.skipped} duplicates` 
-      });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+
 
   const approveMemberMutation = useMutation({
     mutationFn: async (farcasterFid: number) => {
@@ -244,34 +219,7 @@ export default function AdminPage() {
           </form>
         </div>
 
-        {/* Import Members Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Import Members</h2>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            importMembersMutation.mutate(csvData);
-          }} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                CSV Data
-              </label>
-              <Textarea
-                value={csvData}
-                onChange={(e) => setCsvData(e.target.value)}
-                placeholder="farcaster_fid,farcaster_username,name,ipe_passport,approved&#10;2790,jhansen,Jean Hansen,jean.ipecity.eth,true"
-                rows={8}
-                className="font-mono text-sm"
-              />
-            </div>
-            <Button 
-              type="submit" 
-              disabled={importMembersMutation.isPending}
-              className="w-full"
-            >
-              {importMembersMutation.isPending ? "Importing..." : "Import Members"}
-            </Button>
-          </form>
-        </div>
+
       </div>
 
       {/* Pulses List */}

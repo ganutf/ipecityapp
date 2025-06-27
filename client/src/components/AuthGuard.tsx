@@ -1,7 +1,7 @@
-import { useProfile } from "@farcaster/auth-kit";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -10,18 +10,18 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requireAuth = false, requireApproval = false }: AuthGuardProps) {
-  const { profile } = useProfile();
+  const { profile } = usePersistentAuth();
   const [, setLocation] = useLocation();
 
   // Check signer status
   const { data: signerData } = useQuery({
-    queryKey: ["/api/neynar/signer", profile?.fid],
+    queryKey: [`/api/neynar/signer/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
 
   // Check member status
   const { data: memberStatus } = useQuery({
-    queryKey: ["/api/members/check", profile?.fid],
+    queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
 
@@ -38,8 +38,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
     if (profile && profile.fid) {
       // First priority: Check signer status
       if (signerData) {
-        console.log("AuthGuard - Signer status:", signerData.status);
-        if (signerData.status === 'pending_approval') {
+        console.log("AuthGuard - Signer status:", (signerData as any).status);
+        if ((signerData as any).status === 'pending_approval') {
           console.log("AuthGuard - Redirecting to signer approval");
           // Signer needs approval, redirect to signer approval page
           setLocation("/signer-approval");
@@ -48,8 +48,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
       }
 
       // Second priority: Check member status (only after signer is approved)
-      if (signerData && signerData.status === 'approved' && memberStatus) {
-        const { isMember, status, approved } = memberStatus;
+      if (signerData && (signerData as any).status === 'approved' && memberStatus) {
+        const { isMember, status, approved } = memberStatus as any;
 
         if (!isMember) {
           // User not registered, redirect to registration

@@ -28,8 +28,14 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     const result = await resend!.emails.send(emailData);
     
-    console.log(`Email sent successfully to ${params.to}`, result);
-    return result.data !== null; // Return true only if email was actually sent
+    console.log(`Email API response for ${params.to}:`, result);
+    
+    // Handle Resend's response format - they return errors in the result object
+    if (result.error) {
+      throw result.error;
+    }
+    
+    return result.data !== null;
   } catch (error: any) {
     console.error('Resend email error:', error);
     

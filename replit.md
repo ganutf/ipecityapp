@@ -257,6 +257,13 @@ The application follows a monorepo structure with clear separation between clien
   - **Clear Console Logging**: Detailed email content logged with clear formatting for verification
   - **Production Safety**: Production mode unchanged, still sends real emails to actual recipients
   - **Testing Efficiency**: Verification codes and email content visible in console without API costs
+- June 27, 2025. **AUTOMATIC SIGNER APPROVAL DETECTION**: Real-time Status Monitoring:
+  - **Fixed Manual Approval Detection**: Signer approval page now automatically detects when users approve on mobile
+  - **Real-time Neynar API Integration**: Server checks live signer status instead of cached database values
+  - **Automatic Redirect**: Users are instantly redirected to registration after mobile approval
+  - **Cache Prevention**: Added no-cache headers to prevent stale status responses
+  - **Clean UX**: Removed manual status check buttons for seamless automatic flow
+  - **Production Ready**: Complete authentication flow from login → signer approval → registration → admin approval
 
 ## User Preferences
 

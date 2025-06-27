@@ -220,6 +220,14 @@ The application follows a monorepo structure with clear separation between clien
   - **Removed CSV Import**: Streamlined admin workflow focusing on individual registration approval
   - **Enhanced Member Management**: Admin dashboard shows registration status, timestamps, and member details
   - **Production Ready**: All features tested with comprehensive error handling and user feedback
+- June 27, 2025. Email Verification System Fixes:
+  - **Database Constraint Fix**: Removed foreign key constraint from email verifications to allow verification for unregistered users
+  - **Registration UX Enhancement**: Auto-filled FID field and made Ipê passport optional in registration form
+  - **Profile Menu Implementation**: Added profile picture dropdown with logout functionality
+  - **Email API Routes**: Added missing email verification endpoints (/api/auth/verify-email, /api/auth/confirm-email)
+  - **Development Mode Support**: Email system works in development with fallback handling for invalid SendGrid keys
+  - **Complete Verification Flow**: End-to-end email verification tested and confirmed working (send code → verify code → mark verified)
+  - **Awaiting Production Email**: SendGrid API key required for production email delivery
 
 ## User Preferences
 

@@ -1,13 +1,6 @@
-import { MailService } from '@sendgrid/mail';
+import { Resend } from 'resend';
 
-if (!process.env.SENDGRID_API_KEY) {
-  console.warn("SENDGRID_API_KEY environment variable not set - email functionality disabled");
-}
-
-const mailService = new MailService();
-if (process.env.SENDGRID_API_KEY) {
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-}
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 interface EmailParams {
   to: string;
@@ -18,23 +11,27 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.log('Email would be sent (SENDGRID_API_KEY not configured):', params);
+  if (!resend) {
+    console.log('Email would be sent (RESEND_API_KEY not configured):', params);
     return true; // Return true for development
   }
 
   try {
-    await mailService.send({
-      to: params.to,
+    const emailData: any = {
       from: params.from,
+      to: params.to,
       subject: params.subject,
-      text: params.text || undefined,
-      html: params.html || undefined,
-    });
-    console.log(`Email sent successfully to ${params.to}`);
+    };
+    
+    if (params.text) emailData.text = params.text;
+    if (params.html) emailData.html = params.html;
+    
+    const result = await resend!.emails.send(emailData);
+    
+    console.log(`Email sent successfully to ${params.to}`, result);
     return true;
   } catch (error) {
-    console.error('SendGrid email error:', error);
+    console.error('Resend email error:', error);
     // For development, log the error but continue the flow
     if (process.env.NODE_ENV === 'development') {
       console.log('Development mode: treating email as sent despite error');
@@ -51,7 +48,7 @@ export function generateVerificationCode(): string {
 export async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
   return sendEmail({
     to: email,
-    from: process.env.FROM_EMAIL || 'noreply@ipecity.eth', // You'll need to verify this sender in SendGrid
+    from: process.env.FROM_EMAIL || 'noreply@ipecity.com', // Resend requires a verified domain
     subject: 'Ipê City Pulse - Email Verification',
     text: `Your verification code is: ${code}`,
     html: `
@@ -68,7 +65,7 @@ export async function sendVerificationEmail(email: string, code: string): Promis
 export async function sendApprovalEmail(email: string, ipePassport: string): Promise<boolean> {
   return sendEmail({
     to: email,
-    from: process.env.FROM_EMAIL || 'noreply@ipecity.eth',
+    from: process.env.FROM_EMAIL || 'noreply@ipecity.com',
     subject: 'Welcome to Ipê City Pulse!',
     text: `Your registration has been approved! Your Ipê passport is: ${ipePassport}.ipecity.eth`,
     html: `
@@ -86,7 +83,7 @@ export async function sendApprovalEmail(email: string, ipePassport: string): Pro
 export async function sendDenialEmail(email: string): Promise<boolean> {
   return sendEmail({
     to: email,
-    from: process.env.FROM_EMAIL || 'noreply@ipecity.eth',
+    from: process.env.FROM_EMAIL || 'noreply@ipecity.com',
     subject: 'Ipê City Pulse Registration Update',
     text: 'Your registration for Ipê City Pulse was not approved at this time.',
     html: `

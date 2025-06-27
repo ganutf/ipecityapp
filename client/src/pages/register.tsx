@@ -56,6 +56,12 @@ export default function RegisterPage() {
   const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
   const [memberStatus, setMemberStatus] = useState<{isMember: boolean, approved: boolean, status?: string} | null>(null);
 
+  // Check if user is already a member on page load
+  const { data: existingMemberStatus } = useQuery({
+    queryKey: ["/api/members/check", profile?.fid],
+    enabled: !!profile?.fid,
+  });
+
   const form = useForm<RegistrationData>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
@@ -196,6 +202,26 @@ export default function RegisterPage() {
       return () => clearInterval(interval);
     }
   }, [registrationSubmitted, profile?.fid]);
+
+  // Handle existing member status on page load
+  useEffect(() => {
+    if (existingMemberStatus) {
+      const typedStatus = existingMemberStatus as {isMember: boolean, approved: boolean, status?: string};
+      if (typedStatus.isMember) {
+        setRegistrationSubmitted(true);
+        setMemberStatus(typedStatus);
+        
+        if (typedStatus.approved) {
+          // Member is approved, redirect to main app
+          toast({
+            title: "Welcome back!",
+            description: "You're already an approved member.",
+          });
+          setTimeout(() => setLocation("/"), 1000);
+        }
+      }
+    }
+  }, [existingMemberStatus, setLocation, toast]);
 
   const handleSendVerification = () => {
     const email = form.getValues("email");
@@ -432,19 +458,51 @@ export default function RegisterPage() {
             )}
           </form>
 
-          {/* Registration Submitted - Pending Approval State */}
+          {/* Registration Submitted - Approval Status */}
           {registrationSubmitted && (
             <CardContent className="pt-0">
               <div className="border-t pt-6">
                 <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-yellow-100 rounded-full flex items-center justify-center">
-                    <div className="w-8 h-8 border-4 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+                  {/* Status Icon */}
+                  <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${
+                    memberStatus?.approved 
+                      ? 'bg-green-100' 
+                      : memberStatus?.status === 'denied'
+                        ? 'bg-red-100'
+                        : 'bg-yellow-100'
+                  }`}>
+                    {memberStatus?.approved ? (
+                      <div className="w-8 h-8 text-green-600">✓</div>
+                    ) : memberStatus?.status === 'denied' ? (
+                      <div className="w-8 h-8 text-red-600">✗</div>
+                    ) : (
+                      <div className="w-8 h-8 border-4 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+                    )}
                   </div>
                   
+                  {/* Status Message */}
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-gray-900">Registration Under Review</h3>
+                    <h3 className={`text-lg font-semibold ${
+                      memberStatus?.approved 
+                        ? 'text-green-900' 
+                        : memberStatus?.status === 'denied'
+                          ? 'text-red-900'
+                          : 'text-gray-900'
+                    }`}>
+                      {memberStatus?.approved 
+                        ? 'Registration Approved!' 
+                        : memberStatus?.status === 'denied'
+                          ? 'Registration Denied'
+                          : 'Registration Under Review'
+                      }
+                    </h3>
                     <p className="text-gray-600">
-                      Your application has been submitted and is being reviewed by our team.
+                      {memberStatus?.approved 
+                        ? 'Welcome to Ipê City Pulse! Redirecting to the app...'
+                        : memberStatus?.status === 'denied'
+                          ? 'Your application was not approved. Please contact support for more information.'
+                          : 'Your application has been submitted and is being reviewed by our team.'
+                      }
                     </p>
                   </div>
 
@@ -456,37 +514,59 @@ export default function RegisterPage() {
                         <span className={`font-medium ${
                           memberStatus.approved 
                             ? 'text-green-600' 
-                            : 'text-yellow-600'
+                            : memberStatus.status === 'denied'
+                              ? 'text-red-600'
+                              : 'text-yellow-600'
                         }`}>
-                          {memberStatus.approved ? 'Approved' : 'Pending Review'}
+                          {memberStatus.approved 
+                            ? 'Approved' 
+                            : memberStatus.status === 'denied'
+                              ? 'Denied'
+                              : 'Pending Review'
+                          }
                         </span>
                       </div>
                     </div>
                   )}
 
                   {/* Actions */}
-                  <div className="space-y-3">
-                    <Button
-                      variant="outline"
-                      onClick={checkMemberStatus}
-                      disabled={checkMemberStatusMutation.isPending}
-                      className="w-full"
-                    >
-                      {checkMemberStatusMutation.isPending ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
-                          Checking Status...
-                        </>
-                      ) : (
-                        'Check Status'
-                      )}
-                    </Button>
+                  {!memberStatus?.approved && memberStatus?.status !== 'denied' && (
+                    <div className="space-y-3">
+                      <Button
+                        variant="outline"
+                        onClick={checkMemberStatus}
+                        disabled={checkMemberStatusMutation.isPending}
+                        className="w-full"
+                      >
+                        {checkMemberStatusMutation.isPending ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+                            Checking Status...
+                          </>
+                        ) : (
+                          'Check Status'
+                        )}
+                      </Button>
 
-                    <p className="text-xs text-gray-500">
-                      Typical review time: 24-48 hours<br/>
-                      You'll receive an email notification when your application is reviewed.
-                    </p>
-                  </div>
+                      <p className="text-xs text-gray-500">
+                        Typical review time: 24-48 hours<br/>
+                        You'll receive an email notification when your application is reviewed.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Contact Support for Denied */}
+                  {memberStatus?.status === 'denied' && (
+                    <div className="space-y-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => window.location.href = 'mailto:support@ipecity.com'}
+                        className="w-full"
+                      >
+                        Contact Support
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

@@ -360,10 +360,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve member (admin only)
-  app.post("/api/admin/approve-member/:fid", async (req, res) => {
+  app.post("/api/admin/approve-member", async (req, res) => {
     try {
-      const fid = parseInt(req.params.fid);
-      const member = await storage.approveMember(fid);
+      const { farcasterFid } = req.body;
+      const member = await storage.approveMember(farcasterFid);
       
       // Send approval email
       if (member.email && member.ipePassport) {
@@ -378,10 +378,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Deny member (admin only)
-  app.post("/api/admin/deny-member/:fid", async (req, res) => {
+  app.post("/api/admin/deny-member", async (req, res) => {
     try {
-      const fid = parseInt(req.params.fid);
-      const member = await storage.denyMember(fid);
+      const { farcasterFid } = req.body;
+      const member = await storage.denyMember(farcasterFid);
       
       // Send denial email
       if (member.email) {

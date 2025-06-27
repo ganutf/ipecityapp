@@ -110,6 +110,50 @@ export default function AdminPage() {
     },
   });
 
+  const approveMemberMutation = useMutation({
+    mutationFn: async (farcasterFid: number) => {
+      const response = await fetch("/api/admin/approve-member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ farcasterFid }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to approve member");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      toast({ title: "Success", description: "Member approved successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const denyMemberMutation = useMutation({
+    mutationFn: async (farcasterFid: number) => {
+      const response = await fetch("/api/admin/deny-member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ farcasterFid }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to deny member");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      toast({ title: "Success", description: "Member denied successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Show loading while auth is initializing
   if (isLoading) {
     return (
@@ -359,6 +403,7 @@ export default function AdminPage() {
                     <th className="text-left py-2">Name</th>
                     <th className="text-left py-2">Ipê Passport</th>
                     <th className="text-left py-2">Status</th>
+                    <th className="text-left py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -376,6 +421,32 @@ export default function AdminPage() {
                         }`}>
                           {member.approved ? 'Approved' : 'Pending'}
                         </span>
+                      </td>
+                      <td className="py-2">
+                        {!member.approved && (
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => approveMemberMutation.mutate(member.farcasterFid)}
+                              disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              {approveMemberMutation.isPending ? "..." : "Approve"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => denyMemberMutation.mutate(member.farcasterFid)}
+                              disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
+                            >
+                              {denyMemberMutation.isPending ? "..." : "Deny"}
+                            </Button>
+                          </div>
+                        )}
+                        {member.approved && (
+                          <span className="text-sm text-gray-500">Already approved</span>
+                        )}
                       </td>
                     </tr>
                   ))}

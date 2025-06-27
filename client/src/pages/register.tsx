@@ -252,33 +252,62 @@ export default function RegisterPage() {
     setPassportVerified(isVerified);
   }, []);
 
+  // Send passport verification email
+  const sendPassportVerificationMutation = useMutation({
+    mutationFn: async (passport: string) => {
+      return apiRequest(`/api/passport/send-verification`, {
+        method: "POST",
+        body: JSON.stringify({
+          farcasterFid: profile?.fid,
+          ipePassport: passport,
+        }),
+      });
+    },
+    onSuccess: (data: any) => {
+      setPassportVerificationSent(true);
+      toast({
+        title: "Verification email sent",
+        description: "Check your email for the passport verification link.",
+      });
+      
+      // Poll for verification completion
+      const pollInterval = setInterval(() => {
+        const passport = form.getValues("ipePassport");
+        const isVerified = localStorage.getItem(`passport-verified-${passport}.ipecity.eth`) === "true";
+        if (isVerified) {
+          setPassportVerified(true);
+          setPassportVerificationSent(false);
+          clearInterval(pollInterval);
+          toast({
+            title: "Passport verified",
+            description: "Your ENS ownership has been successfully verified.",
+          });
+        }
+      }, 2000);
+      
+      // Clear polling after 10 minutes
+      setTimeout(() => clearInterval(pollInterval), 600000);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send verification email. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handlePassportVerification = () => {
-    const targetPassport = "hansen.ipecity.eth";
-    // Set hardcoded passport value
-    form.setValue("ipePassport", targetPassport);
-    
-    // Open verification page in new tab
-    const verificationUrl = `/verify-passport/test-token-123`;
-    window.open(verificationUrl, '_blank');
-    
-    setPassportVerificationSent(true);
-    
-    // Poll for verification completion
-    const pollInterval = setInterval(() => {
-      const isVerified = localStorage.getItem(`passport-verified-${targetPassport}`) === "true";
-      if (isVerified) {
-        setPassportVerified(true);
-        setPassportVerificationSent(false);
-        clearInterval(pollInterval);
-        toast({
-          title: "Passport verified",
-          description: "Your ENS ownership has been successfully verified.",
-        });
-      }
-    }, 2000);
-    
-    // Clear polling after 5 minutes
-    setTimeout(() => clearInterval(pollInterval), 300000);
+    const passport = form.getValues("ipePassport");
+    if (passport && profile?.fid) {
+      sendPassportVerificationMutation.mutate(passport);
+    } else {
+      toast({
+        title: "Error",
+        description: "Please enter a passport name first.",
+        variant: "destructive",
+      });
+    }
   };
 
   const onSubmit = (data: RegistrationData) => {
@@ -414,21 +443,24 @@ export default function RegisterPage() {
               {/* Ipê Passport */}
               <div className="space-y-2">
                 <Label htmlFor="ipePassport">Ipê Passport (Optional)</Label>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   <Input
                     id="ipePassport"
-                    value="hansen.ipecity.eth"
-                    disabled
+                    {...form.register("ipePassport")}
+                    placeholder="yourname"
                     className="flex-1"
+                    disabled={passportVerified}
                   />
+                  <span className="text-muted-foreground">.ipecity.eth</span>
                   {!passportVerified && (
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handlePassportVerification}
-                      disabled={passportVerificationSent}
+                      disabled={passportVerificationSent || sendPassportVerificationMutation.isPending || !form.watch("ipePassport")}
                     >
-                      {passportVerificationSent ? "Verifying..." : "Verify Ownership"}
+                      {sendPassportVerificationMutation.isPending ? "Sending..." : 
+                       passportVerificationSent ? "Verifying..." : "Verify Ownership"}
                     </Button>
                   )}
                   {passportVerified && (
@@ -437,6 +469,11 @@ export default function RegisterPage() {
                     </Button>
                   )}
                 </div>
+                {passportValue && passportCheck && (
+                  <p className={`text-sm ${passportCheck.available ? "text-green-600" : "text-red-600"}`}>
+                    {passportCheck.available ? "✓ Available" : `✗ ${passportCheck.reason || "Not available"}`}
+                  </p>
+                )}
                 {passportVerificationSent && !passportVerified && (
                   <p className="text-sm text-orange-600">
                     ⏳ Verification email sent - check your inbox and complete verification
@@ -446,6 +483,9 @@ export default function RegisterPage() {
                   <p className="text-sm text-green-600">
                     ✓ Passport ownership verified
                   </p>
+                )}
+                {form.formState.errors.ipePassport && (
+                  <p className="text-sm text-destructive">{form.formState.errors.ipePassport.message}</p>
                 )}
               </div>
 

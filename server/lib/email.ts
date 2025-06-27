@@ -48,7 +48,7 @@ export function generateVerificationCode(): string {
 export async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
   return sendEmail({
     to: email,
-    from: process.env.FROM_EMAIL || 'noreply@ipecity.com', // Resend requires a verified domain
+    from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
     subject: 'Ipê City Pulse - Email Verification',
     text: `Your verification code is: ${code}`,
     html: `
@@ -65,7 +65,7 @@ export async function sendVerificationEmail(email: string, code: string): Promis
 export async function sendApprovalEmail(email: string, ipePassport: string): Promise<boolean> {
   return sendEmail({
     to: email,
-    from: process.env.FROM_EMAIL || 'noreply@ipecity.com',
+    from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
     subject: 'Welcome to Ipê City Pulse!',
     text: `Your registration has been approved! Your Ipê passport is: ${ipePassport}.ipecity.eth`,
     html: `
@@ -83,7 +83,7 @@ export async function sendApprovalEmail(email: string, ipePassport: string): Pro
 export async function sendDenialEmail(email: string): Promise<boolean> {
   return sendEmail({
     to: email,
-    from: process.env.FROM_EMAIL || 'noreply@ipecity.com',
+    from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
     subject: 'Ipê City Pulse Registration Update',
     text: 'Your registration for Ipê City Pulse was not approved at this time.',
     html: `

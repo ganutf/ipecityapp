@@ -14,9 +14,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { useAccount, useConnect, useSignMessage, useEnsName } from "wagmi";
+import { useAccount, useConnect, useSignMessage } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useEnsLookup } from "@/hooks/useEnsLookup";
 
 const PROFILE_TAGS = [
   'tech founder',
@@ -65,10 +66,11 @@ export default function ProfilePage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors, error: connectError } = useConnect();
   const { signMessageAsync } = useSignMessage();
-  const { data: ensName } = useEnsName({ address });
+  const { ensName, isLoading: ensLoading, error: ensError } = useEnsLookup(address);
   
   // Debug wallet connection state
   console.log("Wallet state:", { isConnected, address, connectors: connectors.length, connectError });
+  console.log("ENS lookup:", { ensName, ensLoading, ensError });
 
   // Check if user is already a member on page load
   const { data: existingMemberStatus } = useQuery({
@@ -582,7 +584,15 @@ export default function ProfilePage() {
                             {address?.slice(0, 6)}...{address?.slice(-4)}
                           </span>
                         </div>
-                        {ensName ? (
+                        {ensLoading ? (
+                          <div className="text-sm text-gray-500">
+                            Looking up ENS domain...
+                          </div>
+                        ) : ensError ? (
+                          <div className="text-sm text-red-600">
+                            Error looking up ENS domain
+                          </div>
+                        ) : ensName ? (
                           <div className="text-sm">
                             <span className="font-medium">ENS domain:</span>
                             <span className="ml-2 text-blue-600">{ensName}</span>
@@ -647,6 +657,37 @@ export default function ProfilePage() {
                                     >
                                       Reset Verification
                                     </Button>
+                                  );
+                                }
+
+                                if (ensLoading) {
+                                  return (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      disabled
+                                      className="w-full"
+                                    >
+                                      Looking up ENS domain...
+                                    </Button>
+                                  );
+                                }
+
+                                if (ensError) {
+                                  return (
+                                    <div className="text-center">
+                                      <p className="text-sm text-red-600 mb-2">
+                                        Error looking up ENS domain
+                                      </p>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={openConnectModal}
+                                        className="w-full"
+                                      >
+                                        Try Different Wallet
+                                      </Button>
+                                    </div>
                                   );
                                 }
 

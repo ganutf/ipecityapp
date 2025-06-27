@@ -19,7 +19,7 @@ export function useEnsLookup(address: string | undefined) {
         method: 'GET',
       });
     },
-    enabled: !!address && !!address.match(/^0x[a-fA-F0-9]{40}$/),
+    enabled: Boolean(address && address.match(/^0x[a-fA-F0-9]{40}$/)),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });

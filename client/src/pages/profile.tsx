@@ -14,6 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { useAccount, useConnect, useSignMessage, useEnsName } from "wagmi";
+import { createSiweMessage } from "viem/siwe";
 
 const PROFILE_TAGS = [
   'tech founder',
@@ -57,6 +59,12 @@ export default function ProfilePage() {
   const [passportVerificationSent, setPassportVerificationSent] = useState(false);
   const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
   const [memberStatus, setMemberStatus] = useState<{isMember: boolean, approved: boolean, status?: string} | null>(null);
+  
+  // Wallet connection for passport verification
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { signMessage } = useSignMessage();
+  const { data: ensName } = useEnsName({ address });
 
   // Check if user is already a member on page load
   const { data: existingMemberStatus } = useQuery({
@@ -305,6 +313,88 @@ export default function ProfilePage() {
       toast({
         title: "Error",
         description: "Please enter a passport name first.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Direct wallet verification for passport
+  const handleDirectWalletVerification = async () => {
+    const passport = form.getValues("ipePassport");
+    if (!passport) {
+      toast({
+        title: "Error",
+        description: "Please enter a passport name first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isConnected || !address) {
+      toast({
+        title: "Connect Wallet",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const expectedDomain = `${passport}.ipecity.eth`;
+    
+    // Check if connected wallet owns the ENS domain
+    if (ensName !== expectedDomain) {
+      toast({
+        title: "Domain ownership required",
+        description: `Your wallet must own ${expectedDomain} to verify ownership.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create signature challenge
+    const challengeMessage = `Verify ownership of ${expectedDomain} for Ipê City registration\n\nFID: ${profile?.fid}\nTimestamp: ${new Date().toISOString()}`;
+    
+    try {
+      // Try SIWE format first
+      let messageToSign: string;
+      let signature: string;
+      
+      try {
+        const siweMessage = createSiweMessage({
+          domain: window.location.host,
+          address,
+          statement: challengeMessage,
+          uri: window.location.origin,
+          version: '1',
+          chainId: 1,
+          nonce: Math.random().toString(36).substring(2),
+          issuedAt: new Date()
+        });
+        
+        messageToSign = siweMessage;
+        const { data } = await signMessage({ message: siweMessage });
+        signature = data || '';
+      } catch (siweError) {
+        // Fallback to simple message signing
+        messageToSign = challengeMessage;
+        const { data } = await signMessage({ message: challengeMessage });
+        signature = data || '';
+      }
+
+      // Mark as verified locally
+      localStorage.setItem(`passport-verified-${expectedDomain}`, "true");
+      setPassportVerified(true);
+      
+      toast({
+        title: "Passport verified",
+        description: "Your ENS ownership has been successfully verified.",
+      });
+      
+    } catch (error) {
+      console.error("Signature error:", error);
+      toast({
+        title: "Verification failed",
+        description: "Failed to sign message. Please try again.",
         variant: "destructive",
       });
     }

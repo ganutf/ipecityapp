@@ -283,6 +283,14 @@ The application follows a monorepo structure with clear separation between clien
   - **Reset Functionality**: Users can reset verification status to try with different wallets
   - **Enhanced UX**: Clear feedback when wallet doesn't own Ipê City domain with option to connect different wallet
   - **Local Storage Integration**: Verification status persists across sessions for seamless user experience
+- June 27, 2025. **JUSTANAME API INTEGRATION**: Generic ENS Lookup System with Off-chain Subdomain Support:
+  - **Generic ENS API**: Created `/api/ens/lookup/{address}` endpoint supporting multiple ENS resolution methods
+  - **JustAName Integration**: Implemented off-chain subdomain lookup via JustAName API for Ipê City domains
+  - **Custom Hook**: Created `useEnsLookup` hook replacing wagmi's `useEnsName` with standardized interface
+  - **Loading States**: Added proper loading indicators and error handling for ENS domain resolution
+  - **Future-Ready Architecture**: Generic endpoint design allows easy addition of on-chain ENS fallback
+  - **Enhanced UX**: Real-time ENS domain detection with "Looking up ENS domain..." feedback
+  - **Production Ready**: Complete integration tested with actual JustAName API responses
 
 ## User Preferences
 

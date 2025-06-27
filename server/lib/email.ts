@@ -11,20 +11,30 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  // In development mode, only log emails without sending them
+  if (isDevelopment) {
+    console.log('📧 Email would be sent (DEVELOPMENT MODE - NO QUOTA USED):');
+    console.log('  To:', params.to);
+    console.log('  From:', params.from);
+    console.log('  Subject:', params.subject);
+    if (params.text) console.log('  Text:', params.text);
+    if (params.html) console.log('  HTML:', params.html.substring(0, 100) + '...');
+    return true;
+  }
+
+  // Production mode - send real emails
   if (!resend) {
-    console.log('Email would be sent (RESEND_API_KEY not configured):', params);
-    return true; // Return true for development
+    console.error('RESEND_API_KEY not configured for production email sending');
+    return false;
   }
 
   try {
-    // Environment-based email routing
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const actualRecipient = params.to;
-    
     const emailData: any = {
-      from: isDevelopment ? 'noreply@resend.dev' : params.from,
-      to: isDevelopment ? 'delivered@resend.dev' : params.to,
-      subject: isDevelopment ? `[DEV] ${params.subject} (for ${actualRecipient})` : params.subject,
+      from: params.from,
+      to: params.to,
+      subject: params.subject,
     };
     
     if (params.text) emailData.text = params.text;
@@ -32,15 +42,10 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     const result = await resend!.emails.send(emailData);
     
-    console.log(`Email sent successfully (${isDevelopment ? 'TEST' : 'PROD'}) to ${emailData.to}`, result);
+    console.log(`Email sent successfully (PRODUCTION) to ${params.to}`, result);
     return true;
   } catch (error) {
     console.error('Resend email error:', error);
-    // For development, log the error but continue the flow
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Development mode: treating email as sent despite error');
-      return true;
-    }
     return false;
   }
 }

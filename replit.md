@@ -251,6 +251,12 @@ The application follows a monorepo structure with clear separation between clien
   - **Dual-Environment Email System**: Development emails route to delivered@resend.dev, production uses updates.ipe.city
   - **Enhanced Testing**: Verification codes displayed prominently in console for easy copying during development
   - **Complete Flow**: Login → Signer Approval → Registration → Admin Approval with inline status tracking
+- June 27, 2025. **EMAIL QUOTA OPTIMIZATION**: Development Mode Email Logging:
+  - **Zero Quota Usage in Development**: Development mode now only logs emails without sending them
+  - **Quota Conservation**: Prevents accidental API quota consumption during testing and development
+  - **Clear Console Logging**: Detailed email content logged with clear formatting for verification
+  - **Production Safety**: Production mode unchanged, still sends real emails to actual recipients
+  - **Testing Efficiency**: Verification codes and email content visible in console without API costs
 
 ## User Preferences
 

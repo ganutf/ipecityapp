@@ -14,6 +14,7 @@ import { mnemonicToAccount } from "viem/accounts";
 import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
+import { lookupEnsName } from "./lib/ensLookup";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -672,6 +673,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Confirm passport verification error:", error);
       res.status(500).json({ error: "Failed to confirm passport verification" });
+    }
+  });
+
+  // ENS Lookup endpoint
+  app.get("/api/ens/lookup/:address", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address) {
+        return res.status(400).json({
+          ensName: null,
+          source: 'justaname',
+          error: 'Address parameter is required'
+        });
+      }
+
+      const result = await lookupEnsName(address);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('ENS lookup route error:', error);
+      res.status(500).json({
+        ensName: null,
+        source: 'justaname',
+        error: 'Internal server error'
+      });
     }
   });
 

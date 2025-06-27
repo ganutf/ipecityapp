@@ -443,6 +443,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
       });
 
+      // Display verification code prominently for testing
+      console.log('');
+      console.log('=====================================');
+      console.log(`VERIFICATION CODE FOR ${email}: ${code}`);
+      console.log(`Copy this code: ${code}`);
+      console.log('=====================================');
+      console.log('');
+
       const emailSent = await sendVerificationEmail(email, code);
       
       if (!emailSent) {

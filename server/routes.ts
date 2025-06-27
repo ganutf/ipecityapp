@@ -436,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const verification = await storage.createEmailVerification({
         farcasterFid,
         email,
-        code,
+        verificationCode: code,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
       });
 

@@ -128,7 +128,7 @@ export default function RegisterPage() {
   // Register member
   const registerMutation = useMutation({
     mutationFn: async (data: RegistrationData) => {
-      return apiRequest(`/api/auth/register`, {
+      return apiRequest(`/api/register`, {
         method: "POST",
         body: JSON.stringify({
           farcasterFid: profile?.fid,

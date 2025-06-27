@@ -17,10 +17,14 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
   }
 
   try {
+    // Environment-based email routing
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const actualRecipient = params.to;
+    
     const emailData: any = {
-      from: params.from,
-      to: params.to,
-      subject: params.subject,
+      from: isDevelopment ? 'noreply@resend.dev' : params.from,
+      to: isDevelopment ? 'delivered@resend.dev' : params.to,
+      subject: isDevelopment ? `[DEV] ${params.subject} (for ${actualRecipient})` : params.subject,
     };
     
     if (params.text) emailData.text = params.text;
@@ -28,7 +32,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     const result = await resend!.emails.send(emailData);
     
-    console.log(`Email sent successfully to ${params.to}`, result);
+    console.log(`Email sent successfully (${isDevelopment ? 'TEST' : 'PROD'}) to ${emailData.to}`, result);
     return true;
   } catch (error) {
     console.error('Resend email error:', error);
@@ -46,9 +50,14 @@ export function generateVerificationCode(): string {
 }
 
 export async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const fromEmail = isDevelopment 
+    ? 'onboarding@resend.dev' 
+    : 'noreply@updates.ipe.city';
+
   return sendEmail({
     to: email,
-    from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+    from: fromEmail,
     subject: 'Ipê City Pulse - Email Verification',
     text: `Your verification code is: ${code}`,
     html: `

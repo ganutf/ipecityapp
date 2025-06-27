@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthKitProvider } from "@farcaster/auth-kit";
+import { AuthGuard, RequireAuth, RequireApproval } from "@/components/AuthGuard";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import RegisterPage from "@/pages/register";
@@ -20,15 +21,17 @@ const config = {
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={FarcasterEmbed} />
-        <Route path="/admin" component={AdminPage} />
-        <Route path="/register" component={RegisterPage} />
-        <Route path="/signer-approval" component={SignerApprovalPage} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <AuthGuard>
+      <Layout>
+        <Switch>
+          <Route path="/" component={() => <RequireApproval><FarcasterEmbed /></RequireApproval>} />
+          <Route path="/admin" component={() => <RequireApproval><AdminPage /></RequireApproval>} />
+          <Route path="/register" component={RegisterPage} />
+          <Route path="/signer-approval" component={SignerApprovalPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </Layout>
+    </AuthGuard>
   );
 }
 

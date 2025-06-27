@@ -26,9 +26,6 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
   });
 
   useEffect(() => {
-    console.log("AuthGuard - Profile:", profile);
-    console.log("AuthGuard - SignerData:", signerData);
-    console.log("AuthGuard - MemberStatus:", memberStatus);
 
     if (requireAuth && !profile) {
       // Not authenticated, stay on current page (should show sign in)

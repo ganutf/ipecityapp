@@ -4,12 +4,15 @@ import {
   pulseExecutions,
   userSigners,
   emailVerifications,
+  passportVerifications,
   type Member,
   type InsertMember,
   type UpdateMember,
   type Registration,
   type EmailVerification,
   type InsertEmailVerification,
+  type PassportVerification,
+  type InsertPassportVerification,
   type Pulse,
   type InsertPulse,
   type UpdatePulse,
@@ -41,6 +44,11 @@ export interface IStorage {
   createEmailVerification(verification: InsertEmailVerification): Promise<EmailVerification>;
   getEmailVerification(farcasterFid: number, code: string): Promise<EmailVerification | undefined>;
   markEmailVerified(farcasterFid: number): Promise<void>;
+  
+  // Passport Verification
+  createPassportVerification(verification: InsertPassportVerification): Promise<PassportVerification>;
+  getPassportVerification(token: string): Promise<PassportVerification | undefined>;
+  markPassportVerified(token: string): Promise<PassportVerification | undefined>;
   
   // Pulses
   getPulse(id: number): Promise<Pulse | undefined>;
@@ -173,6 +181,35 @@ export class DatabaseStorage implements IStorage {
       .update(members)
       .set({ emailVerified: true, updatedAt: new Date() })
       .where(eq(members.farcasterFid, farcasterFid));
+  }
+
+  // Passport Verification
+  async createPassportVerification(verification: InsertPassportVerification): Promise<PassportVerification> {
+    const [passportVerification] = await db
+      .insert(passportVerifications)
+      .values(verification)
+      .returning();
+    return passportVerification;
+  }
+
+  async getPassportVerification(token: string): Promise<PassportVerification | undefined> {
+    const [verification] = await db
+      .select()
+      .from(passportVerifications)
+      .where(eq(passportVerifications.verificationToken, token));
+    return verification;
+  }
+
+  async markPassportVerified(token: string): Promise<PassportVerification | undefined> {
+    const [verification] = await db
+      .update(passportVerifications)
+      .set({ 
+        verified: true, 
+        verifiedAt: new Date() 
+      })
+      .where(eq(passportVerifications.verificationToken, token))
+      .returning();
+    return verification;
   }
 
   async getAllMembers(): Promise<Member[]> {

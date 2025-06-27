@@ -127,6 +127,19 @@ export const emailVerifications = pgTable("email_verifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Passport verification table
+export const passportVerifications = pgTable("passport_verifications", {
+  id: serial("id").primaryKey(),
+  farcasterFid: integer("farcaster_fid").notNull(),
+  ipePassport: varchar("ipe_passport").notNull(),
+  verificationToken: varchar("verification_token").unique().notNull(),
+  challengeMessage: text("challenge_message").notNull(),
+  verified: boolean("verified").default(false).notNull(),
+  verifiedAt: timestamp("verified_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertMemberSchema = createInsertSchema(members).omit({
   id: true,
@@ -166,6 +179,12 @@ export const insertEmailVerificationSchema = createInsertSchema(emailVerificatio
   createdAt: true,
 });
 
+export const insertPassportVerificationSchema = createInsertSchema(passportVerifications).omit({
+  id: true,
+  createdAt: true,
+  verifiedAt: true,
+});
+
 export const insertPulseSchema = createInsertSchema(pulses).omit({
   id: true,
   createdAt: true,
@@ -193,6 +212,8 @@ export type UpdateMember = z.infer<typeof updateMemberSchema>;
 export type Registration = z.infer<typeof registrationSchema>;
 export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type InsertEmailVerification = z.infer<typeof insertEmailVerificationSchema>;
+export type PassportVerification = typeof passportVerifications.$inferSelect;
+export type InsertPassportVerification = z.infer<typeof insertPassportVerificationSchema>;
 export type Pulse = typeof pulses.$inferSelect;
 export type InsertPulse = z.infer<typeof insertPulseSchema>;
 export type UpdatePulse = z.infer<typeof updatePulseSchema>;

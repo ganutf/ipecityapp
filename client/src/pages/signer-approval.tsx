@@ -117,20 +117,13 @@ export default function SignerApprovalPage() {
             <div className="mx-auto w-16 h-16 bg-[#8B5CF6] bg-opacity-10 rounded-full flex items-center justify-center mb-4">
               <Smartphone className="w-8 h-8 text-[#8B5CF6]" />
             </div>
-            <CardTitle>Approve Your Signer</CardTitle>
-            <CardDescription>
-              To interact with Farcaster posts, you need to approve a signer for your account.
-            </CardDescription>
+            <CardTitle>Approve Ipê City App</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center space-y-4">
               <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <AlertCircle className="w-5 h-5 text-[#8B5CF6]" />
-                  <span className="font-medium">One-Time Setup</span>
-                </div>
                 <p className="text-sm text-muted-foreground">
-                  This approval allows the app to interact with Farcaster on your behalf. You'll typically pay 1 warp for this approval.
+                  One-time setup to connect with your Farcaster account. Costs about 1 warp.
                 </p>
               </div>
 
@@ -146,13 +139,9 @@ export default function SignerApprovalPage() {
               )}
 
               {/* Instructions */}
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <p>
-                  <strong>Option 1:</strong> Scan the QR code with your mobile Farcaster app
-                </p>
-                <p>
-                  <strong>Option 2:</strong> Open the approval link directly
-                </p>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>Scan the QR code with your Farcaster app</p>
+                <p>or use the button below</p>
               </div>
             </div>
 
@@ -164,7 +153,7 @@ export default function SignerApprovalPage() {
                   onClick={() => window.open((signerData as any).signer_approval_url, '_blank')}
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Open Approval Link
+                  Approve in Farcaster
                 </Button>
               )}
 

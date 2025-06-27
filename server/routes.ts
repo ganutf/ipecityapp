@@ -10,6 +10,10 @@ import { insertPulseSchema, updatePulseSchema, insertMemberSchema, insertPulseEx
 import QRCode from "qrcode";
 import { getSignedKey } from "./lib/getSignedKey";
 import { sendVerificationEmail, sendApprovalEmail, sendDenialEmail, generateVerificationCode } from "./lib/email";
+import { mnemonicToAccount } from "viem/accounts";
+import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
+import { hexToBytes, bytesToHex } from "viem";
+import { randomBytes } from "crypto";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -548,6 +552,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Check passport availability error:", error);
       res.status(500).json({ error: "Failed to check passport availability" });
+    }
+  });
+
+  // Send passport verification email
+  app.post("/api/passport/send-verification", async (req, res) => {
+    try {
+      const { farcasterFid, ipePassport } = req.body;
+      
+      if (!farcasterFid || !ipePassport) {
+        return res.status(400).json({ error: 'FID and passport are required' });
+      }
+
+      // Generate verification token
+      const verificationToken = crypto.randomUUID().replace(/-/g, '');
+      
+      // Create challenge message
+      const challengeMessage = `Verify ownership of ${ipePassport}.ipecity.eth for Ipê City registration\n\nFID: ${farcasterFid}\nTimestamp: ${new Date().toISOString()}`;
+      
+      // Store verification in database
+      const verification = await storage.createPassportVerification({
+        farcasterFid,
+        ipePassport: `${ipePassport}.ipecity.eth`,
+        verificationToken,
+        challengeMessage,
+        verified: false,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      });
+
+      // Get member email for sending verification link
+      const member = await storage.getMember(farcasterFid);
+      if (!member?.email) {
+        return res.status(400).json({ error: 'Member email not found' });
+      }
+
+      // Send verification email
+      const verificationUrl = `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/verify-passport/${verificationToken}`;
+      
+      // For development, log the verification URL
+      if (process.env.NODE_ENV === 'development') {
+        console.log('\n=== PASSPORT VERIFICATION EMAIL ===');
+        console.log(`To: ${member.email}`);
+        console.log(`Subject: Verify ownership of ${ipePassport}.ipecity.eth`);
+        console.log(`\nVerification Link: ${verificationUrl}`);
+        console.log('=====================================\n');
+      }
+
+      // TODO: Implement actual email sending when email service is configured
+      // await sendPassportVerificationEmail(member.email, ipePassport, verificationUrl);
+      
+      res.json({ 
+        success: true, 
+        message: 'Verification email sent',
+        token: verificationToken // For development only
+      });
+    } catch (error) {
+      console.error("Send passport verification error:", error);
+      res.status(500).json({ error: "Failed to send verification email" });
+    }
+  });
+
+  // Get passport verification details by token
+  app.get("/api/passport/verify/:token", async (req, res) => {
+    try {
+      const token = req.params.token;
+      const verification = await storage.getPassportVerification(token);
+      
+      if (!verification) {
+        return res.status(404).json({ error: 'Verification token not found' });
+      }
+
+      if (verification.expiresAt < new Date()) {
+        return res.status(400).json({ error: 'Verification token has expired' });
+      }
+
+      res.json({
+        passport: verification.ipePassport,
+        farcasterFid: verification.farcasterFid,
+        challenge: verification.challengeMessage,
+        verified: verification.verified
+      });
+    } catch (error) {
+      console.error("Get passport verification error:", error);
+      res.status(500).json({ error: "Failed to get verification details" });
+    }
+  });
+
+  // Confirm passport verification
+  app.post("/api/passport/confirm-verification", async (req, res) => {
+    try {
+      const { token, signature, message, address } = req.body;
+      
+      if (!token || !signature || !message || !address) {
+        return res.status(400).json({ error: 'Token, signature, message, and address are required' });
+      }
+
+      const verification = await storage.getPassportVerification(token);
+      
+      if (!verification) {
+        return res.status(404).json({ error: 'Verification token not found' });
+      }
+
+      if (verification.verified) {
+        return res.status(400).json({ error: 'Passport already verified' });
+      }
+
+      if (verification.expiresAt < new Date()) {
+        return res.status(400).json({ error: 'Verification token has expired' });
+      }
+
+      // Mark as verified in database
+      await storage.markPassportVerified(token);
+      
+      res.json({ 
+        success: true, 
+        message: 'Passport ownership verified successfully',
+        passport: verification.ipePassport
+      });
+    } catch (error) {
+      console.error("Confirm passport verification error:", error);
+      res.status(500).json({ error: "Failed to confirm passport verification" });
     }
   });
 

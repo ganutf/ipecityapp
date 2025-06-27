@@ -63,7 +63,7 @@ export default function ProfilePage() {
   // Wallet connection for passport verification
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
-  const { signMessage } = useSignMessage();
+  const { signMessageAsync } = useSignMessage();
   const { data: ensName } = useEnsName({ address });
 
   // Check if user is already a member on page load
@@ -255,10 +255,13 @@ export default function ProfilePage() {
 
   // Check passport verification status from localStorage
   useEffect(() => {
-    const targetPassport = "hansen.ipecity.eth";
-    const isVerified = localStorage.getItem(`passport-verified-${targetPassport}`) === "true";
-    setPassportVerified(isVerified);
-  }, []);
+    const passport = form.watch("ipePassport");
+    if (passport) {
+      const targetPassport = `${passport}.ipecity.eth`;
+      const isVerified = localStorage.getItem(`passport-verified-${targetPassport}`) === "true";
+      setPassportVerified(isVerified);
+    }
+  }, [form.watch("ipePassport")]);
 
   // Send passport verification email
   const sendPassportVerificationMutation = useMutation({
@@ -372,13 +375,11 @@ export default function ProfilePage() {
         });
         
         messageToSign = siweMessage;
-        const { data } = await signMessage({ message: siweMessage });
-        signature = data || '';
+        signature = await signMessageAsync({ message: siweMessage });
       } catch (siweError) {
         // Fallback to simple message signing
         messageToSign = challengeMessage;
-        const { data } = await signMessage({ message: challengeMessage });
-        signature = data || '';
+        signature = await signMessageAsync({ message: challengeMessage });
       }
 
       // Mark as verified locally
@@ -542,23 +543,67 @@ export default function ProfilePage() {
                     disabled={passportVerified}
                   />
                   <span className="text-muted-foreground">.ipecity.eth</span>
-                  {!passportVerified && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handlePassportVerification}
-                      disabled={passportVerificationSent || sendPassportVerificationMutation.isPending || !form.watch("ipePassport")}
-                    >
-                      {sendPassportVerificationMutation.isPending ? "Sending..." : 
-                       passportVerificationSent ? "Verifying..." : "Verify Ownership"}
-                    </Button>
-                  )}
-                  {passportVerified && (
+                </div>
+                
+                {/* Passport Verification Options */}
+                {!passportVerified && form.watch("ipePassport") && (
+                  <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
+                    <p className="text-sm font-medium">Verify ownership of {form.watch("ipePassport")}.ipecity.eth:</p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {/* Email Verification */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handlePassportVerification}
+                        disabled={passportVerificationSent || sendPassportVerificationMutation.isPending}
+                        className="flex-1"
+                      >
+                        {sendPassportVerificationMutation.isPending ? "Sending..." : 
+                         passportVerificationSent ? "Email Sent" : "Send Email Link"}
+                      </Button>
+                      
+                      {/* Direct Wallet Connection */}
+                      {!isConnected ? (
+                        <Button
+                          type="button"
+                          variant="default"
+                          onClick={() => connect({ connector: connectors[0] })}
+                          className="flex-1"
+                        >
+                          Connect Wallet
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="default"
+                          onClick={handleDirectWalletVerification}
+                          className="flex-1"
+                        >
+                          Verify with Wallet
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {isConnected && (
+                      <div className="text-xs text-gray-600">
+                        Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                        {ensName && (
+                          <span className="ml-2">({ensName})</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {passportVerified && (
+                  <div className="flex items-center gap-2">
                     <Button type="button" variant="outline" disabled>
                       ✓ Verified
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
+                
                 {passportValue && passportCheck && (
                   <p className={`text-sm ${passportCheck.available ? "text-green-600" : "text-red-600"}`}>
                     {passportCheck.available ? "✓ Available" : `✗ ${passportCheck.reason || "Not available"}`}

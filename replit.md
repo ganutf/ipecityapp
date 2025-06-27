@@ -273,7 +273,7 @@ The application follows a monorepo structure with clear separation between clien
 - June 27, 2025. **PASSPORT VERIFICATION SYSTEM COMPLETED**: Automatic ENS Detection with Streamlined Verification:
   - **Renamed Register to Profile Page**: Changed /register route to /profile with updated navigation and AuthGuard redirects
   - **Profile Menu Integration**: Added profile link to user dropdown menu in navigation header
-  - **Automatic ENS Detection**: System automatically detects Ipê City domains (.ipecity.eth) from connected wallets
+  - **Automatic ENS Detection**: System automatically detects Ipê City domains (ipecity.eth and *.ipecity.eth) from connected wallets
   - **Simplified Interface**: Removed manual subdomain input field - app shows "Ipê Passport Verification" title with clear status
   - **Smart Status Display**: Shows "Not verified" or "✓ Verified" status with connected wallet and ENS domain information
   - **Intelligent Button Logic**: Button text changes based on wallet state and ENS ownership detection

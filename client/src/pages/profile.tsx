@@ -260,12 +260,12 @@ export default function ProfilePage() {
   // Check passport verification status from localStorage
   useEffect(() => {
     // Check if the connected wallet's ENS domain is verified
-    if (ensName && ensName.endsWith('.ipecity.eth')) {
+    if (ensName && (ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth')) {
       const isVerified = localStorage.getItem(`passport-verified-${ensName}`) === "true";
       setPassportVerified(isVerified);
       
       // Auto-fill the passport field with detected domain
-      const passportFromDomain = ensName.replace('.ipecity.eth', '');
+      const passportFromDomain = ensName === 'ipecity.eth' ? 'ipecity' : ensName.replace('.ipecity.eth', '');
       form.setValue("ipePassport", passportFromDomain);
     } else {
       // Clear verification if no valid ENS domain
@@ -361,10 +361,10 @@ export default function ProfilePage() {
       return;
     }
 
-    if (!ensName || !ensName.endsWith('.ipecity.eth')) {
+    if (!ensName || (!ensName.endsWith('.ipecity.eth') && ensName !== 'ipecity.eth')) {
       toast({
         title: "Ipê City domain required",
-        description: "Your wallet must own an Ipê City domain (.ipecity.eth) to verify ownership.",
+        description: "Your wallet must own an Ipê City domain (ipecity.eth or *.ipecity.eth) to verify ownership.",
         variant: "destructive",
       });
       return;
@@ -374,7 +374,7 @@ export default function ProfilePage() {
     console.log("ENS domain:", ensName);
     
     // Extract passport name from ENS domain
-    const passportFromDomain = ensName.replace('.ipecity.eth', '');
+    const passportFromDomain = ensName === 'ipecity.eth' ? 'ipecity' : ensName.replace('.ipecity.eth', '');
     
     // Update the form with the detected passport
     form.setValue("ipePassport", passportFromDomain);
@@ -586,7 +586,7 @@ export default function ProfilePage() {
                           <div className="text-sm">
                             <span className="font-medium">ENS domain:</span>
                             <span className="ml-2 text-blue-600">{ensName}</span>
-                            {ensName.endsWith('.ipecity.eth') ? (
+                            {(ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth') ? (
                               <span className="ml-2 text-green-600">✓ Ipê City domain detected</span>
                             ) : (
                               <span className="ml-2 text-orange-600">⚠ Not an Ipê City domain</span>
@@ -650,7 +650,7 @@ export default function ProfilePage() {
                                   );
                                 }
 
-                                if (ensName && ensName.endsWith('.ipecity.eth')) {
+                                if (ensName && (ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth')) {
                                   return (
                                     <Button
                                       type="button"

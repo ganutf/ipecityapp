@@ -152,10 +152,10 @@ export default function SignerApprovalPage() {
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              {signerData?.approvalUrl && (
+              {(signerData as any)?.signer_approval_url && (
                 <Button
                   className="w-full"
-                  onClick={() => window.open(signerData.approvalUrl, '_blank')}
+                  onClick={() => window.open((signerData as any).signer_approval_url, '_blank')}
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Open Approval Link

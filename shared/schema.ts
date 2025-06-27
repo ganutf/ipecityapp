@@ -119,7 +119,7 @@ export const userSignersRelations = relations(userSigners, ({ one }) => ({
 // Email verification table
 export const emailVerifications = pgTable("email_verifications", {
   id: serial("id").primaryKey(),
-  farcasterFid: integer("farcaster_fid").references(() => members.farcasterFid).notNull(),
+  farcasterFid: integer("farcaster_fid").notNull(),
   email: varchar("email").notNull(),
   verificationCode: varchar("verification_code", { length: 6 }).notNull(),
   expiresAt: timestamp("expires_at").notNull(),

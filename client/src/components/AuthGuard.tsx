@@ -31,38 +31,43 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
       return;
     }
 
-    if (profile && signerData && memberStatus) {
-      // First check signer approval status
-      if (signerData.status === 'pending_approval') {
-        // Signer needs approval, redirect to signer approval page
-        setLocation("/signer-approval");
-        return;
+    if (profile && profile.fid) {
+      // First priority: Check signer status
+      if (signerData) {
+        if (signerData.status === 'pending_approval') {
+          // Signer needs approval, redirect to signer approval page
+          setLocation("/signer-approval");
+          return;
+        }
       }
 
-      const { isMember, status, approved } = memberStatus;
+      // Second priority: Check member status (only after signer is approved)
+      if (signerData && signerData.status === 'approved' && memberStatus) {
+        const { isMember, status, approved } = memberStatus;
 
-      if (!isMember) {
-        // User not registered, redirect to registration
-        setLocation("/register");
-        return;
-      }
+        if (!isMember) {
+          // User not registered, redirect to registration
+          setLocation("/register");
+          return;
+        }
 
-      if (status === "pending") {
-        // Registration pending, redirect to registration page for inline approval
-        setLocation("/register");
-        return;
-      }
+        if (status === "pending") {
+          // Registration pending, redirect to registration page for inline approval
+          setLocation("/register");
+          return;
+        }
 
-      if (status === "denied") {
-        // Registration denied, redirect to registration page (shows denial message)
-        setLocation("/register");
-        return;
-      }
+        if (status === "denied") {
+          // Registration denied, redirect to registration page (shows denial message)
+          setLocation("/register");
+          return;
+        }
 
-      if (requireApproval && !approved) {
-        // Approval required but user not approved
-        setLocation("/register");
-        return;
+        if (requireApproval && !approved) {
+          // Approval required but user not approved
+          setLocation("/register");
+          return;
+        }
       }
     }
   }, [profile, signerData, memberStatus, requireAuth, requireApproval, setLocation]);

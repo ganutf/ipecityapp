@@ -13,7 +13,7 @@ export default function SignerApprovalPage() {
 
   // Get signer data
   const { data: signerData, refetch: refetchSigner } = useQuery({
-    queryKey: [`/api/neynar/signer/${profile?.fid}`, Date.now()],
+    queryKey: [`/api/neynar/signer/${profile?.fid}`],
     enabled: !!profile?.fid,
     refetchInterval: 3000, // Check every 3 seconds for approval
     refetchIntervalInBackground: true,
@@ -24,12 +24,14 @@ export default function SignerApprovalPage() {
   // Generate QR code
   useEffect(() => {
     const generateQR = async () => {
-      if ((signerData as any)?.signer_approval_url) {
+      const approvalUrl = (signerData as any)?.signer_approval_url;
+      
+      if (approvalUrl) {
         try {
           const response = await fetch(`/api/qrcode`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: (signerData as any).signer_approval_url }),
+            body: JSON.stringify({ url: approvalUrl }),
           });
           if (response.ok) {
             const qrDataUrl = await response.text();
@@ -42,7 +44,7 @@ export default function SignerApprovalPage() {
     };
     
     generateQR();
-  }, [(signerData as any)?.signer_approval_url]);
+  }, [signerData]);
 
   // Auto-redirect when signer is approved
   useEffect(() => {

@@ -127,6 +127,50 @@ export default function AdminPage() {
     },
   });
 
+  const approvePassportClaimMutation = useMutation({
+    mutationFn: async (farcasterFid: number) => {
+      const response = await fetch("/api/passport/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ farcasterFid }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to approve passport claim");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      toast({ title: "Success", description: "Passport claim approved successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const denyPassportClaimMutation = useMutation({
+    mutationFn: async (farcasterFid: number) => {
+      const response = await fetch("/api/passport/deny", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ farcasterFid }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to deny passport claim");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      toast({ title: "Success", description: "Passport claim denied successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   // Show loading while auth is initializing
   if (isLoading) {
     return (
@@ -379,23 +423,19 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="default"
-                                onClick={() => {
-                                  // TODO: Add approve passport claim mutation
-                                  console.log('Approve claim for FID:', member.farcasterFid);
-                                }}
+                                onClick={() => approvePassportClaimMutation.mutate(member.farcasterFid)}
+                                disabled={approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
                                 className="bg-green-600 hover:bg-green-700"
                               >
-                                Approve
+                                {approvePassportClaimMutation.isPending ? "..." : "Approve"}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                onClick={() => {
-                                  // TODO: Add deny passport claim mutation
-                                  console.log('Deny claim for FID:', member.farcasterFid);
-                                }}
+                                onClick={() => denyPassportClaimMutation.mutate(member.farcasterFid)}
+                                disabled={approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
                               >
-                                Deny
+                                {denyPassportClaimMutation.isPending ? "..." : "Deny"}
                               </Button>
                             </div>
                           ) : memberStatus === 'member' ? (

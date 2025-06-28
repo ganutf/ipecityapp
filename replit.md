@@ -291,6 +291,18 @@ The application follows a monorepo structure with clear separation between clien
   - **Future-Ready Architecture**: Generic endpoint design allows easy addition of on-chain ENS fallback
   - **Enhanced UX**: Real-time ENS domain detection with "Looking up ENS domain..." feedback
   - **Production Ready**: Complete integration tested with actual JustAName API responses
+- June 28, 2025. **MAJOR REGISTRATION FLOW OVERHAUL**: New Status-Based Registration with Passport Claiming:
+  - **Database Schema Expansion**: Added status tracking, passport claiming fields, and profile completion flags
+  - **New Registration States**: pending_signer → signer_approved → email_verified → pending_claim → member
+  - **Email Verification First**: Mandatory email verification after signer approval with 6-digit codes
+  - **Dual Passport Flow**: Users can verify existing domains or claim new subdomains
+  - **Admin Claim Management**: Admins approve/deny passport claims with automatic subdomain creation
+  - **Enhanced Admin Dashboard**: Status column, claim tracking, and streamlined member management
+  - **Automatic Membership**: Passport verification grants immediate member status
+  - **Profile Completion**: Optional post-membership profile filling with completion tracking
+  - **Status-Based Routing**: AuthGuard redirects users based on registration progress
+  - **Email Notifications**: Automated emails for claim approvals/denials and verification codes
+  - **Complete API Integration**: New endpoints for claims, status updates, and email verification
 
 ## User Preferences
 

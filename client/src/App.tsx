@@ -14,6 +14,8 @@ import AdminPage from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
 import SignerApprovalPage from "@/pages/signer-approval";
 import VerifyPassportPage from "@/pages/verify-passport";
+import EmailVerificationPage from "@/pages/email-verification";
+import PassportValidationPage from "@/pages/passport-validation";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 import "@rainbow-me/rainbowkit/styles.css";
@@ -43,6 +45,8 @@ function Router() {
           <Route path="/admin" component={() => <RequireApproval><AdminPage /></RequireApproval>} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
+          <Route path="/email-verification" component={EmailVerificationPage} />
+          <Route path="/passport-validation" component={PassportValidationPage} />
           <Route path="/verify-passport/:token" component={VerifyPassportPage} />
           <Route component={NotFound} />
         </Switch>

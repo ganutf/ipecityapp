@@ -331,55 +331,82 @@ export default function AdminPage() {
                     <th className="text-left py-2">FID</th>
                     <th className="text-left py-2">Username</th>
                     <th className="text-left py-2">Name</th>
-                    <th className="text-left py-2">Ipê Passport</th>
+                    <th className="text-left py-2">Passport</th>
                     <th className="text-left py-2">Status</th>
+                    <th className="text-left py-2">Claim</th>
                     <th className="text-left py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(membersData as any)?.members?.map((member: Member) => (
-                    <tr key={member.id} className="border-b">
-                      <td className="py-2">{member.farcasterFid}</td>
-                      <td className="py-2">{member.farcasterUsername}</td>
-                      <td className="py-2">{member.name}</td>
-                      <td className="py-2">{member.ipePassport}</td>
-                      <td className="py-2">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          member.approved 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {member.approved ? 'Approved' : 'Pending'}
-                        </span>
-                      </td>
-                      <td className="py-2">
-                        {!member.approved && (
-                          <div className="flex space-x-2">
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => approveMemberMutation.mutate(member.farcasterFid)}
-                              disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              {approveMemberMutation.isPending ? "..." : "Approve"}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => denyMemberMutation.mutate(member.farcasterFid)}
-                              disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
-                            >
-                              {denyMemberMutation.isPending ? "..." : "Deny"}
-                            </Button>
-                          </div>
-                        )}
-                        {member.approved && (
-                          <span className="text-sm text-gray-500">Already approved</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {(membersData as any)?.members?.map((member: Member) => {
+                    const memberStatus = (member as any).status || 'pending_signer';
+                    const hasPendingClaim = (member as any).passportClaimStatus === 'pending';
+                    const claimSubdomain = (member as any).passportClaimSubdomain;
+                    
+                    return (
+                      <tr key={member.id} className="border-b">
+                        <td className="py-2">{member.farcasterFid}</td>
+                        <td className="py-2">{member.farcasterUsername}</td>
+                        <td className="py-2">{member.name || '-'}</td>
+                        <td className="py-2">{member.ipePassport || '-'}</td>
+                        <td className="py-2">
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            memberStatus === 'member' 
+                              ? 'bg-green-100 text-green-800'
+                              : memberStatus === 'pending_claim'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : memberStatus === 'email_verified'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {memberStatus === 'member' ? 'Member' :
+                             memberStatus === 'pending_claim' ? 'Pending Claim' :
+                             memberStatus === 'email_verified' ? 'Email Verified' :
+                             memberStatus === 'signer_approved' ? 'Signer Approved' :
+                             'Pending Signer'}
+                          </span>
+                        </td>
+                        <td className="py-2">
+                          {claimSubdomain ? (
+                            <span className="text-sm font-mono">
+                              {claimSubdomain}.ipecity.eth
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="py-2">
+                          {hasPendingClaim ? (
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => {
+                                  // TODO: Add approve passport claim mutation
+                                  console.log('Approve claim for FID:', member.farcasterFid);
+                                }}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  // TODO: Add deny passport claim mutation
+                                  console.log('Deny claim for FID:', member.farcasterFid);
+                                }}
+                              >
+                                Deny
+                              </Button>
+                            </div>
+                          ) : memberStatus === 'member' ? (
+                            <span className="text-sm text-gray-500">Completed</span>
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

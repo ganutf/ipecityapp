@@ -223,6 +223,67 @@ export class DatabaseStorage implements IStorage {
     return verification;
   }
 
+  // Status Management
+  async updateMemberStatus(farcasterFid: number, status: string): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  // Passport Claims
+  async createPassportClaim(claim: PassportClaim): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({
+        passportClaimSubdomain: claim.passportClaimSubdomain,
+        passportClaimWalletAddress: claim.passportClaimWalletAddress,
+        passportClaimStatus: 'pending',
+        status: 'pending_claim',
+        updatedAt: new Date()
+      })
+      .where(eq(members.farcasterFid, claim.farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async getPendingClaims(): Promise<Member[]> {
+    return await db
+      .select()
+      .from(members)
+      .where(eq(members.passportClaimStatus, 'pending'))
+      .orderBy(asc(members.createdAt));
+  }
+
+  async approvePassportClaim(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({
+        passportClaimStatus: 'approved',
+        status: 'member',
+        passportVerified: true,
+        updatedAt: new Date()
+      })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async denyPassportClaim(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({
+        passportClaimStatus: 'denied',
+        status: 'signer_approved',
+        updatedAt: new Date()
+      })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
   async getAllMembers(): Promise<Member[]> {
     return await db.select().from(members).orderBy(asc(members.name));
   }

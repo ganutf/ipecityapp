@@ -20,6 +20,8 @@ import {
   type InsertPulseExecution,
   type UserSigner,
   type InsertUserSigner,
+  type PassportClaim,
+  type EmailVerificationRequest,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -44,6 +46,15 @@ export interface IStorage {
   createEmailVerification(verification: InsertEmailVerification): Promise<EmailVerification>;
   getEmailVerification(farcasterFid: number, code: string): Promise<EmailVerification | undefined>;
   markEmailVerified(farcasterFid: number): Promise<void>;
+  
+  // Status Management
+  updateMemberStatus(farcasterFid: number, status: string): Promise<Member>;
+  
+  // Passport Claims
+  createPassportClaim(claim: PassportClaim): Promise<Member>;
+  getPendingClaims(): Promise<Member[]>;
+  approvePassportClaim(farcasterFid: number): Promise<Member>;
+  denyPassportClaim(farcasterFid: number): Promise<Member>;
   
   // Passport Verification
   createPassportVerification(verification: InsertPassportVerification): Promise<PassportVerification>;

@@ -47,6 +47,33 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
       // Second priority: Check member status (only after signer is approved)
       if (signerData && (signerData as any).status === 'approved' && memberStatus) {
         const { isMember, status, approved } = memberStatus as any;
+        
+        // Handle new registration flow states
+        if (isMember) {
+          const memberStatus = (memberStatus as any).status;
+          
+          // Redirect based on member status
+          if (memberStatus === 'signer_approved' || memberStatus === 'pending_signer') {
+            setLocation("/email-verification");
+            return;
+          }
+          
+          if (memberStatus === 'email_verified') {
+            setLocation("/passport-validation");
+            return;
+          }
+          
+          if (memberStatus === 'pending_claim') {
+            setLocation("/passport-validation"); // Will show "under review" state
+            return;
+          }
+          
+          // Member status - allow full access
+          if (memberStatus === 'member') {
+            // User is a full member, allow access to all pages
+            return;
+          }
+        }
 
         if (!isMember) {
           // User not registered, redirect to profile

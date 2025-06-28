@@ -6,7 +6,7 @@ import {
   isApiErrorResponse,
 } from "@neynar/nodejs-sdk";
 import { storage } from "./storage";
-import { insertPulseSchema, updatePulseSchema, insertMemberSchema, insertPulseExecutionSchema, registrationSchema, insertEmailVerificationSchema, insertPassportVerificationSchema } from "@shared/schema";
+import { insertPulseSchema, updatePulseSchema, insertMemberSchema, insertPulseExecutionSchema, registrationSchema, insertEmailVerificationSchema, insertPassportVerificationSchema, passportClaimSchema, emailVerificationRequestSchema } from "@shared/schema";
 import QRCode from "qrcode";
 import { getSignedKey } from "./lib/getSignedKey";
 import { sendVerificationEmail, sendApprovalEmail, sendDenialEmail, generateVerificationCode } from "./lib/email";
@@ -439,6 +439,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       console.error("Get members error:", err);
       res.status(500).json({ error: err.message || 'Failed to get members' });
+    }
+  });
+
+  // Update member status
+  app.post("/api/members/status", async (req, res) => {
+    try {
+      const { farcasterFid, status } = req.body;
+      const member = await storage.updateMemberStatus(farcasterFid, status);
+      res.json({ success: true, member });
+    } catch (error) {
+      console.error("Update member status error:", error);
+      res.status(500).json({ error: "Failed to update member status" });
+    }
+  });
+
+  // Create passport claim
+  app.post("/api/passport/claim", async (req, res) => {
+    try {
+      const validatedClaim = passportClaimSchema.parse(req.body);
+      const member = await storage.createPassportClaim(validatedClaim);
+      res.json({ success: true, member });
+    } catch (error) {
+      console.error("Create passport claim error:", error);
+      res.status(500).json({ error: "Failed to create passport claim" });
+    }
+  });
+
+  // Get pending passport claims (admin only)
+  app.get("/api/passport/claims", async (req, res) => {
+    try {
+      const claims = await storage.getPendingClaims();
+      res.json({ claims });
+    } catch (error) {
+      console.error("Get pending claims error:", error);
+      res.status(500).json({ error: "Failed to get pending claims" });
+    }
+  });
+
+  // Approve passport claim (admin only)
+  app.post("/api/passport/approve", async (req, res) => {
+    try {
+      const { farcasterFid } = req.body;
+      
+      // Get member details for subdomain creation
+      const member = await storage.getMember(farcasterFid);
+      if (!member || !member.passportClaimSubdomain || !member.passportClaimWalletAddress) {
+        return res.status(400).json({ error: "Invalid claim data" });
+      }
+
+      // TODO: Implement JustAName API call to create subdomain
+      // For now, just approve the claim
+      const updatedMember = await storage.approvePassportClaim(farcasterFid);
+      
+      // Send approval email
+      if (updatedMember.email) {
+        await sendApprovalEmail(updatedMember.email, updatedMember.passportClaimSubdomain || '');
+      }
+      
+      res.json({ success: true, member: updatedMember });
+    } catch (error) {
+      console.error("Approve passport claim error:", error);
+      res.status(500).json({ error: "Failed to approve passport claim" });
+    }
+  });
+
+  // Deny passport claim (admin only)
+  app.post("/api/passport/deny", async (req, res) => {
+    try {
+      const { farcasterFid } = req.body;
+      const member = await storage.denyPassportClaim(farcasterFid);
+      
+      // Send denial email
+      if (member.email) {
+        await sendDenialEmail(member.email);
+      }
+      
+      res.json({ success: true, member });
+    } catch (error) {
+      console.error("Deny passport claim error:", error);
+      res.status(500).json({ error: "Failed to deny passport claim" });
+    }
+  });
+
+  // Request email verification
+  app.post("/api/auth/request-email-verification", async (req, res) => {
+    try {
+      const validatedRequest = emailVerificationRequestSchema.parse(req.body);
+      const { farcasterFid, email } = validatedRequest;
+      
+      // Generate verification code
+      const code = generateVerificationCode();
+      
+      // Create email verification record
+      await storage.createEmailVerification({
+        farcasterFid,
+        email,
+        verificationCode: code,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      });
+      
+      // Send verification email
+      const emailSent = await sendVerificationEmail(email, code);
+      
+      if (!emailSent) {
+        return res.status(500).json({ error: "Failed to send verification email" });
+      }
+      
+      res.json({ success: true, message: "Verification code sent" });
+    } catch (error) {
+      console.error("Request email verification error:", error);
+      res.status(500).json({ error: "Failed to request email verification" });
+    }
+  });
+
+  // Verify email code
+  app.post("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { farcasterFid, code } = req.body;
+      
+      // Get and validate verification
+      const verification = await storage.getEmailVerification(farcasterFid, code);
+      if (!verification) {
+        return res.status(400).json({ error: "Invalid verification code" });
+      }
+      
+      if (verification.expiresAt < new Date()) {
+        return res.status(400).json({ error: "Verification code expired" });
+      }
+      
+      // Mark email as verified
+      await storage.markEmailVerified(farcasterFid);
+      
+      // Update member status to email_verified
+      await storage.updateMemberStatus(farcasterFid, 'email_verified');
+      
+      res.json({ success: true, message: "Email verified successfully" });
+    } catch (error) {
+      console.error("Verify email error:", error);
+      res.status(500).json({ error: "Failed to verify email" });
     }
   });
 

@@ -69,7 +69,7 @@ export default function IdVerificationPage() {
           email: data.email,
         }),
       });
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       setEmailSent(true);
@@ -98,7 +98,7 @@ export default function IdVerificationPage() {
           code: data.code,
         }),
       });
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       setEmailVerified(true);
@@ -138,7 +138,7 @@ export default function IdVerificationPage() {
           message,
         }),
       });
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       setPassportVerified(true);

@@ -303,6 +303,14 @@ The application follows a monorepo structure with clear separation between clien
   - **Status-Based Routing**: AuthGuard redirects users based on registration progress
   - **Email Notifications**: Automated emails for claim approvals/denials and verification codes
   - **Complete API Integration**: New endpoints for claims, status updates, and email verification
+- June 29, 2025. **UNIFIED ID VERIFICATION SYSTEM**: Combined Email and Passport Verification Interface:
+  - **Single-Page Experience**: Created unified ID verification page combining email and passport verification sections
+  - **Fixed Root Domain Support**: Updated passport verification to accept both ipecity.eth and *.ipecity.eth domains
+  - **API Response Handling**: Fixed email verification mutations to work with apiRequest function (removed duplicate .json() calls)
+  - **Streamlined Navigation**: Users complete both verifications on one page with "Done - Go to Home" completion button
+  - **Proper Status Flow**: Member record created during email verification, enabling subsequent passport verification
+  - **Enhanced UX**: Clear section headers, status indicators, and completion messaging throughout process
+  - **Updated Routing**: AuthGuard redirects non-members to unified /id-verification page instead of separate endpoints
 
 ## User Preferences
 

@@ -6,6 +6,17 @@ import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
 
+interface MemberStatus {
+  isMember: boolean;
+  approved: boolean;
+  status?: string;
+  member?: {
+    email?: string;
+    emailVerified?: boolean;
+    ipePassport?: string;
+  };
+}
+
 export default function IdVerificationPage() {
   const { profile } = usePersistentAuth();
   const [, setLocation] = useLocation();
@@ -14,14 +25,14 @@ export default function IdVerificationPage() {
   const [passportComplete, setPassportComplete] = useState(false);
 
   // Check member status to determine current verification state
-  const { data: memberStatus, refetch } = useQuery({
+  const { data: memberStatus, refetch } = useQuery<MemberStatus>({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
 
   // Update completion states based on member status
-  const isEmailVerified = (memberStatus as any)?.member?.emailVerified || false;
-  const isPassportVerified = (memberStatus as any)?.member?.ipePassport || false;
+  const isEmailVerified = memberStatus?.member?.emailVerified || false;
+  const isPassportVerified = !!memberStatus?.member?.ipePassport;
   const bothComplete = (emailComplete || isEmailVerified) && (passportComplete || isPassportVerified);
 
   const handleEmailComplete = () => {
@@ -49,7 +60,7 @@ export default function IdVerificationPage() {
 
       <EmailVerificationSection
         farcasterFid={profile?.fid || 0}
-        currentEmail={(memberStatus as any)?.member?.email}
+        currentEmail={memberStatus?.member?.email}
         isVerified={isEmailVerified}
         onVerificationComplete={handleEmailComplete}
         allowChange={true}
@@ -57,7 +68,7 @@ export default function IdVerificationPage() {
 
       <PassportVerificationSection
         farcasterFid={profile?.fid || 0}
-        currentPassport={(memberStatus as any)?.member?.ipePassport}
+        currentPassport={memberStatus?.member?.ipePassport}
         isVerified={isPassportVerified}
         onVerificationComplete={handlePassportComplete}
         allowChange={true}

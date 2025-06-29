@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useAccount, useSignMessage } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,12 @@ export default function IdVerificationPage() {
   
   // ENS lookup
   const { ensName, isLoading: ensLoading, error: ensError } = useEnsLookup(address);
+
+  // Check member status to determine current verification state
+  const { data: memberStatus } = useQuery({
+    queryKey: [`/api/members/check/${profile?.fid}`],
+    enabled: !!profile?.fid,
+  });
 
   // Email form
   const emailForm = useForm<z.infer<typeof emailVerificationSchema>>({
@@ -158,15 +164,38 @@ export default function IdVerificationPage() {
     },
   });
 
-  // Check passport verification status from localStorage
+  // Initialize verification state based on member status
+  useEffect(() => {
+    if (memberStatus) {
+      const { isMember, status } = memberStatus as any;
+      
+      if (isMember) {
+        // Set email verification status
+        if (status === 'email_verified' || status === 'member') {
+          setEmailVerified(true);
+          setEmailStep('verify'); // Skip to verification step if already verified
+        }
+        
+        // Set passport verification status
+        if (status === 'member') {
+          setPassportVerified(true);
+          if (ensName) {
+            localStorage.setItem(`passport-verified-${ensName}`, "true");
+          }
+        }
+      }
+    }
+  }, [memberStatus, ensName]);
+
+  // Check passport verification status from localStorage for current session
   useEffect(() => {
     if (ensName && (ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth')) {
       const isVerified = localStorage.getItem(`passport-verified-${ensName}`) === "true";
-      setPassportVerified(isVerified);
-    } else {
-      setPassportVerified(false);
+      if (isVerified && memberStatus && (memberStatus as any).status === 'member') {
+        setPassportVerified(true);
+      }
     }
-  }, [ensName, isConnected]);
+  }, [ensName, isConnected, memberStatus]);
 
   const onEmailSubmit = (data: z.infer<typeof emailVerificationSchema>) => {
     sendEmailMutation.mutate(data);

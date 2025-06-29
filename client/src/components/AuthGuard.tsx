@@ -48,23 +48,13 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
       if (signerData && (signerData as any).status === 'approved' && memberStatus) {
         const { isMember, status, approved } = memberStatus as any;
         
-        // Handle new registration flow states
+        // Handle registration flow states
         if (isMember) {
           const currentStatus = status;
           
-          // Redirect based on member status
-          if (currentStatus === 'signer_approved' || currentStatus === 'pending_signer') {
-            setLocation("/email-verification");
-            return;
-          }
-          
-          if (currentStatus === 'email_verified') {
-            setLocation("/passport-validation");
-            return;
-          }
-          
-          if (currentStatus === 'pending_claim') {
-            setLocation("/passport-validation"); // Will show "under review" state
+          // If user has email_verified status but not full member, redirect to unified verification
+          if (currentStatus === 'email_verified' || currentStatus === 'pending_claim') {
+            setLocation("/id-verification");
             return;
           }
           

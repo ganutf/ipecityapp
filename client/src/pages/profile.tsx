@@ -9,8 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { EmailVerificationSection } from "@/components/EmailVerificationSection";
+import { PassportVerificationSection } from "@/components/PassportVerificationSection";
 
 const PROFILE_TAGS = [
   'tech founder', 'student', 'developer', 'lawyer', 'scientist',
@@ -102,7 +105,30 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl py-8">
+    <div className="container mx-auto max-w-2xl py-8 space-y-6">
+      {/* Verification Sections */}
+      <div>
+        <h2 className="text-2xl font-bold mb-4">ID Verification</h2>
+        <div className="space-y-4">
+          <EmailVerificationSection
+            farcasterFid={profile?.fid || 0}
+            currentEmail={memberData?.member?.email}
+            isVerified={memberData?.member?.emailVerified || false}
+            allowChange={true}
+          />
+          
+          <PassportVerificationSection
+            farcasterFid={profile?.fid || 0}
+            currentPassport={memberData?.member?.ipePassport}
+            isVerified={!!memberData?.member?.ipePassport}
+            allowChange={true}
+          />
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Profile Settings */}
       <Card>
         <CardHeader>
           <CardTitle>Profile Settings</CardTitle>
@@ -112,19 +138,6 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Member Info Display */}
-            <div className="space-y-2 p-4 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <Label className="font-medium">Email</Label>
-                  <p className="text-gray-600">{memberData.member?.email}</p>
-                </div>
-                <div>
-                  <Label className="font-medium">Ipê Passport</Label>
-                  <p className="text-gray-600">{memberData.member?.ipePassport || 'Not set'}</p>
-                </div>
-              </div>
-            </div>
 
             {/* Editable Fields */}
             <div className="space-y-4">

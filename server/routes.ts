@@ -571,10 +571,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark email as verified
       await storage.markEmailVerified(farcasterFid);
       
-      // Update member status to email_verified
-      await storage.updateMemberStatus(farcasterFid, 'email_verified');
+      // Check if member exists, create if not
+      let member = await storage.getMember(farcasterFid);
+      if (!member) {
+        // Create basic member record with email_verified status
+        member = await storage.createMember({
+          farcasterFid,
+          email: verification.email,
+          status: 'email_verified',
+          emailVerified: true,
+          passportVerified: false,
+          profileCompleted: false
+        });
+      } else {
+        // Update existing member status
+        member = await storage.updateMemberStatus(farcasterFid, 'email_verified');
+      }
       
-      res.json({ success: true, message: "Email verified successfully" });
+      res.json({ success: true, message: "Email verified successfully", member });
     } catch (error) {
       console.error("Verify email error:", error);
       res.status(500).json({ error: "Failed to verify email" });

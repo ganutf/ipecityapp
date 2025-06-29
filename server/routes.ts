@@ -613,6 +613,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Confirm email verification (alias for verify-email to match component expectations)
+  app.post("/api/auth/confirm-email", async (req, res) => {
+    try {
+      const { farcasterFid, code } = req.body;
+      
+      // Get and validate verification
+      const verification = await storage.getEmailVerification(farcasterFid, code);
+      if (!verification) {
+        return res.status(400).json({ error: "Invalid verification code" });
+      }
+      
+      if (verification.expiresAt < new Date()) {
+        return res.status(400).json({ error: "Verification code expired" });
+      }
+      
+      // Mark email as verified
+      await storage.markEmailVerified(farcasterFid);
+      
+      // Check if member exists, create if not
+      let member = await storage.getMember(farcasterFid);
+      if (!member) {
+        // Get user profile from Neynar to populate username
+        try {
+          const userResponse = await neynar.fetchBulkUsers({ fids: [farcasterFid] });
+          const userProfile = userResponse.users[0];
+          
+          // Create basic member record with email_verified status
+          member = await storage.createMember({
+            farcasterFid,
+            farcasterUsername: userProfile?.username || '',
+            email: verification.email,
+            status: 'email_verified',
+            emailVerified: true,
+            passportVerified: false,
+            profileCompleted: false
+          });
+        } catch (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          // Create member without username if profile fetch fails
+          member = await storage.createMember({
+            farcasterFid,
+            email: verification.email,
+            status: 'email_verified',
+            emailVerified: true,
+            passportVerified: false,
+            profileCompleted: false
+          });
+        }
+      } else {
+        // Update existing member status
+        member = await storage.updateMemberStatus(farcasterFid, 'email_verified');
+      }
+      
+      res.json({ success: true, message: "Email verified successfully", member });
+    } catch (error) {
+      console.error("Confirm email error:", error);
+      res.status(500).json({ error: "Failed to verify email" });
+    }
+  });
+
   // Check if user is approved member
   app.get("/api/members/check/:farcasterFid", async (req, res) => {
     try {

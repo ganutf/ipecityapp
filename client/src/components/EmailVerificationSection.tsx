@@ -31,7 +31,7 @@ export function EmailVerificationSection({
   // Send verification email
   const sendVerificationMutation = useMutation({
     mutationFn: async (emailAddress: string) => {
-      return apiRequest(`/api/auth/verify-email`, {
+      return apiRequest(`/api/auth/request-email-verification`, {
         method: "POST",
         body: JSON.stringify({
           farcasterFid,

@@ -325,7 +325,8 @@ The application follows a monorepo structure with clear separation between clien
   - **Change Capabilities**: Users can disconnect wallets, connect different wallets, change email addresses, and re-verify from Profile page
   - **Component Reusability**: Verification logic centralized in reusable components with configurable props for different contexts
   - **API Fixes**: Corrected email verification endpoint mismatches and fixed SIWE nonce generation for passport verification
-  - **Production Ready**: Complete unified verification system working across registration and profile editing flows
+  - **Endpoint Corrections**: Fixed passport verification to use correct `/api/passport/verify` endpoint instead of non-existent `/api/auth/verify-passport`
+  - **Production Ready**: Complete unified verification system working across registration and profile editing flows with all API endpoints aligned
 
 ## User Preferences
 

@@ -53,11 +53,11 @@ export function PassportVerificationSection({
 
       const signature = await signMessageAsync({ message });
 
-      return apiRequest("/api/auth/verify-passport", {
+      return apiRequest("/api/passport/verify", {
         method: "POST",
         body: JSON.stringify({
           farcasterFid,
-          address,
+          walletAddress: address,
           ensName,
           message,
           signature,

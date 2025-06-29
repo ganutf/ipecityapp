@@ -76,8 +76,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         }
 
         if (!isMember) {
-          // User not registered, redirect to profile
-          setLocation("/profile");
+          // User not registered, redirect to email verification to start registration
+          setLocation("/email-verification");
           return;
         }
 

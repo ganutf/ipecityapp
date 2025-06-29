@@ -915,6 +915,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update member profile
+  app.patch("/api/members/:farcasterFid", async (req, res) => {
+    try {
+      const farcasterFid = parseInt(req.params.farcasterFid);
+      const updateData = req.body;
+      
+      if (!farcasterFid) {
+        return res.status(400).json({ error: 'Valid Farcaster FID is required' });
+      }
+
+      const member = await storage.getMember(farcasterFid);
+      if (!member) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+
+      const updatedMember = await storage.updateMember(farcasterFid, updateData);
+      
+      res.json({ 
+        success: true, 
+        message: 'Profile updated successfully',
+        member: updatedMember
+      });
+    } catch (error) {
+      console.error("Update member profile error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   /* ───────────────────────────────────────────────────────────── */
   return createServer(app);
 }

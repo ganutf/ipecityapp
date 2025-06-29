@@ -15,6 +15,23 @@ import { apiRequest } from "@/lib/queryClient";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
 
+interface MemberData {
+  isMember: boolean;
+  approved: boolean;
+  status?: string;
+  member?: {
+    name?: string;
+    email?: string;
+    emailVerified?: boolean;
+    xHandle?: string;
+    linkedin?: string;
+    miniBio?: string;
+    profileTags?: string[];
+    ipePassport?: string;
+    profileCompleted?: boolean;
+  };
+}
+
 const PROFILE_TAGS = [
   'tech founder', 'student', 'developer', 'lawyer', 'scientist',
   'public servant', 'designer', 'creator', 'technologist', 'researcher'
@@ -34,7 +51,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
 
   // Get member data
-  const { data: memberData } = useQuery({
+  const { data: memberData } = useQuery<MemberData>({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
@@ -42,11 +59,11 @@ export default function ProfilePage() {
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: (memberData as any)?.member?.name || "",
-      xHandle: (memberData as any)?.member?.xHandle || "",
-      linkedin: (memberData as any)?.member?.linkedin || "",
-      miniBio: (memberData as any)?.member?.miniBio || "",
-      profileTags: (memberData as any)?.member?.profileTags || [],
+      name: memberData?.member?.name || "",
+      xHandle: memberData?.member?.xHandle || "",
+      linkedin: memberData?.member?.linkedin || "",
+      miniBio: memberData?.member?.miniBio || "",
+      profileTags: memberData?.member?.profileTags || [],
     },
   });
 
@@ -89,7 +106,7 @@ export default function ProfilePage() {
     form.setValue("profileTags", newTags);
   };
 
-  if (!(memberData as any)?.isMember) {
+  if (!memberData?.isMember) {
     return (
       <div className="container mx-auto max-w-2xl py-8">
         <Card>
@@ -112,15 +129,15 @@ export default function ProfilePage() {
         <div className="space-y-4">
           <EmailVerificationSection
             farcasterFid={profile?.fid || 0}
-            currentEmail={(memberData as any)?.member?.email}
-            isVerified={(memberData as any)?.member?.emailVerified || false}
+            currentEmail={memberData?.member?.email}
+            isVerified={memberData?.member?.emailVerified || false}
             allowChange={true}
           />
           
           <PassportVerificationSection
             farcasterFid={profile?.fid || 0}
-            currentPassport={(memberData as any)?.member?.ipePassport}
-            isVerified={!!(memberData as any)?.member?.ipePassport}
+            currentPassport={memberData?.member?.ipePassport}
+            isVerified={!!memberData?.member?.ipePassport}
             allowChange={true}
           />
         </div>

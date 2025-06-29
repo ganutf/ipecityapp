@@ -811,6 +811,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Verify passport ownership (signature-based verification)
+  app.post("/api/passport/verify", async (req, res) => {
+    try {
+      const { farcasterFid, ensName, walletAddress, signature, message } = req.body;
+      
+      if (!farcasterFid || !ensName || !walletAddress) {
+        return res.status(400).json({ error: 'FID, ENS name, and wallet address are required' });
+      }
+
+      // Verify the ENS domain is an Ipê City domain
+      if (!ensName.endsWith('.ipecity.eth')) {
+        return res.status(400).json({ error: 'Only Ipê City domains (.ipecity.eth) are supported' });
+      }
+
+      // Get member and update with passport verification
+      const member = await storage.getMember(farcasterFid);
+      if (!member) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+
+      // Update member with verified passport and set status to 'member'
+      const updatedMember = await storage.updateMember(farcasterFid, {
+        ipePassport: ensName.replace('.ipecity.eth', ''),
+        passportVerified: true,
+        status: 'member'
+      });
+      
+      res.json({ 
+        success: true, 
+        message: 'Passport verified successfully',
+        member: updatedMember
+      });
+    } catch (error) {
+      console.error("Verify passport error:", error);
+      res.status(500).json({ error: "Failed to verify passport" });
+    }
+  });
+
   // Confirm passport verification
   app.post("/api/passport/confirm-verification", async (req, res) => {
     try {

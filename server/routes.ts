@@ -821,8 +821,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify the ENS domain is an Ipê City domain
-      if (!ensName.endsWith('.ipecity.eth')) {
-        return res.status(400).json({ error: 'Only Ipê City domains (.ipecity.eth) are supported' });
+      if (!ensName.endsWith('.ipecity.eth') && ensName !== 'ipecity.eth') {
+        return res.status(400).json({ error: 'Only Ipê City domains (ipecity.eth and *.ipecity.eth) are supported' });
       }
 
       // Get member and update with passport verification
@@ -831,9 +831,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Member not found' });
       }
 
+      // Extract passport name from ENS domain
+      const passportName = ensName === 'ipecity.eth' ? 'ipecity' : ensName.replace('.ipecity.eth', '');
+      
       // Update member with verified passport and set status to 'member'
       const updatedMember = await storage.updateMember(farcasterFid, {
-        ipePassport: ensName.replace('.ipecity.eth', ''),
+        ipePassport: passportName,
         passportVerified: true,
         status: 'member'
       });

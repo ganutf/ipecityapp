@@ -16,6 +16,7 @@ import SignerApprovalPage from "@/pages/signer-approval";
 import VerifyPassportPage from "@/pages/verify-passport";
 import EmailVerificationPage from "@/pages/email-verification";
 import PassportValidationPage from "@/pages/passport-validation";
+import IdVerificationPage from "@/pages/id-verification";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 import "@rainbow-me/rainbowkit/styles.css";
@@ -47,6 +48,7 @@ function Router() {
           <Route path="/signer-approval" component={SignerApprovalPage} />
           <Route path="/email-verification" component={EmailVerificationPage} />
           <Route path="/passport-validation" component={PassportValidationPage} />
+          <Route path="/id-verification" component={IdVerificationPage} />
           <Route path="/verify-passport/:token" component={VerifyPassportPage} />
           <Route component={NotFound} />
         </Switch>

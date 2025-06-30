@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,12 @@ export function EmailVerificationSection({
   const [showVerification, setShowVerification] = useState(false);
   const [emailVerified, setEmailVerified] = useState(isVerified);
   const { toast } = useToast();
+
+  // Sync local state with props when they change (for page refreshes)
+  useEffect(() => {
+    setEmail(currentEmail || "");
+    setEmailVerified(isVerified || false);
+  }, [currentEmail, isVerified]);
 
   // Send verification email
   const sendVerificationMutation = useMutation({

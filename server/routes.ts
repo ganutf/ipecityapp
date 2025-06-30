@@ -688,8 +688,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       } else {
-        // Update existing member status
-        member = await storage.updateMemberStatus(farcasterFid, 'email_verified');
+        // Update existing member with email and verification status
+        member = await storage.updateMember(farcasterFid, {
+          email: verification.email,
+          emailVerified: true,
+          status: 'email_verified'
+        });
       }
       
       res.json({ success: true, message: "Email verified successfully", member });

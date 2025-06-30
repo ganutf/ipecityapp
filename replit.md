@@ -328,7 +328,8 @@ The application follows a monorepo structure with clear separation between clien
   - **Endpoint Corrections**: Fixed passport verification to use correct `/api/passport/verify` endpoint instead of non-existent `/api/auth/verify-passport`
   - **Loading State Fixes**: Eliminated red icon glitch by fixing race condition between signer and member status API calls in AuthGuard
   - **Enhanced Error Handling**: Added proper loading states and prevented error state flashes during component initialization
-  - **Production Ready**: Complete unified verification system working across registration and profile editing flows with smooth loading transitions
+  - **Authentication Security**: Fixed ID verification page to require authentication, preventing access by non-logged users
+  - **Production Ready**: Complete unified verification system working across registration and profile editing flows with smooth loading transitions and proper security
 
 ## User Preferences
 

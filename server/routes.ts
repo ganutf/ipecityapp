@@ -15,6 +15,7 @@ import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
 import { lookupEnsName } from "./lib/ensLookup";
+import { createSubdomain, checkSubdomainAvailability } from "./lib/justaname";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -488,8 +489,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid claim data" });
       }
 
-      // TODO: Implement JustAName API call to create subdomain
-      // For now, just approve the claim
+      // Create subdomain using JustAName API
+      console.log(`Creating subdomain: ${member.passportClaimSubdomain}.ipecity.eth for wallet: ${member.passportClaimWalletAddress}`);
+      
+      const subdomainResult = await createSubdomain(
+        member.passportClaimSubdomain,
+        member.passportClaimWalletAddress,
+        "ipecity.eth"
+      );
+
+      if (!subdomainResult.success) {
+        console.error("Subdomain creation failed:", subdomainResult.error);
+        return res.status(500).json({ 
+          error: `Failed to create subdomain: ${subdomainResult.error}` 
+        });
+      }
+
+      console.log("Subdomain creation result:", subdomainResult);
+      
+      // Approve the claim after successful subdomain creation
       const updatedMember = await storage.approvePassportClaim(farcasterFid);
       
       // Send approval email

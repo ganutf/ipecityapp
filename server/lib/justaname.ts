@@ -17,7 +17,7 @@ interface JustaNameResponse {
   };
 }
 
-const JUSTANAME_API_URL = "https://api.justaname.id/ens/v1/subname/add";
+const API_BASE_URL = "https://api.justaname.id";
 const ENS_DOMAIN = "ipecity.eth";
 const CHAIN_ID = 1; // Mainnet
 
@@ -48,14 +48,16 @@ export async function createSubdomain({
   const headers = {
     "x-api-key": apiKey,
     "x-signature": adminSignature,
-    "x-message": adminMessage.replace(/\r?\n/g, '\\n'),
+    "x-message": Buffer.from(adminMessage, "utf8").toString("base64"),
     "x-address": adminAddress,
     "Content-Type": "application/json"
   };
 
+  console.log('🔄 Creating subdomain for:', username);
+
   try {
     const { data } = await axios.post<JustaNameResponse>(
-      JUSTANAME_API_URL,
+      `${API_BASE_URL}/ens/v1/subname/add`,
       payload,
       { headers }
     );
@@ -63,6 +65,7 @@ export async function createSubdomain({
     const createdEns = data.result.data.ens;
     console.log(`✅ Subdomain created: ${createdEns}`);
     return createdEns;
+
   } catch (error: any) {
     console.error("❌ Failed to create subdomain:", error.response?.data || error.message);
     

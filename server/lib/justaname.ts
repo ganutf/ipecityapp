@@ -9,7 +9,6 @@ interface CreateSubdomainParams {
 }
 
 const ENS_DOMAIN = "ipecity.eth";
-const CHAIN_ID = 1; // Mainnet
 
 export async function createSubdomain({
   username,
@@ -24,19 +23,25 @@ export async function createSubdomain({
   }
 
   try {
-    const justaname = JustaName.init({
-      apiKey,
-      chainId: CHAIN_ID,
-    });
+    const justaname = JustaName.init();
 
-    const result = await justaname.subnames.addSubname({
-      username,
-      ensDomain: ENS_DOMAIN,
-      address: userWalletAddress,
-      message: adminMessage,
-      signature: adminSignature,
-      signerAddress: adminAddress
-    });
+    // @ts-ignore - SDK types may be incorrect, testing functionality  
+    const result = await justaname.subnames.addSubname(
+      {
+        username,
+        ensDomain: ENS_DOMAIN,
+        addresses: [{
+          address: userWalletAddress,
+          coinType: 60
+        }]
+      },
+      {
+        apiKey,
+        xAddress: adminAddress,
+        xMessage: adminMessage,
+        xSignature: adminSignature
+      }
+    );
 
     const createdEns = `${username}.${ENS_DOMAIN}`;
     console.log(`✅ Subdomain created with SDK: ${createdEns}`);

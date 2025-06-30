@@ -46,12 +46,15 @@ export function EmailVerificationSection({
         description: "Check your email for the verification code.",
       });
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to send verification code. Please try again.",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      // Only show error toast if it's not a network/loading issue
+      if (!error?.message?.includes('fetch')) {
+        toast({
+          title: "Error",
+          description: "Failed to send verification code. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -75,12 +78,15 @@ export function EmailVerificationSection({
       });
       onVerificationComplete?.();
     },
-    onError: () => {
-      toast({
-        title: "Invalid code",
-        description: "The verification code is invalid or expired.",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      // Only show error toast if it's not a network/loading issue
+      if (!error?.message?.includes('fetch')) {
+        toast({
+          title: "Invalid code",
+          description: "The verification code is invalid or expired.",
+          variant: "destructive",
+        });
+      }
     },
   });
 

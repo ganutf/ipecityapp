@@ -25,7 +25,7 @@ export default function IdVerificationPage() {
   const [passportComplete, setPassportComplete] = useState(false);
 
   // Check member status to determine current verification state
-  const { data: memberStatus, refetch } = useQuery<MemberStatus>({
+  const { data: memberStatus, refetch, isLoading: memberLoading } = useQuery<MemberStatus>({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
@@ -48,6 +48,21 @@ export default function IdVerificationPage() {
   const handleDone = () => {
     setLocation("/");
   };
+
+  // Show loading state while member status is being fetched
+  if (memberLoading) {
+    return (
+      <div className="container mx-auto max-w-2xl py-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold">ID Verification</h1>
+          <div className="flex items-center justify-center mt-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <span className="ml-3 text-gray-600">Loading verification status...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto max-w-2xl py-8 space-y-6">

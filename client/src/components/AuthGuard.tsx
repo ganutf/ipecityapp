@@ -14,21 +14,29 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
   const [, setLocation] = useLocation();
 
   // Check signer status
-  const { data: signerData } = useQuery({
+  const { data: signerData, isLoading: signerLoading } = useQuery({
     queryKey: [`/api/neynar/signer/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
 
   // Check member status
-  const { data: memberStatus } = useQuery({
+  const { data: memberStatus, isLoading: memberLoading } = useQuery({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
+
+  // Wait for both queries to complete before making routing decisions
+  const isLoading = signerLoading || memberLoading;
 
   useEffect(() => {
 
     if (requireAuth && !profile) {
       // Not authenticated, stay on current page (should show sign in)
+      return;
+    }
+
+    // Don't make routing decisions while data is still loading
+    if (isLoading) {
       return;
     }
 
@@ -90,7 +98,16 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         }
       }
     }
-  }, [profile, signerData, memberStatus, requireAuth, requireApproval, setLocation]);
+  }, [profile, signerData, memberStatus, isLoading, requireAuth, requireApproval, setLocation]);
+
+  // Show loading state while queries are in progress
+  if (isLoading && profile?.fid) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

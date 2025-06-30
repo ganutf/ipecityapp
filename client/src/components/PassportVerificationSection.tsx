@@ -74,11 +74,14 @@ export function PassportVerificationSection({
       onVerificationComplete?.();
     },
     onError: (error: any) => {
-      toast({
-        title: "Verification failed",
-        description: error.message || "Failed to verify passport ownership.",
-        variant: "destructive",
-      });
+      // Only show error toast if it's not a network/loading issue
+      if (!error?.message?.includes('fetch')) {
+        toast({
+          title: "Verification failed",
+          description: error.message || "Failed to verify passport ownership.",
+          variant: "destructive",
+        });
+      }
     },
   });
 

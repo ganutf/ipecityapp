@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAccount, useDisconnect, useSignMessage } from "wagmi";
@@ -26,12 +28,68 @@ export function PassportVerificationSection({
 }: PassportVerificationSectionProps) {
   const [passportVerified, setPassportVerified] = useState(isVerified);
   const [passportVerificationSent, setPassportVerificationSent] = useState(false);
+  const [showClaimForm, setShowClaimForm] = useState(false);
+  const [claimPassport, setClaimPassport] = useState("");
   const { toast } = useToast();
   
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
   const { ensName, isLoading: ensLoading, error: ensError } = useEnsLookup(address);
+
+  // Claim passport
+  const claimPassportMutation = useMutation({
+    mutationFn: async (passportName: string) => {
+      if (!address) {
+        throw new Error("Wallet not connected");
+      }
+
+      // Create SIWE message for claiming
+      const message = createSiweMessage({
+        domain: window.location.host,
+        address,
+        statement: `I claim the Ipê City passport: ${passportName}.ipecity.eth`,
+        uri: window.location.origin,
+        version: "1",
+        chainId: 1,
+        nonce: Math.random().toString(36).slice(2)
+      });
+
+      // Sign the message
+      const signature = await signMessageAsync({ message });
+
+      // Submit claim
+      return apiRequest("/api/passport/claim", {
+        method: "POST",
+        body: JSON.stringify({
+          farcasterFid,
+          ipePassport: passportName,
+          walletAddress: address,
+          signature,
+          message
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+    },
+    onSuccess: () => {
+      setPassportVerificationSent(true);
+      setShowClaimForm(false);
+      toast({
+        title: "Passport claim submitted",
+        description: "Your passport claim has been submitted for admin approval.",
+      });
+      onVerificationComplete?.();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Claim failed",
+        description: error.message || "Failed to submit passport claim.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Verify passport ownership
   const verifyPassportMutation = useMutation({
@@ -110,9 +168,23 @@ export function PassportVerificationSection({
   const resetVerification = () => {
     setPassportVerified(false);
     setPassportVerificationSent(false);
+    setShowClaimForm(false);
+    setClaimPassport("");
     if (isConnected) {
       disconnect();
     }
+  };
+
+  const handleClaimPassport = () => {
+    if (!claimPassport.trim()) {
+      toast({
+        title: "Enter passport name",
+        description: "Please enter a passport name to claim.",
+        variant: "destructive",
+      });
+      return;
+    }
+    claimPassportMutation.mutate(claimPassport.trim());
   };
 
   const isIpeCityDomain = ensName && (ensName === 'ipecity.eth' || ensName.endsWith('.ipecity.eth'));
@@ -230,18 +302,62 @@ export function PassportVerificationSection({
                   )}
                 </div>
 
-                <Button
-                  onClick={handleVerifyPassport}
-                  disabled={verifyPassportMutation.isPending || !isIpeCityDomain}
-                  className="w-full"
-                >
-                  {verifyPassportMutation.isPending
-                    ? "Verifying..."
-                    : isIpeCityDomain
-                    ? "Verify Passport Ownership"
-                    : "Connect wallet with Ipê City domain"
-                  }
-                </Button>
+                {isIpeCityDomain ? (
+                  <Button
+                    onClick={handleVerifyPassport}
+                    disabled={verifyPassportMutation.isPending}
+                    className="w-full"
+                  >
+                    {verifyPassportMutation.isPending
+                      ? "Verifying..."
+                      : "Verify Passport Ownership"
+                    }
+                  </Button>
+                ) : (
+                  <div className="space-y-4">
+                    {!showClaimForm ? (
+                      <Button
+                        onClick={() => setShowClaimForm(true)}
+                        className="w-full"
+                      >
+                        Claim New Ipê Passport
+                      </Button>
+                    ) : (
+                      <div className="space-y-3">
+                        <div>
+                          <Label htmlFor="passport-name">Choose your passport name</Label>
+                          <div className="flex gap-2 mt-1">
+                            <Input
+                              id="passport-name"
+                              type="text"
+                              placeholder="username"
+                              value={claimPassport}
+                              onChange={(e) => setClaimPassport(e.target.value)}
+                              className="flex-1"
+                            />
+                            <span className="flex items-center text-sm text-gray-500">.ipecity.eth</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleClaimPassport}
+                            disabled={claimPassportMutation.isPending || !claimPassport.trim()}
+                            className="flex-1"
+                          >
+                            {claimPassportMutation.isPending ? "Claiming..." : "Claim Passport"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowClaimForm(false)}
+                            disabled={claimPassportMutation.isPending}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

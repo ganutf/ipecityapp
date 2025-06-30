@@ -48,7 +48,7 @@ export async function createSubdomain({
   const headers = {
     "x-api-key": apiKey,
     "x-signature": adminSignature,
-    "x-message": adminMessage,
+    "x-message": encodeURIComponent(adminMessage),
     "x-address": adminAddress,
     "Content-Type": "application/json"
   };

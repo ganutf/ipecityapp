@@ -1,0 +1,85 @@
+That stack-trace is coming straight from Node’s HTTP stack (`_http_outgoing`).
+Node refuses to send any header that contains control-characters such as **LF `\n` or CR `\r`** (or non-ASCII bytes). When you build a “Sign-in With Ethereum” (SIWE) message you normally keep the human-readable line-breaks, e.g.:
+
+```
+justaname wants you to sign in with your Ethereum account:
+0xABCD…
+
+URI: https://my-dapp.com
+Version: 1
+Chain ID: 1
+Nonce: 123456
+Issued At: 2025-06-30T21:00:00Z
+```
+
+If you push that verbatim into an HTTP header (`x-message`) Node sees the real newline characters and throws:
+
+````
+TypeError [ERR_INVALID_CHAR]: Invalid character in header content ["x-message"]
+``` :contentReference[oaicite:0]{index=0}
+
+---
+
+## Two easy ways to make the header legal
+
+| option | what you do | why it works |
+|--------|-------------|--------------|
+| **Escape the line breaks** | Replace every real line break with the two-character sequence `\n` **before** setting the header.<br>`const headerMsg = siweMsg.replace(/\r?\n/g, '\\n');` | `\` and `n` are perfectly legal ASCII characters, so Node is happy, and the JustaName API will interpret the literal `\n` sequences as newlines. |
+| **Base-64 encode the whole message** | `const headerMsg = Buffer.from(siweMsg, 'utf8').toString('base64');`<br>Send it as `x-message`; the API will base-64-decode it automatically. | Binary-safe, keeps the message compact, avoids all control characters. |
+
+*(Both approaches are used by projects in the wild; pick the one you prefer.)*
+
+---
+
+## Minimal working snippet (Axios)
+
+```ts
+import axios from 'axios';
+import { createSiweMessage, signMessage } from './siweUtils';   // your helpers
+import { Wallet } from 'ethers';
+
+const wallet      = new Wallet(process.env.PRIVATE_KEY!); // should be the ENS 2LD owner
+const address     = await wallet.getAddress();
+const siweMessage = createSiweMessage(address, 'justaname');   // build the SIWE payload
+const signature   = await signMessage(wallet, siweMessage);
+
+// 1) escape line-feeds  (or swap for the base-64 version shown above)
+const safeMessage = siweMessage.replace(/\r?\n/g, '\\n');
+
+await axios.post(
+  'https://api.justaname.id/ens/v1/subname/add',
+  {
+    username:  'alice',            // the sub-label you’re creating
+    ensDomain: 'mydomain.eth',     // the 2LD you control
+    chainId:   1,                  // 1 = mainnet, 11155111 = Sepolia
+    addresses: [{ coinType: 60, address }],   // ETH addr record
+  },
+  {
+    headers: {
+      'x-api-key'  : process.env.JAN_API_KEY,
+      'x-address'  : address,
+      'x-message'  : safeMessage,   // <<—— no illegal chars now
+      'x-signature': signature
+    }
+  }
+);
+````
+
+### A couple of gotchas
+
+1. **Which wallet must sign?**
+   The address in `x-address` (i.e. the wallet whose private key you use to sign the SIWE message) must **own the 2-level ENS domain** (`mydomain.eth`) *or* have been delegated `nameWrapper` / `operator` rights for it. Using any other wallet will make the API reject the request after the headers are accepted.
+
+2. **Stay in ASCII.**
+   If you add a `statement:` line to your SIWE message make sure you don’t paste fancy quotes or an em-dash—those are > 0x7F and will also trip Node’s header check.
+
+3. **Prefer the SDK if you can.**
+   Installing `@justaname.id/sdk` offloads the SIWE construction, signing and header encoding for you; internally it uses the “escaped line-break” technique, so you never hit this error. ([docs.justaname.id][1])
+
+---
+
+### TL;DR
+
+Sanitise / encode the SIWE message **before** you drop it into `x-message`, or let the official SDK do it for you, and the “Invalid character in header content” error disappears.
+
+[1]: https://docs.justaname.id/api/api-reference/subname/add "Add | JustaName"

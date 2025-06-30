@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { usePersistentAuth, updateCachedMemberStatus, updateCachedSignerStatus } from "@/hooks/use-persistent-auth";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -10,7 +10,7 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requireAuth = false, requireApproval = false }: AuthGuardProps) {
-  const { profile } = usePersistentAuth();
+  const { profile, cachedMemberStatus, cachedSignerStatus } = usePersistentAuth();
   const [, setLocation] = useLocation();
 
   // Check signer status

@@ -8,10 +8,44 @@ interface StoredAuthData {
   pfpUrl?: string;
   custodyAddress?: string;
   timestamp: number;
+  memberStatus?: {
+    isMember: boolean;
+    status: string;
+    approved: boolean;
+    member?: any;
+  };
+  signerStatus?: string;
 }
 
 const AUTH_STORAGE_KEY = 'farcaster_auth_data';
 const AUTH_EXPIRY_HOURS = 24 * 7; // 7 days
+
+// Helper functions to update cached member status
+export function updateCachedMemberStatus(memberStatus: any) {
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (stored) {
+      const authData = JSON.parse(stored);
+      authData.memberStatus = memberStatus;
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+    }
+  } catch (error) {
+    console.error('Failed to update cached member status:', error);
+  }
+}
+
+export function updateCachedSignerStatus(signerStatus: string) {
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (stored) {
+      const authData = JSON.parse(stored);
+      authData.signerStatus = signerStatus;
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+    }
+  } catch (error) {
+    console.error('Failed to update cached signer status:', error);
+  }
+}
 
 export function usePersistentAuth() {
   const { isAuthenticated: kitAuth, profile: kitProfile } = useProfile();
@@ -53,7 +87,7 @@ export function usePersistentAuth() {
         username: kitProfile.username,
         displayName: kitProfile.displayName,
         pfpUrl: kitProfile.pfpUrl,
-        custodyAddress: kitProfile.custodyAddress,
+        custodyAddress: (kitProfile as any).custodyAddress,
         timestamp: Date.now()
       };
       
@@ -76,7 +110,9 @@ export function usePersistentAuth() {
   return {
     isAuthenticated,
     profile,
-    isLoading: !isInitialized
+    isLoading: !isInitialized,
+    cachedMemberStatus: restoredProfile?.memberStatus,
+    cachedSignerStatus: restoredProfile?.signerStatus
   };
 }
 

@@ -56,10 +56,7 @@ export function generateVerificationCode(): string {
 }
 
 export async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const fromEmail = isDevelopment 
-    ? 'onboarding@resend.dev' 
-    : 'noreply@updates.ipe.city';
+  const fromEmail = 'noreply@updates.ipe.city';
 
   return sendEmail({
     to: email,
@@ -78,10 +75,7 @@ export async function sendVerificationEmail(email: string, code: string): Promis
 }
 
 export async function sendApprovalEmail(email: string, ipePassport: string): Promise<boolean> {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const fromEmail = isDevelopment 
-    ? 'onboarding@resend.dev' 
-    : 'team@updates.ipe.city';
+  const fromEmail = 'team@updates.ipe.city';
 
   return sendEmail({
     to: email,
@@ -101,10 +95,7 @@ export async function sendApprovalEmail(email: string, ipePassport: string): Pro
 }
 
 export async function sendDenialEmail(email: string): Promise<boolean> {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const fromEmail = isDevelopment 
-    ? 'onboarding@resend.dev' 
-    : 'team@updates.ipe.city';
+  const fromEmail = 'team@updates.ipe.city';
 
   return sendEmail({
     to: email,

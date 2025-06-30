@@ -15,6 +15,7 @@ import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
 import { lookupEnsName } from "./lib/ensLookup";
+import { createSubdomain } from "./lib/justaname";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -480,7 +481,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Approve passport claim (admin only)
   app.post("/api/passport/approve", async (req, res) => {
     try {
-      const { farcasterFid } = req.body;
+      const { farcasterFid, adminMessage, adminSignature, adminAddress } = req.body;
+      
+      // Validate required admin signature data
+      if (!adminMessage || !adminSignature || !adminAddress) {
+        return res.status(400).json({ error: "Admin signature required" });
+      }
       
       // Get member details for subdomain creation
       const member = await storage.getMember(farcasterFid);
@@ -488,16 +494,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid claim data" });
       }
 
-      // TODO: Implement JustAName API call to create subdomain
-      // For now, just approve the claim
-      const updatedMember = await storage.approvePassportClaim(farcasterFid);
-      
-      // Send approval email
-      if (updatedMember.email) {
-        await sendApprovalEmail(updatedMember.email, updatedMember.passportClaimSubdomain || '');
+      // Create subdomain via JustaName API
+      try {
+        const createdEns = await createSubdomain({
+          username: member.passportClaimSubdomain,
+          userWalletAddress: member.passportClaimWalletAddress,
+          adminMessage,
+          adminSignature,
+          adminAddress
+        });
+
+        console.log(`Subdomain created successfully: ${createdEns}`);
+        
+        // Update member with the created passport
+        const updatedMember = await storage.approvePassportClaim(farcasterFid);
+        
+        // Send approval email
+        if (updatedMember.email) {
+          await sendApprovalEmail(updatedMember.email, createdEns);
+        }
+        
+        res.json({ success: true, member: updatedMember, ensName: createdEns });
+      } catch (subdomainError: any) {
+        console.error("Subdomain creation failed:", subdomainError);
+        
+        // If subdomain creation fails, don't approve the claim
+        return res.status(500).json({ 
+          error: "Failed to create subdomain",
+          details: subdomainError.message
+        });
       }
-      
-      res.json({ success: true, member: updatedMember });
     } catch (error) {
       console.error("Approve passport claim error:", error);
       res.status(500).json({ error: "Failed to approve passport claim" });

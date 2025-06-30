@@ -7,11 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
+import { useAccount, useSignMessage } from "wagmi";
+import { createSiweMessage } from "viem/siwe";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Wallet connection for admin signing
+  const { address: adminAddress, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,17 @@ interface PassportVerificationSectionProps {
   allowChange?: boolean;
 }
 
+interface MemberData {
+  isMember: boolean;
+  approved: boolean;
+  status?: string;
+  member?: {
+    passportClaimSubdomain?: string;
+    passportClaimStatus?: string;
+    ipePassport?: string;
+  };
+}
+
 export function PassportVerificationSection({
   farcasterFid,
   currentPassport = "",
@@ -31,11 +42,46 @@ export function PassportVerificationSection({
   const [showClaimForm, setShowClaimForm] = useState(false);
   const [claimPassport, setClaimPassport] = useState("");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
   const { ensName, isLoading: ensLoading, error: ensError } = useEnsLookup(address);
+
+  // Query member status to check passport claim status
+  const { data: memberData, refetch: refetchMemberStatus } = useQuery<MemberData>({
+    queryKey: [`/api/members/check/${farcasterFid}`],
+    enabled: !!farcasterFid,
+    refetchInterval: passportVerificationSent ? 10000 : false, // Poll every 10 seconds when claim is pending
+  });
+
+  // Update states based on member data
+  useEffect(() => {
+    if (memberData?.member) {
+      const { ipePassport, passportClaimStatus } = memberData.member;
+      
+      // If passport is verified/approved, update state
+      if (ipePassport) {
+        setPassportVerified(true);
+        setPassportVerificationSent(false);
+        onVerificationComplete?.();
+      }
+      
+      // Handle claim status updates
+      if (passportClaimStatus === 'approved' && !ipePassport) {
+        // Admin approved but passport not yet set - this shouldn't happen normally
+        refetchMemberStatus();
+      } else if (passportClaimStatus === 'denied') {
+        setPassportVerificationSent(false);
+        toast({
+          title: "Passport claim denied",
+          description: "Your passport claim was not approved. Please try again or contact support.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [memberData, onVerificationComplete, refetchMemberStatus, toast]);
 
   // Claim passport
   const claimPassportMutation = useMutation({
@@ -188,19 +234,55 @@ export function PassportVerificationSection({
   };
 
   const isIpeCityDomain = ensName && (ensName === 'ipecity.eth' || ensName.endsWith('.ipecity.eth'));
+  
+  // Determine current status and display appropriate message
+  const getStatusDisplay = () => {
+    if (passportVerified) {
+      return { status: "✓ Verified", color: "text-green-600", description: "Your Ipê City passport has been verified." };
+    }
+    
+    if (memberData?.member?.passportClaimStatus === 'pending') {
+      return { 
+        status: "⏳ Pending Approval", 
+        color: "text-yellow-600", 
+        description: `Your claim for ${memberData.member.passportClaimSubdomain}.ipecity.eth is awaiting admin approval.` 
+      };
+    }
+    
+    if (memberData?.member?.passportClaimStatus === 'denied') {
+      return { 
+        status: "❌ Denied", 
+        color: "text-red-600", 
+        description: "Your passport claim was denied. You can try claiming again." 
+      };
+    }
+    
+    if (passportVerificationSent) {
+      return { 
+        status: "⏳ Submitted", 
+        color: "text-yellow-600", 
+        description: "Your passport claim has been submitted for approval." 
+      };
+    }
+    
+    return { 
+      status: "", 
+      color: "", 
+      description: "Connect your wallet to verify ownership of an Ipê City domain or claim a new one." 
+    };
+  };
+
+  const statusDisplay = getStatusDisplay();
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           Ipê Passport Verification
-          {passportVerified && <span className="text-green-600">✓</span>}
+          {statusDisplay.status && <span className={statusDisplay.color}>{statusDisplay.status}</span>}
         </CardTitle>
         <CardDescription>
-          {passportVerified 
-            ? "Your Ipê City passport has been verified."
-            : "Connect your wallet to verify ownership of an Ipê City domain."
-          }
+          {statusDisplay.description}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -223,6 +305,27 @@ export function PassportVerificationSection({
                 Change Wallet / Re-verify
               </Button>
             )}
+          </div>
+        ) : memberData?.member?.passportClaimStatus === 'pending' ? (
+          <div className="space-y-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="text-sm font-medium text-yellow-800">
+                Claim Pending Approval
+              </div>
+              <p className="text-sm text-yellow-700 mt-1">
+                Your claim for <span className="font-mono">{memberData.member.passportClaimSubdomain}.ipecity.eth</span> is being reviewed by administrators.
+              </p>
+              <p className="text-xs text-yellow-600 mt-2">
+                You'll receive an email notification once your claim is processed.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => refetchMemberStatus()}
+              className="w-full"
+            >
+              Check Status
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">

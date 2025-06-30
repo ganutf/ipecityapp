@@ -141,18 +141,30 @@ export default function AdminPage() {
         throw new Error("Admin wallet must be connected to approve claims");
       }
 
-      // Create message for subdomain creation authorization
-      const adminMessage = `Approve subdomain creation for member ${farcasterFid} at ${Date.now()}`;
+      // Step 1: Request JustaName challenge
+      const challengeResponse = await fetch("/api/passport/request-challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminAddress }),
+      });
       
-      // Sign the message with admin wallet
-      const adminSignature = await signMessageAsync({ message: adminMessage });
+      if (!challengeResponse.ok) {
+        const errorData = await challengeResponse.json();
+        throw new Error(errorData.error || "Failed to request challenge");
+      }
+      
+      const { challenge } = await challengeResponse.json();
+      
+      // Step 2: Sign the JustaName challenge
+      const adminSignature = await signMessageAsync({ message: challenge });
 
+      // Step 3: Approve passport claim with signed challenge
       const response = await fetch("/api/passport/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           farcasterFid,
-          adminMessage,
+          adminMessage: challenge,
           adminSignature,
           adminAddress
         }),

@@ -70,3 +70,43 @@ export function sanitizeUsername(username: string): string {
     .replace(/[^a-z0-9]/g, '') // Keep only letters and numbers
     .slice(0, 20); // Ensure max length
 }
+
+/**
+ * Request a challenge from JustaName for SIWE signing
+ */
+export async function requestJustaNameChallenge(adminAddress: string): Promise<string> {
+  const apiKey = process.env.JUSTANAME_API_KEY;
+  if (!apiKey) {
+    throw new Error("JUSTANAME_API_KEY environment variable is required");
+  }
+
+  try {
+    // Get or create JustaName instance
+    const jan = JustaName.init({
+      ensDomains: [
+        {
+          domain: ENS_DOMAIN,
+          chainId: CHAIN_ID,
+          apiKey,
+        },
+      ],
+      networks: [{ chainId: CHAIN_ID }],
+      config: { domain: 'localhost', origin: 'http://localhost:5000' },
+    });
+
+    // Request challenge from JustaName
+    const { challenge } = await jan.siwe.requestChallenge({
+      address: adminAddress,
+      chainId: CHAIN_ID,
+      domain: 'justaname.id',
+      origin: 'https://justaname.id',
+    });
+
+    console.log(`✅ JustaName challenge requested for address: ${adminAddress}`);
+    return challenge;
+  } catch (error: any) {
+    const msg = error?.message ?? String(error);
+    console.error("❌ Failed to request JustaName challenge:", msg);
+    throw new Error(`JustaName challenge error: ${msg}`);
+  }
+}

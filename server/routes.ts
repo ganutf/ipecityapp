@@ -15,7 +15,7 @@ import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
 import { lookupEnsName } from "./lib/ensLookup";
-import { createSubdomain } from "./lib/justaname";
+import { createSubdomain, requestJustaNameChallenge } from "./lib/justaname";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -475,6 +475,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get pending claims error:", error);
       res.status(500).json({ error: "Failed to get pending claims" });
+    }
+  });
+
+  // Request JustaName challenge for admin signing
+  app.post("/api/passport/request-challenge", async (req, res) => {
+    try {
+      const { adminAddress } = req.body;
+      
+      if (!adminAddress) {
+        return res.status(400).json({ error: "Admin address required" });
+      }
+      
+      const challenge = await requestJustaNameChallenge(adminAddress);
+      res.json({ challenge });
+    } catch (error: any) {
+      console.error("Challenge request failed:", error);
+      res.status(500).json({ error: "Failed to request challenge" });
     }
   });
 

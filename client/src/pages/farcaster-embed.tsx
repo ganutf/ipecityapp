@@ -91,9 +91,9 @@ export default function FarcasterEmbed() {
   };
 
   const getUserExecutionStatus = (pulseId: number) => {
-    if (!executionsData?.executions) return { liked: false, recasted: false };
+    if (!(executionsData as any)?.executions) return { liked: false, recasted: false };
 
-    const executions = executionsData.executions.filter(
+    const executions = (executionsData as any).executions.filter(
       (exec: any) => exec.pulseId === pulseId,
     );
 
@@ -104,7 +104,7 @@ export default function FarcasterEmbed() {
   };
 
   // Find today's active pulse
-  const activePulse = pulsesData?.pulses?.find((pulse: Pulse) =>
+  const activePulse = (pulsesData as any)?.pulses?.find((pulse: Pulse) =>
     isToday(pulse.date),
   );
 
@@ -132,7 +132,7 @@ export default function FarcasterEmbed() {
   }
 
   // Show signer approval screen when needed (only if signer is not approved)
-  if (isAuthenticated && memberCheck?.isMember && signerData && signerStatus !== 'approved' && (signerStatus === 'generated' || signerStatus === 'pending_approval') && approvalUrl) {
+  if (isAuthenticated && (memberCheck as any)?.isMember && signerData && signerStatus !== 'approved' && (signerStatus === 'generated' || signerStatus === 'pending_approval') && approvalUrl) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
@@ -216,8 +216,8 @@ export default function FarcasterEmbed() {
 
 
   // Show verification status for users who are members but not fully approved
-  if (isAuthenticated && hasValidFid && !authLoading && memberCheck?.isMember && memberCheck?.status !== 'member') {
-    const { status, member } = memberCheck;
+  if (isAuthenticated && hasValidFid && !authLoading && (memberCheck as any)?.isMember && (memberCheck as any)?.status !== 'member') {
+    const { status, member } = memberCheck as any;
     
     return (
       <div className="max-w-2xl mx-auto p-6">
@@ -272,7 +272,7 @@ export default function FarcasterEmbed() {
         <div className="mb-12 flex justify-center">
           <PostTool
             pulse={activePulse}
-            member={memberCheck?.member}
+            member={(memberCheck as any)?.member}
             signerUuid={signerUuid}
           />
         </div>
@@ -290,11 +290,11 @@ export default function FarcasterEmbed() {
       )}
 
       {/* Upcoming and Previous Pulses */}
-      {pulsesData?.pulses?.length > 0 && (
+      {(pulsesData as any)?.pulses?.length > 0 && (
         <div className="space-y-8">
           {/* Upcoming Pulses */}
           {(() => {
-            const upcomingPulses = pulsesData.pulses
+            const upcomingPulses = (pulsesData as any).pulses
               .filter((pulse: Pulse) => !isToday(pulse.date) && !isPastDate(pulse.date))
               .sort((a: Pulse, b: Pulse) => a.date.localeCompare(b.date)); // Ascending for upcoming
             
@@ -449,7 +449,7 @@ export default function FarcasterEmbed() {
 
           {/* Previous Pulses */}
           {(() => {
-            const previousPulses = pulsesData.pulses
+            const previousPulses = (pulsesData as any).pulses
               .filter((pulse: Pulse) => !isToday(pulse.date) && isPastDate(pulse.date))
               .sort((a: Pulse, b: Pulse) => b.date.localeCompare(a.date)); // Descending for previous
             

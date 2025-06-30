@@ -339,6 +339,13 @@ The application follows a monorepo structure with clear separation between clien
   - **Farcaster Username Pre-filling**: Passport claim form now auto-fills with sanitized Farcaster username for better UX
   - **Admin Wallet Signing**: Admin wallet connection required for subdomain creation with proper signature authentication
   - **Production Ready**: Complete unified verification system working across registration and profile editing flows with smooth loading transitions, proper security, and functional email delivery
+- June 30, 2025. **AUTOMATIC MEMBER CREATION**: Implemented member creation on first authentication:
+  - **Streamlined Flow**: Member records now created automatically when users first authenticate via Farcaster
+  - **Flexible Verification Order**: Users can complete email verification or passport claiming in any order
+  - **Consistent Data State**: Every authenticated user has a member record with pending_signer initial status
+  - **Eliminated Race Conditions**: No more errors when users skip email verification and go directly to passport claiming
+  - **Simplified API Logic**: Removed duplicate member creation code from verification endpoints
+  - **Better UX**: Authentication flow works regardless of which verification step users choose first
 
 ## User Preferences
 

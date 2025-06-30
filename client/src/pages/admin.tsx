@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
 import { useAccount, useSignMessage } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
@@ -240,6 +241,46 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <p className="text-gray-600 mt-2">Manage pulses and community members</p>
+        
+        {/* Admin Wallet Connection Status */}
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-sm font-medium text-blue-800">
+              Admin Wallet Status:
+            </span>
+            {isConnected ? (
+              <div className="flex items-center gap-2">
+                <span className="text-green-600">✓ Connected</span>
+                <span className="text-xs text-gray-600 font-mono">
+                  {adminAddress?.slice(0, 6)}...{adminAddress?.slice(-4)}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-orange-600">⚠ Not Connected</span>
+                <ConnectButton.Custom>
+                  {({ openConnectModal }) => (
+                    <Button 
+                      onClick={openConnectModal} 
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Connect Wallet
+                    </Button>
+                  )}
+                </ConnectButton.Custom>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-blue-700 mt-2">
+            Wallet required to approve passport claims and create subdomains
+          </p>
+        </div>
+      </div>
+      
       <div className="space-y-8">
         {/* Create Pulse Section */}
         <div className="bg-white rounded-lg shadow p-6">

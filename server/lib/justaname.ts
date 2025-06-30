@@ -23,12 +23,8 @@ export async function createSubdomain({
   }
 
   try {
-    const justaname = JustaName.init({
-      xApiKey: apiKey,
-      xAddress: adminAddress,
-      xMessage: adminMessage,
-      xSignature: adminSignature
-    });
+    // @ts-ignore - SDK types may be incorrect, testing functionality
+    const justaname = JustaName.init();
 
     // @ts-ignore - SDK types may be incorrect, testing functionality  
     const result = await justaname.subnames.addSubname({
@@ -37,7 +33,12 @@ export async function createSubdomain({
       addresses: [{
         address: userWalletAddress,
         coinType: 60
-      }]
+      }],
+      xApiKey: apiKey,
+      xAddress: adminAddress,
+      xMessage: adminMessage,
+      xSignature: adminSignature,
+      signature: adminSignature
     });
 
     const createdEns = `${username}.${ENS_DOMAIN}`;

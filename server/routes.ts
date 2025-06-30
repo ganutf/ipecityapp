@@ -703,7 +703,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/members/check/:farcasterFid", async (req, res) => {
     try {
       const farcasterFid = parseInt(req.params.farcasterFid);
-      const member = await storage.getMember(farcasterFid);
+      let member = await storage.getMember(farcasterFid);
+      
+      // If no member exists, create one automatically after Farcaster authentication
+      if (!member) {
+        try {
+          // Get user profile from Neynar to populate username
+          const userResponse = await neynar.fetchBulkUsers({ fids: [farcasterFid] });
+          const userProfile = userResponse.users[0];
+          
+          // Create basic member record with pending_signer status
+          member = await storage.createMember({
+            farcasterFid,
+            farcasterUsername: userProfile?.username || '',
+            status: 'pending_signer',
+            emailVerified: false,
+            passportVerified: false,
+            profileCompleted: false
+          });
+          
+          console.log(`Created new member record for FID ${farcasterFid}`);
+        } catch (profileError) {
+          console.error("Error creating member record:", profileError);
+          // Create member without username if profile fetch fails
+          member = await storage.createMember({
+            farcasterFid,
+            status: 'pending_signer',
+            emailVerified: false,
+            passportVerified: false,
+            profileCompleted: false
+          });
+        }
+      }
+      
       res.json({ 
         isMember: !!member,
         approved: member?.approved || false,
@@ -779,43 +811,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.markEmailVerified(farcasterFid);
       
-      // Check if member exists, create if not
-      let member = await storage.getMember(farcasterFid);
-      if (!member) {
-        // Get user profile from Neynar to populate username
-        try {
-          const userResponse = await neynar.fetchBulkUsers({ fids: [farcasterFid] });
-          const userProfile = userResponse.users[0];
-          
-          // Create basic member record with email_verified status
-          member = await storage.createMember({
-            farcasterFid,
-            farcasterUsername: userProfile?.username || '',
-            email: verification.email,
-            status: 'email_verified',
-            emailVerified: true,
-            passportVerified: false,
-            profileCompleted: false
-          });
-        } catch (profileError) {
-          console.error("Error fetching user profile:", profileError);
-          // Create member without username if profile fetch fails
-          member = await storage.createMember({
-            farcasterFid,
-            email: verification.email,
-            status: 'email_verified',
-            emailVerified: true,
-            passportVerified: false,
-            profileCompleted: false
-          });
-        }
-      } else {
-        // Update existing member status
-        member = await storage.updateMember(farcasterFid, {
-          emailVerified: true,
-          status: 'email_verified'
-        });
-      }
+      // Update member status - member should already exist from member check endpoint
+      const member = await storage.updateMember(farcasterFid, {
+        email: verification.email,
+        emailVerified: true,
+        status: 'email_verified'
+      });
       
       res.json({ success: true, message: 'Email verified successfully', member });
     } catch (error) {

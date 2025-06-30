@@ -141,18 +141,21 @@ export default function AdminPage() {
         throw new Error("Admin wallet must be connected to approve claims");
       }
 
-      // Create SIWE message for subdomain creation authorization
-      const adminMessage = createSiweMessage({
-        domain: "justaname.id",
-        address: adminAddress,
-        statement: `Approve subdomain creation for member ${farcasterFid}`,
-        uri: "https://justaname.id",
-        version: "1",
-        chainId: 1,
-        nonce: Math.random().toString(36).substring(2, 15),
+      // Step 1: Get official SIWE challenge from JustaName
+      const challengeResponse = await fetch("/api/justaname/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminAddress }),
       });
       
-      // Sign the message with admin wallet
+      if (!challengeResponse.ok) {
+        const errorData = await challengeResponse.json();
+        throw new Error(errorData.error || "Failed to get JustaName challenge");
+      }
+      
+      const { challenge: adminMessage } = await challengeResponse.json();
+      
+      // Step 2: Sign the official challenge message
       const adminSignature = await signMessageAsync({ message: adminMessage });
 
       const response = await fetch("/api/passport/approve", {

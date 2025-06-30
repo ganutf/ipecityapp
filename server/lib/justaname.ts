@@ -21,6 +21,23 @@ const API_BASE_URL = "https://api.justaname.id";
 const ENS_DOMAIN = "ipecity.eth";
 const CHAIN_ID = 1; // Mainnet
 
+// New function to get challenge from JustaName
+export async function getJustaNameChallenge(adminAddress: string): Promise<string> {
+  try {
+    const { data } = await axios.post(`${API_BASE_URL}/ens/v1/siwe/request-challenge`, {
+      domain: 'justaname.id',
+      origin: 'https://justaname.id',
+      address: adminAddress,
+      chainId: CHAIN_ID,
+    });
+
+    return data.result.data.challenge;
+  } catch (error: any) {
+    console.error("❌ Failed to get JustaName challenge:", error.response?.data || error.message);
+    throw new Error(`JustaName challenge error: ${JSON.stringify(error.response?.data || error.message)}`);
+  }
+}
+
 export async function createSubdomain({
   username,
   userWalletAddress,

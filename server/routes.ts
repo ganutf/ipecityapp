@@ -478,6 +478,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get JustaName SIWE challenge
+  app.post("/api/justaname/challenge", async (req, res) => {
+    try {
+      const { adminAddress } = req.body;
+      
+      if (!adminAddress) {
+        return res.status(400).json({ error: "Admin address required" });
+      }
+      
+      const { getJustaNameChallenge } = await import('./lib/justaname.js');
+      const challenge = await getJustaNameChallenge(adminAddress);
+      
+      res.json({ challenge });
+    } catch (error: any) {
+      console.error("Challenge request failed:", error);
+      res.status(500).json({ error: error.message || "Failed to get challenge" });
+    }
+  });
+
   // Approve passport claim (admin only)
   app.post("/api/passport/approve", async (req, res) => {
     try {

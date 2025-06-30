@@ -74,9 +74,10 @@ export function PassportVerificationSection({
         refetchMemberStatus();
       } else if (passportClaimStatus === 'denied') {
         setPassportVerificationSent(false);
+        setShowClaimForm(false);
         toast({
           title: "Passport claim denied",
-          description: "Your passport claim was not approved. Please try again or contact support.",
+          description: "Your passport claim was not approved. You can try claiming a different passport.",
           variant: "destructive",
         });
       }

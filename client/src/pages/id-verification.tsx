@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -20,6 +20,7 @@ interface MemberStatus {
 export default function IdVerificationPage() {
   const { profile } = usePersistentAuth();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   
   const [emailComplete, setEmailComplete] = useState(false);
   const [passportComplete, setPassportComplete] = useState(false);
@@ -38,11 +39,13 @@ export default function IdVerificationPage() {
   const handleEmailComplete = () => {
     setEmailComplete(true);
     refetch(); // Refresh member status
+    queryClient.invalidateQueries({ queryKey: [`/api/members/check/${profile?.fid}`] });
   };
 
   const handlePassportComplete = () => {
     setPassportComplete(true);
     refetch(); // Refresh member status
+    queryClient.invalidateQueries({ queryKey: [`/api/members/check/${profile?.fid}`] });
   };
 
   const handleDone = () => {

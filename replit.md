@@ -333,6 +333,8 @@ The application follows a monorepo structure with clear separation between clien
   - **Email Domain Fix**: Configured all emails to use verified updates.ipe.city domain instead of Resend development domain
   - **Passport Claiming Fix**: Added passport claiming functionality for users without existing Ipê City domains, allowing them to claim new subdomains
   - **Email Verification Status Persistence**: Fixed home page to display email verification status instead of redirecting users, allowing verified users to see their progress
+  - **Passport Claim Status Polling**: Added real-time status monitoring to PassportVerificationSection with proper pending/approved/denied state handling
+  - **Enhanced ID Verification Flow**: ID verification page now shows proper status updates after admin approval with automatic polling and status display
   - **Production Ready**: Complete unified verification system working across registration and profile editing flows with smooth loading transitions, proper security, and functional email delivery
 
 ## User Preferences

@@ -779,7 +779,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.markEmailVerified(farcasterFid);
       
-      res.json({ success: true, message: 'Email verified successfully' });
+      // Check if member exists, create if not
+      let member = await storage.getMember(farcasterFid);
+      if (!member) {
+        // Get user profile from Neynar to populate username
+        try {
+          const userResponse = await neynar.fetchBulkUsers({ fids: [farcasterFid] });
+          const userProfile = userResponse.users[0];
+          
+          // Create basic member record with email_verified status
+          member = await storage.createMember({
+            farcasterFid,
+            farcasterUsername: userProfile?.username || '',
+            email: verification.email,
+            status: 'email_verified',
+            emailVerified: true,
+            passportVerified: false,
+            profileCompleted: false
+          });
+        } catch (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          // Create member without username if profile fetch fails
+          member = await storage.createMember({
+            farcasterFid,
+            email: verification.email,
+            status: 'email_verified',
+            emailVerified: true,
+            passportVerified: false,
+            profileCompleted: false
+          });
+        }
+      } else {
+        // Update existing member status
+        member = await storage.updateMember(farcasterFid, {
+          emailVerified: true,
+          status: 'email_verified'
+        });
+      }
+      
+      res.json({ success: true, message: 'Email verified successfully', member });
     } catch (error) {
       console.error("Confirm email verification error:", error);
       res.status(500).json({ error: "Failed to confirm email verification" });

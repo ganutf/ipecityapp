@@ -9,6 +9,7 @@ interface CreateSubdomainParams {
 }
 
 const ENS_DOMAIN = "ipecity.eth";
+const CHAIN_ID = 1; // Mainnet
 
 export async function createSubdomain({
   username,
@@ -23,35 +24,42 @@ export async function createSubdomain({
   }
 
   try {
-    // @ts-ignore - SDK types may be incorrect, testing functionality
-    const justaname = JustaName.init();
-
-    // @ts-ignore - SDK types may be incorrect, testing functionality  
-    const result = await justaname.subnames.addSubname({
-      username,
-      ensDomain: ENS_DOMAIN,
-      addresses: [{
-        address: userWalletAddress,
-        coinType: 60
-      }],
-      xApiKey: apiKey,
-      xAddress: adminAddress,
-      xMessage: adminMessage,
-      xSignature: adminSignature,
-      signature: adminSignature
+    // Initialize the SDK with proper configuration
+    const jan = JustaName.init({
+      ensDomains: [
+        {
+          domain: ENS_DOMAIN,
+          chainId: CHAIN_ID,
+          apiKey,
+        },
+      ],
+      networks: [{ chainId: CHAIN_ID }],
+      config: { domain: 'localhost', origin: 'http://localhost:5000' },
     });
+
+    // Create subdomain with proper parameter structure
+    await jan.subnames.addSubname(
+      {
+        username,
+        ensDomain: ENS_DOMAIN,
+        chainId: CHAIN_ID,
+        addresses: [{ address: userWalletAddress, coinType: 60 }],
+      },
+      {
+        xApiKey: apiKey,
+        xAddress: adminAddress,
+        xMessage: adminMessage,
+        xSignature: adminSignature,
+      }
+    );
 
     const createdEns = `${username}.${ENS_DOMAIN}`;
     console.log(`✅ Subdomain created with SDK: ${createdEns}`);
     return createdEns;
   } catch (error: any) {
-    console.error("❌ Failed to create subdomain with SDK:", error);
-    
-    // Re-throw with more specific error message
-    if (error.message) {
-      throw new Error(`JustaName SDK error: ${error.message}`);
-    }
-    throw new Error(`Failed to create subdomain: ${error}`);
+    const msg = error?.message ?? String(error);
+    console.error("❌ Failed to create subdomain with SDK:", msg);
+    throw new Error(`JustaName SDK error: ${msg}`);
   }
 }
 

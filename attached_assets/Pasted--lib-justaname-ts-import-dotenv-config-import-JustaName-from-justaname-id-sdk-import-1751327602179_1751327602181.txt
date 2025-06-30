@@ -1,0 +1,114 @@
+// lib/justaname.ts
+import 'dotenv/config';
+import { JustaName } from '@justaname.id/sdk';
+import { Wallet } from 'ethers';
+
+interface CreateSubdomainParams {
+  /** sub-label to mint (e.g. “alice” → alice.ipecity.eth) */
+  username: string;
+  /** wallet that will own the new subdomain records (ETH address) */
+  userWalletAddress: string;
+  /** full, unmodified SIWE challenge text that was signed */
+  adminMessage: string;
+  /** signature of `adminMessage` (hex string) */
+  adminSignature: string;
+  /** address that signed `adminMessage` – must own / control the 2-LD */
+  adminAddress: string;
+}
+
+/** parent ENS name you control */
+const ENS_DOMAIN = 'ipecity.eth';
+/** chain on which the parent ENS name lives */
+const CHAIN_ID   = 1;               // 1 = mainnet, 11155111 = Sepolia, etc.
+
+/**
+ * Creates an ENS sub-domain off-chain via JustaName.
+ * Returns the full ENS name (e.g. "alice.ipecity.eth") on success.
+ */
+export async function createSubdomain({
+  username,
+  userWalletAddress,
+  adminMessage,
+  adminSignature,
+  adminAddress,
+}: CreateSubdomainParams): Promise<string> {
+  const apiKey = process.env.JUSTANAME_API_KEY;
+  if (!apiKey) {
+    throw new Error('JUSTANAME_API_KEY environment variable is required');
+  }
+
+  // --- initialise the SDK once per process (re-use this instance if you can) ---
+  const jan = JustaName.init({
+    ensDomains: [
+      {
+        domain : ENS_DOMAIN,
+        chainId: CHAIN_ID,
+        apiKey,                 // you can omit this here and pass it in the headers instead
+      },
+    ],
+    networks: [{ chainId: CHAIN_ID }],
+    config  : { domain: 'your-backend.com', origin: 'https://your-backend.com' },
+  });
+
+  try {
+    // ---------- 1st argument: payload ----------
+    // ---------- 2nd argument: headers ----------
+    await jan.subnames.addSubname(
+      {
+        username,
+        ensDomain: ENS_DOMAIN,
+        chainId  : CHAIN_ID,
+        addresses: [{ address: userWalletAddress, coinType: 60 }],
+      },
+      {
+        xApiKey   : apiKey,
+        xAddress  : adminAddress,
+        xMessage  : adminMessage,
+        xSignature: adminSignature,
+      },
+    );
+
+    const createdEns = `${username}.${ENS_DOMAIN}`;
+    console.log(`✅ Subdomain created with SDK: ${createdEns}`);
+    return createdEns;
+  } catch (error: any) {
+    // surface a clearer error for the caller / logs
+    const msg = error?.message ?? String(error);
+    console.error('❌ Failed to create subdomain with SDK:', msg);
+    throw new Error(`JustaName SDK error: ${msg}`);
+  }
+}
+
+/**
+ * Sanitises a user-supplied username so it is a valid ENS label.
+ * – lower-cases
+ * – strips everything except a-z and 0-9
+ * – caps length at 20 chars (optional, tweak to taste)
+ */
+export function sanitizeUsername(username: string): string {
+  return username
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')  // keep only [a-z0-9]
+    .slice(0, 20);
+}
+
+/* -------------------------------------------------------------------------- */
+/* OPTIONAL: helper to fetch a fresh SIWE challenge and signature in-house.   */
+/* If you already obtain `adminMessage` & `adminSignature` elsewhere, delete. */
+/* -------------------------------------------------------------------------- */
+
+export async function getAdminSignature(
+  adminWallet: Wallet,
+): Promise<{ adminMessage: string; adminSignature: string }> {
+  const jan = JustaName.getInstance();          // reuse the same instance
+  // 1) ask JustaName for a challenge
+  const { challenge } = await jan.siwe.requestChallenge({
+    address : await adminWallet.getAddress(),
+    chainId : CHAIN_ID,
+    domain  : 'justaname.id',
+    origin  : 'https://justaname.id',
+  });
+  // 2) sign it locally
+  const signature = await adminWallet.signMessage(challenge);
+  return { adminMessage: challenge, adminSignature: signature };
+}

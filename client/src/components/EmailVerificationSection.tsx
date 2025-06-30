@@ -140,7 +140,7 @@ export function EmailVerificationSection({
           }
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 text-center">
         {emailVerified ? (
           <div className="space-y-4">
             <div>

@@ -304,7 +304,7 @@ export function PassportVerificationSection({
           {statusDisplay.description}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 text-center">
         {passportVerified ? (
           <div className="space-y-4">
             <div>
@@ -312,7 +312,7 @@ export function PassportVerificationSection({
               <p className="text-sm text-gray-600">{currentPassport}</p>
             </div>
             <div>
-              <div className="text-sm font-medium">Connected Wallet</div>
+              <div className="text-sm font-medium">Wallet Connected</div>
               <p className="text-sm text-gray-600 break-all">{address}</p>
             </div>
             {allowChange && (

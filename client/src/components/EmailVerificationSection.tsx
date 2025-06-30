@@ -130,6 +130,7 @@ export function EmailVerificationSection({
 
   const cancelEmailChange = () => {
     setEmail(originalEmail);
+    setEmailVerified(true);
     setShowVerification(false);
     setVerificationCode("");
   };

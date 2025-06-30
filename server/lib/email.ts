@@ -12,10 +12,11 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   const isDevelopment = process.env.NODE_ENV === 'development';
+  const testMode = process.env.EMAIL_TEST_MODE === 'true';
   
-  // In development mode, only log emails without sending them
-  if (isDevelopment) {
-    console.log('📧 Email would be sent (DEVELOPMENT MODE - NO QUOTA USED):');
+  // Test mode - log emails without sending them (set EMAIL_TEST_MODE=true to enable)
+  if (isDevelopment && testMode) {
+    console.log('📧 Email would be sent (TEST MODE - NO QUOTA USED):');
     console.log('  To:', params.to);
     console.log('  From:', params.from);
     console.log('  Subject:', params.subject);
@@ -24,9 +25,9 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     return true;
   }
 
-  // Production mode - send real emails
+  // Send real emails (development or production)
   if (!resend) {
-    console.error('RESEND_API_KEY not configured for production email sending');
+    console.error('RESEND_API_KEY not configured for email sending');
     return false;
   }
 
@@ -42,10 +43,10 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     const result = await resend!.emails.send(emailData);
     
-    console.log(`Email sent successfully (PRODUCTION) to ${params.to}`, result);
+    console.log(`📧 Email sent successfully to ${params.to}`, result);
     return true;
   } catch (error) {
-    console.error('Resend email error:', error);
+    console.error('📧 Email sending failed:', error);
     return false;
   }
 }

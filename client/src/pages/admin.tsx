@@ -143,7 +143,7 @@ export default function AdminPage() {
 
       // Create SIWE message for subdomain creation authorization
       const adminMessage = createSiweMessage({
-        domain: "justaname",
+        domain: "justaname.id",
         address: adminAddress,
         statement: `Approve subdomain creation for member ${farcasterFid}`,
         uri: "https://justaname.id",

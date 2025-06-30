@@ -144,7 +144,7 @@ export function EmailVerificationSection({
         {emailVerified ? (
           <div className="space-y-4">
             <div>
-              <Label>Verified Email</Label>
+              <div className="text-sm font-medium">Verified Email</div>
               <p className="text-sm text-gray-600">{email}</p>
             </div>
             {allowChange && (

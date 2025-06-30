@@ -31,10 +31,10 @@ export default function IdVerificationPage() {
     enabled: !!profile?.fid,
   });
 
-  // Update completion states based on member status
+  // Update completion states based on member status (matching Profile page logic)
   const isEmailVerified = memberStatus?.member?.emailVerified || false;
   const isPassportVerified = !!memberStatus?.member?.ipePassport;
-  const bothComplete = (emailComplete || isEmailVerified) && (passportComplete || isPassportVerified);
+  const bothComplete = isEmailVerified && isPassportVerified;
 
   const handleEmailComplete = () => {
     setEmailComplete(true);

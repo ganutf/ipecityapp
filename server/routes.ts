@@ -1021,6 +1021,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint for JustAName subdomain creation
+  app.post("/api/test/subdomain", async (req, res) => {
+    try {
+      const { subdomain, ownerAddress } = req.body;
+      
+      if (!subdomain || !ownerAddress) {
+        return res.status(400).json({ error: "Missing subdomain or ownerAddress" });
+      }
+
+      console.log(`Testing subdomain creation: ${subdomain}.ipecity.eth for ${ownerAddress}`);
+      
+      // Test subdomain availability first
+      const availability = await checkSubdomainAvailability(subdomain, "ipecity.eth");
+      console.log("Subdomain availability:", availability);
+
+      // Attempt to create the subdomain
+      const result = await createSubdomain(subdomain, ownerAddress, "ipecity.eth");
+      console.log("Subdomain creation result:", result);
+
+      res.json({
+        success: true,
+        availability,
+        creation: result,
+        testComplete: true
+      });
+    } catch (error) {
+      console.error("Test subdomain creation error:", error);
+      res.status(500).json({ 
+        error: "Test failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   /* ───────────────────────────────────────────────────────────── */
   return createServer(app);
 }

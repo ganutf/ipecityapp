@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { updateCachedMemberStatus } from "@/hooks/use-persistent-auth";
 import { useAccount, useDisconnect, useSignMessage } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -73,9 +74,20 @@ export function PassportVerificationSection({
         }
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setPassportVerificationSent(true);
       setShowClaimForm(false);
+      
+      // Cache the updated member status immediately
+      if (data && data.member) {
+        updateCachedMemberStatus({
+          isMember: true,
+          status: 'pending_claim',
+          approved: false,
+          member: data.member
+        });
+      }
+      
       toast({
         title: "Passport claim submitted",
         description: "Your passport claim has been submitted for admin approval.",
@@ -122,9 +134,20 @@ export function PassportVerificationSection({
         }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setPassportVerified(true);
       setPassportVerificationSent(true);
+      
+      // Cache the updated member status immediately
+      if (data && data.member) {
+        updateCachedMemberStatus({
+          isMember: true,
+          status: 'member',
+          approved: true,
+          member: data.member
+        });
+      }
+      
       toast({
         title: "Passport verified",
         description: "Your Ipê City passport has been successfully verified.",

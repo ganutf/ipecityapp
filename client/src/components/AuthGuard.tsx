@@ -17,13 +17,28 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
   const { data: signerData, isLoading: signerLoading } = useQuery({
     queryKey: [`/api/neynar/signer/${profile?.fid}`],
     enabled: !!profile?.fid,
+    initialData: cachedSignerStatus ? { status: cachedSignerStatus } : undefined,
   });
 
   // Check member status
   const { data: memberStatus, isLoading: memberLoading } = useQuery({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
+    initialData: cachedMemberStatus,
   });
+
+  // Cache API responses when they're received
+  useEffect(() => {
+    if (signerData && (signerData as any).status) {
+      updateCachedSignerStatus((signerData as any).status);
+    }
+  }, [signerData]);
+
+  useEffect(() => {
+    if (memberStatus) {
+      updateCachedMemberStatus(memberStatus);
+    }
+  }, [memberStatus]);
 
   // Wait for both queries to complete before making routing decisions
   const isLoading = signerLoading || memberLoading;

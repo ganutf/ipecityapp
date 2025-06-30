@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { updateCachedMemberStatus } from "@/hooks/use-persistent-auth";
 
 interface EmailVerificationSectionProps {
   farcasterFid: number;
@@ -69,9 +70,20 @@ export function EmailVerificationSection({
         }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setEmailVerified(true);
       setShowVerification(false);
+      
+      // Cache the updated member status immediately
+      if (data && data.member) {
+        updateCachedMemberStatus({
+          isMember: true,
+          status: 'email_verified',
+          approved: false,
+          member: data.member
+        });
+      }
+      
       toast({
         title: "Email verified",
         description: "Your email has been successfully verified.",

@@ -60,15 +60,21 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         if (isMember) {
           const currentStatus = status;
           
-          // If user has email_verified status but not full member, redirect to unified verification
-          if (currentStatus === 'email_verified' || currentStatus === 'pending_claim') {
-            setLocation("/id-verification");
-            return;
-          }
-          
           // Member status - allow full access
           if (currentStatus === 'member') {
             // User is a full member, allow access to all pages
+            return;
+          }
+          
+          // Email verified or pending claim users can access home page but need verification for other protected pages
+          if (currentStatus === 'email_verified' || currentStatus === 'pending_claim') {
+            // Allow access to home page and profile, but redirect to verification for other protected pages
+            const currentPath = window.location.pathname;
+            if (requireApproval && currentPath !== '/' && currentPath !== '/profile' && currentPath !== '/id-verification') {
+              setLocation("/id-verification");
+              return;
+            }
+            // Allow access to home page and profile
             return;
           }
         }

@@ -27,18 +27,18 @@ export default function FarcasterEmbed() {
   const { data: signerData, isLoading: signerLoading, refetch: refetchSigner } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled:
-      isAuthenticated && !!viewerFid && memberCheck?.isMember && !authLoading,
+      isAuthenticated && !!viewerFid && (memberCheck as any)?.isMember && !authLoading,
     staleTime: 1000, // Keep data fresh
     refetchInterval: (data) => {
       // Poll every 2 seconds if signer is pending approval, otherwise don't poll
-      return data?.status === 'pending_approval' || data?.status === 'generated' ? 2000 : false;
+      return (data as any)?.status === 'pending_approval' || (data as any)?.status === 'generated' ? 2000 : false;
     },
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
-  const signerUuid = signerData?.signer_uuid || null;
-  const signerStatus = signerData?.status || 'pending_approval';
-  const approvalUrl = signerData?.signer_approval_url;
+  const signerUuid = (signerData as any)?.signer_uuid || null;
+  const signerStatus = (signerData as any)?.status || 'pending_approval';
+  const approvalUrl = (signerData as any)?.signer_approval_url;
 
   // Generate QR code when approval URL is available
   useEffect(() => {
@@ -58,13 +58,13 @@ export default function FarcasterEmbed() {
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: isAuthenticated && memberCheck?.isMember && !authLoading,
+    enabled: isAuthenticated && (memberCheck as any)?.isMember && !authLoading,
   });
 
   // Get user's executions
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
-    enabled: isAuthenticated && hasValidFid && memberCheck?.isMember && !authLoading,
+    enabled: isAuthenticated && hasValidFid && (memberCheck as any)?.isMember && !authLoading,
   });
 
   // Helper functions for date comparison
@@ -215,36 +215,46 @@ export default function FarcasterEmbed() {
 
 
 
-  if (isAuthenticated && hasValidFid && !authLoading && memberCheck && (!memberCheck?.isMember || !memberCheck?.approved)) {
-    // Check member status and redirect appropriately
-    const { isMember, status, approved } = memberCheck;
+  // Show verification status for users who are members but not fully approved
+  if (isAuthenticated && hasValidFid && !authLoading && memberCheck?.isMember && memberCheck?.status !== 'member') {
+    const { status, member } = memberCheck;
     
-    if (!isMember) {
-      // User not registered - redirect to registration
-      window.location.href = '/register';
-      return null;
-    }
-    
-    if (status === 'pending') {
-      // Registration pending - redirect to pending page
-      window.location.href = '/pending';
-      return null;
-    }
-    
-    if (status === 'denied') {
-      // Registration denied - redirect to pending page (shows denial message)
-      window.location.href = '/pending';
-      return null;
-    }
-    
-    if (!approved) {
-      // Not approved for some other reason
-      window.location.href = '/pending';
-      return null;
-    }
+    return (
+      <div className="max-w-2xl mx-auto p-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold text-blue-800 mb-3">Verification Status</h2>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Email Verification:</span>
+              {member?.emailVerified ? (
+                <span className="text-green-600 text-sm">✓ Verified</span>
+              ) : (
+                <span className="text-orange-600 text-sm">Pending</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Passport Verification:</span>
+              {member?.ipePassport ? (
+                <span className="text-green-600 text-sm">✓ Verified ({member.ipePassport})</span>
+              ) : (
+                <span className="text-orange-600 text-sm">Pending</span>
+              )}
+            </div>
+          </div>
+          <div className="mt-4">
+            <Link
+              href="/id-verification"
+              className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            >
+              Complete Verification
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  if (authLoading || (isAuthenticated && hasValidFid && (!memberCheck || !memberCheck.member || pulsesLoading || executionsLoading || signerData === undefined))) {
+  if (authLoading || (isAuthenticated && hasValidFid && (!memberCheck || pulsesLoading || executionsLoading || signerData === undefined))) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="text-center py-12">

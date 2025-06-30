@@ -53,7 +53,7 @@ export interface IStorage {
   // Passport Claims
   createPassportClaim(claim: PassportClaim): Promise<Member>;
   getPendingClaims(): Promise<Member[]>;
-  approvePassportClaim(farcasterFid: number): Promise<Member>;
+  approvePassportClaim(farcasterFid: number, ensName?: string): Promise<Member>;
   denyPassportClaim(farcasterFid: number): Promise<Member>;
   
   // Passport Verification
@@ -257,15 +257,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(members.createdAt));
   }
 
-  async approvePassportClaim(farcasterFid: number): Promise<Member> {
+  async approvePassportClaim(farcasterFid: number, ensName?: string): Promise<Member> {
+    const updateData: any = {
+      passportClaimStatus: 'approved',
+      status: 'member',
+      passportVerified: true,
+      updatedAt: new Date()
+    };
+
+    // If ENS name is provided, set it as the passport
+    if (ensName) {
+      updateData.ipePassport = ensName;
+    }
+
     const [member] = await db
       .update(members)
-      .set({
-        passportClaimStatus: 'approved',
-        status: 'member',
-        passportVerified: true,
-        updatedAt: new Date()
-      })
+      .set(updateData)
       .where(eq(members.farcasterFid, farcasterFid))
       .returning();
     return member;

@@ -135,23 +135,48 @@ export default function AdminPage() {
 
   const approvePassportClaimMutation = useMutation({
     mutationFn: async (farcasterFid: number) => {
+      // Check if admin wallet is connected
+      if (!isConnected || !adminAddress) {
+        throw new Error("Admin wallet must be connected to approve claims");
+      }
+
+      // Create message for subdomain creation authorization
+      const adminMessage = `Approve subdomain creation for member ${farcasterFid} at ${Date.now()}`;
+      
+      // Sign the message with admin wallet
+      const adminSignature = await signMessageAsync({ message: adminMessage });
+
       const response = await fetch("/api/passport/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farcasterFid }),
+        body: JSON.stringify({ 
+          farcasterFid,
+          adminMessage,
+          adminSignature,
+          adminAddress
+        }),
       });
+      
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to approve passport claim");
+        throw new Error(errorData.error || "Failed to approve passport claim");
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-      toast({ title: "Success", description: "Passport claim approved successfully" });
+      const ensName = data.ensName || "passport";
+      toast({ 
+        title: "Success", 
+        description: `Subdomain ${ensName} created and passport claim approved!` 
+      });
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" 
+      });
     },
   });
 

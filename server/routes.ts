@@ -507,7 +507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Subdomain created successfully: ${createdEns}`);
         
         // Update member with the created passport
-        const updatedMember = await storage.approvePassportClaim(farcasterFid);
+        const updatedMember = await storage.approvePassportClaim(farcasterFid, createdEns);
         
         // Send approval email
         if (updatedMember.email) {

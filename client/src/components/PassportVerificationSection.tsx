@@ -10,6 +10,7 @@ import { useAccount, useDisconnect, useSignMessage } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 interface PassportVerificationSectionProps {
   farcasterFid: number;
@@ -48,6 +49,23 @@ export function PassportVerificationSection({
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
   const { ensName, isLoading: ensLoading, error: ensError } = useEnsLookup(address);
+  const { profile } = usePersistentAuth();
+
+  // Username sanitization function
+  const sanitizeUsername = (username: string): string => {
+    return username
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '') // Keep only letters and numbers
+      .slice(0, 20); // Ensure max length
+  };
+
+  // Pre-fill passport name with sanitized Farcaster username when claim form opens
+  useEffect(() => {
+    if (showClaimForm && profile?.username && !claimPassport) {
+      const sanitizedUsername = sanitizeUsername(profile.username);
+      setClaimPassport(sanitizedUsername);
+    }
+  }, [showClaimForm, profile?.username, claimPassport]);
 
   // Query member status to check passport claim status
   const { data: memberData, refetch: refetchMemberStatus } = useQuery<MemberData>({

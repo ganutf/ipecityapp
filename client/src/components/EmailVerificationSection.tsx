@@ -23,6 +23,7 @@ export function EmailVerificationSection({
   allowChange = false
 }: EmailVerificationSectionProps) {
   const [email, setEmail] = useState(currentEmail);
+  const [originalEmail, setOriginalEmail] = useState(currentEmail);
   const [verificationCode, setVerificationCode] = useState("");
   const [showVerification, setShowVerification] = useState(false);
   const [emailVerified, setEmailVerified] = useState(isVerified);
@@ -31,6 +32,7 @@ export function EmailVerificationSection({
   // Sync local state with props when they change (for page refreshes)
   useEffect(() => {
     setEmail(currentEmail || "");
+    setOriginalEmail(currentEmail || "");
     setEmailVerified(isVerified || false);
   }, [currentEmail, isVerified]);
 
@@ -126,6 +128,12 @@ export function EmailVerificationSection({
     setVerificationCode("");
   };
 
+  const cancelEmailChange = () => {
+    setEmail(originalEmail);
+    setShowVerification(false);
+    setVerificationCode("");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -171,13 +179,23 @@ export function EmailVerificationSection({
             </div>
 
             {!showVerification ? (
-              <Button
-                onClick={handleSendVerification}
-                disabled={sendVerificationMutation.isPending || !email}
-                className="w-full"
-              >
-                {sendVerificationMutation.isPending ? "Sending..." : "Send Verification Code"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSendVerification}
+                  disabled={sendVerificationMutation.isPending || !email || email === originalEmail}
+                  className="flex-1"
+                >
+                  {sendVerificationMutation.isPending ? "Sending..." : "Send Verification Code"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={cancelEmailChange}
+                  disabled={sendVerificationMutation.isPending}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
             ) : (
               <div className="space-y-4">
                 <div>

@@ -487,9 +487,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Admin address required" });
       }
       
+      console.log('🔄 Getting JustaName challenge for address:', adminAddress);
+      
       const { getJustaNameChallenge } = await import('./lib/justaname.js');
       const challenge = await getJustaNameChallenge(adminAddress);
       
+      console.log('✅ Challenge received:', challenge);
       res.json({ challenge });
     } catch (error: any) {
       console.error("Challenge request failed:", error);

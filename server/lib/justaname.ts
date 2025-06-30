@@ -24,16 +24,28 @@ const CHAIN_ID = 1; // Mainnet
 // New function to get challenge from JustaName
 export async function getJustaNameChallenge(adminAddress: string): Promise<string> {
   try {
-    const { data } = await axios.post(`${API_BASE_URL}/ens/v1/siwe/request-challenge`, {
+    console.log('🔄 Requesting challenge from JustaName for:', adminAddress);
+    
+    const response = await axios.post(`${API_BASE_URL}/ens/v1/siwe/request-challenge`, {
       domain: 'justaname.id',
       origin: 'https://justaname.id',
       address: adminAddress,
       chainId: CHAIN_ID,
     });
 
-    return data.result.data.challenge;
+    console.log('📋 JustaName response status:', response.status);
+    console.log('📋 JustaName response data:', JSON.stringify(response.data, null, 2));
+
+    const challenge = response.data.result.data.challenge;
+    console.log('✅ Extracted challenge:', challenge);
+    
+    return challenge;
   } catch (error: any) {
-    console.error("❌ Failed to get JustaName challenge:", error.response?.data || error.message);
+    console.error("❌ Failed to get JustaName challenge:");
+    console.error("Response status:", error.response?.status);
+    console.error("Response data:", error.response?.data);
+    console.error("Error message:", error.message);
+    
     throw new Error(`JustaName challenge error: ${JSON.stringify(error.response?.data || error.message)}`);
   }
 }

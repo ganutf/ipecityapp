@@ -15,7 +15,6 @@ import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
 import { lookupEnsName } from "./lib/ensLookup";
-import { createSubdomain, checkSubdomainAvailability } from "./lib/justaname";
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -489,25 +488,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid claim data" });
       }
 
-      // Create subdomain using JustAName API
-      console.log(`Creating subdomain: ${member.passportClaimSubdomain}.ipecity.eth for wallet: ${member.passportClaimWalletAddress}`);
-      
-      const subdomainResult = await createSubdomain(
-        member.passportClaimSubdomain,
-        member.passportClaimWalletAddress,
-        "ipecity.eth"
-      );
-
-      if (!subdomainResult.success) {
-        console.error("Subdomain creation failed:", subdomainResult.error);
-        return res.status(500).json({ 
-          error: `Failed to create subdomain: ${subdomainResult.error}` 
-        });
-      }
-
-      console.log("Subdomain creation result:", subdomainResult);
-      
-      // Approve the claim after successful subdomain creation
+      // TODO: Implement JustAName API call to create subdomain
+      // For now, just approve the claim
       const updatedMember = await storage.approvePassportClaim(farcasterFid);
       
       // Send approval email
@@ -1018,40 +1000,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Update member profile error:", error);
       res.status(500).json({ error: "Failed to update profile" });
-    }
-  });
-
-  // Test endpoint for JustAName subdomain creation
-  app.post("/api/test/subdomain", async (req, res) => {
-    try {
-      const { subdomain, ownerAddress } = req.body;
-      
-      if (!subdomain || !ownerAddress) {
-        return res.status(400).json({ error: "Missing subdomain or ownerAddress" });
-      }
-
-      console.log(`Testing subdomain creation: ${subdomain}.ipecity.eth for ${ownerAddress}`);
-      
-      // Test subdomain availability first
-      const availability = await checkSubdomainAvailability(subdomain, "ipecity.eth");
-      console.log("Subdomain availability:", availability);
-
-      // Attempt to create the subdomain
-      const result = await createSubdomain(subdomain, ownerAddress, "ipecity.eth");
-      console.log("Subdomain creation result:", result);
-
-      res.json({
-        success: true,
-        availability,
-        creation: result,
-        testComplete: true
-      });
-    } catch (error) {
-      console.error("Test subdomain creation error:", error);
-      res.status(500).json({ 
-        error: "Test failed",
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
     }
   });
 

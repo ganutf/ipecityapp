@@ -8,7 +8,7 @@ import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { http } from "wagmi";
-
+import { JustaNameProvider } from "@justaname.id/react";
 import { AuthGuard, RequireAuth, RequireApproval } from "@/components/AuthGuard";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
@@ -37,7 +37,25 @@ const wagmiConfig = getDefaultConfig({
   },
 });
 
-
+const justaNameConfig = {
+  networks: [
+    {
+      chainId: mainnet.id,
+      providerUrl: 'https://eth.blockrazor.xyz',
+    },
+  ],
+  ensDomains: [
+    {
+      chainId: mainnet.id,
+      ensDomain: 'ipecity.eth',
+    },
+  ],
+  config: {
+    domain: window.location.hostname,
+    origin: window.location.origin,
+    subnameChallengeTtl: 10 * 60 * 1000, // 10 minutes
+  },
+};
 
 function Router() {
   return (
@@ -64,10 +82,12 @@ function App() {
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
+            <JustaNameProvider config={justaNameConfig}>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+              </TooltipProvider>
+            </JustaNameProvider>
           </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>

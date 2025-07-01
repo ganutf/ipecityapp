@@ -10,6 +10,7 @@ import { Pencil, Save, X } from "lucide-react";
 import { useAccount, useSignMessage } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAddSubname } from "@justaname.id/react";
 import { mainnet } from "viem/chains";
 
 export default function AdminPage() {
@@ -21,48 +22,8 @@ export default function AdminPage() {
   const { address: adminAddress, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
   
-  // Client-side JustaName API integration
-  const createSubdomainClientSide = async (username: string, userWalletAddress: string) => {
-    if (!adminAddress) throw new Error("Admin wallet not connected");
-    
-    // Step 1: Get JustaName challenge
-    const challengeResponse = await fetch("/api/passport/request-challenge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ adminAddress }),
-    });
-    
-    if (!challengeResponse.ok) throw new Error("Failed to get challenge");
-    const { challenge } = await challengeResponse.json();
-    
-    // Step 2: Sign challenge with admin wallet
-    const signature = await signMessageAsync({ message: challenge });
-    
-    // Step 3: Call JustaName API directly
-    const response = await fetch('https://api.justaname.id/v1/subnames', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_JUSTANAME_API_KEY || ''}`
-      },
-      body: JSON.stringify({
-        ensDomain: 'ipecity.eth',
-        username: username,
-        chainId: mainnet.id,
-        userWalletAddress: userWalletAddress,
-        adminMessage: challenge,
-        adminSignature: signature,
-        adminAddress: adminAddress
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to create subdomain');
-    }
-    
-    return await response.json();
-  };
+  // JustaName hook for subdomain creation
+  const { addSubname } = useAddSubname();
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -196,11 +157,12 @@ export default function AdminPage() {
         throw new Error("No passport claim found for this member");
       }
 
-      // Step 2: Create subdomain using client-side JustaName API call
-      await createSubdomainClientSide(
-        member.passportClaimSubdomain,
-        member.passportClaimWalletAddress
-      );
+      // Step 2: Create subdomain using JustaName client-side hook
+      await addSubname({
+        ensDomain: 'ipecity.eth',
+        username: member.passportClaimSubdomain,
+        chainId: mainnet.id,
+      });
 
       // Step 3: Update member status to approved (no server-side subdomain creation needed)
       const response = await fetch("/api/passport/approve", {

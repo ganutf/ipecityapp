@@ -6,7 +6,7 @@ import {
   isApiErrorResponse,
 } from "@neynar/nodejs-sdk";
 import { storage } from "./storage";
-import { insertPulseSchema, updatePulseSchema, insertMemberSchema, insertPulseExecutionSchema, registrationSchema, insertEmailVerificationSchema, insertPassportVerificationSchema, passportClaimSchema, emailVerificationRequestSchema } from "@shared/schema";
+import { insertPulseSchema, updatePulseSchema, insertMemberSchema, insertPulseExecutionSchema, registrationSchema, insertEmailVerificationSchema, insertPassportVerificationSchema, emailVerificationRequestSchema, passportVerificationSchema, MembershipState } from "@shared/schema";
 import QRCode from "qrcode";
 import { getSignedKey } from "./lib/getSignedKey";
 import { sendVerificationEmail, sendApprovalEmail, sendDenialEmail, generateVerificationCode } from "./lib/email";

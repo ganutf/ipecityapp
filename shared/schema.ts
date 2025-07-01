@@ -38,34 +38,34 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Community members table
+// Community members table with simplified state machine
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),
   farcasterFid: integer("farcaster_fid").notNull().unique(),
   farcasterUsername: varchar("farcaster_username"),
-  name: varchar("name"),
-  email: varchar("email").unique(),
+  farcasterDisplayName: varchar("farcaster_display_name"),
+  farcasterPfpUrl: varchar("farcaster_pfp_url"),
+  farcasterBio: text("farcaster_bio"),
+  
+  // Contact information
+  email: varchar("email"),
   emailVerified: boolean("email_verified").default(false).notNull(),
+  
+  // Social profiles
   xHandle: varchar("x_handle"),
   linkedin: varchar("linkedin"),
   miniBio: text("mini_bio"),
   profileTags: text("profile_tags").array(),
-  ipePassport: varchar("ipe_passport").unique(), // User-chosen subdomain for <user-id>.ipecity.eth
+  
+  // Passport information
+  ipePassport: varchar("ipe_passport"), // ENS subdomain like user.ipecity.eth
   passportVerified: boolean("passport_verified").default(false).notNull(),
+  connectedWalletAddress: varchar("connected_wallet_address"),
   
-  // New status field to track registration flow
-  status: varchar("status").default("pending_signer").notNull(), // pending_signer, signer_approved, email_verified, pending_passport, pending_claim, member
+  // Simplified state machine
+  membershipState: varchar("membership_state").default("NEW_MEMBER").notNull(), // NEW_MEMBER, WAITING_MEMBERSHIP_VERIFICATION, MEMBERSHIP_ACTIVE
   
-  // Passport claiming fields
-  passportClaimSubdomain: varchar("passport_claim_subdomain"),
-  passportClaimWalletAddress: varchar("passport_claim_wallet_address"),
-  passportClaimStatus: varchar("passport_claim_status"), // pending, approved, denied
-  
-  // Legacy fields (keeping for backward compatibility)
-  registrationStatus: varchar("registration_status").default("pending").notNull(), // pending, approved, denied
-  approved: boolean("approved").default(false).notNull(),
-  
-  profileCompleted: boolean("profile_completed").default(false).notNull(),
+  // Timestamps
   registeredAt: timestamp("registered_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -153,6 +153,15 @@ export const passportVerifications = pgTable("passport_verifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Define membership states enum
+export const MembershipState = {
+  NEW_MEMBER: "NEW_MEMBER",
+  WAITING_MEMBERSHIP_VERIFICATION: "WAITING_MEMBERSHIP_VERIFICATION", 
+  MEMBERSHIP_ACTIVE: "MEMBERSHIP_ACTIVE"
+} as const;
+
+export type MembershipStateType = typeof MembershipState[keyof typeof MembershipState];
+
 // Insert schemas
 export const insertMemberSchema = createInsertSchema(members).omit({
   id: true,
@@ -172,40 +181,24 @@ export const updateMemberSchema = createInsertSchema(members).omit({
 export const registrationSchema = createInsertSchema(members).pick({
   farcasterFid: true,
   farcasterUsername: true,
-  name: true,
-  email: true,
-  xHandle: true,
-  linkedin: true,
-  miniBio: true,
-  profileTags: true,
-  ipePassport: true,
+  farcasterDisplayName: true,
+  farcasterPfpUrl: true,
+  farcasterBio: true,
 }).extend({
-  email: z.string().email("Invalid email address"),
-  ipePassport: z.string()
-    .min(3, "Passport must be at least 3 characters")
-    .max(20, "Passport must be at most 20 characters")
-    .regex(/^[a-z0-9]+$/, "Passport can only contain lowercase letters and numbers"),
+  email: z.string().email("Invalid email address").optional(),
 });
 
-// New schema for passport claims
-export const passportClaimSchema = createInsertSchema(members).pick({
-  farcasterFid: true,
-  passportClaimSubdomain: true,
-  passportClaimWalletAddress: true,
-}).extend({
-  passportClaimSubdomain: z.string()
-    .min(3, "Subdomain must be at least 3 characters")
-    .max(20, "Subdomain must be at most 20 characters")
-    .regex(/^[a-z0-9]+$/, "Subdomain can only contain lowercase letters and numbers"),
-  passportClaimWalletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address"),
+// Email verification schema
+export const emailVerificationRequestSchema = z.object({
+  farcasterFid: z.number(),
+  email: z.string().email("Invalid email address"),
 });
 
-// Email verification schema (separate from full registration)
-export const emailVerificationRequestSchema = createInsertSchema(members).pick({
-  farcasterFid: true,
-  email: true,
-}).extend({
-  email: z.string().email("Invalid email address"),
+// Passport verification schema
+export const passportVerificationSchema = z.object({
+  farcasterFid: z.number(),
+  ipePassport: z.string().min(1, "Passport is required"),
+  connectedWalletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address"),
 });
 
 export const insertEmailVerificationSchema = createInsertSchema(emailVerifications).omit({
@@ -256,9 +249,9 @@ export type InsertPulseExecution = z.infer<typeof insertPulseExecutionSchema>;
 export type UserSigner = typeof userSigners.$inferSelect;
 export type InsertUserSigner = z.infer<typeof insertUserSignerSchema>;
 
-// New types for passport claiming
-export type PassportClaim = z.infer<typeof passportClaimSchema>;
+// New types 
 export type EmailVerificationRequest = z.infer<typeof emailVerificationRequestSchema>;
+export type PassportVerificationRequest = z.infer<typeof passportVerificationSchema>;
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;

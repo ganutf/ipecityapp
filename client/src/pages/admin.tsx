@@ -193,20 +193,25 @@ export default function AdminPage() {
             }),
           });
           
-        } catch (subdomainError) {
+        } catch (subdomainError: any) {
           console.error("JustaName subdomain creation failed:", subdomainError);
           
           // Log error to server
-          await fetch("/api/subnames/log", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "error",
-              username: member.passportClaimSubdomain,
-              error: subdomainError.message || String(subdomainError),
-              stack: subdomainError.stack || null
-            }),
-          });
+          try {
+            await fetch("/api/subnames/log", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "error",
+                username: member.passportClaimSubdomain,
+                error: subdomainError.message || String(subdomainError),
+                stack: subdomainError.stack || null,
+                fullError: JSON.stringify(subdomainError, Object.getOwnPropertyNames(subdomainError))
+              }),
+            });
+          } catch (logError) {
+            console.error("Failed to log error to server:", logError);
+          }
           
           throw new Error(`Failed to create subdomain: ${subdomainError.message || subdomainError}`);
         }

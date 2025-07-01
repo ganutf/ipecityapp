@@ -38,6 +38,7 @@ const wagmiConfig = getDefaultConfig({
 });
 
 const justaNameConfig = {
+  apiKey: import.meta.env.VITE_JUSTANAME_API_KEY || '',
   networks: [
     {
       chainId: mainnet.id,

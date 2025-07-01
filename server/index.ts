@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import { registerSimplifiedRoutes } from "./simplified-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 
@@ -79,7 +79,8 @@ app.use((req, res, next) => {
     validateEnvironment();
     await testDatabaseConnection();
 
-    const server = await registerRoutes(app);
+    registerSimplifiedRoutes(app);
+    const server = await setupVite(app, require("http").createServer(app));
 
     // Enhanced error handling middleware
     app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

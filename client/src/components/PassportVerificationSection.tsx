@@ -11,6 +11,8 @@ import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { useAddSubname } from "@justaname.id/react";
+import { mainnet } from "viem/chains";
 
 interface PassportVerificationSectionProps {
   farcasterFid: number;
@@ -48,6 +50,7 @@ export function PassportVerificationSection({
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
+  const { addSubname } = useAddSubname();
   const { ensName, isLoading: ensLoading, error: ensError } = useEnsLookup(address);
   const { profile } = usePersistentAuth();
 
@@ -109,7 +112,30 @@ export function PassportVerificationSection({
         throw new Error("Wallet not connected");
       }
 
-      // Create SIWE message for claiming
+      console.log("=== PASSPORT CLAIMING PROCESS ===");
+      console.log("Step 1: Creating subdomain with JustaName SDK...");
+      console.log(`Subdomain: ${passportName}.ipecity.eth`);
+      console.log("User wallet:", address);
+
+      // Step 1: Create subdomain using JustaName SDK (user-initiated)
+      try {
+        const subdomainParams = {
+          ensDomain: 'ipecity.eth',
+          username: passportName,
+          chainId: mainnet.id
+        };
+        
+        console.log("Subdomain parameters:", subdomainParams);
+        await addSubname(subdomainParams);
+        console.log("✓ Subdomain created successfully with JustaName SDK");
+      } catch (subdomainError) {
+        console.error("✗ Subdomain creation failed:", subdomainError);
+        throw new Error(`Failed to create subdomain: ${subdomainError.message || 'Unknown error'}`);
+      }
+
+      console.log("Step 2: Submitting claim to backend for admin approval...");
+
+      // Step 2: Create SIWE message for claiming
       const message = createSiweMessage({
         domain: window.location.host,
         address,
@@ -123,7 +149,7 @@ export function PassportVerificationSection({
       // Sign the message
       const signature = await signMessageAsync({ message });
 
-      // Submit claim
+      // Step 3: Submit claim to backend (subdomain already created)
       return apiRequest("/api/passport/claim", {
         method: "POST",
         body: JSON.stringify({

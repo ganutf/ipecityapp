@@ -177,52 +177,8 @@ export default function AdminPage() {
         console.log("Chain ID:", mainnet.id);
         console.log("Admin wallet:", adminAddress);
         
-        const subdomainParams = {
-          ensDomain: 'ipecity.eth',
-          username: member.passportClaimSubdomain,
-          chainId: mainnet.id
-        };
-        console.log("Subdomain creation parameters:", subdomainParams);
-        
-        try {
-          // Try client-side first, fallback to server-side if it fails
-          console.log("Attempting client-side subdomain creation...");
-          await addSubname(subdomainParams);
-          console.log(`Subdomain created successfully: ${member.passportClaimSubdomain}.ipecity.eth`);
-          
-          // Log success to server
-          await fetch("/api/subnames/log", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "success",
-              username: member.passportClaimSubdomain,
-              message: "Subdomain created successfully"
-            }),
-          });
-          
-        } catch (subdomainError: any) {
-          console.error("JustaName subdomain creation failed:", subdomainError);
-          
-          // Log error to server
-          try {
-            await fetch("/api/subnames/log", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                type: "error",
-                username: member.passportClaimSubdomain,
-                error: subdomainError.message || String(subdomainError),
-                stack: subdomainError.stack || null,
-                fullError: JSON.stringify(subdomainError, Object.getOwnPropertyNames(subdomainError))
-              }),
-            });
-          } catch (logError) {
-            console.error("Failed to log error to server:", logError);
-          }
-          
-          throw new Error(`Failed to create subdomain: ${subdomainError.message || subdomainError}`);
-        }
+        // Subdomain creation is now handled by user during claim process
+        console.log(`Subdomain should already exist: ${member.passportClaimSubdomain}.ipecity.eth`);
 
         // Step 3: Update member status to approved (no server-side subdomain creation needed)
         console.log("Step 3: Updating member status on server...");

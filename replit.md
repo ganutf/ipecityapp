@@ -346,6 +346,13 @@ The application follows a monorepo structure with clear separation between clien
   - **Eliminated Race Conditions**: No more errors when users skip email verification and go directly to passport claiming
   - **Simplified API Logic**: Removed duplicate member creation code from verification endpoints
   - **Better UX**: Authentication flow works regardless of which verification step users choose first
+- July 1, 2025. **SERVER-SIDE SUBDOMAIN CREATION**: Migrated subdomain creation from client-side React hooks to server-side API integration:
+  - **Removed @justaname.id/react Dependency**: Eliminated client-side React hooks approach due to configuration complexity
+  - **Enhanced Server Architecture**: Created `/api/passport/create-subdomain` endpoint for centralized subdomain management
+  - **Streamlined Admin Flow**: Simplified admin approval process without complex client-side provider configuration
+  - **Maintained JustaName Integration**: Kept existing server-side JustaName SDK for reliable subdomain creation
+  - **Error Handling**: Improved error messaging and debugging for subdomain creation failures
+  - **Email Notifications**: Automatic approval emails sent after successful subdomain creation
 
 ## User Preferences
 

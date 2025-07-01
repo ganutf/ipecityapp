@@ -19,9 +19,6 @@ export default function AdminPage() {
   // Wallet connection for admin signing
   const { address: adminAddress, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  
-  // JustaName hook for subdomain creation
-  const { addSubname } = useAddSubname();
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -144,40 +141,21 @@ export default function AdminPage() {
         throw new Error("Admin wallet must be connected to approve claims");
       }
 
-      // Step 1: Get member data to find the passport claim subdomain
-      const memberResponse = await fetch(`/api/members/${farcasterFid}`);
-      if (!memberResponse.ok) {
-        throw new Error("Failed to get member data");
-      }
-      const member = await memberResponse.json();
-      
-      if (!member.passportClaimSubdomain) {
-        throw new Error("No passport claim found for this member");
-      }
-
-      // Step 2: Create subdomain using JustaName client-side hook
-      try {
-        await addSubname({
-          ensDomain: "ipecity.eth",
-          username: member.passportClaimSubdomain,
-          chainId: mainnet.id,
-        });
-      } catch (error: any) {
-        throw new Error(`Failed to create subdomain: ${error.message}`);
-      }
-
-      // Step 3: Update member status to approved
-      const response = await fetch("/api/passport/approve-simple", {
+      // Create subdomain and approve claim using server-side JustaName integration
+      const response = await fetch("/api/passport/create-subdomain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farcasterFid }),
+        body: JSON.stringify({ 
+          farcasterFid,
+          adminAddress
+        }),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to approve passport claim");
+        throw new Error(errorData.error || "Failed to create subdomain and approve claim");
       }
-      return { ...response.json(), ensName: `${member.passportClaimSubdomain}.ipecity.eth` };
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });

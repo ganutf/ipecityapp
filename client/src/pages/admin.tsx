@@ -173,13 +173,21 @@ export default function AdminPage() {
         // Step 2: Create subdomain using JustaName client-side hook
         console.log("Step 2: Creating subdomain using JustaName hook...");
         console.log(`Creating subdomain for user: ${member.passportClaimSubdomain}.ipecity.eth`);
+        console.log("API Key available:", !!import.meta.env.VITE_JUSTANAME_API_KEY);
+        console.log("Chain ID:", mainnet.id);
+        console.log("Admin wallet:", adminAddress);
+        
+        const subdomainParams = {
+          ensDomain: 'ipecity.eth',
+          username: member.passportClaimSubdomain,
+          chainId: mainnet.id
+        };
+        console.log("Subdomain creation parameters:", subdomainParams);
         
         try {
-          await addSubname({
-            ensDomain: 'ipecity.eth',
-            username: member.passportClaimSubdomain,
-            chainId: mainnet.id
-          });
+          // Try client-side first, fallback to server-side if it fails
+          console.log("Attempting client-side subdomain creation...");
+          await addSubname(subdomainParams);
           console.log(`Subdomain created successfully: ${member.passportClaimSubdomain}.ipecity.eth`);
           
           // Log success to server

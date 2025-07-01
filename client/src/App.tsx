@@ -58,6 +58,13 @@ const justaNameConfig = {
   },
 };
 
+// Debug: Log API key availability (without exposing the actual key)
+console.log('JustaName API Key configured:', !!import.meta.env.VITE_JUSTANAME_API_KEY);
+console.log('JustaName config:', { 
+  ...justaNameConfig, 
+  apiKey: justaNameConfig.apiKey ? '[CONFIGURED]' : '[MISSING]' 
+});
+
 function Router() {
   return (
     <AuthGuard>

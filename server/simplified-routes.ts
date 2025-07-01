@@ -1,18 +1,12 @@
 import express, { Express, Request, Response } from "express";
-import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
 import { simplifiedStorage } from "./simplified-storage";
 import { Member } from "@shared/Member";
 import { 
   emailVerificationRequestSchema, 
   passportVerificationSchema, 
-  MembershipState,
-  registrationSchema 
+  MembershipState
 } from "@shared/schema";
 import { sendVerificationEmail, generateVerificationCode } from "./lib/email";
-
-const neynarClient = new NeynarAPIClient(new Configuration({
-  apiKey: process.env.NEYNAR_API_KEY!,
-}));
 
 export function registerSimplifiedRoutes(app: Express) {
   

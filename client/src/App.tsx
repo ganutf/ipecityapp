@@ -55,6 +55,11 @@ const justaNameConfig = {
       ensDomain: "ipecity.eth",
     },
   ],
+  config: {
+    domain: window.location.hostname,
+    origin: window.location.origin,
+    subnameChallengeTtl: 600000,
+  },
 };
 
 

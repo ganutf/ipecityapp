@@ -10,8 +10,6 @@ import { Pencil, Save, X } from "lucide-react";
 import { useAccount, useSignMessage } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAddSubname } from "@justaname.id/react";
-import { mainnet } from "viem/chains";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();

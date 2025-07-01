@@ -1106,7 +1106,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /* ───────────────────────────────────────────────────────────── */
-  // All JustaName server-side endpoints removed - subdomain creation now purely client-side
+  // JustaName SDK might still call server endpoints for subdomain creation
+  app.post("/api/subnames/add", async (req, res) => {
+    console.log("=== JustaName SDK Server Call ===");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    console.log("Headers:", req.headers);
+    
+    // Return error to force client-side operation
+    res.status(501).json({ 
+      error: "Server-side subdomain creation disabled",
+      message: "Use client-side JustaName SDK only"
+    });
+  });
 
   return createServer(app);
 }

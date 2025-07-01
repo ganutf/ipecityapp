@@ -129,10 +129,13 @@ export function PassportVerificationSection({
       console.log("Step 1: Creating subdomain with JustaName SDK...");
       console.log(`Subdomain: ${passportName}.ipecity.eth`);
 
-      // Step 1: Create subdomain using JustaName SDK (simplified approach)
+      // Step 1: Create subdomain using JustaName SDK (matching working pattern)
+      const textConfig: Record<string, string> = {};
+      
       await addSubname({
         ensDomain: "ipecity.eth",
         username: passportName.toLowerCase(),
+        text: textConfig,
         chainId: mainnet.id,
       });
 

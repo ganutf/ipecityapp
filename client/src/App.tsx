@@ -41,8 +41,9 @@ const wagmiConfig = getDefaultConfig({
   },
 });
 
+
+
 const justaNameConfig = {
-  apiKey: import.meta.env.VITE_JUSTANAME_API_KEY,
   networks: [
     {
       chainId: mainnet.id,
@@ -51,16 +52,18 @@ const justaNameConfig = {
   ],
   ensDomains: [
     {
+      apiKey: import.meta.env.VITE_JUSTANAME_API_KEY,
       chainId: mainnet.id,
       ensDomain: "ipecity.eth",
     },
   ],
   config: {
-    domain: window.location.hostname,
+    domain: window.location.origin,
     origin: window.location.origin,
     subnameChallengeTtl: 600000,
   },
 };
+
 
 
 function Router() {

@@ -547,13 +547,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ensName = `${member.passportClaimSubdomain}.ipecity.eth`;
       console.log(`Approving claim for ENS name: ${ensName}`);
       
+      console.log("Calling storage.approvePassportClaim...");
       const updatedMember = await storage.approvePassportClaim(farcasterFid, ensName);
       console.log(`Member updated successfully. New status: ${updatedMember.status}`);
       
-      // Send approval email
+      // Send approval email (with error handling to prevent server crash)
       if (updatedMember.email) {
         console.log(`Sending approval email to: ${updatedMember.email}`);
-        await sendApprovalEmail(updatedMember.email, ensName);
+        try {
+          await sendApprovalEmail(updatedMember.email, ensName);
+          console.log("Approval email sent successfully");
+        } catch (emailError) {
+          console.error("Failed to send approval email (non-fatal):", emailError);
+          // Continue with response even if email fails
+        }
       } else {
         console.log("No email address found - skipping approval email");
       }

@@ -60,7 +60,7 @@ export function registerSimplifiedRoutes(app: Express) {
       const verificationCode = generateVerificationCode();
       
       // Store verification code
-      await simplifiedStorage.createEmailVerification({
+      await legacyAdapter.createEmailVerification({
         farcasterFid,
         email,
         verificationCode,
@@ -97,7 +97,7 @@ export function registerSimplifiedRoutes(app: Express) {
     try {
       const { farcasterFid, verificationCode } = req.body;
       
-      const verification = await simplifiedStorage.getEmailVerification(farcasterFid, verificationCode);
+      const verification = await legacyAdapter.getEmailVerification(farcasterFid, verificationCode);
       
       if (!verification) {
         return res.status(400).json({ 
@@ -115,7 +115,7 @@ export function registerSimplifiedRoutes(app: Express) {
       }
       
       // Mark email as verified
-      const updatedMember = await simplifiedStorage.markEmailVerified(farcasterFid, verification.email);
+      const updatedMember = await legacyAdapter.markEmailVerified(farcasterFid, verification.email);
       const memberInstance = new Member(updatedMember);
       
       res.json({ 
@@ -143,7 +143,7 @@ export function registerSimplifiedRoutes(app: Express) {
       // For now, we'll assume the validation is successful
       
       // Mark passport as verified
-      const updatedMember = await simplifiedStorage.markPassportVerified(
+      const updatedMember = await legacyAdapter.markPassportVerified(
         farcasterFid, 
         ipePassport, 
         connectedWalletAddress
@@ -170,7 +170,7 @@ export function registerSimplifiedRoutes(app: Express) {
   app.get("/api/members/:fid", async (req: Request, res: Response) => {
     try {
       const fid = parseInt(req.params.fid);
-      const member = await simplifiedStorage.getMember(fid);
+      const member = await legacyAdapter.getMember(fid);
       
       if (!member) {
         return res.status(404).json({ 
@@ -210,7 +210,7 @@ export function registerSimplifiedRoutes(app: Express) {
           return obj;
         }, {});
       
-      const updatedMember = await simplifiedStorage.updateMember(fid, filteredUpdate);
+      const updatedMember = await legacyAdapter.updateMember(fid, filteredUpdate);
       const memberInstance = new Member(updatedMember);
       
       res.json({

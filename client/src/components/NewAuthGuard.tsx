@@ -21,14 +21,17 @@ export function NewAuthGuard({ children, requireAuth = false }: AuthGuardProps) 
   });
 
   // Check/create member status
-  const { data: memberData, isLoading: memberLoading } = useQuery({
+  const { data: memberData, isLoading: memberLoading } = useQuery<{
+    success: boolean;
+    member: any;
+  }>({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
 
   // Create Member instance when data is available
   useEffect(() => {
-    if (memberData?.member) {
+    if (memberData?.success && memberData?.member) {
       setMember(new Member(memberData.member));
     } else {
       setMember(null);

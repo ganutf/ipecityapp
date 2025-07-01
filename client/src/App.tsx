@@ -19,6 +19,7 @@ import IdVerificationPage from "@/pages/id-verification";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 import "@rainbow-me/rainbowkit/styles.css";
+import { JustaNameProvider } from "@justaname.id/react";
 
 const authKitConfig = {
   relay: "https://relay.farcaster.xyz",

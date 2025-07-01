@@ -10,6 +10,8 @@ import { Pencil, Save, X } from "lucide-react";
 import { useAccount, useSignMessage } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAddSubname } from "@justaname.id/react";
+import { mainnet } from "viem/chains";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
@@ -19,6 +21,9 @@ export default function AdminPage() {
   // Wallet connection for admin signing
   const { address: adminAddress, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  
+  // JustaName hook for subdomain creation
+  const { addSubname } = useAddSubname();
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -141,40 +146,40 @@ export default function AdminPage() {
         throw new Error("Admin wallet must be connected to approve claims");
       }
 
-      // Step 1: Request JustaName challenge
-      const challengeResponse = await fetch("/api/passport/request-challenge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminAddress }),
-      });
-      
-      if (!challengeResponse.ok) {
-        const errorData = await challengeResponse.json();
-        throw new Error(errorData.error || "Failed to request challenge");
+      // Step 1: Get member data to find the passport claim subdomain
+      const memberResponse = await fetch(`/api/members/${farcasterFid}`);
+      if (!memberResponse.ok) {
+        throw new Error("Failed to get member data");
       }
+      const member = await memberResponse.json();
       
-      const { challenge } = await challengeResponse.json();
-      
-      // Step 2: Sign the JustaName challenge
-      const adminSignature = await signMessageAsync({ message: challenge });
+      if (!member.passportClaimSubdomain) {
+        throw new Error("No passport claim found for this member");
+      }
 
-      // Step 3: Approve passport claim with signed challenge
-      const response = await fetch("/api/passport/approve", {
+      // Step 2: Create subdomain using JustaName client-side hook
+      try {
+        await addSubname({
+          ensDomain: "ipecity.eth",
+          username: member.passportClaimSubdomain,
+          chainId: mainnet.id,
+        });
+      } catch (error: any) {
+        throw new Error(`Failed to create subdomain: ${error.message}`);
+      }
+
+      // Step 3: Update member status to approved
+      const response = await fetch("/api/passport/approve-simple", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          farcasterFid,
-          adminMessage: challenge,
-          adminSignature,
-          adminAddress
-        }),
+        body: JSON.stringify({ farcasterFid }),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to approve passport claim");
       }
-      return response.json();
+      return { ...response.json(), ensName: `${member.passportClaimSubdomain}.ipecity.eth` };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });

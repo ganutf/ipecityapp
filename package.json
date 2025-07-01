@@ -15,6 +15,7 @@
     "@farcaster/hub-nodejs": "^0.15.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
+    "@justaname.id/react": "^0.3.202",
     "@justaname.id/sdk": "^0.2.199",
     "@neondatabase/serverless": "^0.10.4",
     "@neynar/nodejs-sdk": "^2.46.0",

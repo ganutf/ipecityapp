@@ -1,5 +1,5 @@
 import express, { Express, Request, Response } from "express";
-import { simplifiedStorage } from "./simplified-storage";
+import { legacyAdapter } from "./legacy-adapter";
 import { Member } from "@shared/Member";
 import { 
   emailVerificationRequestSchema, 
@@ -15,7 +15,7 @@ export function registerSimplifiedRoutes(app: Express) {
     try {
       const fid = parseInt(req.params.fid);
       
-      let member = await simplifiedStorage.getMember(fid);
+      let member = await legacyAdapter.getMember(fid);
       
       // Auto-create member if doesn't exist
       if (!member) {
@@ -31,7 +31,7 @@ export function registerSimplifiedRoutes(app: Express) {
             passportVerified: false,
           };
           
-          member = await simplifiedStorage.createMember(newMemberData);
+          member = await legacyAdapter.createMember(newMemberData);
         } catch (error) {
           console.error("Error creating member:", error);
           return res.status(500).json({ success: false, error: "Failed to create member" });

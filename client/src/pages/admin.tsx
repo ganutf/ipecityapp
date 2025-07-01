@@ -178,8 +178,7 @@ export default function AdminPage() {
           await addSubname({
             ensDomain: 'ipecity.eth',
             username: member.passportClaimSubdomain,
-            chainId: mainnet.id,
-            records: {} // Fix for JustaName SDK bug - prevents contentHash undefined error
+            chainId: mainnet.id
           });
           console.log(`Subdomain created successfully: ${member.passportClaimSubdomain}.ipecity.eth`);
           

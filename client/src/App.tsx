@@ -40,17 +40,21 @@ const wagmiConfig = getDefaultConfig({
 const justaNameConfig = {
   networks: [
     {
-      chainId: 1,
-      providerUrl: 'https://mainnet.infura.io/v3/demo' // Using demo provider for development
-    }
+      chainId: mainnet.id,
+      providerUrl: 'https://eth.blockrazor.xyz',
+    },
   ],
   ensDomains: [
     {
-      chainId: 1,
-      domain: 'ipecity.eth'
-    }
+      chainId: mainnet.id,
+      ensDomain: 'ipecity.eth',
+    },
   ],
-  apiKey: import.meta.env.VITE_JUSTANAME_API_KEY || 'demo'
+  config: {
+    domain: window.location.hostname,
+    origin: window.location.origin,
+    subnameChallengeTtl: 10 * 60 * 1000, // 10 minutes
+  },
 };
 
 function Router() {

@@ -98,7 +98,7 @@ export async function requestJustaNameChallenge(adminAddress: string): Promise<s
     const { challenge } = await jan.siwe.requestChallenge({
       address: adminAddress,
       chainId: CHAIN_ID,
-      domain: ENS_DOMAIN,
+      domain: 'justaname.id',
       origin: 'https://justaname.id',
     });
 

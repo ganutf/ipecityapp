@@ -1114,6 +1114,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /* ───────────────────────────────────────────────────────────── */
+  // Mock endpoint for client-side subdomain creation tracking
+  app.post("/api/subnames/add", async (req, res) => {
+    console.log("=== CLIENT-SIDE SUBDOMAIN CREATION ===");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+    console.log("This is a client-side operation - server just logging for debugging");
+    res.json({ success: true, message: "Client-side subdomain creation logged" });
+  });
+
   return createServer(app);
 }
 

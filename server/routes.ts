@@ -443,6 +443,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get individual member by FID
+  app.get("/api/members/:fid", async (req, res) => {
+    try {
+      const fid = parseInt(req.params.fid);
+      if (isNaN(fid)) {
+        return res.status(400).json({ error: "Invalid FID" });
+      }
+      
+      const member = await storage.getMember(fid);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      
+      res.json(member);
+    } catch (error: any) {
+      console.error("Failed to get member:", error);
+      res.status(500).json({ error: "Failed to get member" });
+    }
+  });
+
   // Update member status
   app.post("/api/members/status", async (req, res) => {
     try {

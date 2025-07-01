@@ -8,6 +8,7 @@ import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { http } from "wagmi";
+import { JustaNameProvider } from "@justaname.id/react";
 import { AuthGuard, RequireAuth, RequireApproval } from "@/components/AuthGuard";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
@@ -36,6 +37,22 @@ const wagmiConfig = getDefaultConfig({
   },
 });
 
+const justaNameConfig = {
+  networks: [
+    {
+      chainId: 1,
+      providerUrl: 'https://mainnet.infura.io/v3/demo' // Using demo provider for development
+    }
+  ],
+  ensDomains: [
+    {
+      chainId: 1,
+      domain: 'ipecity.eth'
+    }
+  ],
+  apiKey: import.meta.env.VITE_JUSTANAME_API_KEY || 'demo'
+};
+
 function Router() {
   return (
     <AuthGuard>
@@ -61,10 +78,12 @@ function App() {
       <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
+            <JustaNameProvider config={justaNameConfig}>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+              </TooltipProvider>
+            </JustaNameProvider>
           </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>

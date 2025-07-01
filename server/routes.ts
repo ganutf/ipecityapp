@@ -498,22 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Request JustaName challenge for admin signing
-  app.post("/api/passport/request-challenge", async (req, res) => {
-    try {
-      const { adminAddress } = req.body;
-      
-      if (!adminAddress) {
-        return res.status(400).json({ error: "Admin address required" });
-      }
-      
-      const challenge = await requestJustaNameChallenge(adminAddress);
-      res.json({ challenge });
-    } catch (error: any) {
-      console.error("Challenge request failed:", error);
-      res.status(500).json({ error: "Failed to request challenge" });
-    }
-  });
+  // JustaName challenge endpoint removed - subdomain creation now client-side only
 
   // Approve passport claim (admin only)
   app.post("/api/passport/approve", async (req, res) => {

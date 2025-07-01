@@ -354,6 +354,8 @@ The application follows a monorepo structure with clear separation between clien
   - **User-Owned Subdomains**: Subdomains are created with user's wallet address, not admin address
   - **Error Handling**: Enhanced debugging and error messages for subdomain creation process
   - **API Cleanup**: Updated @justaname.id/react to latest version (0.3.202) with proper parameter structure
+  - **Server-Side Cleanup**: Completely removed all server-side JustaName API code, endpoints, and dependencies
+  - **Pure Client-Side**: Subdomain creation now purely client-side using @justaname.id/react hook with minimal parameters
 
 ## User Preferences
 

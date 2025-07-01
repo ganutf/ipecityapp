@@ -141,19 +141,38 @@ export default function AdminPage() {
         throw new Error("Admin wallet must be connected to approve claims");
       }
 
-      // Create subdomain and approve claim using server-side JustaName integration
-      const response = await fetch("/api/passport/create-subdomain", {
+      // Step 1: Request JustaName challenge
+      const challengeResponse = await fetch("/api/passport/request-challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminAddress }),
+      });
+      
+      if (!challengeResponse.ok) {
+        const errorData = await challengeResponse.json();
+        throw new Error(errorData.error || "Failed to request challenge");
+      }
+      
+      const { challenge } = await challengeResponse.json();
+      
+      // Step 2: Sign the JustaName challenge
+      const adminSignature = await signMessageAsync({ message: challenge });
+
+      // Step 3: Approve passport claim with signed challenge
+      const response = await fetch("/api/passport/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           farcasterFid,
+          adminMessage: challenge,
+          adminSignature,
           adminAddress
         }),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create subdomain and approve claim");
+        throw new Error(errorData.error || "Failed to approve passport claim");
       }
       return response.json();
     },

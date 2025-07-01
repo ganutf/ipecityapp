@@ -574,7 +574,12 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="default"
-                                onClick={() => approvePassportClaimMutation.mutate(member.farcasterFid)}
+                                onClick={() => {
+                                  console.log("APPROVE BUTTON CLICKED for FID:", member.farcasterFid);
+                                  console.log("Wallet connected:", isConnected);
+                                  console.log("Admin address:", adminAddress);
+                                  approvePassportClaimMutation.mutate(member.farcasterFid);
+                                }}
                                 disabled={approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
                                 className="bg-green-600 hover:bg-green-700"
                               >

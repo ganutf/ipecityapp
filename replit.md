@@ -346,6 +346,14 @@ The application follows a monorepo structure with clear separation between clien
   - **Eliminated Race Conditions**: No more errors when users skip email verification and go directly to passport claiming
   - **Simplified API Logic**: Removed duplicate member creation code from verification endpoints
   - **Better UX**: Authentication flow works regardless of which verification step users choose first
+- July 1, 2025. **ARCHITECTURAL FIX: USER-INITIATED SUBDOMAIN CREATION**:
+  - **Fixed Core Architecture**: Moved JustaName SDK subdomain creation from admin approval to user claim process
+  - **Correct Flow**: Users now create subdomains when claiming passports, admins only approve membership status  
+  - **Updated Passport Claiming**: Added JustaName SDK integration to PassportVerificationSection component
+  - **Simplified Admin Panel**: Removed subdomain creation logic from admin approval flow
+  - **User-Owned Subdomains**: Subdomains are created with user's wallet address, not admin address
+  - **Error Handling**: Enhanced debugging and error messages for subdomain creation process
+  - **API Cleanup**: Updated @justaname.id/react to latest version (0.3.202) with proper parameter structure
 
 ## User Preferences
 

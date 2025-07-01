@@ -128,7 +128,7 @@ export function PassportVerificationSection({
         console.log("Subdomain parameters:", subdomainParams);
         await addSubname(subdomainParams);
         console.log("✓ Subdomain created successfully with JustaName SDK");
-      } catch (subdomainError) {
+      } catch (subdomainError: any) {
         console.error("✗ Subdomain creation failed:", subdomainError);
         throw new Error(`Failed to create subdomain: ${subdomainError.message || 'Unknown error'}`);
       }

@@ -170,51 +170,36 @@ export default function AdminPage() {
           throw new Error("No passport claim found for this member");
         }
 
-        // Step 2: Create subdomain using JustaName client-side hook
-        console.log("Step 2: Creating subdomain using JustaName hook...");
+        // Step 2: Create subdomain via server-side JustaName API
+        console.log("Step 2: Creating subdomain via server-side JustaName API...");
         console.log(`Creating subdomain for user: ${member.passportClaimSubdomain}.ipecity.eth`);
         
-        try {
-          await addSubname({
-            ensDomain: 'ipecity.eth',
+        const subdomainResponse = await fetch("/api/passport/create-subdomain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            farcasterFid,
             username: member.passportClaimSubdomain,
-            chainId: mainnet.id,
-          });
-          console.log(`Subdomain created successfully: ${member.passportClaimSubdomain}.ipecity.eth`);
+            walletAddress: adminAddress
+          }),
+        });
+        
+        console.log(`Subdomain creation response: ${subdomainResponse.status} ${subdomainResponse.statusText}`);
+        
+        if (!subdomainResponse.ok) {
+          const errorText = await subdomainResponse.text();
+          console.error(`Subdomain creation failed (${subdomainResponse.status}):`, errorText);
           
-          // Log success to server
-          await fetch("/api/subnames/log", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "success",
-              username: member.passportClaimSubdomain,
-              message: "Subdomain created successfully"
-            }),
-          });
-          
-        } catch (subdomainError: any) {
-          console.error("JustaName subdomain creation failed:", subdomainError);
-          
-          // Log error to server
           try {
-            await fetch("/api/subnames/log", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                type: "error",
-                username: member.passportClaimSubdomain,
-                error: subdomainError.message || String(subdomainError),
-                stack: subdomainError.stack || null,
-                fullError: JSON.stringify(subdomainError, Object.getOwnPropertyNames(subdomainError))
-              }),
-            });
-          } catch (logError) {
-            console.error("Failed to log error to server:", logError);
+            const errorData = JSON.parse(errorText);
+            throw new Error(errorData.error || `Subdomain creation failed: ${subdomainResponse.status}`);
+          } catch (parseError) {
+            throw new Error(`Subdomain creation failed: ${subdomainResponse.status} - ${errorText.substring(0, 200)}`);
           }
-          
-          throw new Error(`Failed to create subdomain: ${subdomainError.message || subdomainError}`);
         }
+        
+        const subdomainResult = await subdomainResponse.json();
+        console.log("Subdomain creation result:", subdomainResult);
 
         // Step 3: Update member status to approved (no server-side subdomain creation needed)
         console.log("Step 3: Updating member status on server...");

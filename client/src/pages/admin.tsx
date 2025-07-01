@@ -158,13 +158,16 @@ export default function AdminPage() {
       }
 
       // Step 2: Create subdomain using JustaName client-side hook
+      console.log(`Creating subdomain for user: ${member.passportClaimSubdomain}.ipecity.eth`);
       await addSubname({
         ensDomain: 'ipecity.eth',
         username: member.passportClaimSubdomain,
         chainId: mainnet.id,
       });
+      console.log(`Subdomain created successfully: ${member.passportClaimSubdomain}.ipecity.eth`);
 
       // Step 3: Update member status to approved (no server-side subdomain creation needed)
+      console.log(`Updating member status to approved for FID: ${farcasterFid}`);
       const response = await fetch("/api/passport/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -174,11 +177,23 @@ export default function AdminPage() {
         }),
       });
       
+      console.log(`Server response status: ${response.status} ${response.statusText}`);
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to approve passport claim");
+        const responseText = await response.text();
+        console.error(`Server error response:`, responseText);
+        
+        try {
+          const errorData = JSON.parse(responseText);
+          throw new Error(errorData.error || `Server error: ${response.status}`);
+        } catch (parseError) {
+          throw new Error(`Server returned invalid response: ${response.status} - ${responseText.substring(0, 100)}`);
+        }
       }
-      return response.json();
+      
+      const responseText = await response.text();
+      console.log(`Server success response:`, responseText);
+      return JSON.parse(responseText);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });

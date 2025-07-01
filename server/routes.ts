@@ -518,26 +518,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Approve passport claim (admin only)
   app.post("/api/passport/approve", async (req, res) => {
     try {
+      console.log("=== PASSPORT APPROVAL REQUEST ===");
+      console.log("Request body:", JSON.stringify(req.body, null, 2));
+      
       const { farcasterFid, skipSubdomainCreation } = req.body;
+      
+      if (!farcasterFid) {
+        console.error("Missing farcasterFid in request");
+        return res.status(400).json({ error: "FarcasterFid required" });
+      }
+      
+      console.log(`Processing approval for FID: ${farcasterFid}`);
       
       // Get member details
       const member = await storage.getMember(farcasterFid);
+      console.log(`Found member:`, member ? { 
+        fid: member.farcasterFid, 
+        claimSubdomain: member.passportClaimSubdomain,
+        status: member.status 
+      } : 'null');
+      
       if (!member || !member.passportClaimSubdomain) {
+        console.error("Invalid claim data - missing member or subdomain");
         return res.status(400).json({ error: "Invalid claim data" });
       }
 
       // Since subdomain creation is handled client-side, just approve the claim
       const ensName = `${member.passportClaimSubdomain}.ipecity.eth`;
+      console.log(`Approving claim for ENS name: ${ensName}`);
+      
       const updatedMember = await storage.approvePassportClaim(farcasterFid, ensName);
+      console.log(`Member updated successfully. New status: ${updatedMember.status}`);
       
       // Send approval email
       if (updatedMember.email) {
+        console.log(`Sending approval email to: ${updatedMember.email}`);
         await sendApprovalEmail(updatedMember.email, ensName);
+      } else {
+        console.log("No email address found - skipping approval email");
       }
       
-      res.json({ success: true, member: updatedMember, ensName });
+      const response = { success: true, member: updatedMember, ensName };
+      console.log("=== PASSPORT APPROVAL SUCCESS ===");
+      console.log("Response:", JSON.stringify(response, null, 2));
+      
+      res.json(response);
     } catch (error) {
-      console.error("Approve passport claim error:", error);
+      console.error("=== PASSPORT APPROVAL ERROR ===");
+      console.error("Error details:", error);
+      console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
       res.status(500).json({ error: "Failed to approve passport claim" });
     }
   });

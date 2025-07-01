@@ -15,7 +15,7 @@ import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
 import { lookupEnsName } from "./lib/ensLookup";
-import { requestJustaNameChallenge } from "./lib/justaname";
+// JustaName server-side imports removed
 
 /* local unions for clarity */
 type Reaction = "like" | "recast";
@@ -1121,40 +1121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /* ───────────────────────────────────────────────────────────── */
-  // Mock endpoint for client-side subdomain creation tracking
-  app.post("/api/subnames/add", async (req, res) => {
-    console.log("=== CLIENT-SIDE SUBDOMAIN CREATION ===");
-    console.log("Request body:", JSON.stringify(req.body, null, 2));
-    console.log("This is a client-side operation - server just logging for debugging");
-    res.json({ success: true, message: "Client-side subdomain creation logged" });
-  });
-
-  // Endpoint for logging JustaName hook results (success/error)
-  app.post("/api/subnames/log", async (req, res) => {
-    try {
-      const { type, username, message, error, stack } = req.body;
-      
-      if (type === "success") {
-        console.log("=== JUSTANAME HOOK SUCCESS ===");
-        console.log(`Username: ${username}`);
-        console.log(`Message: ${message}`);
-        console.log(`Subdomain created: ${username}.ipecity.eth`);
-      } else if (type === "error") {
-        console.log("=== JUSTANAME HOOK ERROR ===");
-        console.log(`Username: ${username}`);
-        console.log(`Error: ${error}`);
-        if (stack) {
-          console.log(`Stack trace: ${stack}`);
-        }
-        console.log("Full error details:", JSON.stringify(req.body, null, 2));
-      }
-      
-      res.json({ success: true, logged: true });
-    } catch (logError) {
-      console.error("Failed to log JustaName hook result:", logError);
-      res.status(500).json({ error: "Failed to log result" });
-    }
-  });
+  // All JustaName server-side endpoints removed - subdomain creation now purely client-side
 
   return createServer(app);
 }

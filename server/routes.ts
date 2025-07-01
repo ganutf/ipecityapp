@@ -498,6 +498,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // JustaName SDK endpoint for subdomain creation
+  app.post("/api/subnames/add", async (req, res) => {
+    try {
+      const { ensDomain, username, chainId } = req.body;
+      
+      console.log("JustaName subdomain creation request:", { ensDomain, username, chainId });
+      
+      // For now, just return success - the actual creation happens through JustaName
+      res.json({ 
+        success: true, 
+        message: "Subdomain creation initiated",
+        ensDomain,
+        username,
+        fullDomain: `${username}.${ensDomain}`
+      });
+    } catch (error: any) {
+      console.error("JustaName subdomain creation error:", error);
+      res.status(500).json({ error: "Failed to create subdomain" });
+    }
+  });
+
   // Request JustaName challenge for admin signing
   app.post("/api/passport/request-challenge", async (req, res) => {
     try {

@@ -128,26 +128,15 @@ export function PassportVerificationSection({
       console.log("=== PASSPORT CLAIMING PROCESS ===");
       console.log("Step 1: Creating subdomain with JustaName SDK...");
       console.log(`Subdomain: ${passportName}.ipecity.eth`);
-      console.log("User wallet:", address);
 
-      // Step 1: Create subdomain using JustaName SDK (user-initiated)
-      try {
-        const subdomainParams = {
-          ensDomain: "ipecity.eth",
-          username: passportName,
-          chainId: mainnet.id,
-        };
+      // Step 1: Create subdomain using JustaName SDK (simplified approach)
+      await addSubname({
+        ensDomain: "ipecity.eth",
+        username: passportName.toLowerCase(),
+        chainId: mainnet.id,
+      });
 
-        console.log("Subdomain parameters:", subdomainParams);
-        await addSubname(subdomainParams);
-        console.log("✓ Subdomain created successfully with JustaName SDK");
-      } catch (subdomainError: any) {
-        console.error("✗ Subdomain creation failed:", subdomainError);
-        throw new Error(
-          `Failed to create subdomain: ${subdomainError.message || "Unknown error"}`,
-        );
-      }
-
+      console.log("✓ Subdomain created successfully with JustaName SDK");
       console.log("Step 2: Submitting claim to backend for admin approval...");
 
       // Step 2: Create SIWE message for claiming

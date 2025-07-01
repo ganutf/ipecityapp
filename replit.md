@@ -356,6 +356,8 @@ The application follows a monorepo structure with clear separation between clien
   - **API Cleanup**: Updated @justaname.id/react to latest version (0.3.202) with proper parameter structure
   - **Server-Side Cleanup**: Completely removed all server-side JustaName API code, endpoints, and dependencies
   - **Pure Client-Side**: Subdomain creation now purely client-side using @justaname.id/react hook with minimal parameters
+  - **Configuration Fix**: Added missing API key and origin parameters to JustaName configuration
+  - **Simplified Implementation**: Streamlined addSubname call to match working reference code with minimal parameters
 
 ## User Preferences
 

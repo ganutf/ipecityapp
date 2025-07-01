@@ -358,6 +358,7 @@ The application follows a monorepo structure with clear separation between clien
   - **Pure Client-Side**: Subdomain creation now purely client-side using @justaname.id/react hook with minimal parameters
   - **Configuration Fix**: Added missing API key and origin parameters to JustaName configuration
   - **Simplified Implementation**: Streamlined addSubname call to match working reference code with minimal parameters
+  - **JustaName API Configuration Resolved**: Fixed configuration structure by moving API key to ensDomains array and using full HTTPS URLs for domain/origin parameters
 
 ## User Preferences
 

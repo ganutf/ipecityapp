@@ -1129,6 +1129,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true, message: "Client-side subdomain creation logged" });
   });
 
+  // Endpoint for logging JustaName hook results (success/error)
+  app.post("/api/subnames/log", async (req, res) => {
+    try {
+      const { type, username, message, error, stack } = req.body;
+      
+      if (type === "success") {
+        console.log("=== JUSTANAME HOOK SUCCESS ===");
+        console.log(`Username: ${username}`);
+        console.log(`Message: ${message}`);
+        console.log(`Subdomain created: ${username}.ipecity.eth`);
+      } else if (type === "error") {
+        console.log("=== JUSTANAME HOOK ERROR ===");
+        console.log(`Username: ${username}`);
+        console.log(`Error: ${error}`);
+        if (stack) {
+          console.log(`Stack trace: ${stack}`);
+        }
+        console.log("Full error details:", JSON.stringify(req.body, null, 2));
+      }
+      
+      res.json({ success: true, logged: true });
+    } catch (logError) {
+      console.error("Failed to log JustaName hook result:", logError);
+      res.status(500).json({ error: "Failed to log result" });
+    }
+  });
+
   return createServer(app);
 }
 

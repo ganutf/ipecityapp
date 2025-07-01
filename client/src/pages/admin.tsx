@@ -174,12 +174,42 @@ export default function AdminPage() {
         console.log("Step 2: Creating subdomain using JustaName hook...");
         console.log(`Creating subdomain for user: ${member.passportClaimSubdomain}.ipecity.eth`);
         
-        await addSubname({
-          ensDomain: 'ipecity.eth',
-          username: member.passportClaimSubdomain,
-          chainId: mainnet.id,
-        });
-        console.log(`Subdomain created successfully: ${member.passportClaimSubdomain}.ipecity.eth`);
+        try {
+          await addSubname({
+            ensDomain: 'ipecity.eth',
+            username: member.passportClaimSubdomain,
+            chainId: mainnet.id,
+          });
+          console.log(`Subdomain created successfully: ${member.passportClaimSubdomain}.ipecity.eth`);
+          
+          // Log success to server
+          await fetch("/api/subnames/log", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "success",
+              username: member.passportClaimSubdomain,
+              message: "Subdomain created successfully"
+            }),
+          });
+          
+        } catch (subdomainError) {
+          console.error("JustaName subdomain creation failed:", subdomainError);
+          
+          // Log error to server
+          await fetch("/api/subnames/log", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "error",
+              username: member.passportClaimSubdomain,
+              error: subdomainError.message || String(subdomainError),
+              stack: subdomainError.stack || null
+            }),
+          });
+          
+          throw new Error(`Failed to create subdomain: ${subdomainError.message || subdomainError}`);
+        }
 
         // Step 3: Update member status to approved (no server-side subdomain creation needed)
         console.log("Step 3: Updating member status on server...");

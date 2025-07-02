@@ -160,6 +160,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await storage.updateUserSignerStatus(fid, 'approved');
               console.log('Signer approved! Updated database status.');
               
+              // Also update member status to 'signer_approved' if they're still pending_signer
+              try {
+                const member = await storage.getMember(fid);
+                if (member && member.status === 'pending_signer') {
+                  await storage.updateMemberStatus(fid, 'signer_approved');
+                  console.log('Updated member status to signer_approved');
+                }
+              } catch (memberError) {
+                console.error('Error updating member status:', memberError);
+                // Don't fail the request if member update fails
+              }
+              
               res.json({ 
                 signer_uuid: userSigner.signerUuid,
                 status: 'approved',

@@ -53,7 +53,12 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
       }
 
       // Second priority: Check member status (only after signer is approved)
-      if (signerData && (signerData as any).status === 'approved' && memberStatus) {
+      if (signerData && (signerData as any).status === 'approved') {
+        // Wait for member status to load after signer approval
+        if (!memberStatus) {
+          return; // Still loading member status
+        }
+
         const { isMember, status, approved } = memberStatus as any;
         
         // Handle registration flow states
@@ -64,6 +69,16 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           if (currentStatus === 'member') {
             // User is a full member, allow access to all pages
             return;
+          }
+          
+          // Signer approved but still needs email/passport verification
+          if (currentStatus === 'signer_approved' || currentStatus === 'pending_signer') {
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/id-verification') {
+              setLocation("/id-verification");
+              return;
+            }
+            return; // Already on verification page
           }
           
           // Email verified or pending claim users can access home page but need verification for other protected pages
@@ -77,30 +92,31 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             // Allow access to home page and profile
             return;
           }
-        }
 
-        if (!isMember) {
+          if (status === "pending") {
+            // Registration pending, redirect to profile page for inline approval
+            setLocation("/profile");
+            return;
+          }
+
+          if (status === "denied") {
+            // Registration denied, redirect to profile page (shows denial message)
+            setLocation("/profile");
+            return;
+          }
+
+          if (requireApproval && !approved) {
+            // Approval required but user not approved
+            setLocation("/profile");
+            return;
+          }
+        } else {
           // User not registered, redirect to unified ID verification page
-          setLocation("/id-verification");
-          return;
-        }
-
-        if (status === "pending") {
-          // Registration pending, redirect to profile page for inline approval
-          setLocation("/profile");
-          return;
-        }
-
-        if (status === "denied") {
-          // Registration denied, redirect to profile page (shows denial message)
-          setLocation("/profile");
-          return;
-        }
-
-        if (requireApproval && !approved) {
-          // Approval required but user not approved
-          setLocation("/profile");
-          return;
+          const currentPath = window.location.pathname;
+          if (currentPath !== '/id-verification') {
+            setLocation("/id-verification");
+            return;
+          }
         }
       }
     }

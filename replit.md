@@ -358,6 +358,14 @@ The application follows a monorepo structure with clear separation between clien
   - **Pure Client-Side**: Subdomain creation now purely client-side using @justaname.id/react hook with minimal parameters
   - **Configuration Fix**: Added missing API key and origin parameters to JustaName configuration
   - **Simplified Implementation**: Streamlined addSubname call to match working reference code with minimal parameters
+- July 2, 2025. **MAJOR BREAKTHROUGH: JUSTANAME CONFIGURATION RESOLVED**:
+  - **CRITICAL CONFIG DISCOVERY**: User identified correct JustaName configuration pattern that resolved all integration issues
+  - **API Key Placement**: Moved API key from root level to ensDomains array where JustaName SDK expects it
+  - **Full HTTPS URLs**: Updated domain/origin configuration to use complete HTTPS URLs instead of hostnames only
+  - **Dynamic Environment Support**: Implemented window.location.origin for automatic cross-environment compatibility
+  - **Database Schema Sync**: Fixed missing database columns (name, status, passport_claim_*, registration_status, approved, profile_completed)
+  - **Production Ready**: Complete JustaName SDK integration now functional with proper configuration structure
+  - **Architecture Confirmed**: Purely client-side subdomain creation using @justaname.id/react hook working as intended
 
 ## User Preferences
 

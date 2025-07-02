@@ -83,7 +83,14 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           
           // Email verified or pending claim users can access home page but need verification for other protected pages
           if (currentStatus === 'email_verified' || currentStatus === 'pending_claim') {
-            // Allow access to home page and profile, but redirect to verification for other protected pages
+            // Check if both email and passport are verified - if so, they should have full access
+            const { member } = memberStatus as any;
+            if (member && member.emailVerified && member.ipePassport) {
+              // Both verifications complete - allow full access like a member
+              return;
+            }
+            
+            // Still need some verification - allow access to home page and profile, but redirect to verification for other protected pages
             const currentPath = window.location.pathname;
             if (requireApproval && currentPath !== '/' && currentPath !== '/profile' && currentPath !== '/id-verification') {
               setLocation("/id-verification");

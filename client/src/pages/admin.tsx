@@ -7,23 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
-import { useAccount, useSignMessage } from "wagmi";
-import { createSiweMessage } from "viem/siwe";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAddSubname } from "@justaname.id/react";
-import { mainnet } from "viem/chains";
+
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
-  // Wallet connection for admin signing
-  const { address: adminAddress, isConnected } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-  
-  // JustaName hook for subdomain creation
-  const { addSubname } = useAddSubname();
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -141,113 +130,27 @@ export default function AdminPage() {
 
   const approvePassportClaimMutation = useMutation({
     mutationFn: async (farcasterFid: number) => {
-      try {
-        console.log("=== STARTING PASSPORT APPROVAL PROCESS ===");
-        console.log(`FarcasterFid: ${farcasterFid}`);
-        console.log(`Admin connected: ${isConnected}`);
-        console.log(`Admin address: ${adminAddress}`);
-        
-        // Check if admin wallet is connected
-        if (!isConnected || !adminAddress) {
-          throw new Error("Admin wallet must be connected to approve claims");
-        }
-
-        // Step 1: Get member details to get their claimed username
-        console.log("Step 1: Fetching member details...");
-        const memberResponse = await fetch(`/api/members/${farcasterFid}`);
-        console.log(`Member fetch response: ${memberResponse.status} ${memberResponse.statusText}`);
-        
-        if (!memberResponse.ok) {
-          const errorText = await memberResponse.text();
-          console.error("Member fetch failed:", errorText);
-          throw new Error(`Failed to get member details: ${memberResponse.status} - ${errorText}`);
-        }
-        
-        const member = await memberResponse.json();
-        console.log("Member data:", member);
-        
-        if (!member.passportClaimSubdomain) {
-          throw new Error("No passport claim found for this member");
-        }
-
-        // Step 2: Create subdomain using JustaName client-side hook
-        console.log("Step 2: Creating subdomain using JustaName hook...");
-        console.log(`Creating subdomain for user: ${member.passportClaimSubdomain}.ipecity.eth`);
-        console.log("API Key available:", !!import.meta.env.VITE_JUSTANAME_API_KEY);
-        console.log("Chain ID:", mainnet.id);
-        console.log("Admin wallet:", adminAddress);
-        
-        // Subdomain creation is now handled by user during claim process
-        console.log(`Subdomain should already exist: ${member.passportClaimSubdomain}.ipecity.eth`);
-
-        // Step 3: Update member status to approved (no server-side subdomain creation needed)
-        console.log("Step 3: Updating member status on server...");
-        console.log(`Updating member status to approved for FID: ${farcasterFid}`);
-        
-        const response = await fetch("/api/passport/approve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            farcasterFid,
-            skipSubdomainCreation: true // Flag to indicate subdomain was created client-side
-          }),
-        });
-        
-        console.log(`Server response status: ${response.status} ${response.statusText}`);
-        console.log(`Server response headers:`, Object.fromEntries(response.headers.entries()));
-        
-        if (!response.ok) {
-          const responseText = await response.text();
-          console.error(`Server error response (${response.status}):`, responseText);
-          
-          try {
-            const errorData = JSON.parse(responseText);
-            throw new Error(errorData.error || `Server error: ${response.status}`);
-          } catch (parseError) {
-            console.error("Failed to parse error response as JSON:", parseError);
-            throw new Error(`Server returned invalid response: ${response.status} - ${responseText.substring(0, 200)}`);
-          }
-        }
-        
-        const responseText = await response.text();
-        console.log(`Server success response:`, responseText);
-        
-        try {
-          const result = JSON.parse(responseText);
-          console.log("=== PASSPORT APPROVAL COMPLETED SUCCESSFULLY ===");
-          return result;
-        } catch (parseError) {
-          console.error("Failed to parse success response as JSON:", parseError);
-          throw new Error(`Server returned invalid JSON: ${responseText.substring(0, 200)}`);
-        }
-        
-      } catch (error) {
-        console.error("=== MUTATION FUNCTION ERROR ===");
-        console.error("Error in mutation function:", error);
-        console.error("Error type:", typeof error);
-        console.error("Error constructor:", error.constructor.name);
-        
-        if (error instanceof Error) {
-          console.error("Error message:", error.message);
-          console.error("Error stack:", error.stack);
-        }
-        
-        // Re-throw the error so it gets caught by the onError handler
-        throw error;
+      const response = await fetch("/api/passport/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ farcasterFid }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to approve passport claim");
       }
+      
+      return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-      const ensName = data.ensName || "passport";
       toast({ 
         title: "Success", 
-        description: `Subdomain ${ensName} created and passport claim approved!` 
+        description: "Passport claim approved successfully!" 
       });
     },
     onError: (error: Error) => {
-      console.error("=== APPROVE PASSPORT CLAIM ERROR ===");
-      console.error("Error object:", error);
-      console.error("Error message:", error.message);
       console.error("Error stack:", error.stack);
       console.error("Full error details:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       

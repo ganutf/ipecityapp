@@ -785,6 +785,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Check if member should be automatically promoted to 'member' status
+      if (member && member.emailVerified && member.ipePassport && (member as any).status !== 'member') {
+        try {
+          member = await storage.updateMemberStatus(farcasterFid, 'member');
+          console.log(`Auto-promoted FID ${farcasterFid} to member status (both verifications complete)`);
+        } catch (updateError) {
+          console.error("Error auto-promoting member:", updateError);
+          // Continue without failing the request
+        }
+      }
+      
       res.json({ 
         isMember: !!member,
         approved: member?.approved || false,

@@ -9,11 +9,7 @@ import { WagmiProvider } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { http } from "wagmi";
 import { JustaNameProvider } from "@justaname.id/react";
-import {
-  AuthGuard,
-  RequireAuth,
-  RequireApproval,
-} from "@/components/AuthGuard";
+import { SimpleAuthGuard } from "@/components/SimpleAuthGuard";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
@@ -68,44 +64,19 @@ const justaNameConfig = {
 
 function Router() {
   return (
-    <AuthGuard>
+    <SimpleAuthGuard>
       <Layout>
         <Switch>
-          <Route
-            path="/"
-            component={() => (
-              <RequireApproval>
-                <FarcasterEmbed />
-              </RequireApproval>
-            )}
-          />
-          <Route
-            path="/admin"
-            component={() => (
-              <RequireApproval>
-                <AdminPage />
-              </RequireApproval>
-            )}
-          />
+          <Route path="/" component={FarcasterEmbed} />
+          <Route path="/admin" component={AdminPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
-
-          <Route
-            path="/id-verification"
-            component={() => (
-              <RequireAuth>
-                <IdVerificationPage />
-              </RequireAuth>
-            )}
-          />
-          <Route
-            path="/verify-passport/:token"
-            component={VerifyPassportPage}
-          />
+          <Route path="/id-verification" component={IdVerificationPage} />
+          <Route path="/verify-passport/:token" component={VerifyPassportPage} />
           <Route component={NotFound} />
         </Switch>
       </Layout>
-    </AuthGuard>
+    </SimpleAuthGuard>
   );
 }
 

@@ -1,8 +1,15 @@
 import { ReactNode, useEffect } from "react";
 import { useProfile } from "@farcaster/auth-kit";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation, useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { Member } from "@shared/Member";
+
+// Simple navigation function
+const navigate = (path: string) => {
+  if (window.location.pathname !== path) {
+    window.location.href = path;
+  }
+};
 
 interface SimpleAuthGuardProps {
   children: ReactNode;
@@ -12,7 +19,6 @@ interface SimpleAuthGuardProps {
 export function SimpleAuthGuard({ children, requireAuth = true }: SimpleAuthGuardProps) {
   const { profile } = useProfile();
   const [location] = useLocation();
-  const navigate = useNavigate();
 
   // Check signer status
   const { data: signerData, isLoading: signerLoading } = useQuery<{
@@ -69,7 +75,7 @@ export function SimpleAuthGuard({ children, requireAuth = true }: SimpleAuthGuar
       if (signerData?.status === "approved" && memberData?.success) {
         const member = new Member(memberData.member);
         
-        if (member.state === "NEW_MEMBER" || member.state === "WAITING_MEMBERSHIP_VERIFICATION") {
+        if (member.membershipState === "NEW_MEMBER" || member.membershipState === "WAITING_MEMBERSHIP_VERIFICATION") {
           if (location !== "/id-verification") {
             navigate("/id-verification");
           }
@@ -77,7 +83,7 @@ export function SimpleAuthGuard({ children, requireAuth = true }: SimpleAuthGuar
         }
 
         // Member is active - allow access to any route
-        if (member.state === "MEMBERSHIP_ACTIVE") {
+        if (member.membershipState === "MEMBERSHIP_ACTIVE") {
           return;
         }
       }

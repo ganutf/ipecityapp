@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
 
-
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const queryClient = useQueryClient();
@@ -151,9 +150,6 @@ export default function AdminPage() {
       });
     },
     onError: (error: Error) => {
-      console.error("Error stack:", error.stack);
-      console.error("Full error details:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-      
       toast({ 
         title: "Error", 
         description: error.message, 
@@ -198,9 +194,11 @@ export default function AdminPage() {
 
   if (!isAuthenticated || !isAdmin) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">Access Restricted</h2>
-        <p className="text-gray-600">Admin access required.</p>
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <p className="text-gray-600">Admin access required.</p>
+        </div>
       </div>
     );
   }
@@ -225,41 +223,6 @@ export default function AdminPage() {
       <div className="text-center">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-gray-600 mt-2">Manage pulses and community members</p>
-        
-        {/* Admin Wallet Connection Status */}
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-sm font-medium text-blue-800">
-              Admin Wallet Status:
-            </span>
-            {isConnected ? (
-              <div className="flex items-center gap-2">
-                <span className="text-green-600">✓ Connected</span>
-                <span className="text-xs text-gray-600 font-mono">
-                  {adminAddress?.slice(0, 6)}...{adminAddress?.slice(-4)}
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <span className="text-orange-600">⚠ Not Connected</span>
-                <ConnectButton.Custom>
-                  {({ openConnectModal }) => (
-                    <Button 
-                      onClick={openConnectModal} 
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      Connect Wallet
-                    </Button>
-                  )}
-                </ConnectButton.Custom>
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-blue-700 mt-2">
-            Wallet required to approve passport claims and create subdomains
-          </p>
-        </div>
       </div>
       
       <div className="space-y-8">
@@ -412,7 +375,7 @@ export default function AdminPage() {
       {/* Members List */}
       <div className="mt-8 bg-white rounded-lg shadow">
         <div className="p-6 border-b">
-          <h2 className="text-xl font-semibold">Members</h2>
+          <h2 className="text-xl font-semibold">Community Members</h2>
         </div>
         <div className="p-6">
           {membersLoading ? (
@@ -422,32 +385,43 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left py-2">FID</th>
-                    <th className="text-left py-2">Username</th>
-                    <th className="text-left py-2">Name</th>
-                    <th className="text-left py-2">Passport</th>
-                    <th className="text-left py-2">Status</th>
-                    <th className="text-left py-2">Claim</th>
-                    <th className="text-left py-2">Actions</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Member
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Passport Claim
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white divide-y divide-gray-200">
                   {(membersData as any)?.members?.map((member: Member) => {
-                    const memberStatus = (member as any).status || 'pending_signer';
-                    const hasPendingClaim = (member as any).passportClaimStatus === 'pending';
-                    const claimSubdomain = (member as any).passportClaimSubdomain;
+                    const memberStatus = (member as any).status || 'unknown';
+                    const claimSubdomain = member.passportClaimSubdomain;
+                    const hasPendingClaim = memberStatus === 'pending_claim' && claimSubdomain;
                     
                     return (
-                      <tr key={member.id} className="border-b">
-                        <td className="py-2">{member.farcasterFid}</td>
-                        <td className="py-2">{member.farcasterUsername}</td>
-                        <td className="py-2">{member.name || '-'}</td>
-                        <td className="py-2">{member.ipePassport || '-'}</td>
+                      <tr key={member.id}>
                         <td className="py-2">
-                          <span className={`px-2 py-1 rounded text-xs ${
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {member.farcasterUsername || `FID ${member.farcasterFid}`}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              FID: {member.farcasterFid}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             memberStatus === 'member' 
                               ? 'bg-green-100 text-green-800'
                               : memberStatus === 'pending_claim'
@@ -459,7 +433,6 @@ export default function AdminPage() {
                             {memberStatus === 'member' ? 'Member' :
                              memberStatus === 'pending_claim' ? 'Pending Claim' :
                              memberStatus === 'email_verified' ? 'Email Verified' :
-                             memberStatus === 'signer_approved' ? 'Signer Approved' :
                              'Pending Signer'}
                           </span>
                         </td>
@@ -476,12 +449,7 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="default"
-                                onClick={() => {
-                                  console.log("APPROVE BUTTON CLICKED for FID:", member.farcasterFid);
-                                  console.log("Wallet connected:", isConnected);
-                                  console.log("Admin address:", adminAddress);
-                                  approvePassportClaimMutation.mutate(member.farcasterFid);
-                                }}
+                                onClick={() => approvePassportClaimMutation.mutate(member.farcasterFid)}
                                 disabled={approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
                                 className="bg-green-600 hover:bg-green-700"
                               >

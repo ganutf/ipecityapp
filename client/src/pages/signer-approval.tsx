@@ -15,10 +15,10 @@ export default function SignerApprovalPage() {
   const { data: signerData, refetch: refetchSigner } = useQuery({
     queryKey: [`/api/neynar/signer/${profile?.fid}`],
     enabled: !!profile?.fid,
-    refetchInterval: false, // Disable polling
-    refetchIntervalInBackground: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    refetchInterval: 3000, // Check every 3 seconds for approval
+    refetchIntervalInBackground: true,
+    staleTime: 0, // Always fetch fresh data for signer status
+    gcTime: 0, // Don't cache signer status data
   });
 
   // Generate QR code

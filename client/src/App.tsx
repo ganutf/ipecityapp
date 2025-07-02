@@ -9,7 +9,11 @@ import { WagmiProvider } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { http } from "wagmi";
 import { JustaNameProvider } from "@justaname.id/react";
-import { SimpleAuthGuard } from "@/components/SimpleAuthGuard";
+import {
+  AuthGuard,
+  RequireAuth,
+  RequireApproval,
+} from "@/components/AuthGuard";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
@@ -30,7 +34,7 @@ const authKitConfig = {
 
 const wagmiConfig = getDefaultConfig({
   appName: "Ipê City Pulse",
-  projectId: "demo", // Development configuration
+  projectId: "demo", // Simplified for development
   chains: [mainnet],
   transports: {
     [mainnet.id]: http(),
@@ -64,19 +68,44 @@ const justaNameConfig = {
 
 function Router() {
   return (
-    <SimpleAuthGuard>
+    <AuthGuard>
       <Layout>
         <Switch>
-          <Route path="/" component={FarcasterEmbed} />
-          <Route path="/admin" component={AdminPage} />
+          <Route
+            path="/"
+            component={() => (
+              <RequireApproval>
+                <FarcasterEmbed />
+              </RequireApproval>
+            )}
+          />
+          <Route
+            path="/admin"
+            component={() => (
+              <RequireApproval>
+                <AdminPage />
+              </RequireApproval>
+            )}
+          />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
-          <Route path="/id-verification" component={IdVerificationPage} />
-          <Route path="/verify-passport/:token" component={VerifyPassportPage} />
+
+          <Route
+            path="/id-verification"
+            component={() => (
+              <RequireAuth>
+                <IdVerificationPage />
+              </RequireAuth>
+            )}
+          />
+          <Route
+            path="/verify-passport/:token"
+            component={VerifyPassportPage}
+          />
           <Route component={NotFound} />
         </Switch>
       </Layout>
-    </SimpleAuthGuard>
+    </AuthGuard>
   );
 }
 

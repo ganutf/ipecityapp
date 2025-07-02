@@ -1,5 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerSimplifiedRoutes } from "./simplified-routes";
+import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 
@@ -79,8 +79,7 @@ app.use((req, res, next) => {
     validateEnvironment();
     await testDatabaseConnection();
 
-    // Register API routes
-    registerSimplifiedRoutes(app);
+    const server = await registerRoutes(app);
 
     // Enhanced error handling middleware
     app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
@@ -100,21 +99,21 @@ app.use((req, res, next) => {
       });
     });
 
-    // Create HTTP server
-    const { createServer } = await import("http");
-    const httpServer = createServer(app);
-
-    // Setup Vite in development or serve static files in production
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
     if (app.get("env") === "development") {
-      await setupVite(app, httpServer);
+      await setupVite(app, server);
     } else {
       serveStatic(app);
     }
 
     // ALWAYS serve the app on port 5000
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
     const port = 5000;
     
-    const serverInstance = httpServer.listen({
+    const serverInstance = server.listen({
       port,
       host: "0.0.0.0",
       reusePort: true,

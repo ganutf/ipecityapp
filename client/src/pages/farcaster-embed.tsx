@@ -19,21 +19,21 @@ export default function FarcasterEmbed() {
   const hasValidFid = !!viewerFid && typeof viewerFid === 'number' && !isNaN(viewerFid);
 
   // Check if user is approved member
-  const { data: memberCheck, isLoading: memberLoading } = useQuery({
+  const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
     enabled: isAuthenticated && hasValidFid && !authLoading,
-    refetchInterval: false,
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000,
   });
 
   const { data: signerData, isLoading: signerLoading, refetch: refetchSigner } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled:
       isAuthenticated && !!viewerFid && (memberCheck as any)?.isMember && !authLoading,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: false, // Disable polling
-    refetchOnWindowFocus: false, // Disable refetch on focus
+    staleTime: 1000, // Keep data fresh
+    refetchInterval: (data) => {
+      // Poll every 2 seconds if signer is pending approval, otherwise don't poll
+      return (data as any)?.status === 'pending_approval' || (data as any)?.status === 'generated' ? 2000 : false;
+    },
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   const signerUuid = (signerData as any)?.signer_uuid || null;
@@ -254,9 +254,7 @@ export default function FarcasterEmbed() {
     );
   }
 
-  // All data should be loaded at this point
-
-  if (authLoading || memberLoading || (isAuthenticated && hasValidFid && (!memberCheck || pulsesLoading || executionsLoading || signerLoading))) {
+  if (authLoading || (isAuthenticated && hasValidFid && (!memberCheck || pulsesLoading || executionsLoading || signerData === undefined))) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="text-center py-12">

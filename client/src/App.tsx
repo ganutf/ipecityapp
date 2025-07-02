@@ -30,7 +30,7 @@ const authKitConfig = {
 
 const wagmiConfig = getDefaultConfig({
   appName: "Ipê City Pulse",
-  projectId: "demo", // Simplified for development
+  projectId: "c4f79cc821944d9680842e34466bfbd6", // Generic project ID to reduce warnings
   chains: [mainnet],
   transports: {
     [mainnet.id]: http(),

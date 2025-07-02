@@ -359,6 +359,15 @@ The application follows a monorepo structure with clear separation between clien
   - **Configuration Fix**: Added missing API key and origin parameters to JustaName configuration
   - **Simplified Implementation**: Streamlined addSubname call to match working reference code with minimal parameters
   - **JustaName API Configuration Resolved**: Fixed configuration structure by moving API key to ensDomains array and using full HTTPS URLs for domain/origin parameters
+- July 2, 2025. **INFINITE LOOP RESOLUTION**: Complete Fix for Continuous API Polling:
+  - **Database Schema Migration**: Successfully cleaned database and applied new simplified schema, eliminating legacy adapter dependency
+  - **Query Configuration Fix**: Disabled aggressive polling intervals across all components (FarcasterEmbed, SignerApproval, AuthGuards)
+  - **Loading State Logic**: Fixed loading conditions by properly handling memberLoading state in FarcasterEmbed component
+  - **API Call Optimization**: Added proper staleTime (5 minutes) and disabled unnecessary refetching (refetchOnWindowFocus, refetchOnMount)
+  - **Polling Elimination**: Removed 2-second polling from FarcasterEmbed and 3-second polling from SignerApproval pages
+  - **Performance Improvement**: Reduced API calls from hundreds per second to normal controlled requests
+  - **Application Stability**: Home page now loads normally without "Loading pulse data... no response" infinite loop
+  - **RainbowKit Warnings**: Updated project ID to reduce console warnings from WalletConnect demo configuration
 
 ## User Preferences
 

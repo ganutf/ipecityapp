@@ -18,6 +18,9 @@ export function NewAuthGuard({ children, requireAuth = false }: AuthGuardProps) 
   const { data: signerData, isLoading: signerLoading } = useQuery({
     queryKey: [`/api/neynar/signer/${profile?.fid}`],
     enabled: !!profile?.fid,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Check/create member status

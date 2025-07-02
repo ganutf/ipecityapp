@@ -28,12 +28,9 @@ export default function FarcasterEmbed() {
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled:
       isAuthenticated && !!viewerFid && (memberCheck as any)?.isMember && !authLoading,
-    staleTime: 1000, // Keep data fresh
-    refetchInterval: (data) => {
-      // Poll every 2 seconds if signer is pending approval, otherwise don't poll
-      return (data as any)?.status === 'pending_approval' || (data as any)?.status === 'generated' ? 2000 : false;
-    },
-    refetchOnWindowFocus: true, // Refetch when window regains focus
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: false, // Disable polling
+    refetchOnWindowFocus: false, // Disable refetch on focus
   });
 
   const signerUuid = (signerData as any)?.signer_uuid || null;

@@ -77,22 +77,3 @@
 .farcaster-purple-light {
   background-color: var(--farcaster-purple-light);
 }
-
-/* Hide Vite error overlays */
-.vite-error-overlay,
-[data-vite-dev-id],
-[class*="runtime-error"],
-[class*="error-overlay"],
-#vite-plugin-checker-error-overlay {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* Hide any overlay that contains connection error text */
-*[style*="position: fixed"]:has(*:contains("Connection interrupted")),
-*[style*="position: fixed"]:has(*:contains("plugin:runtime-error")),
-*[style*="z-index"]:has(*:contains("Connection interrupted")) {
-  display: none !important;
-}

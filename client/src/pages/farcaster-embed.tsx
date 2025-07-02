@@ -19,9 +19,12 @@ export default function FarcasterEmbed() {
   const hasValidFid = !!viewerFid && typeof viewerFid === 'number' && !isNaN(viewerFid);
 
   // Check if user is approved member
-  const { data: memberCheck } = useQuery({
+  const { data: memberCheck, isLoading: memberLoading } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
     enabled: isAuthenticated && hasValidFid && !authLoading,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: signerData, isLoading: signerLoading, refetch: refetchSigner } = useQuery({
@@ -251,7 +254,9 @@ export default function FarcasterEmbed() {
     );
   }
 
-  if (authLoading || (isAuthenticated && hasValidFid && (!memberCheck || pulsesLoading || executionsLoading || signerData === undefined))) {
+  // All data should be loaded at this point
+
+  if (authLoading || memberLoading || (isAuthenticated && hasValidFid && (!memberCheck || pulsesLoading || executionsLoading || signerLoading))) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="text-center py-12">

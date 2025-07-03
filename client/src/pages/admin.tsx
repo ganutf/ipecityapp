@@ -91,11 +91,15 @@ export default function AdminPage() {
   });
 
   const approveMemberMutation = useMutation({
-    mutationFn: async (farcasterFid: number) => {
+    mutationFn: async (member: { farcasterFid: number; ipeUsername?: string; userWalletAddress?: string }) => {
       const response = await fetch("/api/admin/approve-member", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farcasterFid }),
+        body: JSON.stringify({ 
+          farcasterFid: member.farcasterFid,
+          ipeUsername: member.ipeUsername,
+          userWalletAddress: member.userWalletAddress
+        }),
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -105,7 +109,7 @@ export default function AdminPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-      toast({ title: "Success", description: "Member approved successfully" });
+      toast({ title: "Success", description: "Member approved and subdomain reserved" });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -134,78 +138,7 @@ export default function AdminPage() {
     },
   });
 
-  const approvePassportClaimMutation = useMutation({
-    mutationFn: async (member: Member) => {
-      if (!isConnected || !address) {
-        throw new Error("Admin wallet must be connected to create subdomains");
-      }
 
-      // Use ipeUsername for new flow, fallback to passportClaimSubdomain for existing claims
-      const usernameToReserve = (member as any).ipeUsername || member.passportClaimSubdomain;
-      const walletAddress = member.passportClaimWalletAddress;
-
-      if (!usernameToReserve || !walletAddress) {
-        throw new Error("Missing username or wallet address for this member");
-      }
-
-      console.log("=== ADMIN SUBDOMAIN RESERVATION ===");
-      console.log(`Reserving subdomain: ${usernameToReserve}.ipecity.eth`);
-      console.log(`Will be owned by: ${walletAddress}`);
-      console.log(`Admin wallet (API caller): ${address}`);
-
-      // Step 1: Reserve subdomain using JustaName API
-      const reserveResponse = await fetch('https://api.justaname.id/ens/v1/subname/reserve', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_JUSTANAME_API_KEY,
-        },
-        body: JSON.stringify({
-          username: usernameToReserve.toLowerCase(),
-          ensDomain: "ipecity.eth",
-          chainId: 1,
-          ethAddress: walletAddress,
-        }),
-      });
-
-      if (!reserveResponse.ok) {
-        const errorData = await reserveResponse.json();
-        throw new Error(`Failed to reserve subdomain: ${errorData.error || reserveResponse.statusText}`);
-      }
-
-      const reserveData = await reserveResponse.json();
-      console.log("✓ Subdomain reserved successfully:", reserveData);
-      console.log("Step 2: Approving passport claim in backend...");
-
-      // Step 2: Approve in backend
-      const response = await fetch("/api/passport/approve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farcasterFid: member.farcasterFid }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to approve passport claim");
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-      toast({ 
-        title: "Success", 
-        description: "Passport claim approved successfully!" 
-      });
-    },
-    onError: (error: Error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive" 
-      });
-    },
-  });
 
   const denyPassportClaimMutation = useMutation({
     mutationFn: async (farcasterFid: number) => {
@@ -538,16 +471,17 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="default"
-                                onClick={() => approvePassportClaimMutation.mutate(member)}
-                                disabled={!isConnected || approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
+                                onClick={() => approveMemberMutation.mutate({
+                                  farcasterFid: member.farcasterFid,
+                                  ipeUsername: (member as any).ipeUsername,
+                                  userWalletAddress: member.passportClaimWalletAddress || undefined
+                                })}
+                                disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                                 className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                                title={!isConnected ? "Connect wallet to approve claims" : ""}
                               >
-                                {approvePassportClaimMutation.isPending 
+                                {approveMemberMutation.isPending 
                                   ? "Reserving..." 
-                                  : !isConnected 
-                                    ? "Need Wallet" 
-                                    : "Approve & Reserve"}
+                                  : "Approve & Reserve"}
                               </Button>
                               <Button
                                 size="sm"

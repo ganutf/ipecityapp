@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAccount, useSignMessage } from "wagmi";
+import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { SiweMessage } from "siwe";
+import { useAccountInvitations, useAcceptSubname } from "@justaname.id/react";
 
 interface UsernameClaimSectionProps {
   member: any;
@@ -21,64 +21,33 @@ export function UsernameClaimSection({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
-  const { signMessageAsync } = useSignMessage();
   const [username, setUsername] = useState("");
-  const [availabilityCheck, setAvailabilityCheck] = useState<{
-    checking: boolean;
-    available: boolean | null;
-    error: string | null;
-  }>({ checking: false, available: null, error: null });
+  
+  // Use JustaName SDK hooks
+  const { invitations, isInvitationsPending, refetchInvitations } = useAccountInvitations();
+  const { acceptSubname, isAcceptSubnamePending } = useAcceptSubname();
 
-  // Check username availability with debounce
-  useEffect(() => {
-    if (username.length < 3) {
-      setAvailabilityCheck({ checking: false, available: null, error: null });
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
-      setAvailabilityCheck({ checking: true, available: null, error: null });
-      try {
-        const response = await fetch(`/api/subname/available/${username}`);
-        const data = await response.json();
-
-        if (response.ok) {
-          setAvailabilityCheck({
-            checking: false,
-            available: data.available,
-            error: null,
-          });
-        } else {
-          setAvailabilityCheck({
-            checking: false,
-            available: null,
-            error: data.error || "Failed to check availability",
-          });
-        }
-      } catch (error) {
-        setAvailabilityCheck({
-          checking: false,
-          available: null,
-          error: "Failed to check availability",
-        });
-      }
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [username]);
-
+  // Claim username mutation (for new claims)
   const claimUsernameMutation = useMutation({
-    mutationFn: async (data: {
+    mutationFn: async ({
+      farcasterFid,
+      username,
+      walletAddress,
+    }: {
       farcasterFid: number;
       username: string;
       walletAddress: string;
     }) => {
-      const response = await fetch("/api/username/claim", {
+      const response = await fetch("/api/passport/claim", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          farcasterFid,
+          ipeUsername: username,
+          walletAddress,
+        }),
       });
 
       if (!response.ok) {
@@ -104,128 +73,26 @@ export function UsernameClaimSection({
     },
   });
 
-  // Accept subdomain mutation (frontend wallet signing + JustaName API)
+  // Accept subdomain mutation using JustaName SDK
   const acceptSubdomainMutation = useMutation({
     mutationFn: async () => {
       if (!address || !isConnected) {
         throw new Error("Wallet not connected");
       }
 
-      // Create SIWE-compliant message for signing
-      const domain = window.location.host;
-      const origin = window.location.origin;
-      const statement = `Accept subdomain ${member.ipeUsername}.ipecity.eth`;
+      // Find the invitation for this member's username  
+      const invitation = invitations?.find((inv: any) => 
+        inv.name === `${member.ipeUsername}.ipecity.eth`
+      );
 
-      const siweMessage = new SiweMessage({
-        domain,
-        address,
-        statement,
-        uri: origin,
-        version: "1",
-        chainId: 1,
-        issuedAt: new Date().toISOString(),
-      });
-
-      const message = siweMessage.prepareMessage();
-
-      // Get user to sign the SIWE message
-      const signature = await signMessageAsync({ message });
-
-      // Prepare request data
-      const requestData = {
-        username: member.ipeUsername,
-        ensDomain: "ipecity.eth",
-        chainId: 1, // Mainnet
-        addresses: [
-          {
-            address: address,
-            coinType: 60, // ETH
-          },
-        ],
-      };
-
-      const requestHeaders = {
-        "Content-Type": "application/json",
-        "x-api-key": import.meta.env.VITE_JUSTANAME_API_KEY || "",
-        "x-signature": signature,
-        "x-message": message,
-        "x-address": address,
-      };
-
-      // Log all request details to console and send to server for logging
-      console.log("JustaName Accept API Request:", {
-        url: "https://api.justaname.id/ens/v1/subname/accept",
-        method: "POST",
-        headers: requestHeaders,
-        body: requestData,
-        member: {
-          farcasterFid: member.farcasterFid,
-          ipeUsername: member.ipeUsername,
-          status: member.status,
-        },
-      });
-
-      // Send request details to server for terminal logging
-      fetch("/api/debug/log-justaname-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: "https://api.justaname.id/ens/v1/subname/accept",
-          headers: requestHeaders,
-          body: requestData,
-          member: {
-            farcasterFid: member.farcasterFid,
-            ipeUsername: member.ipeUsername,
-            status: member.status,
-          },
-        }),
-      }).catch((err) => console.log("Debug logging failed:", err));
-
-      // Call JustaName accept API directly
-      let response;
-      try {
-        response = await fetch(
-          "https://api.justaname.id/ens/v1/subname/accept",
-          {
-            method: "POST",
-            headers: requestHeaders,
-            body: JSON.stringify(requestData),
-          },
-        );
-      } catch (fetchError) {
-        console.error("Network/Fetch Error:", fetchError);
-        throw new Error(
-          `Network error: ${fetchError.message || "Failed to connect to JustaName API"}`,
-        );
+      if (!invitation) {
+        throw new Error("No pending invitation found for this username");
       }
 
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          errorData = { message: "Failed to parse error response" };
-        }
-        console.error("JustaName API Error:", {
-          status: response.status,
-          statusText: response.statusText,
-          errorData,
-          headers: Object.fromEntries(response.headers.entries()),
-          requestData: {
-            username: member.ipeUsername,
-            ensDomain: "ipecity.eth",
-            chainId: 1,
-            address: address,
-          },
-        });
-        throw new Error(
-          errorData.message ||
-            errorData.error ||
-            `API Error: ${response.status}`,
-        );
-      }
-
-      return response.json();
+      // Use JustaName SDK to accept the invitation
+      const result = await acceptSubname({ ens: `${member.ipeUsername}.ipecity.eth` });
+      
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -276,8 +143,22 @@ export function UsernameClaimSection({
     },
   });
 
+  // Availability check mutation
+  const availabilityCheck = useMutation({
+    mutationFn: async (username: string) => {
+      const response = await fetch(`/api/passport/availability/${username}`);
+      return response.json();
+    },
+  });
+
+  useEffect(() => {
+    if (username && username.length >= 3) {
+      availabilityCheck.mutate(username.toLowerCase());
+    }
+  }, [username]);
+
   const handleClaimUsername = () => {
-    if (!username || !availabilityCheck.available || !isConnected || !address)
+    if (!username || !availabilityCheck.data?.available || !isConnected || !address)
       return;
 
     claimUsernameMutation.mutate({
@@ -327,222 +208,143 @@ export function UsernameClaimSection({
             </p>
           </div>
 
-          <div
-            className={`p-3 rounded-lg ${
-              isActive
-                ? "bg-green-50 text-green-800"
-                : isApprovedNotAccepted
-                  ? "bg-blue-50 text-blue-800"
-                  : isPending
-                    ? "bg-yellow-50 text-yellow-800"
-                    : "bg-gray-50 text-gray-800"
-            }`}
-          >
-            <p className="text-sm font-medium">
-              Status:{" "}
-              {isActive
-                ? "Active & Live"
-                : isApprovedNotAccepted
-                  ? "Approved & Reserved"
-                  : isPending
-                    ? "Pending Admin Approval"
-                    : "Unknown"}
-            </p>
+          <div>
+            <p className="text-sm font-medium mb-2">Status:</p>
             {isPending && (
-              <div>
-                <p className="text-xs mt-1">
-                  An admin will review and approve your username claim.
-                </p>
-                <Button
-                  onClick={() => window.location.reload()}
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                >
-                  Check Status
-                </Button>
+              <div className="flex items-center space-x-2 text-yellow-700">
+                <Clock className="w-4 h-4" />
+                <span>Pending admin approval</span>
               </div>
             )}
             {isApprovedNotAccepted && (
-              <p className="text-xs mt-1">
-                Your subdomain has been reserved! Verify your passport to
-                activate it.
-              </p>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2 text-blue-700">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Approved - Ready to verify</span>
+                </div>
+                
+                {!isConnected ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">
+                      Connect your wallet to verify your passport:
+                    </p>
+                    <ConnectButton />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">
+                      Click to complete passport verification:
+                    </p>
+                    <Button
+                      onClick={() => acceptSubdomainMutation.mutate()}
+                      disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
+                      className="w-full"
+                    >
+                      {(acceptSubdomainMutation.isPending || isAcceptSubnamePending) ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        "Verify Passport"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
             )}
             {isActive && (
-              <p className="text-xs mt-1">
-                Your Ipê passport is now active and live on the blockchain!
-              </p>
+              <div className="flex items-center space-x-2 text-green-700">
+                <CheckCircle className="w-4 h-4" />
+                <span>Active on blockchain</span>
+              </div>
             )}
           </div>
-
-          {/* Show Verify Passport button when approved but not yet accepted */}
-          {isApprovedNotAccepted && (
-            <div className="space-y-2">
-              {!isConnected && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800 mb-2">
-                    Connect your wallet to verify passport:
-                  </p>
-                  <ConnectButton.Custom>
-                    {({ openConnectModal, mounted }) => {
-                      if (!mounted) return null;
-                      return (
-                        <Button
-                          onClick={openConnectModal}
-                          className="w-full bg-blue-600 hover:bg-blue-700"
-                        >
-                          Connect Wallet
-                        </Button>
-                      );
-                    }}
-                  </ConnectButton.Custom>
-                </div>
-              )}
-
-              {isConnected && (
-                <Button
-                  onClick={() => acceptSubdomainMutation.mutate()}
-                  disabled={acceptSubdomainMutation.isPending}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  {acceptSubdomainMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Verifying Passport...
-                    </>
-                  ) : (
-                    "Verify Passport"
-                  )}
-                </Button>
-              )}
-            </div>
-          )}
         </CardContent>
       </Card>
     );
   }
 
+  // If user hasn't claimed username yet, show claiming interface
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Claim Your Ipê Username</CardTitle>
+        <CardTitle className="flex items-center space-x-2">
+          <AlertCircle className="w-5 h-5 text-blue-600" />
+          <span>Claim Ipê Username</span>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <p className="text-sm text-gray-600 mb-4">
-            Choose a unique username for your Ipê City passport. This will be
-            your subdomain under ipecity.eth.
+          <p className="text-sm text-gray-600 mb-3">
+            Claim your unique username for the Ipê City community:
           </p>
-
-          {/* Wallet Connection Requirement */}
-          {!isConnected && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 mb-2">
-                Connect your wallet to claim a username:
-              </p>
-              <ConnectButton.Custom>
-                {({ openConnectModal, mounted }) => {
-                  if (!mounted) return null;
-                  return (
-                    <Button
-                      onClick={openConnectModal}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                    >
-                      Connect Wallet
-                    </Button>
-                  );
-                }}
-              </ConnectButton.Custom>
-            </div>
-          )}
-
-          {isConnected && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
-                ✓ Wallet connected: {address?.slice(0, 6)}...
-                {address?.slice(-4)}
+          
+          <div className="space-y-3">
+            <div>
+              <Input
+                placeholder="Enter desired username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                className="mb-2"
+              />
+              <p className="text-xs text-gray-500">
+                Will become: {username || "[username]"}.ipecity.eth
               </p>
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Input
-              type="text"
-              placeholder="Enter username (3+ characters)"
-              value={username}
-              onChange={(e) =>
-                setUsername(
-                  e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""),
-                )
-              }
-              className="font-mono"
-            />
-
-            {username && (
-              <p className="text-sm text-gray-500">
-                Your subdomain will be:{" "}
-                <span className="font-mono">{username}.ipecity.eth</span>
-              </p>
-            )}
-
-            {/* Availability indicator */}
-            {username.length >= 3 && (
-              <div className="flex items-center space-x-2">
-                {availabilityCheck.checking ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                    <span className="text-sm text-blue-600">
-                      Checking availability...
-                    </span>
-                  </>
-                ) : availabilityCheck.error ? (
-                  <>
-                    <AlertCircle className="w-4 h-4 text-red-600" />
-                    <span className="text-sm text-red-600">
-                      {availabilityCheck.error}
-                    </span>
-                  </>
-                ) : availabilityCheck.available === true ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm text-green-600">Available!</span>
-                  </>
-                ) : availabilityCheck.available === false ? (
-                  <>
-                    <AlertCircle className="w-4 h-4 text-red-600" />
-                    <span className="text-sm text-red-600">
-                      Username not available
-                    </span>
-                  </>
-                ) : null}
+            {username && username.length >= 3 && (
+              <div className="text-sm">
+                {availabilityCheck.isPending ? (
+                  <div className="flex items-center space-x-2 text-gray-600">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Checking availability...</span>
+                  </div>
+                ) : availabilityCheck.data?.available ? (
+                  <div className="flex items-center space-x-2 text-green-600">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Available</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2 text-red-600">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Not available</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        <Button
-          onClick={handleClaimUsername}
-          disabled={
-            !username ||
-            username.length < 3 ||
-            availabilityCheck.checking ||
-            !availabilityCheck.available ||
-            !isConnected ||
-            !address ||
-            claimUsernameMutation.isPending
-          }
-          className="w-full"
-        >
-          {claimUsernameMutation.isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Claiming...
-            </>
-          ) : (
-            "Claim Username"
-          )}
-        </Button>
+        {!isConnected ? (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">
+              Connect your wallet to claim a username:
+            </p>
+            <ConnectButton />
+          </div>
+        ) : (
+          <Button
+            onClick={handleClaimUsername}
+            disabled={
+              !username ||
+              username.length < 3 ||
+              availabilityCheck.isPending ||
+              !availabilityCheck.data?.available ||
+              claimUsernameMutation.isPending
+            }
+            className="w-full"
+          >
+            {claimUsernameMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Claiming...
+              </>
+            ) : (
+              "Claim Username"
+            )}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

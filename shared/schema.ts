@@ -49,7 +49,7 @@ export const members = pgTable("members", {
   linkedin: varchar("linkedin"),
   miniBio: text("mini_bio"),
   profileTags: text("profile_tags").array(),
-
+  ipePassport: varchar("ipe_passport").unique(), // User-chosen subdomain for <user-id>.ipecity.eth
   passportVerified: boolean("passport_verified").default(false).notNull(),
   
   // New status field to track registration flow

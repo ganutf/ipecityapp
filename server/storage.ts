@@ -29,7 +29,7 @@ import { eq, and, desc, asc } from "drizzle-orm";
 export interface IStorage {
   // Members
   getMember(farcasterFid: number): Promise<Member | undefined>;
-  getMemberByUsername(username: string): Promise<Member | undefined>;
+
   getMemberByEmail(email: string): Promise<Member | undefined>;
   getMemberByIpePassport(passport: string): Promise<Member | undefined>;
   createMember(member: InsertMember): Promise<Member>;
@@ -86,10 +86,7 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
 
-  async getMemberByUsername(username: string): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.farcasterUsername, username));
-    return member;
-  }
+
 
   async createMember(member: InsertMember): Promise<Member> {
     const [newMember] = await db.insert(members).values(member).returning();

@@ -653,7 +653,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create basic member record with email_verified status
           member = await storage.createMember({
             farcasterFid,
-            farcasterUsername: userProfile?.username || '',
             email: verification.email,
             status: 'email_verified',
             emailVerified: true,
@@ -713,7 +712,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create basic member record with email_verified status
           member = await storage.createMember({
             farcasterFid,
-            farcasterUsername: userProfile?.username || '',
             email: verification.email,
             status: 'email_verified',
             emailVerified: true,
@@ -764,7 +762,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create basic member record with pending_signer status
           member = await storage.createMember({
             farcasterFid,
-            farcasterUsername: userProfile?.username || '',
             status: 'pending_signer',
             emailVerified: false,
             passportVerified: false,

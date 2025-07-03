@@ -42,7 +42,6 @@ export const users = pgTable("users", {
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),
   farcasterFid: integer("farcaster_fid").notNull().unique(),
-  farcasterUsername: varchar("farcaster_username"),
   name: varchar("name"),
   email: varchar("email").unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
@@ -171,7 +170,6 @@ export const updateMemberSchema = createInsertSchema(members).omit({
 
 export const registrationSchema = createInsertSchema(members).pick({
   farcasterFid: true,
-  farcasterUsername: true,
   name: true,
   email: true,
   xHandle: true,

@@ -413,7 +413,7 @@ export default function AdminPage() {
                         <td className="py-2">
                           <div>
                             <div className="text-sm font-medium text-gray-900">
-                              {member.farcasterUsername || `FID ${member.farcasterFid}`}
+                              {member.name || `FID ${member.farcasterFid}`}
                             </div>
                             <div className="text-sm text-gray-500">
                               FID: {member.farcasterFid}

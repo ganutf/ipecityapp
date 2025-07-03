@@ -144,33 +144,12 @@ export default function AdminPage() {
         throw new Error("Missing subdomain claim or wallet address for this member");
       }
 
-      console.log("=== ADMIN SUBDOMAIN RESERVATION ===");
-      console.log(`Reserving subdomain: ${member.passportClaimSubdomain}.ipecity.eth`);
-      console.log(`Will be owned by: ${member.passportClaimWalletAddress}`);
-      console.log(`Admin wallet (API caller): ${address}`);
+      console.log("=== ADMIN PASSPORT APPROVAL ===");
+      console.log(`Approving passport claim: ${member.passportClaimSubdomain}.ipecity.eth`);
+      console.log(`User wallet: ${member.passportClaimWalletAddress}`);
+      console.log("Note: User will create subdomain using their wallet");
 
-      // Step 1: Reserve subdomain using JustaName API
-      const reserveResponse = await fetch('https://api.justaname.id/ens/v1/subname/reserve', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_JUSTANAME_API_KEY}`,
-        },
-        body: JSON.stringify({
-          username: member.passportClaimSubdomain.toLowerCase(),
-          ensDomain: "ipecity.eth",
-          chainId: 1,
-        }),
-      });
-
-      if (!reserveResponse.ok) {
-        const errorData = await reserveResponse.json();
-        throw new Error(`Failed to reserve subdomain: ${errorData.error || reserveResponse.statusText}`);
-      }
-
-      const reserveData = await reserveResponse.json();
-      console.log("✓ Subdomain reserved successfully:", reserveData);
-      console.log("Step 2: Approving passport claim in backend...");
+      console.log("Approving passport claim in backend...");
 
       // Step 2: Approve in backend
       const response = await fetch("/api/passport/approve", {
@@ -534,15 +513,12 @@ export default function AdminPage() {
                                 size="sm"
                                 variant="default"
                                 onClick={() => approvePassportClaimMutation.mutate(member)}
-                                disabled={!isConnected || approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
+                                disabled={approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
                                 className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                                title={!isConnected ? "Connect wallet to approve claims" : ""}
                               >
                                 {approvePassportClaimMutation.isPending 
-                                  ? "Reserving..." 
-                                  : !isConnected 
-                                    ? "Need Wallet" 
-                                    : "Approve & Reserve"}
+                                  ? "Approving..." 
+                                  : "Approve Claim"}
                               </Button>
                               <Button
                                 size="sm"

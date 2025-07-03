@@ -620,48 +620,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "FID is required" });
       }
 
-      if (!userWalletAddress) {
-        return res.status(400).json({ error: "User Wallet is required" });
-      }
+      // Note: userWalletAddress is optional for legacy members who don't have username claims
 
       const member = await storage.getMember(farcasterFid);
       if (!member) {
         return res.status(404).json({ error: "Member not found" });
       }
 
-      // For username claims, reserve subdomain with JustaName API
-      if (ipeUsername && userWalletAddress) {
-        console.log(
-          `Reserving subdomain ${ipeUsername}.ipecity.eth for user wallet ${userWalletAddress}`,
-        );
+      // For username claims, reserve subdomain with JustaName API (only if wallet address is available)
+      if (ipeUsername) {
+        if (!userWalletAddress) {
+          console.log(`WARNING: Username claim ${ipeUsername} missing wallet address - skipping subdomain reservation`);
+          // Allow approval but note that subdomain reservation is skipped
+        } else {
+          console.log(
+            `Reserving subdomain ${ipeUsername}.ipecity.eth for user wallet ${userWalletAddress}`,
+          );
 
-        const reserveResponse = await fetch(
-          "https://api.justaname.id/ens/v1/subname/reserve",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": process.env.VITE_JUSTANAME_API_KEY || "",
+          const reserveResponse = await fetch(
+            "https://api.justaname.id/ens/v1/subname/reserve",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-api-key": process.env.VITE_JUSTANAME_API_KEY || "",
+              },
+              body: JSON.stringify({
+                username: ipeUsername,
+                ensDomain: "ipecity.eth",
+                chainId: 1,
+                ethAddress: userWalletAddress,
+              }),
             },
-            body: JSON.stringify({
-              username: ipeUsername,
-              ensDomain: "ipecity.eth",
-              chainId: 1,
-              ethAddress: userWalletAddress,
-            }),
-          },
-        );
+          );
 
-        if (!reserveResponse.ok) {
-          const errorData = await reserveResponse.json();
-          throw new Error(
-            `Failed to reserve subdomain: ${errorData.error || reserveResponse.statusText}`,
+          if (!reserveResponse.ok) {
+            const errorData = await reserveResponse.json();
+            throw new Error(
+              `Failed to reserve subdomain: ${errorData.error || reserveResponse.statusText}`,
+            );
+          }
+
+          console.log(
+            `Successfully reserved ${ipeUsername}.ipecity.eth for ${userWalletAddress}`,
           );
         }
-
-        console.log(
-          `Successfully reserved ${ipeUsername}.ipecity.eth for ${userWalletAddress}`,
-        );
       }
 
       // Update member status to approved

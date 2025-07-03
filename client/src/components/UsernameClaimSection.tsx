@@ -95,6 +95,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
     },
   });
 
+  // Accept subdomain mutation (calls JustaName accept API with wallet signature)
   const acceptSubdomainMutation = useMutation({
     mutationFn: async (farcasterFid: number) => {
       const response = await fetch("/api/subname/accept", {
@@ -114,17 +115,44 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
     },
     onSuccess: () => {
       toast({
-        title: "Subdomain activated successfully!",
-        description: "Your Ipê passport is now active.",
+        title: "Passport verified successfully!",
+        description: "Your Ipê passport is now active on the blockchain.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      // Update member status to active_member
+      updateMemberStatusMutation.mutate({
+        farcasterFid: member.farcasterFid,
+        status: 'active_member'
+      });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to activate subdomain",
+        title: "Failed to verify passport",
         description: error.error || "Please try again.",
         variant: "destructive",
       });
+    },
+  });
+
+  // Update member status mutation
+  const updateMemberStatusMutation = useMutation({
+    mutationFn: async ({ farcasterFid, status }: { farcasterFid: number; status: string }) => {
+      const response = await fetch("/api/members/update-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ farcasterFid, status }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw errorData;
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
     },
   });
 
@@ -181,13 +209,23 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
               }
             </p>
             {isPending && (
-              <p className="text-xs mt-1">
-                An admin will review and approve your username claim. You'll be able to accept it once approved.
-              </p>
+              <div>
+                <p className="text-xs mt-1">
+                  An admin will review and approve your username claim.
+                </p>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                >
+                  Check Status
+                </Button>
+              </div>
             )}
             {isApprovedNotAccepted && (
               <p className="text-xs mt-1">
-                Your subdomain has been reserved! Click the button below to accept and activate it.
+                Your subdomain has been reserved! Verify your passport to activate it.
               </p>
             )}
             {isActive && (
@@ -197,22 +235,45 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
             )}
           </div>
 
-          {/* Show Accept button when approved but not yet accepted */}
+          {/* Show Verify Passport button when approved but not yet accepted */}
           {isApprovedNotAccepted && (
-            <Button
-              onClick={() => acceptSubdomainMutation.mutate(member.farcasterFid)}
-              disabled={acceptSubdomainMutation.isPending}
-              className="w-full"
-            >
-              {acceptSubdomainMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Activating...
-                </>
-              ) : (
-                "Accept & Activate Passport"
+            <div className="space-y-2">
+              {!isConnected && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800 mb-2">Connect your wallet to verify passport:</p>
+                  <ConnectButton.Custom>
+                    {({ openConnectModal, mounted }) => {
+                      if (!mounted) return null;
+                      return (
+                        <Button
+                          onClick={openConnectModal}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                          Connect Wallet
+                        </Button>
+                      );
+                    }}
+                  </ConnectButton.Custom>
+                </div>
               )}
-            </Button>
+              
+              {isConnected && (
+                <Button
+                  onClick={() => acceptSubdomainMutation.mutate(member.farcasterFid)}
+                  disabled={acceptSubdomainMutation.isPending}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {acceptSubdomainMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Verifying Passport...
+                    </>
+                  ) : (
+                    "Verify Passport"
+                  )}
+                </Button>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>

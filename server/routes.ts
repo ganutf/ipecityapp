@@ -105,6 +105,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Accept subdomain using JustaName accept API
+  app.post("/api/subname/accept", async (req, res) => {
+    try {
+      const { farcasterFid } = req.body;
+
+      if (!farcasterFid) {
+        return res.status(400).json({ error: "FID is required" });
+      }
+
+      // Get member data
+      const member = await storage.getMember(farcasterFid);
+      if (!member || !member.ipeUsername) {
+        return res.status(404).json({ error: "Member not found or no username claimed" });
+      }
+
+      // Call JustaName accept API
+      const response = await fetch('https://api.justaname.id/api/v1/subname/accept', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.JUSTANAME_API_KEY}`,
+        },
+        body: JSON.stringify({
+          subname: member.ipeUsername,
+          ensDomain: 'ipecity.eth',
+          signature: "user_signed", // This should be replaced with actual wallet signature
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to accept subdomain');
+      }
+
+      const data = await response.json();
+      
+      // Update member status to active
+      await storage.updateMember(farcasterFid, { status: 'active_member' });
+
+      res.json({ success: true, data });
+    } catch (error) {
+      console.error("Error accepting subdomain:", error);
+      res.status(500).json({ error: "Failed to accept subdomain" });
+    }
+  });
+
+  // Update member status
+  app.post("/api/members/update-status", async (req, res) => {
+    try {
+      const { farcasterFid, status } = req.body;
+
+      if (!farcasterFid || !status) {
+        return res.status(400).json({ error: "FID and status are required" });
+      }
+
+      const member = await storage.updateMember(farcasterFid, { status });
+      res.json({ success: true, member });
+    } catch (error) {
+      console.error("Error updating member status:", error);
+      res.status(500).json({ error: "Failed to update member status" });
+    }
+  });
+
   // Claim username (update ipe_username field)
   app.post("/api/username/claim", async (req, res) => {
     try {

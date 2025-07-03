@@ -610,9 +610,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/approve-member", async (req, res) => {
     try {
       const { farcasterFid, ipeUsername, userWalletAddress } = req.body;
-      
+
       if (!farcasterFid) {
         return res.status(400).json({ error: "FID is required" });
+      }
+
+      if (!userWalletAddress) {
+        return res.status(400).json({ error: "User Wallet is required" });
       }
 
       const member = await storage.getMember(farcasterFid);
@@ -622,28 +626,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // For username claims, reserve subdomain with JustaName API
       if (ipeUsername && userWalletAddress) {
-        console.log(`Reserving subdomain ${ipeUsername}.ipecity.eth for user wallet ${userWalletAddress}`);
-        
-        const reserveResponse = await fetch('https://api.justaname.id/ens/v1/subname/reserve', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.VITE_JUSTANAME_API_KEY || '',
+        console.log(
+          `Reserving subdomain ${ipeUsername}.ipecity.eth for user wallet ${userWalletAddress}`,
+        );
+
+        const reserveResponse = await fetch(
+          "https://api.justaname.id/ens/v1/subname/reserve",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": process.env.VITE_JUSTANAME_API_KEY || "",
+            },
+            body: JSON.stringify({
+              username: ipeUsername,
+              ensDomain: "ipecity.eth",
+              chainId: 1,
+              ethAddress: userWalletAddress,
+            }),
           },
-          body: JSON.stringify({
-            username: ipeUsername,
-            ensDomain: "ipecity.eth",
-            chainId: 1,
-            ethAddress: userWalletAddress,
-          }),
-        });
+        );
 
         if (!reserveResponse.ok) {
           const errorData = await reserveResponse.json();
-          throw new Error(`Failed to reserve subdomain: ${errorData.error || reserveResponse.statusText}`);
+          throw new Error(
+            `Failed to reserve subdomain: ${errorData.error || reserveResponse.statusText}`,
+          );
         }
 
-        console.log(`Successfully reserved ${ipeUsername}.ipecity.eth for ${userWalletAddress}`);
+        console.log(
+          `Successfully reserved ${ipeUsername}.ipecity.eth for ${userWalletAddress}`,
+        );
       }
 
       // Update member status to approved
@@ -651,7 +664,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send approval email
       if (updatedMember.email) {
-        const passportName = ipeUsername ? `${ipeUsername}.ipecity.eth` : updatedMember.ipePassport;
+        const passportName = ipeUsername
+          ? `${ipeUsername}.ipecity.eth`
+          : updatedMember.ipePassport;
         if (passportName) {
           await sendApprovalEmail(updatedMember.email, passportName);
         }

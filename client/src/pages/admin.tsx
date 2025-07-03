@@ -451,11 +451,19 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="default"
-                                onClick={() => approveMemberMutation.mutate({
-                                  farcasterFid: member.farcasterFid,
-                                  ipeUsername: (member as any).ipeUsername,
-                                  userWalletAddress: member.passportClaimWalletAddress || undefined
-                                })}
+                                onClick={() => {
+                                  console.log('Member data for approval:', {
+                                    fid: member.farcasterFid,
+                                    ipeUsername: (member as any).ipeUsername,
+                                    passportClaimWalletAddress: member.passportClaimWalletAddress,
+                                    allMemberData: member
+                                  });
+                                  approveMemberMutation.mutate({
+                                    farcasterFid: member.farcasterFid,
+                                    ipeUsername: (member as any).ipeUsername,
+                                    userWalletAddress: member.passportClaimWalletAddress || undefined
+                                  });
+                                }}
                                 disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                                 className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
                               >

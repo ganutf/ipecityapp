@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useAddSubname } from "@justaname.id/react";
-import { mainnet } from "wagmi/chains";
+
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 export default function AdminPage() {
@@ -150,21 +150,9 @@ export default function AdminPage() {
       console.log(`Owner will be: ${member.passportClaimWalletAddress}`);
       console.log(`Admin wallet (signer): ${address}`);
 
-      // Step 1: Create subdomain with JustaName SDK
-      // Assign ownership to the user's wallet address, not admin wallet
+      // Step 1: Create subdomain with JustaName SDK using simplified hook pattern
       await addSubname({
         username: member.passportClaimSubdomain.toLowerCase(),
-        ensDomain: "ipecity.eth",
-        chainId: mainnet.id,
-        addresses: [
-          {
-            address: member.passportClaimWalletAddress,
-            coinType: 60 as any, // ETH wallet
-          }
-        ],
-        text: [
-          { key: "description", value: `Ipê City passport for ${member.name || member.farcasterFid}` }
-        ]
       });
 
       console.log("✓ Subdomain created successfully");

@@ -7,11 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
+import { useAccount, useConnect } from "wagmi";
+import { useAddSubname } from "@justaname.id/react";
+import { mainnet } from "wagmi/chains";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Wallet connection for subdomain creation
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { addSubname } = useAddSubname();
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -128,11 +136,37 @@ export default function AdminPage() {
   });
 
   const approvePassportClaimMutation = useMutation({
-    mutationFn: async (farcasterFid: number) => {
+    mutationFn: async (member: Member) => {
+      if (!isConnected || !address) {
+        throw new Error("Admin wallet must be connected to create subdomains");
+      }
+
+      if (!member.passportClaimSubdomain) {
+        throw new Error("No subdomain claim found for this member");
+      }
+
+      console.log("=== ADMIN SUBDOMAIN CREATION ===");
+      console.log(`Creating subdomain: ${member.passportClaimSubdomain}.ipecity.eth`);
+      console.log(`Admin wallet: ${address}`);
+
+      // Step 1: Create subdomain with JustaName SDK
+      const textConfig: Record<string, string> = {};
+      
+      await addSubname({
+        ensDomain: "ipecity.eth",
+        username: member.passportClaimSubdomain.toLowerCase(),
+        text: textConfig,
+        chainId: mainnet.id,
+      });
+
+      console.log("✓ Subdomain created successfully");
+      console.log("Step 2: Approving passport claim in backend...");
+
+      // Step 2: Approve in backend
       const response = await fetch("/api/passport/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farcasterFid }),
+        body: JSON.stringify({ farcasterFid: member.farcasterFid }),
       });
       
       if (!response.ok) {
@@ -223,6 +257,28 @@ export default function AdminPage() {
       <div className="text-center">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-gray-600 mt-2">Manage pulses and community members</p>
+      </div>
+
+      {/* Wallet Connection Section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-blue-900">Admin Wallet</h3>
+            <p className="text-blue-700 text-sm">
+              {isConnected 
+                ? `Connected: ${address?.slice(0, 6)}...${address?.slice(-4)}` 
+                : "Connect wallet to create subdomains for passport claims"}
+            </p>
+          </div>
+          {!isConnected && (
+            <Button
+              onClick={() => connect({ connector: connectors[0] })}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Connect Wallet
+            </Button>
+          )}
+        </div>
       </div>
       
       <div className="space-y-8">
@@ -449,11 +505,16 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="default"
-                                onClick={() => approvePassportClaimMutation.mutate(member.farcasterFid)}
-                                disabled={approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
-                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => approvePassportClaimMutation.mutate(member)}
+                                disabled={!isConnected || approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+                                title={!isConnected ? "Connect wallet to approve claims" : ""}
                               >
-                                {approvePassportClaimMutation.isPending ? "..." : "Approve"}
+                                {approvePassportClaimMutation.isPending 
+                                  ? "Creating..." 
+                                  : !isConnected 
+                                    ? "Need Wallet" 
+                                    : "Approve & Create"}
                               </Button>
                               <Button
                                 size="sm"

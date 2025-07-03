@@ -133,6 +133,18 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('JustaName API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          headers: Object.fromEntries(response.headers.entries()),
+          requestData: {
+            username: member.ipeUsername,
+            ensDomain: 'ipecity.eth',
+            chainId: 1,
+            address: address
+          }
+        });
         throw new Error(errorData.message || `API Error: ${response.status}`);
       }
       

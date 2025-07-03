@@ -140,27 +140,7 @@ export default function AdminPage() {
 
 
 
-  const denyPassportClaimMutation = useMutation({
-    mutationFn: async (farcasterFid: number) => {
-      const response = await fetch("/api/passport/deny", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farcasterFid }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to deny passport claim");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-      toast({ title: "Success", description: "Passport claim denied successfully" });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+
 
   // Show loading while auth is initializing
   if (isLoading) {
@@ -486,10 +466,10 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                onClick={() => denyPassportClaimMutation.mutate(member.farcasterFid)}
-                                disabled={approvePassportClaimMutation.isPending || denyPassportClaimMutation.isPending}
+                                onClick={() => denyMemberMutation.mutate(member.farcasterFid)}
+                                disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                               >
-                                {denyPassportClaimMutation.isPending ? "..." : "Deny"}
+                                {denyMemberMutation.isPending ? "..." : "Deny"}
                               </Button>
                             </div>
                           ) : memberStatus === 'member' ? (

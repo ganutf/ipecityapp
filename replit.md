@@ -366,6 +366,16 @@ The application follows a monorepo structure with clear separation between clien
   - **Database Schema Sync**: Fixed missing database columns (name, status, passport_claim_*, registration_status, approved, profile_completed)
   - **Production Ready**: Complete JustaName SDK integration now functional with proper configuration structure
   - **Architecture Confirmed**: Purely client-side subdomain creation using @justaname.id/react hook working as intended
+- July 3, 2025. **COMPLETE USERNAME CLAIMING SYSTEM**: Implementation of Reserve→Approve→Accept Workflow:
+  - **Database Extension**: Added ipe_username field to members table for new claiming system
+  - **Username Availability API**: Created real-time availability checking with JustaName API integration
+  - **Three-Stage Workflow**: Users claim username → Admin reserves subdomain with user's wallet → User accepts to activate
+  - **UsernameClaimSection Component**: New component handling username claiming with availability validation and status tracking
+  - **Admin Server-Side Approval**: Admin approval now uses JustaName reserve API with user's wallet address (not admin's wallet)
+  - **Dual Flow Support**: System supports both existing passport verification and new username claiming seamlessly
+  - **Updated ID Verification**: Maintains original wallet connection → ENS lookup flow, shows username claiming when no domain found
+  - **Fixed API Endpoint**: Removed duplicate availability check from claim endpoint that was causing failures
+  - **Production Ready**: Complete reserve→approve→accept workflow operational with proper error handling and user feedback
 
 ## User Preferences
 

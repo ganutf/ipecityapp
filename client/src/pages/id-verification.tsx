@@ -85,18 +85,13 @@ export default function IdVerificationPage() {
         allowChange={true}
       />
 
-      {/* Show username claiming if user doesn't have existing passport, otherwise show passport verification */}
-      {!memberStatus?.member?.ipePassport && !(memberStatus?.member as any)?.ipeUsername ? (
-        <UsernameClaimSection member={memberStatus?.member} />
-      ) : (
-        <PassportVerificationSection
-          farcasterFid={profile?.fid || 0}
-          currentPassport={memberStatus?.member?.ipePassport}
-          isVerified={isPassportVerified}
-          onVerificationComplete={handlePassportComplete}
-          allowChange={true}
-        />
-      )}
+      <PassportVerificationSection
+        farcasterFid={profile?.fid || 0}
+        currentPassport={memberStatus?.member?.ipePassport}
+        isVerified={isPassportVerified}
+        onVerificationComplete={handlePassportComplete}
+        allowChange={true}
+      />
 
       {bothComplete && (
         <div className="text-center pt-4">

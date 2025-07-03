@@ -19,6 +19,7 @@ import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { useAddSubname } from "@justaname.id/react";
 import { mainnet } from "viem/chains";
+import { UsernameClaimSection } from "@/components/UsernameClaimSection";
 
 interface PassportVerificationSectionProps {
   farcasterFid: number;
@@ -36,6 +37,8 @@ interface MemberData {
     passportClaimSubdomain?: string;
     passportClaimStatus?: string;
     ipePassport?: string;
+    ipeUsername?: string;
+    farcasterFid?: number;
   };
 }
 
@@ -49,37 +52,20 @@ export function PassportVerificationSection({
   const [passportVerified, setPassportVerified] = useState(isVerified);
   const [passportVerificationSent, setPassportVerificationSent] =
     useState(false);
-  const [showClaimForm, setShowClaimForm] = useState(false);
-  const [claimPassport, setClaimPassport] = useState("");
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { signMessageAsync } = useSignMessage();
-  const { addSubname } = useAddSubname();
   const {
     ensName,
     isLoading: ensLoading,
     error: ensError,
   } = useEnsLookup(address);
-  const { profile } = usePersistentAuth();
 
-  // Username sanitization function
-  const sanitizeUsername = (username: string): string => {
-    return username
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "") // Keep only letters and numbers
-      .slice(0, 20); // Ensure max length
-  };
 
-  // Pre-fill passport name with sanitized Farcaster username when claim form opens
-  useEffect(() => {
-    if (showClaimForm && profile?.username && !claimPassport) {
-      const sanitizedUsername = sanitizeUsername(profile.username);
-      setClaimPassport(sanitizedUsername);
-    }
-  }, [showClaimForm, profile?.username, claimPassport]);
 
   // Query member status to check passport claim status
   const { data: memberData, refetch: refetchMemberStatus } =
@@ -107,7 +93,6 @@ export function PassportVerificationSection({
         refetchMemberStatus();
       } else if (passportClaimStatus === "denied") {
         setPassportVerificationSent(false);
-        setShowClaimForm(false);
         toast({
           title: "Passport claim denied",
           description:
@@ -118,64 +103,7 @@ export function PassportVerificationSection({
     }
   }, [memberData, onVerificationComplete, refetchMemberStatus, toast]);
 
-  // Claim passport
-  const claimPassportMutation = useMutation({
-    mutationFn: async (passportName: string) => {
-      if (!address) {
-        throw new Error("Wallet not connected");
-      }
 
-      console.log("=== PASSPORT CLAIMING PROCESS ===");
-      console.log("Submitting claim to backend for admin approval...");
-      console.log(`Requested subdomain: ${passportName}.ipecity.eth`);
-
-      // Step 2: Create SIWE message for claiming
-      const message = createSiweMessage({
-        domain: window.location.host,
-        address,
-        statement: `I claim the Ipê City passport: ${passportName}.ipecity.eth`,
-        uri: window.location.origin,
-        version: "1",
-        chainId: 1,
-        nonce: Math.random().toString(36).slice(2),
-      });
-
-      // Sign the message
-      const signature = await signMessageAsync({ message });
-
-      // Submit claim to backend (admin will create subdomain)
-      return apiRequest("/api/passport/claim", {
-        method: "POST",
-        body: JSON.stringify({
-          farcasterFid,
-          passportClaimSubdomain: passportName,
-          passportClaimWalletAddress: address,
-          signature,
-          message,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-    },
-    onSuccess: () => {
-      setPassportVerificationSent(true);
-      setShowClaimForm(false);
-      toast({
-        title: "Passport claim submitted",
-        description:
-          "Your passport claim has been submitted for admin approval.",
-      });
-      onVerificationComplete?.();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Claim failed",
-        description: error.message || "Failed to submit passport claim.",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Verify passport ownership
   const verifyPassportMutation = useMutation({
@@ -255,23 +183,9 @@ export function PassportVerificationSection({
   const resetVerification = () => {
     setPassportVerified(false);
     setPassportVerificationSent(false);
-    setShowClaimForm(false);
-    setClaimPassport("");
     if (isConnected) {
       disconnect();
     }
-  };
-
-  const handleClaimPassport = () => {
-    if (!claimPassport.trim()) {
-      toast({
-        title: "Enter passport name",
-        description: "Please enter a passport name to claim.",
-        variant: "destructive",
-      });
-      return;
-    }
-    claimPassportMutation.mutate(claimPassport.trim());
   };
 
   const isIpeCityDomain =
@@ -483,57 +397,13 @@ export function PassportVerificationSection({
                       : "Verify Passport Ownership"}
                   </Button>
                 ) : (
-                  <div className="space-y-4">
-                    {!showClaimForm ? (
-                      <Button
-                        onClick={() => setShowClaimForm(true)}
-                        className="w-full"
-                      >
-                        Claim New Ipê Passport
-                      </Button>
-                    ) : (
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="passport-name">
-                            Choose your passport name
-                          </Label>
-                          <div className="flex gap-2 mt-1">
-                            <Input
-                              id="passport-name"
-                              type="text"
-                              placeholder="username"
-                              value={claimPassport}
-                              onChange={(e) => setClaimPassport(e.target.value)}
-                              className="flex-1"
-                            />
-                            <span className="flex items-center text-sm text-gray-500">
-                              .ipecity.eth
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={handleClaimPassport}
-                            disabled={
-                              claimPassportMutation.isPending ||
-                              !claimPassport.trim()
-                            }
-                            className="flex-1"
-                          >
-                            {claimPassportMutation.isPending
-                              ? "Claiming..."
-                              : "Claim Passport"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => setShowClaimForm(false)}
-                            disabled={claimPassportMutation.isPending}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                  <div className="mt-6">
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        No Ipê City domain found on this wallet. You can claim a new username below.
+                      </p>
+                    </div>
+                    <UsernameClaimSection member={memberData?.member} />
                   </div>
                 )}
               </div>

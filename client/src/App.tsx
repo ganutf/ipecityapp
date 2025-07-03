@@ -41,8 +41,6 @@ const wagmiConfig = getDefaultConfig({
   },
 });
 
-
-
 const justaNameConfig = {
   networks: [
     {
@@ -58,13 +56,13 @@ const justaNameConfig = {
     },
   ],
   config: {
-    domain: window.location.origin,
-    origin: window.location.origin,
+    domain:
+      "https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev",
+    origin:
+      "https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev",
     subnameChallengeTtl: 600000,
   },
 };
-
-
 
 function Router() {
   return (

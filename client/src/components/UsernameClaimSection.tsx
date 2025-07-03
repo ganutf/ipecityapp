@@ -109,26 +109,44 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
       // Get user to sign the message
       const signature = await signMessageAsync({ message });
       
+      // Prepare request data
+      const requestData = {
+        username: member.ipeUsername,
+        ensDomain: 'ipecity.eth',
+        chainId: 1, // Mainnet
+        addresses: [
+          {
+            address: address,
+            coinType: 60 // ETH
+          }
+        ]
+      };
+      
+      const requestHeaders = {
+        'Content-Type': 'application/json',
+        'x-signature': signature,
+        'x-message': message,
+        'x-address': address,
+      };
+      
+      // Log all request details
+      console.log('JustaName Accept API Request:', {
+        url: 'https://api.justaname.id/ens/v1/subname/accept',
+        method: 'POST',
+        headers: requestHeaders,
+        body: requestData,
+        member: {
+          farcasterFid: member.farcasterFid,
+          ipeUsername: member.ipeUsername,
+          status: member.status
+        }
+      });
+      
       // Call JustaName accept API directly
       const response = await fetch('https://api.justaname.id/ens/v1/subname/accept', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-signature': signature,
-          'x-message': message,
-          'x-address': address,
-        },
-        body: JSON.stringify({
-          username: member.ipeUsername,
-          ensDomain: 'ipecity.eth',
-          chainId: 1, // Mainnet
-          addresses: [
-            {
-              address: address,
-              coinType: 60 // ETH
-            }
-          ]
-        }),
+        headers: requestHeaders,
+        body: JSON.stringify(requestData),
       });
       
       if (!response.ok) {

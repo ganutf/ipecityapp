@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAccount } from "wagmi";
+import { useAccount, useSignMessage } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 interface UsernameClaimSectionProps {
@@ -17,6 +17,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
   const [username, setUsername] = useState("");
   const [availabilityCheck, setAvailabilityCheck] = useState<{
     checking: boolean;
@@ -95,20 +96,44 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
     },
   });
 
-  // Accept subdomain mutation (calls JustaName accept API with wallet signature)
+  // Accept subdomain mutation (frontend wallet signing + JustaName API)
   const acceptSubdomainMutation = useMutation({
-    mutationFn: async (farcasterFid: number) => {
-      const response = await fetch("/api/subname/accept", {
-        method: "POST",
+    mutationFn: async () => {
+      if (!address || !isConnected) {
+        throw new Error("Wallet not connected");
+      }
+
+      // Create message for signing
+      const message = `Accept subdomain ${member.ipeUsername}.ipecity.eth for address ${address}`;
+      
+      // Get user to sign the message
+      const signature = await signMessageAsync({ message });
+      
+      // Call JustaName accept API directly
+      const response = await fetch('https://api.justaname.id/ens/v1/subname/accept', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
+          'x-signature': signature,
+          'x-message': message,
+          'x-address': address,
         },
-        body: JSON.stringify({ farcasterFid }),
+        body: JSON.stringify({
+          username: member.ipeUsername,
+          ensDomain: 'ipecity.eth',
+          chainId: 1, // Mainnet
+          addresses: [
+            {
+              address: address,
+              coinType: 60 // ETH
+            }
+          ]
+        }),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw errorData;
+        throw new Error(errorData.message || `API Error: ${response.status}`);
       }
       
       return response.json();
@@ -127,7 +152,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
     onError: (error: any) => {
       toast({
         title: "Failed to verify passport",
-        description: error.error || "Please try again.",
+        description: error.message || "Please try again.",
         variant: "destructive",
       });
     },
@@ -259,7 +284,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
               
               {isConnected && (
                 <Button
-                  onClick={() => acceptSubdomainMutation.mutate(member.farcasterFid)}
+                  onClick={() => acceptSubdomainMutation.mutate()}
                   disabled={acceptSubdomainMutation.isPending}
                   className="w-full bg-green-600 hover:bg-green-700"
                 >

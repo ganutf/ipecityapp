@@ -22,9 +22,10 @@ export function UsernameClaimSection({
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
   const [username, setUsername] = useState("");
-  
+
   // Use JustaName SDK hooks
-  const { invitations, isInvitationsPending, refetchInvitations } = useAccountInvitations();
+  const { invitations, isInvitationsPending, refetchInvitations } =
+    useAccountInvitations();
   const { acceptSubname, isAcceptSubnamePending } = useAcceptSubname();
 
   // Claim username mutation (for new claims)
@@ -80,18 +81,25 @@ export function UsernameClaimSection({
         throw new Error("Wallet not connected");
       }
 
-      // Find the invitation for this member's username  
-      const invitation = invitations?.find((inv: any) => 
-        inv.name === `${member.ipeUsername}.ipecity.eth`
+      console.log("Invitations:", invitations);
+      console.log("Looking for username:", `${member.ipeUsername}.ipecity.eth`);
+      
+      // Find the invitation for this member's username
+      const invitation = invitations?.find(
+        (inv: any) => inv.ens === `${member.ipeUsername}.ipecity.eth`,
       );
+
+      console.log("Found invitation:", invitation);
 
       if (!invitation) {
         throw new Error("No pending invitation found for this username");
       }
 
       // Use JustaName SDK to accept the invitation
-      const result = await acceptSubname({ ens: `${member.ipeUsername}.ipecity.eth` });
-      
+      const result = await acceptSubname({
+        ens: `${member.ipeUsername}.ipecity.eth`,
+      });
+
       return result;
     },
     onSuccess: () => {
@@ -158,7 +166,12 @@ export function UsernameClaimSection({
   }, [username]);
 
   const handleClaimUsername = () => {
-    if (!username || !availabilityCheck.data?.available || !isConnected || !address)
+    if (
+      !username ||
+      !availabilityCheck.data?.available ||
+      !isConnected ||
+      !address
+    )
       return;
 
     claimUsernameMutation.mutate({
@@ -222,7 +235,7 @@ export function UsernameClaimSection({
                   <CheckCircle className="w-4 h-4" />
                   <span>Approved - Ready to verify</span>
                 </div>
-                
+
                 {!isConnected ? (
                   <div className="space-y-2">
                     <p className="text-sm text-gray-600">
@@ -237,10 +250,14 @@ export function UsernameClaimSection({
                     </p>
                     <Button
                       onClick={() => acceptSubdomainMutation.mutate()}
-                      disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
+                      disabled={
+                        acceptSubdomainMutation.isPending ||
+                        isAcceptSubnamePending
+                      }
                       className="w-full"
                     >
-                      {(acceptSubdomainMutation.isPending || isAcceptSubnamePending) ? (
+                      {acceptSubdomainMutation.isPending ||
+                      isAcceptSubnamePending ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Verifying...
@@ -279,7 +296,7 @@ export function UsernameClaimSection({
           <p className="text-sm text-gray-600 mb-3">
             Claim your unique username for the Ipê City community:
           </p>
-          
+
           <div className="space-y-3">
             <div>
               <Input

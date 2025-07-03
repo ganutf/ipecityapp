@@ -139,6 +139,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
       
       const requestHeaders = {
         'Content-Type': 'application/json',
+        'x-api-key': import.meta.env.VITE_JUSTANAME_API_KEY || '',
         'x-signature': signature,
         'x-message': message,
         'x-address': address,
@@ -174,14 +175,27 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
       }).catch(err => console.log('Debug logging failed:', err));
       
       // Call JustaName accept API directly
-      const response = await fetch('https://api.justaname.id/ens/v1/subname/accept', {
-        method: 'POST',
-        headers: requestHeaders,
-        body: JSON.stringify(requestData),
-      });
+      let response;
+      try {
+        response = await fetch('https://api.justaname.id/ens/v1/subname/accept', {
+          method: 'POST',
+          headers: requestHeaders,
+          body: JSON.stringify(requestData),
+          mode: 'cors',
+          credentials: 'omit',
+        });
+      } catch (fetchError) {
+        console.error('Network/Fetch Error:', fetchError);
+        throw new Error(`Network error: ${fetchError.message || 'Failed to connect to JustaName API'}`);
+      }
       
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { message: 'Failed to parse error response' };
+        }
         console.error('JustaName API Error:', {
           status: response.status,
           statusText: response.statusText,
@@ -194,7 +208,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
             address: address
           }
         });
-        throw new Error(errorData.message || `API Error: ${response.status}`);
+        throw new Error(errorData.message || errorData.error || `API Error: ${response.status}`);
       }
       
       return response.json();

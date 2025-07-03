@@ -154,12 +154,13 @@ export default function AdminPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_JUSTANAME_API_KEY}`,
+          'x-api-key': import.meta.env.VITE_JUSTANAME_API_KEY,
         },
         body: JSON.stringify({
           username: member.passportClaimSubdomain.toLowerCase(),
           ensDomain: "ipecity.eth",
           chainId: 1,
+          ethAddress: member.passportClaimWalletAddress,
         }),
       });
 

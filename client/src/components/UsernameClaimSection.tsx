@@ -7,6 +7,7 @@ import { CheckCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAccount, useSignMessage } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { SiweMessage } from "siwe";
 
 interface UsernameClaimSectionProps {
   member: any;
@@ -103,10 +104,24 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
         throw new Error("Wallet not connected");
       }
 
-      // Create message for signing
-      const message = `Accept subdomain ${member.ipeUsername}.ipecity.eth for address ${address}`;
+      // Create SIWE-compliant message for signing
+      const domain = window.location.host;
+      const origin = window.location.origin;
+      const statement = `Accept subdomain ${member.ipeUsername}.ipecity.eth`;
+
+      const siweMessage = new SiweMessage({
+        domain,
+        address,
+        statement,
+        uri: origin,
+        version: '1',
+        chainId: 1,
+        issuedAt: new Date().toISOString(),
+      });
+
+      const message = siweMessage.prepareMessage();
       
-      // Get user to sign the message
+      // Get user to sign the SIWE message
       const signature = await signMessageAsync({ message });
       
       // Prepare request data

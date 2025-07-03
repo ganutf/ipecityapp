@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
 import { useAccount } from "wagmi";
-import { useAddSubname } from "@justaname.id/react";
+// Removed useAddSubname hook - using direct API calls instead
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
@@ -17,9 +17,8 @@ export default function AdminPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // Wallet connection for subdomain creation
+  // Wallet connection for subdomain reservation
   const { address, isConnected } = useAccount();
-  const { addSubname } = useAddSubname();
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -145,17 +144,32 @@ export default function AdminPage() {
         throw new Error("Missing subdomain claim or wallet address for this member");
       }
 
-      console.log("=== ADMIN SUBDOMAIN CREATION ===");
-      console.log(`Creating subdomain: ${member.passportClaimSubdomain}.ipecity.eth`);
-      console.log(`Owner will be: ${member.passportClaimWalletAddress}`);
-      console.log(`Admin wallet (signer): ${address}`);
+      console.log("=== ADMIN SUBDOMAIN RESERVATION ===");
+      console.log(`Reserving subdomain: ${member.passportClaimSubdomain}.ipecity.eth`);
+      console.log(`Will be owned by: ${member.passportClaimWalletAddress}`);
+      console.log(`Admin wallet (API caller): ${address}`);
 
-      // Step 1: Create subdomain with JustaName SDK using simplified hook pattern
-      await addSubname({
-        username: member.passportClaimSubdomain.toLowerCase(),
+      // Step 1: Reserve subdomain using JustaName API
+      const reserveResponse = await fetch('https://api.justaname.id/ens/v1/subname/reserve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_JUSTANAME_API_KEY}`,
+        },
+        body: JSON.stringify({
+          username: member.passportClaimSubdomain.toLowerCase(),
+          ensDomain: "ipecity.eth",
+          chainId: 1,
+        }),
       });
 
-      console.log("✓ Subdomain created successfully");
+      if (!reserveResponse.ok) {
+        const errorData = await reserveResponse.json();
+        throw new Error(`Failed to reserve subdomain: ${errorData.error || reserveResponse.statusText}`);
+      }
+
+      const reserveData = await reserveResponse.json();
+      console.log("✓ Subdomain reserved successfully:", reserveData);
       console.log("Step 2: Approving passport claim in backend...");
 
       // Step 2: Approve in backend
@@ -525,10 +539,10 @@ export default function AdminPage() {
                                 title={!isConnected ? "Connect wallet to approve claims" : ""}
                               >
                                 {approvePassportClaimMutation.isPending 
-                                  ? "Creating..." 
+                                  ? "Reserving..." 
                                   : !isConnected 
                                     ? "Need Wallet" 
-                                    : "Approve & Create"}
+                                    : "Approve & Reserve"}
                               </Button>
                               <Button
                                 size="sm"

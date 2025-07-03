@@ -41,8 +41,6 @@ const wagmiConfig = getDefaultConfig({
   },
 });
 
-
-
 const justaNameConfig = {
   networks: [
     {
@@ -63,8 +61,6 @@ const justaNameConfig = {
     subnameChallengeTtl: 600000,
   },
 };
-
-
 
 function Router() {
   return (

@@ -194,6 +194,34 @@ export function UsernameClaimSection({
             credentials: "omit",
           },
         );
+        
+        // Log the response to server
+        const responseClone = response.clone();
+        try {
+          const responseData = await responseClone.json();
+          fetch('/api/debug/log-justaname-response', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: response.status,
+              statusText: response.statusText,
+              headers: Object.fromEntries(response.headers.entries()),
+              body: responseData
+            })
+          }).catch(err => console.log('Response logging failed:', err));
+        } catch (e) {
+          fetch('/api/debug/log-justaname-response', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: response.status,
+              statusText: response.statusText,
+              headers: Object.fromEntries(response.headers.entries()),
+              body: { error: 'Failed to parse response as JSON' }
+            })
+          }).catch(err => console.log('Response logging failed:', err));
+        }
+        
       } catch (fetchError) {
         console.error("Network/Fetch Error:", fetchError);
         throw new Error(

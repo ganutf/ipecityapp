@@ -124,24 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Username must be at least 3 characters" });
       }
 
-      // Check if username is available
-      const availabilityResponse = await fetch(
-        `https://api.justaname.id/ens/v1/subname/available?username=${sanitizedUsername}&ensDomain=ipecity.eth&chainId=1`,
-        {
-          headers: {
-            "x-api-key": process.env.VITE_JUSTANAME_API_KEY || "",
-          },
-        },
-      );
-
-      if (!availabilityResponse.ok) {
-        throw new Error("Failed to check username availability");
-      }
-
-      const availabilityData = await availabilityResponse.json();
-      if (!availabilityData.available) {
-        return res.status(400).json({ error: "Username is not available" });
-      }
+      // Note: Availability should be checked by frontend before calling this endpoint
 
       // Update member with claimed username and change status to pending_claim
       const member = await storage.updateMember(farcasterFid, {

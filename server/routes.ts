@@ -105,6 +105,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to log JustaName request details to terminal
+  app.post("/api/debug/log-justaname-request", async (req, res) => {
+    try {
+      const { url, headers, body, member } = req.body;
+      
+      console.log('\n=== JUSTANAME ACCEPT API REQUEST DETAILS ===');
+      console.log('URL:', url);
+      console.log('Method: POST');
+      console.log('\nHeaders:');
+      Object.entries(headers).forEach(([key, value]) => {
+        console.log(`  ${key}: ${value}`);
+      });
+      console.log('\nRequest Body:');
+      console.log(JSON.stringify(body, null, 2));
+      console.log('\nMember Info:');
+      console.log(JSON.stringify(member, null, 2));
+      console.log('=== END REQUEST DETAILS ===\n');
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Debug logging error:', error);
+      res.status(500).json({ error: 'Debug logging failed' });
+    }
+  });
+
   // Accept subdomain using JustaName accept API
   app.post("/api/subname/accept", async (req, res) => {
     try {

@@ -129,7 +129,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
         'x-address': address,
       };
       
-      // Log all request details
+      // Log all request details to console and send to server for logging
       console.log('JustaName Accept API Request:', {
         url: 'https://api.justaname.id/ens/v1/subname/accept',
         method: 'POST',
@@ -141,6 +141,22 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
           status: member.status
         }
       });
+
+      // Send request details to server for terminal logging
+      fetch('/api/debug/log-justaname-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: 'https://api.justaname.id/ens/v1/subname/accept',
+          headers: requestHeaders,
+          body: requestData,
+          member: {
+            farcasterFid: member.farcasterFid,
+            ipeUsername: member.ipeUsername,
+            status: member.status
+          }
+        })
+      }).catch(err => console.log('Debug logging failed:', err));
       
       // Call JustaName accept API directly
       const response = await fetch('https://api.justaname.id/ens/v1/subname/accept', {

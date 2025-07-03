@@ -14,7 +14,10 @@ interface UsernameClaimSectionProps {
   isProfilePage?: boolean;
 }
 
-export function UsernameClaimSection({ member, isProfilePage = false }: UsernameClaimSectionProps) {
+export function UsernameClaimSection({
+  member,
+  isProfilePage = false,
+}: UsernameClaimSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
@@ -38,25 +41,25 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
       try {
         const response = await fetch(`/api/subname/available/${username}`);
         const data = await response.json();
-        
+
         if (response.ok) {
-          setAvailabilityCheck({ 
-            checking: false, 
-            available: data.available, 
-            error: null 
+          setAvailabilityCheck({
+            checking: false,
+            available: data.available,
+            error: null,
           });
         } else {
-          setAvailabilityCheck({ 
-            checking: false, 
-            available: null, 
-            error: data.error || "Failed to check availability" 
+          setAvailabilityCheck({
+            checking: false,
+            available: null,
+            error: data.error || "Failed to check availability",
           });
         }
       } catch (error) {
-        setAvailabilityCheck({ 
-          checking: false, 
-          available: null, 
-          error: "Failed to check availability" 
+        setAvailabilityCheck({
+          checking: false,
+          available: null,
+          error: "Failed to check availability",
         });
       }
     }, 500);
@@ -65,7 +68,11 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
   }, [username]);
 
   const claimUsernameMutation = useMutation({
-    mutationFn: async (data: { farcasterFid: number; username: string; walletAddress: string }) => {
+    mutationFn: async (data: {
+      farcasterFid: number;
+      username: string;
+      walletAddress: string;
+    }) => {
       const response = await fetch("/api/username/claim", {
         method: "POST",
         headers: {
@@ -73,12 +80,12 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
         },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw errorData;
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -114,103 +121,112 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
         address,
         statement,
         uri: origin,
-        version: '1',
+        version: "1",
         chainId: 1,
         issuedAt: new Date().toISOString(),
       });
 
       const message = siweMessage.prepareMessage();
-      
+
       // Get user to sign the SIWE message
       const signature = await signMessageAsync({ message });
-      
+
       // Prepare request data
       const requestData = {
         username: member.ipeUsername,
-        ensDomain: 'ipecity.eth',
+        ensDomain: "ipecity.eth",
         chainId: 1, // Mainnet
         addresses: [
           {
             address: address,
-            coinType: 60 // ETH
-          }
-        ]
+            coinType: 60, // ETH
+          },
+        ],
       };
-      
+
       const requestHeaders = {
-        'Content-Type': 'application/json',
-        'x-api-key': import.meta.env.VITE_JUSTANAME_API_KEY || '',
-        'x-signature': signature,
-        'x-message': message,
-        'x-address': address,
+        "Content-Type": "application/json",
+        "x-api-key": import.meta.env.VITE_JUSTANAME_API_KEY || "",
+        "x-signature": signature,
+        "x-message": message,
+        "x-address": address,
       };
-      
+
       // Log all request details to console and send to server for logging
-      console.log('JustaName Accept API Request:', {
-        url: 'https://api.justaname.id/ens/v1/subname/accept',
-        method: 'POST',
+      console.log("JustaName Accept API Request:", {
+        url: "https://api.justaname.id/ens/v1/subname/accept",
+        method: "POST",
         headers: requestHeaders,
         body: requestData,
         member: {
           farcasterFid: member.farcasterFid,
           ipeUsername: member.ipeUsername,
-          status: member.status
-        }
+          status: member.status,
+        },
       });
 
       // Send request details to server for terminal logging
-      fetch('/api/debug/log-justaname-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("/api/debug/log-justaname-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url: 'https://api.justaname.id/ens/v1/subname/accept',
+          url: "https://api.justaname.id/ens/v1/subname/accept",
           headers: requestHeaders,
           body: requestData,
           member: {
             farcasterFid: member.farcasterFid,
             ipeUsername: member.ipeUsername,
-            status: member.status
-          }
-        })
-      }).catch(err => console.log('Debug logging failed:', err));
-      
+            status: member.status,
+          },
+        }),
+      }).catch((err) => console.log("Debug logging failed:", err));
+
       // Call JustaName accept API directly
       let response;
       try {
-        response = await fetch('https://api.justaname.id/ens/v1/subname/accept', {
-          method: 'POST',
-          headers: requestHeaders,
-          body: JSON.stringify(requestData),
-          mode: 'cors',
-          credentials: 'omit',
-        });
+        response = await fetch(
+          "https://api.justaname.id/ens/v1/subname/accept",
+          {
+            method: "POST",
+            headers: requestHeaders,
+            body: JSON.stringify(requestData),
+            mode: "cors",
+            credentials: "omit",
+          },
+        );
       } catch (fetchError) {
-        console.error('Network/Fetch Error:', fetchError);
-        throw new Error(`Network error: ${fetchError.message || 'Failed to connect to JustaName API'}`);
+        console.error("Network/Fetch Error:", fetchError);
+        throw new Error(
+          `Network error: ${fetchError.message || "Failed to connect to JustaName API"}`,
+        );
       }
-      
+
       if (!response.ok) {
         let errorData;
         try {
           errorData = await response.json();
         } catch (e) {
-          errorData = { message: 'Failed to parse error response' };
+          errorData = { message: "Failed to parse error response" };
         }
-        console.error('JustaName API Error:', {
+        console.error("JustaName API Error:", {
           status: response.status,
           statusText: response.statusText,
           errorData,
           headers: Object.fromEntries(response.headers.entries()),
           requestData: {
             username: member.ipeUsername,
-            ensDomain: 'ipecity.eth',
+            ensDomain: "ipecity.eth",
             chainId: 1,
-            address: address
-          }
+            address: address,
+          },
         });
-        throw new Error(errorData.message || errorData.error || `API Error: ${response.status}`);
+        throw new Error(
+          errorData.message ||
+            errorData.error ||
+            `API Error: ${response.status}`,
+        );
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -221,7 +237,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
       // Update member status to active_member
       updateMemberStatusMutation.mutate({
         farcasterFid: member.farcasterFid,
-        status: 'active_member'
+        status: "active_member",
       });
     },
     onError: (error: any) => {
@@ -235,7 +251,13 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
 
   // Update member status mutation
   const updateMemberStatusMutation = useMutation({
-    mutationFn: async ({ farcasterFid, status }: { farcasterFid: number; status: string }) => {
+    mutationFn: async ({
+      farcasterFid,
+      status,
+    }: {
+      farcasterFid: number;
+      status: string;
+    }) => {
       const response = await fetch("/api/members/update-status", {
         method: "POST",
         headers: {
@@ -243,12 +265,12 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
         },
         body: JSON.stringify({ farcasterFid, status }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw errorData;
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -257,8 +279,9 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
   });
 
   const handleClaimUsername = () => {
-    if (!username || !availabilityCheck.available || !isConnected || !address) return;
-    
+    if (!username || !availabilityCheck.available || !isConnected || !address)
+      return;
+
     claimUsernameMutation.mutate({
       farcasterFid: member.farcasterFid,
       username: username.toLowerCase(),
@@ -268,12 +291,22 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
 
   // Show status if user already has claimed username
   if (member?.ipeUsername) {
-    const isPending = member.status === 'pending_claim';
-    const isApprovedNotAccepted = member.status === 'member';
-    const isActive = member.status === 'active_member';
-    
+    const isPending = member.status === "pending_claim";
+    const isApprovedNotAccepted = member.status === "member";
+    const isActive = member.status === "active_member";
+
     return (
-      <Card className={isActive ? "border-green-200" : isApprovedNotAccepted ? "border-blue-200" : isPending ? "border-yellow-200" : "border-gray-200"}>
+      <Card
+        className={
+          isActive
+            ? "border-green-200"
+            : isApprovedNotAccepted
+              ? "border-blue-200"
+              : isPending
+                ? "border-yellow-200"
+                : "border-gray-200"
+        }
+      >
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             {isActive ? (
@@ -291,22 +324,31 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
         <CardContent className="space-y-4">
           <div>
             <p className="text-sm text-gray-600 mb-2">Your claimed username:</p>
-            <p className="font-mono text-lg">{member.ipeUsername}.ipecity.eth</p>
+            <p className="font-mono text-lg">
+              {member.ipeUsername}.ipecity.eth
+            </p>
           </div>
-          
-          <div className={`p-3 rounded-lg ${
-            isActive ? 'bg-green-50 text-green-800' :
-            isApprovedNotAccepted ? 'bg-blue-50 text-blue-800' :
-            isPending ? 'bg-yellow-50 text-yellow-800' : 
-            'bg-gray-50 text-gray-800'
-          }`}>
+
+          <div
+            className={`p-3 rounded-lg ${
+              isActive
+                ? "bg-green-50 text-green-800"
+                : isApprovedNotAccepted
+                  ? "bg-blue-50 text-blue-800"
+                  : isPending
+                    ? "bg-yellow-50 text-yellow-800"
+                    : "bg-gray-50 text-gray-800"
+            }`}
+          >
             <p className="text-sm font-medium">
-              Status: {
-                isActive ? 'Active & Live' : 
-                isApprovedNotAccepted ? 'Approved & Reserved' : 
-                isPending ? 'Pending Admin Approval' : 
-                'Unknown'
-              }
+              Status:{" "}
+              {isActive
+                ? "Active & Live"
+                : isApprovedNotAccepted
+                  ? "Approved & Reserved"
+                  : isPending
+                    ? "Pending Admin Approval"
+                    : "Unknown"}
             </p>
             {isPending && (
               <div>
@@ -325,7 +367,8 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
             )}
             {isApprovedNotAccepted && (
               <p className="text-xs mt-1">
-                Your subdomain has been reserved! Verify your passport to activate it.
+                Your subdomain has been reserved! Verify your passport to
+                activate it.
               </p>
             )}
             {isActive && (
@@ -340,7 +383,9 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
             <div className="space-y-2">
               {!isConnected && (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800 mb-2">Connect your wallet to verify passport:</p>
+                  <p className="text-sm text-yellow-800 mb-2">
+                    Connect your wallet to verify passport:
+                  </p>
                   <ConnectButton.Custom>
                     {({ openConnectModal, mounted }) => {
                       if (!mounted) return null;
@@ -356,7 +401,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
                   </ConnectButton.Custom>
                 </div>
               )}
-              
+
               {isConnected && (
                 <Button
                   onClick={() => acceptSubdomainMutation.mutate()}
@@ -388,13 +433,16 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
       <CardContent className="space-y-4">
         <div>
           <p className="text-sm text-gray-600 mb-4">
-            Choose a unique username for your Ipê City passport. This will be your subdomain under ipecity.eth.
+            Choose a unique username for your Ipê City passport. This will be
+            your subdomain under ipecity.eth.
           </p>
-          
+
           {/* Wallet Connection Requirement */}
           {!isConnected && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 mb-2">Connect your wallet to claim a username:</p>
+              <p className="text-sm text-blue-800 mb-2">
+                Connect your wallet to claim a username:
+              </p>
               <ConnectButton.Custom>
                 {({ openConnectModal, mounted }) => {
                   if (!mounted) return null;
@@ -414,38 +462,48 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
           {isConnected && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
-                ✓ Wallet connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                ✓ Wallet connected: {address?.slice(0, 6)}...
+                {address?.slice(-4)}
               </p>
             </div>
           )}
-          
+
           <div className="space-y-2">
             <Input
               type="text"
               placeholder="Enter username (3+ characters)"
               value={username}
-              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+              onChange={(e) =>
+                setUsername(
+                  e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""),
+                )
+              }
               className="font-mono"
             />
-            
+
             {username && (
               <p className="text-sm text-gray-500">
-                Your subdomain will be: <span className="font-mono">{username}.ipecity.eth</span>
+                Your subdomain will be:{" "}
+                <span className="font-mono">{username}.ipecity.eth</span>
               </p>
             )}
-            
+
             {/* Availability indicator */}
             {username.length >= 3 && (
               <div className="flex items-center space-x-2">
                 {availabilityCheck.checking ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                    <span className="text-sm text-blue-600">Checking availability...</span>
+                    <span className="text-sm text-blue-600">
+                      Checking availability...
+                    </span>
                   </>
                 ) : availabilityCheck.error ? (
                   <>
                     <AlertCircle className="w-4 h-4 text-red-600" />
-                    <span className="text-sm text-red-600">{availabilityCheck.error}</span>
+                    <span className="text-sm text-red-600">
+                      {availabilityCheck.error}
+                    </span>
                   </>
                 ) : availabilityCheck.available === true ? (
                   <>
@@ -455,20 +513,22 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
                 ) : availabilityCheck.available === false ? (
                   <>
                     <AlertCircle className="w-4 h-4 text-red-600" />
-                    <span className="text-sm text-red-600">Username not available</span>
+                    <span className="text-sm text-red-600">
+                      Username not available
+                    </span>
                   </>
                 ) : null}
               </div>
             )}
           </div>
         </div>
-        
+
         <Button
           onClick={handleClaimUsername}
           disabled={
-            !username || 
-            username.length < 3 || 
-            availabilityCheck.checking || 
+            !username ||
+            username.length < 3 ||
+            availabilityCheck.checking ||
             !availabilityCheck.available ||
             !isConnected ||
             !address ||

@@ -108,10 +108,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Claim username (update ipe_username field)
   app.post("/api/username/claim", async (req, res) => {
     try {
-      const { farcasterFid, username } = req.body;
+      const { farcasterFid, username, walletAddress } = req.body;
 
       if (!farcasterFid || !username) {
         return res.status(400).json({ error: "FID and username are required" });
+      }
+
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address is required" });
       }
 
       // Sanitize username
@@ -126,9 +130,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Note: Availability should be checked by frontend before calling this endpoint
 
-      // Update member with claimed username and change status to pending_claim
+      // Update member with claimed username, wallet address, and change status to pending_claim
       const member = await storage.updateMember(farcasterFid, {
         ipeUsername: sanitizedUsername,
+        passportClaimWalletAddress: walletAddress,
         status: "pending_claim",
       });
 

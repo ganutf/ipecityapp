@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAccount } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 interface UsernameClaimSectionProps {
   member: any;
@@ -14,6 +16,7 @@ interface UsernameClaimSectionProps {
 export function UsernameClaimSection({ member, isProfilePage = false }: UsernameClaimSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { address, isConnected } = useAccount();
   const [username, setUsername] = useState("");
   const [availabilityCheck, setAvailabilityCheck] = useState<{
     checking: boolean;
@@ -60,7 +63,7 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
   }, [username]);
 
   const claimUsernameMutation = useMutation({
-    mutationFn: async (data: { farcasterFid: number; username: string }) => {
+    mutationFn: async (data: { farcasterFid: number; username: string; walletAddress: string }) => {
       const response = await fetch("/api/username/claim", {
         method: "POST",
         headers: {
@@ -126,11 +129,12 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
   });
 
   const handleClaimUsername = () => {
-    if (!username || !availabilityCheck.available) return;
+    if (!username || !availabilityCheck.available || !isConnected || !address) return;
     
     claimUsernameMutation.mutate({
       farcasterFid: member.farcasterFid,
       username: username.toLowerCase(),
+      walletAddress: address,
     });
   };
 
@@ -226,6 +230,34 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
             Choose a unique username for your Ipê City passport. This will be your subdomain under ipecity.eth.
           </p>
           
+          {/* Wallet Connection Requirement */}
+          {!isConnected && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 mb-2">Connect your wallet to claim a username:</p>
+              <ConnectButton.Custom>
+                {({ openConnectModal, mounted }) => {
+                  if (!mounted) return null;
+                  return (
+                    <Button
+                      onClick={openConnectModal}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      Connect Wallet
+                    </Button>
+                  );
+                }}
+              </ConnectButton.Custom>
+            </div>
+          )}
+
+          {isConnected && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                ✓ Wallet connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+              </p>
+            </div>
+          )}
+          
           <div className="space-y-2">
             <Input
               type="text"
@@ -277,6 +309,8 @@ export function UsernameClaimSection({ member, isProfilePage = false }: Username
             username.length < 3 || 
             availabilityCheck.checking || 
             !availabilityCheck.available ||
+            !isConnected ||
+            !address ||
             claimUsernameMutation.isPending
           }
           className="w-full"

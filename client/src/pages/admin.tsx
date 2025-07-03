@@ -270,18 +270,32 @@ export default function AdminPage() {
                 : "Connect wallet to create subdomains for passport claims"}
             </p>
           </div>
-          {!isConnected && (
-            <ConnectButton.Custom>
-              {({ openConnectModal }) => (
+          <ConnectButton.Custom>
+            {({ openConnectModal, openAccountModal, mounted, account }) => {
+              if (!mounted) return null;
+              
+              if (!account) {
+                return (
+                  <Button
+                    onClick={openConnectModal}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Connect Wallet
+                  </Button>
+                );
+              }
+              
+              return (
                 <Button
-                  onClick={openConnectModal}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={openAccountModal}
+                  variant="outline"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
                 >
-                  Connect Wallet
+                  Disconnect
                 </Button>
-              )}
-            </ConnectButton.Custom>
-          )}
+              );
+            }}
+          </ConnectButton.Custom>
         </div>
       </div>
       

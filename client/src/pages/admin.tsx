@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
-import { useAccount, useConnect } from "wagmi";
+import { useAccount } from "wagmi";
 import { useAddSubname } from "@justaname.id/react";
 import { mainnet } from "wagmi/chains";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
@@ -18,7 +19,6 @@ export default function AdminPage() {
   
   // Wallet connection for subdomain creation
   const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
   const { addSubname } = useAddSubname();
 
   // Initialize all state hooks first (must be at top level)
@@ -271,12 +271,16 @@ export default function AdminPage() {
             </p>
           </div>
           {!isConnected && (
-            <Button
-              onClick={() => connect({ connector: connectors[0] })}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Connect Wallet
-            </Button>
+            <ConnectButton.Custom>
+              {({ openConnectModal }) => (
+                <Button
+                  onClick={openConnectModal}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Connect Wallet
+                </Button>
+              )}
+            </ConnectButton.Custom>
           )}
         </div>
       </div>

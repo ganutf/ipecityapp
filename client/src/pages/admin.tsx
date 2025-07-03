@@ -141,22 +141,30 @@ export default function AdminPage() {
         throw new Error("Admin wallet must be connected to create subdomains");
       }
 
-      if (!member.passportClaimSubdomain) {
-        throw new Error("No subdomain claim found for this member");
+      if (!member.passportClaimSubdomain || !member.passportClaimWalletAddress) {
+        throw new Error("Missing subdomain claim or wallet address for this member");
       }
 
       console.log("=== ADMIN SUBDOMAIN CREATION ===");
       console.log(`Creating subdomain: ${member.passportClaimSubdomain}.ipecity.eth`);
-      console.log(`Admin wallet: ${address}`);
+      console.log(`Owner will be: ${member.passportClaimWalletAddress}`);
+      console.log(`Admin wallet (signer): ${address}`);
 
       // Step 1: Create subdomain with JustaName SDK
-      const textConfig: Record<string, string> = {};
-      
+      // Assign ownership to the user's wallet address, not admin wallet
       await addSubname({
-        ensDomain: "ipecity.eth",
         username: member.passportClaimSubdomain.toLowerCase(),
-        text: textConfig,
+        ensDomain: "ipecity.eth",
         chainId: mainnet.id,
+        addresses: [
+          {
+            address: member.passportClaimWalletAddress,
+            coinType: 60 as any, // ETH wallet
+          }
+        ],
+        text: [
+          { key: "description", value: `Ipê City passport for ${member.name || member.farcasterFid}` }
+        ]
       });
 
       console.log("✓ Subdomain created successfully");

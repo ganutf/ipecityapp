@@ -366,14 +366,6 @@ The application follows a monorepo structure with clear separation between clien
   - **Database Schema Sync**: Fixed missing database columns (name, status, passport_claim_*, registration_status, approved, profile_completed)
   - **Production Ready**: Complete JustaName SDK integration now functional with proper configuration structure
   - **Architecture Confirmed**: Purely client-side subdomain creation using @justaname.id/react hook working as intended
-- July 3, 2025. **ADMIN SUBDOMAIN RESERVATION SYSTEM**: Implemented JustaName Reserve API Integration:
-  - **Migrated from Creation to Reservation**: Updated admin panel to use JustaName reserve API instead of direct subdomain creation
-  - **Resolved Authorization Issues**: Reserve API avoids "SubdomainUnauthorizedException" errors that occurred with direct creation
-  - **Proper API Configuration**: Implemented correct headers with x-api-key authentication matching JustaName documentation
-  - **Enhanced Request Structure**: Added ethAddress field mapped to user's passportClaimWalletAddress for proper ownership assignment
-  - **Updated UI Elements**: Changed button text from "Approve & Create" to "Approve & Reserve" to reflect new functionality
-  - **Direct API Integration**: Removed dependency on JustaName hooks, using direct fetch calls with proper error handling
-  - **Production Ready**: Complete reservation system working with proper API authentication and user wallet address assignment
 
 ## User Preferences
 

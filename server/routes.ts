@@ -45,6 +45,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /* ────────────────────────────────  SUBDOMAIN AVAILABILITY  ──────────────────────────────── */
+  // Check subdomain availability
+  app.get("/api/subname/available/:username", async (req, res) => {
+    try {
+      const { username } = req.params;
+      
+      if (!username || username.length < 3) {
+        return res.status(400).json({ 
+          error: "Username must be at least 3 characters long" 
+        });
+      }
+
+      // Sanitize username (lowercase, alphanumeric only)
+      const sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (sanitizedUsername !== username.toLowerCase()) {
+        return res.status(400).json({ 
+          error: "Username can only contain letters and numbers" 
+        });
+      }
+
+      // Check with JustaName API
+      const response = await fetch(
+        `https://api.justaname.id/ens/v1/subname/available?username=${sanitizedUsername}&ensDomain=ipecity.eth&chainId=1`,
+        {
+          headers: {
+            'x-api-key': process.env.VITE_JUSTANAME_API_KEY || '',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`JustaName API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.json({ available: data.available || false, username: sanitizedUsername });
+    } catch (error) {
+      console.error('Error checking subdomain availability:', error);
+      res.status(500).json({ 
+        error: 'Failed to check subdomain availability' 
+      });
+    }
+  });
+
+  // Claim username (update ipe_username field)
+  app.post("/api/username/claim", async (req, res) => {
+    try {
+      const { farcasterFid, username } = req.body;
+      
+      if (!farcasterFid || !username) {
+        return res.status(400).json({ error: "FID and username are required" });
+      }
+
+      // Sanitize username
+      const sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (sanitizedUsername.length < 3) {
+        return res.status(400).json({ error: "Username must be at least 3 characters" });
+      }
+
+      // Check if username is available
+      const availabilityResponse = await fetch(
+        `https://api.justaname.id/ens/v1/subname/available?username=${sanitizedUsername}&ensDomain=ipecity.eth&chainId=1`,
+        {
+          headers: {
+            'x-api-key': process.env.VITE_JUSTANAME_API_KEY || '',
+          },
+        }
+      );
+
+      if (!availabilityResponse.ok) {
+        throw new Error('Failed to check username availability');
+      }
+
+      const availabilityData = await availabilityResponse.json();
+      if (!availabilityData.available) {
+        return res.status(400).json({ error: "Username is not available" });
+      }
+
+      // Update member with claimed username and change status to pending_claim
+      const member = await storage.updateMember(farcasterFid, {
+        ipeUsername: sanitizedUsername,
+        status: "pending_claim"
+      });
+
+      res.json({ success: true, member, username: sanitizedUsername });
+    } catch (error) {
+      console.error('Error claiming username:', error);
+      res.status(500).json({ error: 'Failed to claim username' });
+    }
+  });
+
+  // Accept reserved subdomain (user action after admin approval)
+  app.post("/api/subname/accept", async (req, res) => {
+    try {
+      const { farcasterFid } = req.body;
+      
+      if (!farcasterFid) {
+        return res.status(400).json({ error: "FID is required" });
+      }
+
+      const member = await storage.getMember(farcasterFid);
+      if (!member || !member.ipeUsername) {
+        return res.status(404).json({ error: "Member or username not found" });
+      }
+
+      if (member.status !== 'member') {
+        return res.status(400).json({ error: "Subdomain must be approved first" });
+      }
+
+      // Call JustaName accept API
+      const acceptResponse = await fetch('https://api.justaname.id/ens/v1/subname/accept', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.VITE_JUSTANAME_API_KEY || '',
+        },
+        body: JSON.stringify({
+          username: member.ipeUsername,
+          ensDomain: "ipecity.eth",
+          chainId: 1,
+        }),
+      });
+
+      if (!acceptResponse.ok) {
+        const errorData = await acceptResponse.json();
+        throw new Error(`Failed to accept subdomain: ${errorData.error || acceptResponse.statusText}`);
+      }
+
+      const acceptData = await acceptResponse.json();
+      
+      // Update member status to active_member
+      const updatedMember = await storage.updateMember(farcasterFid, {
+        status: "active_member",
+        passportVerified: true
+      });
+
+      res.json({ success: true, member: updatedMember, acceptData });
+    } catch (error) {
+      console.error('Error accepting subdomain:', error);
+      res.status(500).json({ error: 'Failed to accept subdomain' });
+    }
+  });
+
   /* ────────────────────────────────  QR CODE GENERATION  ──────────────────────────────── */
   app.post('/api/qrcode', async (req, res) => {
     try {

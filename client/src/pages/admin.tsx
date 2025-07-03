@@ -140,13 +140,17 @@ export default function AdminPage() {
         throw new Error("Admin wallet must be connected to create subdomains");
       }
 
-      if (!member.passportClaimSubdomain || !member.passportClaimWalletAddress) {
-        throw new Error("Missing subdomain claim or wallet address for this member");
+      // Use ipeUsername for new flow, fallback to passportClaimSubdomain for existing claims
+      const usernameToReserve = (member as any).ipeUsername || member.passportClaimSubdomain;
+      const walletAddress = member.passportClaimWalletAddress;
+
+      if (!usernameToReserve || !walletAddress) {
+        throw new Error("Missing username or wallet address for this member");
       }
 
       console.log("=== ADMIN SUBDOMAIN RESERVATION ===");
-      console.log(`Reserving subdomain: ${member.passportClaimSubdomain}.ipecity.eth`);
-      console.log(`Will be owned by: ${member.passportClaimWalletAddress}`);
+      console.log(`Reserving subdomain: ${usernameToReserve}.ipecity.eth`);
+      console.log(`Will be owned by: ${walletAddress}`);
       console.log(`Admin wallet (API caller): ${address}`);
 
       // Step 1: Reserve subdomain using JustaName API
@@ -157,10 +161,10 @@ export default function AdminPage() {
           'x-api-key': import.meta.env.VITE_JUSTANAME_API_KEY,
         },
         body: JSON.stringify({
-          username: member.passportClaimSubdomain.toLowerCase(),
+          username: usernameToReserve.toLowerCase(),
           ensDomain: "ipecity.eth",
           chainId: 1,
-          ethAddress: member.passportClaimWalletAddress,
+          ethAddress: walletAddress,
         }),
       });
 
@@ -490,7 +494,7 @@ export default function AdminPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
-                    const claimSubdomain = member.passportClaimSubdomain;
+                    const claimSubdomain = (member as any).ipeUsername || member.passportClaimSubdomain;
                     const hasPendingClaim = memberStatus === 'pending_claim' && claimSubdomain;
                     
                     return (

@@ -50,6 +50,7 @@ export const members = pgTable("members", {
   miniBio: text("mini_bio"),
   profileTags: text("profile_tags").array(),
   ipePassport: varchar("ipe_passport").unique(), // User-chosen subdomain for <user-id>.ipecity.eth
+  ipeUsername: varchar("ipe_username").unique(), // Claimed username for passport verification
   passportVerified: boolean("passport_verified").default(false).notNull(),
   
   // New status field to track registration flow

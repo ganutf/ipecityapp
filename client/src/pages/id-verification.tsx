@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
+import { UsernameClaimSection } from "@/components/UsernameClaimSection";
 
 interface MemberStatus {
   isMember: boolean;
@@ -84,13 +85,18 @@ export default function IdVerificationPage() {
         allowChange={true}
       />
 
-      <PassportVerificationSection
-        farcasterFid={profile?.fid || 0}
-        currentPassport={memberStatus?.member?.ipePassport}
-        isVerified={isPassportVerified}
-        onVerificationComplete={handlePassportComplete}
-        allowChange={true}
-      />
+      {/* Show username claiming if user doesn't have existing passport, otherwise show passport verification */}
+      {!memberStatus?.member?.ipePassport && !(memberStatus?.member as any)?.ipeUsername ? (
+        <UsernameClaimSection member={memberStatus?.member} />
+      ) : (
+        <PassportVerificationSection
+          farcasterFid={profile?.fid || 0}
+          currentPassport={memberStatus?.member?.ipePassport}
+          isVerified={isPassportVerified}
+          onVerificationComplete={handlePassportComplete}
+          allowChange={true}
+        />
+      )}
 
       {bothComplete && (
         <div className="text-center pt-4">

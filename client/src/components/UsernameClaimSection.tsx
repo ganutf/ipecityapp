@@ -1,0 +1,296 @@
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface UsernameClaimSectionProps {
+  member: any;
+  isProfilePage?: boolean;
+}
+
+export function UsernameClaimSection({ member, isProfilePage = false }: UsernameClaimSectionProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [username, setUsername] = useState("");
+  const [availabilityCheck, setAvailabilityCheck] = useState<{
+    checking: boolean;
+    available: boolean | null;
+    error: string | null;
+  }>({ checking: false, available: null, error: null });
+
+  // Check username availability with debounce
+  useEffect(() => {
+    if (username.length < 3) {
+      setAvailabilityCheck({ checking: false, available: null, error: null });
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setAvailabilityCheck({ checking: true, available: null, error: null });
+      try {
+        const response = await fetch(`/api/subname/available/${username}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+          setAvailabilityCheck({ 
+            checking: false, 
+            available: data.available, 
+            error: null 
+          });
+        } else {
+          setAvailabilityCheck({ 
+            checking: false, 
+            available: null, 
+            error: data.error || "Failed to check availability" 
+          });
+        }
+      } catch (error) {
+        setAvailabilityCheck({ 
+          checking: false, 
+          available: null, 
+          error: "Failed to check availability" 
+        });
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [username]);
+
+  const claimUsernameMutation = useMutation({
+    mutationFn: async (data: { farcasterFid: number; username: string }) => {
+      const response = await fetch("/api/username/claim", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw errorData;
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Username claimed successfully!",
+        description: "Your username is now pending admin approval.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to claim username",
+        description: error.error || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const acceptSubdomainMutation = useMutation({
+    mutationFn: async (farcasterFid: number) => {
+      const response = await fetch("/api/subname/accept", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ farcasterFid }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw errorData;
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Subdomain activated successfully!",
+        description: "Your Ipê passport is now active.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to activate subdomain",
+        description: error.error || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleClaimUsername = () => {
+    if (!username || !availabilityCheck.available) return;
+    
+    claimUsernameMutation.mutate({
+      farcasterFid: member.farcasterFid,
+      username: username.toLowerCase(),
+    });
+  };
+
+  // Show status if user already has claimed username
+  if (member?.ipeUsername) {
+    const isPending = member.status === 'pending_claim';
+    const isApprovedNotAccepted = member.status === 'member';
+    const isActive = member.status === 'active_member';
+    
+    return (
+      <Card className={isActive ? "border-green-200" : isApprovedNotAccepted ? "border-blue-200" : isPending ? "border-yellow-200" : "border-gray-200"}>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            {isActive ? (
+              <CheckCircle className="w-5 h-5 text-green-600" />
+            ) : isApprovedNotAccepted ? (
+              <CheckCircle className="w-5 h-5 text-blue-600" />
+            ) : isPending ? (
+              <Clock className="w-5 h-5 text-yellow-600" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-gray-600" />
+            )}
+            <span>Ipê Username</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-sm text-gray-600 mb-2">Your claimed username:</p>
+            <p className="font-mono text-lg">{member.ipeUsername}.ipecity.eth</p>
+          </div>
+          
+          <div className={`p-3 rounded-lg ${
+            isActive ? 'bg-green-50 text-green-800' :
+            isApprovedNotAccepted ? 'bg-blue-50 text-blue-800' :
+            isPending ? 'bg-yellow-50 text-yellow-800' : 
+            'bg-gray-50 text-gray-800'
+          }`}>
+            <p className="text-sm font-medium">
+              Status: {
+                isActive ? 'Active & Live' : 
+                isApprovedNotAccepted ? 'Approved & Reserved' : 
+                isPending ? 'Pending Admin Approval' : 
+                'Unknown'
+              }
+            </p>
+            {isPending && (
+              <p className="text-xs mt-1">
+                An admin will review and approve your username claim. You'll be able to accept it once approved.
+              </p>
+            )}
+            {isApprovedNotAccepted && (
+              <p className="text-xs mt-1">
+                Your subdomain has been reserved! Click the button below to accept and activate it.
+              </p>
+            )}
+            {isActive && (
+              <p className="text-xs mt-1">
+                Your Ipê passport is now active and live on the blockchain!
+              </p>
+            )}
+          </div>
+
+          {/* Show Accept button when approved but not yet accepted */}
+          {isApprovedNotAccepted && (
+            <Button
+              onClick={() => acceptSubdomainMutation.mutate(member.farcasterFid)}
+              disabled={acceptSubdomainMutation.isPending}
+              className="w-full"
+            >
+              {acceptSubdomainMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Activating...
+                </>
+              ) : (
+                "Accept & Activate Passport"
+              )}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Claim Your Ipê Username</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <p className="text-sm text-gray-600 mb-4">
+            Choose a unique username for your Ipê City passport. This will be your subdomain under ipecity.eth.
+          </p>
+          
+          <div className="space-y-2">
+            <Input
+              type="text"
+              placeholder="Enter username (3+ characters)"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+              className="font-mono"
+            />
+            
+            {username && (
+              <p className="text-sm text-gray-500">
+                Your subdomain will be: <span className="font-mono">{username}.ipecity.eth</span>
+              </p>
+            )}
+            
+            {/* Availability indicator */}
+            {username.length >= 3 && (
+              <div className="flex items-center space-x-2">
+                {availabilityCheck.checking ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span className="text-sm text-blue-600">Checking availability...</span>
+                  </>
+                ) : availabilityCheck.error ? (
+                  <>
+                    <AlertCircle className="w-4 h-4 text-red-600" />
+                    <span className="text-sm text-red-600">{availabilityCheck.error}</span>
+                  </>
+                ) : availabilityCheck.available === true ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-green-600">Available!</span>
+                  </>
+                ) : availabilityCheck.available === false ? (
+                  <>
+                    <AlertCircle className="w-4 h-4 text-red-600" />
+                    <span className="text-sm text-red-600">Username not available</span>
+                  </>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <Button
+          onClick={handleClaimUsername}
+          disabled={
+            !username || 
+            username.length < 3 || 
+            availabilityCheck.checking || 
+            !availabilityCheck.available ||
+            claimUsernameMutation.isPending
+          }
+          className="w-full"
+        >
+          {claimUsernameMutation.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              Claiming...
+            </>
+          ) : (
+            "Claim Username"
+          )}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}

@@ -20,6 +20,7 @@ import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { useAddSubname } from "@justaname.id/react";
 import { mainnet } from "viem/chains";
 import { UsernameClaimSection } from "@/components/UsernameClaimSection";
+import { CheckCircle, AlertCircle } from "lucide-react";
 
 interface PassportVerificationSectionProps {
   farcasterFid: number;
@@ -40,6 +41,89 @@ interface MemberData {
     ipeUsername?: string;
     farcasterFid?: number;
   };
+}
+
+interface AcceptanceSectionProps {
+  memberData: MemberData;
+  onAcceptSuccess: () => void;
+}
+
+function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionProps) {
+  const { toast } = useToast();
+  
+  const acceptMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/passport/accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          farcasterFid: memberData.member?.farcasterFid 
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to accept passport");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success!",
+        description: "Passport accepted successfully. You now have full access!",
+      });
+      onAcceptSuccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const subdomainName = memberData.member?.ipeUsername 
+    ? `${memberData.member.ipeUsername}.ipecity.eth`
+    : memberData.member?.ipePassport;
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <CheckCircle className="h-4 w-4 text-green-500" />
+          <span className="font-medium text-blue-800">Passport Reserved</span>
+        </div>
+        <p className="text-sm text-blue-700 mb-3">
+          Your passport <span className="font-mono font-medium">{subdomainName}</span> has been reserved by an admin.
+        </p>
+        <div className="flex items-center gap-2 text-sm text-amber-600">
+          <AlertCircle className="h-4 w-4" />
+          <span>Click "Accept Your Passport" to complete the process and gain full access</span>
+        </div>
+      </div>
+
+      <Button
+        onClick={() => acceptMutation.mutate()}
+        disabled={acceptMutation.isPending}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+      >
+        {acceptMutation.isPending ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+            Accepting...
+          </>
+        ) : (
+          "Accept Your Passport"
+        )}
+      </Button>
+
+      <p className="text-xs text-gray-500 text-center">
+        By accepting, you acknowledge ownership of the passport and agree to complete the registration process.
+      </p>
+    </div>
+  );
 }
 
 export function PassportVerificationSection({
@@ -207,6 +291,17 @@ export function PassportVerificationSection({
       };
     }
 
+    if (memberData?.status === "pending_acceptance") {
+      const subdomainName = memberData.member?.ipeUsername 
+        ? `${memberData.member.ipeUsername}.ipecity.eth`
+        : memberData.member?.ipePassport;
+      return {
+        status: "🔑 Accept Your Passport",
+        color: "text-blue-600",
+        description: `Your passport ${subdomainName} is ready for acceptance.`,
+      };
+    }
+
     if (memberData?.member?.passportClaimStatus === "pending") {
       return {
         status: "⏳ Pending Approval",
@@ -274,6 +369,14 @@ export function PassportVerificationSection({
               </Button>
             )}
           </div>
+        ) : memberData?.status === "pending_acceptance" ? (
+          <AcceptanceSection 
+            memberData={memberData}
+            onAcceptSuccess={() => {
+              refetchMemberStatus();
+              onVerificationComplete?.();
+            }}
+          />
         ) : memberData?.member?.passportClaimStatus === "pending" ? (
           <div className="space-y-4">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

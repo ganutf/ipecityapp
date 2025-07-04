@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
-import { SubdomainAcceptanceSection } from "@/components/SubdomainAcceptanceSection";
 import { UsernameClaimSection } from "@/components/UsernameClaimSection";
 
 interface MemberStatus {
@@ -109,12 +108,7 @@ export default function IdVerificationPage() {
         allowChange={true}
       />
 
-      {memberStatus?.status === 'pending_acceptance' && (
-        <SubdomainAcceptanceSection
-          memberStatus={memberStatus}
-          onStatusChange={refetch}
-        />
-      )}
+
 
       {bothComplete && (
         <div className="text-center pt-4">

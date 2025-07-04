@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,13 @@ export default function IdVerificationPage() {
   const isEmailVerified = memberStatus?.member?.emailVerified || false;
   const isPassportVerified = !!memberStatus?.member?.ipePassport;
   const bothComplete = isEmailVerified && isPassportVerified;
+  
+  // Redirect to home if user becomes approved member
+  useEffect(() => {
+    if (memberStatus?.status === 'member') {
+      setLocation("/");
+    }
+  }, [memberStatus?.status, setLocation]);
 
   const handleEmailComplete = () => {
     setEmailComplete(true);

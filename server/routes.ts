@@ -853,7 +853,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get the subdomain name to accept
       const subdomainToAccept = member.ipeUsername || member.passportClaimSubdomain;
+      console.log(`Member data:`, { ipeUsername: member.ipeUsername, passportClaimSubdomain: member.passportClaimSubdomain });
+      console.log(`Subdomain to accept: ${subdomainToAccept}`);
+      
       if (!subdomainToAccept) {
+        console.log("No subdomain found to accept");
         return res.status(400).json({ error: "No subdomain found to accept" });
       }
 

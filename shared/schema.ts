@@ -54,7 +54,7 @@ export const members = pgTable("members", {
   passportVerified: boolean("passport_verified").default(false).notNull(),
   
   // New status field to track registration flow
-  status: varchar("status").default("pending_signer").notNull(), // pending_signer, signer_approved, email_verified, pending_passport, pending_claim, member
+  status: varchar("status").default("pending_signer").notNull(), // pending_signer, signer_approved, email_verified, pending_passport, pending_claim, pending_acceptance, member
   
   // Passport claiming fields
   passportClaimSubdomain: varchar("passport_claim_subdomain"),

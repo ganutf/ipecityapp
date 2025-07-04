@@ -37,6 +37,7 @@ export interface IStorage {
   getAllMembers(): Promise<Member[]>;
   getPendingMembers(): Promise<Member[]>;
   approveMember(farcasterFid: number): Promise<Member>;
+  acceptSubdomain(farcasterFid: number): Promise<Member>;
   denyMember(farcasterFid: number): Promise<Member>;
   
   // Registration
@@ -117,6 +118,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async approveMember(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ 
+        status: "pending_acceptance",
+        updatedAt: new Date() 
+      })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async acceptSubdomain(farcasterFid: number): Promise<Member> {
     const [member] = await db
       .update(members)
       .set({ 

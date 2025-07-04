@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
+import { SubdomainAcceptanceSection } from "@/components/SubdomainAcceptanceSection";
 import { UsernameClaimSection } from "@/components/UsernameClaimSection";
 
 interface MemberStatus {
@@ -32,7 +33,8 @@ export default function IdVerificationPage() {
     enabled: !!profile?.fid,
     refetchInterval: (query) => {
       // Poll every 10 seconds if user is pending_claim (waiting for admin approval)
-      if ((query.state.data as any)?.status === 'pending_claim') {
+      const status = (query.state.data as any)?.status;
+      if (status === 'pending_claim' || status === 'pending_acceptance') {
         return 10000; // 10 seconds
       }
       return false; // Stop polling for other statuses
@@ -106,6 +108,13 @@ export default function IdVerificationPage() {
         onVerificationComplete={handlePassportComplete}
         allowChange={true}
       />
+
+      {memberStatus?.status === 'pending_acceptance' && (
+        <SubdomainAcceptanceSection
+          memberStatus={memberStatus}
+          onStatusChange={refetch}
+        />
+      )}
 
       {bothComplete && (
         <div className="text-center pt-4">

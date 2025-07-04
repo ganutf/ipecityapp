@@ -131,8 +131,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return; // Already on verification page
           }
           
-          // STATUS: 'email_verified' or 'pending_claim' - Partial verification complete
-          if (currentStatus === 'email_verified' || currentStatus === 'pending_claim') {
+          // STATUS: 'email_verified', 'pending_claim', or 'pending_acceptance' - Partial verification complete
+          if (currentStatus === 'email_verified' || currentStatus === 'pending_claim' || currentStatus === 'pending_acceptance') {
             // Check if both email and passport verifications are complete
             const { member } = memberStatus as any;
             if (member && member.emailVerified && member.ipePassport) {

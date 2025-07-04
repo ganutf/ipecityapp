@@ -829,6 +829,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Accept subdomain with wallet signature
+  app.post("/api/passport/accept", async (req, res) => {
+    try {
+      const { farcasterFid } = req.body;
+
+      if (!farcasterFid) {
+        return res.status(400).json({ error: "FarcasterFid required" });
+      }
+
+      console.log(`Processing subdomain acceptance for FID: ${farcasterFid}`);
+
+      // Get member details
+      const member = await storage.getMember(farcasterFid);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      // Check if member is in pending_acceptance state
+      if (member.status !== "pending_acceptance") {
+        return res.status(400).json({ error: "Member is not in pending_acceptance state" });
+      }
+
+      // Accept the subdomain and update status to member
+      const updatedMember = await storage.acceptSubdomain(farcasterFid);
+
+      console.log(`Subdomain accepted successfully for FID: ${farcasterFid}`);
+      res.json({ success: true, member: updatedMember });
+    } catch (error) {
+      console.error("Accept subdomain error:", error);
+      res.status(500).json({ error: "Failed to accept subdomain" });
+    }
+  });
+
   // Deny member (admin only)
   app.post("/api/admin/deny-member", async (req, res) => {
     try {

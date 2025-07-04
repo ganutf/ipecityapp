@@ -851,7 +851,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Member is not in pending_acceptance state" });
       }
 
-      // Accept the subdomain and update status to member
+      // Get the subdomain name to accept
+      const subdomainToAccept = member.ipeUsername || member.passportClaimSubdomain;
+      if (!subdomainToAccept) {
+        return res.status(400).json({ error: "No subdomain found to accept" });
+      }
+
+      console.log(`Calling JustaName accept API for subdomain: ${subdomainToAccept}.ipecity.eth`);
+
+      // Call JustaName accept API
+      const acceptResponse = await fetch("https://api.justaname.id/v1/accept", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-KEY": process.env.JUSTANAME_API_KEY!,
+        },
+        body: JSON.stringify({
+          domain: "ipecity.eth",
+          subname: subdomainToAccept,
+        }),
+      });
+
+      const acceptData = await acceptResponse.json();
+      console.log("JustaName accept response:", acceptData);
+
+      if (!acceptResponse.ok || acceptData.statusCode !== 200) {
+        console.error("JustaName accept failed:", acceptData);
+        throw new Error(
+          `Failed to accept subdomain: ${acceptData.result?.error || acceptData.error || acceptResponse.statusText}`,
+        );
+      }
+
+      console.log(`Successfully accepted ${subdomainToAccept}.ipecity.eth on JustaName`);
+
+      // Update status to member after successful JustaName acceptance
       const updatedMember = await storage.acceptSubdomain(farcasterFid);
 
       console.log(`Subdomain accepted successfully for FID: ${farcasterFid}`);

@@ -53,16 +53,7 @@ function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionPro
   const { address, isConnected } = useAccount();
   
   // JustaName client-side accept hook
-  const { acceptSubname, isAcceptSubnameLoading, acceptSubnameError } = useAcceptSubname({
-    ensDomains: [
-      {
-        ensDomain: "ipecity.eth",
-        chainId: mainnet.id,
-        apiKey: import.meta.env.VITE_JUSTANAME_API_KEY,
-        origin: window.location.origin,
-      },
-    ],
-  });
+  const { acceptSubname, isAcceptSubnamePending } = useAcceptSubname();
 
   // Backend status update mutation
   const statusUpdateMutation = useMutation({
@@ -120,10 +111,10 @@ function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionPro
       }
 
       // First, accept the subdomain with user's wallet signature
+      const fullDomain = `${username}.ipecity.eth`;
+      console.log("Accepting subdomain with:", { ens: fullDomain });
       await acceptSubname({
-        username,
-        ensDomain: "ipecity.eth",
-        chainId: mainnet.id,
+        ens: fullDomain,
       });
 
       // Then update backend status
@@ -145,7 +136,7 @@ function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionPro
     ? `${memberData.member.passportClaimSubdomain}.ipecity.eth`
     : memberData.member?.ipePassport;
 
-  const isLoading = isAcceptSubnameLoading || statusUpdateMutation.isPending;
+  const isLoading = isAcceptSubnamePending || statusUpdateMutation.isPending;
 
   return (
     <div className="space-y-4">
@@ -200,11 +191,7 @@ function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionPro
         By accepting, you acknowledge ownership of the passport and agree to complete the registration process.
       </p>
 
-      {acceptSubnameError && (
-        <div className="text-sm text-red-600 text-center">
-          {acceptSubnameError.message}
-        </div>
-      )}
+
     </div>
   );
 }

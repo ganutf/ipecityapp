@@ -109,24 +109,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/debug/log-justaname-request", async (req, res) => {
     try {
       const { url, headers, body, member } = req.body;
-      
-      console.log('\n=== JUSTANAME ACCEPT API REQUEST DETAILS ===');
-      console.log('URL:', url);
-      console.log('Method: POST');
-      console.log('\nHeaders:');
+
+      console.log("\n=== JUSTANAME ACCEPT API REQUEST DETAILS ===");
+      console.log("URL:", url);
+      console.log("Method: POST");
+      console.log("\nHeaders:");
       Object.entries(headers).forEach(([key, value]) => {
         console.log(`  ${key}: ${value}`);
       });
-      console.log('\nRequest Body:');
+      console.log("\nRequest Body:");
       console.log(JSON.stringify(body, null, 2));
-      console.log('\nMember Info:');
+      console.log("\nMember Info:");
       console.log(JSON.stringify(member, null, 2));
-      console.log('=== END REQUEST DETAILS ===\n');
-      
+      console.log("=== END REQUEST DETAILS ===\n");
+
       res.json({ success: true });
     } catch (error) {
-      console.error('Debug logging error:', error);
-      res.status(500).json({ error: 'Debug logging failed' });
+      console.error("Debug logging error:", error);
+      res.status(500).json({ error: "Debug logging failed" });
     }
   });
 
@@ -134,21 +134,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/debug/log-justaname-response", async (req, res) => {
     try {
       const { status, statusText, headers, body } = req.body;
-      
-      console.log('\n=== JUSTANAME ACCEPT API RESPONSE DETAILS ===');
-      console.log('Status:', status, statusText);
-      console.log('\nResponse Headers:');
+
+      console.log("\n=== JUSTANAME ACCEPT API RESPONSE DETAILS ===");
+      console.log("Status:", status, statusText);
+      console.log("\nResponse Headers:");
       Object.entries(headers).forEach(([key, value]) => {
         console.log(`  ${key}: ${value}`);
       });
-      console.log('\nResponse Body:');
+      console.log("\nResponse Body:");
       console.log(JSON.stringify(body, null, 2));
-      console.log('=== END RESPONSE DETAILS ===\n');
-      
+      console.log("=== END RESPONSE DETAILS ===\n");
+
       res.json({ success: true });
     } catch (error) {
-      console.error('Response logging error:', error);
-      res.status(500).json({ error: 'Response logging failed' });
+      console.error("Response logging error:", error);
+      res.status(500).json({ error: "Response logging failed" });
     }
   });
 
@@ -164,32 +164,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get member data
       const member = await storage.getMember(farcasterFid);
       if (!member || !member.ipeUsername) {
-        return res.status(404).json({ error: "Member not found or no username claimed" });
+        return res
+          .status(404)
+          .json({ error: "Member not found or no username claimed" });
       }
 
       // Call JustaName accept API
-      const response = await fetch('https://api.justaname.id/api/v1/subname/accept', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.JUSTANAME_API_KEY}`,
+      const response = await fetch(
+        "https://api.justaname.id/api/v1/subname/accept",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.JUSTANAME_API_KEY}`,
+          },
+          body: JSON.stringify({
+            subname: member.ipeUsername,
+            ensDomain: "ipecity.eth",
+            signature: "user_signed", // This should be replaced with actual wallet signature
+          }),
         },
-        body: JSON.stringify({
-          subname: member.ipeUsername,
-          ensDomain: 'ipecity.eth',
-          signature: "user_signed", // This should be replaced with actual wallet signature
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to accept subdomain');
+        throw new Error(errorData.message || "Failed to accept subdomain");
       }
 
       const data = await response.json();
-      
+
       // Update member status to active
-      await storage.updateMember(farcasterFid, { status: 'active_member' });
+      await storage.updateMember(farcasterFid, { status: "active_member" });
 
       res.json({ success: true, data });
     } catch (error) {
@@ -734,6 +739,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "User Wallet is required" });
       }
 
+      if (!ipeUsername) {
+        return res.status(400).json({ error: "IpeUsername is required" });
+      }
+
       const member = await storage.getMember(farcasterFid);
       if (!member) {
         return res.status(404).json({ error: "Member not found" });
@@ -763,7 +772,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         const reserveResponseText = await reserveResponse.text();
-        console.log("JustaName reserve response status:", reserveResponse.status);
+        console.log(
+          "JustaName reserve response status:",
+          reserveResponse.status,
+        );
         console.log("JustaName reserve response:", reserveResponseText);
 
         if (!reserveResponse.ok) {
@@ -1368,7 +1380,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if username is already claimed by another member
-      const existingMember = await storage.getMemberByIpePassport(sanitizedUsername);
+      const existingMember =
+        await storage.getMemberByIpePassport(sanitizedUsername);
       if (existingMember) {
         return res.json({
           available: false,
@@ -1381,9 +1394,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `https://api.justaname.id/ens/v1/subname/available?subname=${sanitizedUsername}.ipecity.eth&chainId=1`,
         {
           headers: {
-            'X-API-KEY': process.env.JUSTANAME_API_KEY || '',
+            "X-API-KEY": process.env.JUSTANAME_API_KEY || "",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -1394,7 +1407,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         available: responseData.result.data.isAvailable,
-        reason: !responseData.result.data.isAvailable ? "This subdomain is already registered on-chain" : undefined,
+        reason: !responseData.result.data.isAvailable
+          ? "This subdomain is already registered on-chain"
+          : undefined,
       });
     } catch (error) {
       console.error("Username availability check error:", error);

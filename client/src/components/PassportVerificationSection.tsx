@@ -17,7 +17,7 @@ import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
-import { useAddSubname } from "@justaname.id/react";
+import { useAddSubname, useAcceptSubname } from "@justaname.id/react";
 import { mainnet } from "viem/chains";
 import { UsernameClaimSection } from "@/components/UsernameClaimSection";
 import { CheckCircle, AlertCircle } from "lucide-react";
@@ -50,8 +50,22 @@ interface AcceptanceSectionProps {
 
 function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionProps) {
   const { toast } = useToast();
+  const { address, isConnected } = useAccount();
   
-  const acceptMutation = useMutation({
+  // JustaName client-side accept hook
+  const { acceptSubname, isAcceptSubnameLoading, acceptSubnameError } = useAcceptSubname({
+    ensDomains: [
+      {
+        ensDomain: "ipecity.eth",
+        chainId: mainnet.id,
+        apiKey: import.meta.env.VITE_JUSTANAME_API_KEY,
+        origin: window.location.origin,
+      },
+    ],
+  });
+
+  // Backend status update mutation
+  const statusUpdateMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/passport/accept", {
         method: "POST",
@@ -63,7 +77,7 @@ function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionPro
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to accept passport");
+        throw new Error(errorData.error || "Failed to update member status");
       }
       
       return response.json();
@@ -84,9 +98,54 @@ function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionPro
     },
   });
 
+  const handleAcceptPassport = async () => {
+    try {
+      if (!isConnected || !address) {
+        toast({
+          title: "Connect wallet",
+          description: "Please connect your wallet to accept your passport.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const username = memberData.member?.ipeUsername || memberData.member?.passportClaimSubdomain;
+      if (!username) {
+        toast({
+          title: "Error",
+          description: "No username found to accept.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // First, accept the subdomain with user's wallet signature
+      await acceptSubname({
+        username,
+        ensDomain: "ipecity.eth",
+        chainId: mainnet.id,
+      });
+
+      // Then update backend status
+      statusUpdateMutation.mutate();
+      
+    } catch (error: any) {
+      console.error("Accept passport error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to accept passport",
+        variant: "destructive",
+      });
+    }
+  };
+
   const subdomainName = memberData.member?.ipeUsername 
     ? `${memberData.member.ipeUsername}.ipecity.eth`
+    : memberData.member?.passportClaimSubdomain
+    ? `${memberData.member.passportClaimSubdomain}.ipecity.eth`
     : memberData.member?.ipePassport;
+
+  const isLoading = isAcceptSubnameLoading || statusUpdateMutation.isPending;
 
   return (
     <div className="space-y-4">
@@ -100,16 +159,34 @@ function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionPro
         </p>
         <div className="flex items-center gap-2 text-sm text-amber-600">
           <AlertCircle className="h-4 w-4" />
-          <span>Click "Accept Your Passport" to complete the process and gain full access</span>
+          <span>Click "Accept Your Passport" to sign with your wallet and complete the process</span>
         </div>
       </div>
 
+      {!isConnected && (
+        <div className="text-center">
+          <ConnectButton.Custom>
+            {({ account, chain, openConnectModal, mounted }) => {
+              return (
+                <Button
+                  onClick={openConnectModal}
+                  variant="outline"
+                  className="w-full mb-2"
+                >
+                  Connect Wallet to Accept
+                </Button>
+              );
+            }}
+          </ConnectButton.Custom>
+        </div>
+      )}
+
       <Button
-        onClick={() => acceptMutation.mutate()}
-        disabled={acceptMutation.isPending}
+        onClick={handleAcceptPassport}
+        disabled={!isConnected || isLoading}
         className="w-full bg-blue-600 hover:bg-blue-700 text-white"
       >
-        {acceptMutation.isPending ? (
+        {isLoading ? (
           <>
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
             Accepting...
@@ -122,6 +199,12 @@ function AcceptanceSection({ memberData, onAcceptSuccess }: AcceptanceSectionPro
       <p className="text-xs text-gray-500 text-center">
         By accepting, you acknowledge ownership of the passport and agree to complete the registration process.
       </p>
+
+      {acceptSubnameError && (
+        <div className="text-sm text-red-600 text-center">
+          {acceptSubnameError.message}
+        </div>
+      )}
     </div>
   );
 }

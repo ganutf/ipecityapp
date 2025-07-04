@@ -72,7 +72,13 @@ export function PassportVerificationSection({
     useQuery<MemberData>({
       queryKey: [`/api/members/check/${farcasterFid}`],
       enabled: !!farcasterFid,
-      refetchInterval: passportVerificationSent ? 10000 : false, // Poll every 10 seconds when claim is pending
+      refetchInterval: (query) => {
+        // Poll if verification was sent OR if claim is pending approval
+        if (passportVerificationSent || (query.state.data as any)?.member?.passportClaimStatus === 'pending') {
+          return 10000; // 10 seconds
+        }
+        return false;
+      },
     });
 
   // Update states based on member data

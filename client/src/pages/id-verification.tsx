@@ -30,6 +30,13 @@ export default function IdVerificationPage() {
   const { data: memberStatus, refetch, isLoading: memberLoading } = useQuery<MemberStatus>({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
+    refetchInterval: (query) => {
+      // Poll every 10 seconds if user is pending_claim (waiting for admin approval)
+      if ((query.state.data as any)?.status === 'pending_claim') {
+        return 10000; // 10 seconds
+      }
+      return false; // Stop polling for other statuses
+    },
   });
 
   // Update completion states based on member status (matching Profile page logic)

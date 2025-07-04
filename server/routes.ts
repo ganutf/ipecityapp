@@ -751,7 +751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "x-api-key": process.env.VITE_JUSTANAME_API_KEY || "",
+              "x-api-key": process.env.JUSTANAME_API_KEY || "",
             },
             body: JSON.stringify({
               username: ipeUsername,
@@ -762,8 +762,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         );
 
+        const reserveResponseText = await reserveResponse.text();
+        console.log("JustaName reserve response status:", reserveResponse.status);
+        console.log("JustaName reserve response:", reserveResponseText);
+
         if (!reserveResponse.ok) {
-          const errorData = await reserveResponse.json();
+          let errorData;
+          try {
+            errorData = JSON.parse(reserveResponseText);
+          } catch (e) {
+            errorData = { error: reserveResponseText };
+          }
           throw new Error(
             `Failed to reserve subdomain: ${errorData.error || reserveResponse.statusText}`,
           );

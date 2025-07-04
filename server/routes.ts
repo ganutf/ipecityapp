@@ -748,10 +748,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Member not found" });
       }
 
-      // Skip subdomain reservation - focus on member approval only
+      // For username claims, reserve subdomain with JustaName API
       if (ipeUsername && userWalletAddress) {
         console.log(
-          `Approving member ${farcasterFid} for subdomain ${ipeUsername}.ipecity.eth (reservation handled separately)`,
+          `Reserving subdomain ${ipeUsername}.ipecity.eth for user wallet ${userWalletAddress}`,
+        );
+
+        const reserveResponse = await fetch(
+          "https://api.justaname.id/ens/v1/subname/reserve",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": process.env.JUSTANAME_API_KEY || "",
+            },
+            body: JSON.stringify({
+              username: ipeUsername,
+              ensDomain: "ipecity.eth",
+              chainId: 1,
+              ethAddress: userWalletAddress,
+            }),
+          },
+        );
+
+        const reserveResponseText = await reserveResponse.text();
+        console.log(
+          "JustaName reserve response status:",
+          reserveResponse.status,
+        );
+        console.log("JustaName reserve response:", reserveResponseText);
+
+        if (!reserveResponse.ok) {
+          let errorData;
+          try {
+            errorData = JSON.parse(reserveResponseText);
+          } catch (e) {
+            errorData = { error: reserveResponseText };
+          }
+          
+          // If subdomain already exists, that's actually success - continue with approval
+          if (reserveResponse.status === 409 && errorData.error?.includes('SubdomainAlreadyExistsException')) {
+            console.log(`Subdomain ${ipeUsername}.ipecity.eth already exists - proceeding with approval`);
+          } else {
+            throw new Error(
+              `Failed to reserve subdomain: ${errorData.error || reserveResponse.statusText}`,
+            );
+          }
+        }
+
+        console.log(
+          `Successfully reserved ${ipeUsername}.ipecity.eth for ${userWalletAddress}`,
         );
       }
 

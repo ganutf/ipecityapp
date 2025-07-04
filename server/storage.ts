@@ -113,15 +113,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingMembers(): Promise<Member[]> {
-    return await db.select().from(members).where(eq(members.registrationStatus, 'pending'));
+    return await db.select().from(members).where(eq(members.status, 'pending_claim'));
   }
 
   async approveMember(farcasterFid: number): Promise<Member> {
     const [member] = await db
       .update(members)
       .set({ 
-        registrationStatus: 'approved', 
-        approved: true,
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, farcasterFid))
@@ -133,8 +131,6 @@ export class DatabaseStorage implements IStorage {
     const [member] = await db
       .update(members)
       .set({ 
-        registrationStatus: 'denied', 
-        approved: false,
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, farcasterFid))
@@ -147,8 +143,6 @@ export class DatabaseStorage implements IStorage {
       .insert(members)
       .values({
         ...registration,
-        registrationStatus: 'pending',
-        approved: false,
         emailVerified: false,
         registeredAt: new Date(),
       })

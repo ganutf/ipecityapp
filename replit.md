@@ -376,6 +376,13 @@ The application follows a monorepo structure with clear separation between clien
   - **Updated ID Verification**: Maintains original wallet connection → ENS lookup flow, shows username claiming when no domain found
   - **Fixed API Endpoint**: Removed duplicate availability check from claim endpoint that was causing failures
   - **Production Ready**: Complete reserve→approve→accept workflow operational with proper error handling and user feedback
+- July 4, 2025. **LEGACY FIELD CLEANUP**: Removed deprecated database columns and simplified authentication logic:
+  - **Database Schema Cleanup**: Removed legacy `registration_status` and `approved` columns from members table
+  - **Simplified Storage Layer**: Updated storage methods to only use current `status` field for state management
+  - **API Response Cleanup**: Removed `approved` and `registrationStatus` fields from `/api/members/check` endpoint response
+  - **AuthGuard Simplification**: Updated authentication logic to rely solely on `status` field instead of redundant `approved` boolean
+  - **Streamlined Codebase**: Eliminated redundant legacy fields that were no longer impacting application logic
+  - **Status-Based Flow**: System now uses single authoritative `status` field for all authentication and routing decisions
 
 ## User Preferences
 

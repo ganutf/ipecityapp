@@ -61,10 +61,6 @@ export const members = pgTable("members", {
   passportClaimWalletAddress: varchar("passport_claim_wallet_address"),
   passportClaimStatus: varchar("passport_claim_status"), // pending, approved, denied
   
-  // Legacy fields (keeping for backward compatibility)
-  registrationStatus: varchar("registration_status").default("pending").notNull(), // pending, approved, denied
-  approved: boolean("approved").default(false).notNull(),
-  
   profileCompleted: boolean("profile_completed").default(false).notNull(),
   registeredAt: timestamp("registered_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),

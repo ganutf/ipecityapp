@@ -109,7 +109,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           return; // Still loading member status
         }
 
-        const { isMember, status, approved } = memberStatus as any;
+        const { isMember, status } = memberStatus as any;
         
         // STEP 5: Handle member registration and verification states
         if (isMember) {
@@ -164,8 +164,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return;
           }
 
-          // FALLBACK: Require approval but user not approved
-          if (requireApproval && !approved) {
+          // FALLBACK: For any other status requiring approval
+          if (requireApproval && status !== 'member') {
             setLocation("/profile");
             return;
           }

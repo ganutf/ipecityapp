@@ -1211,9 +1211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         isMember: !!member,
-        approved: member?.approved || false,
         status: (member as any)?.status || "pending_signer",
-        registrationStatus: member?.registrationStatus || null,
         member: member || null,
       });
     } catch (err: any) {

@@ -786,12 +786,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             errorData = { error: reserveResponseText };
           }
           
+          console.log("Debug - Status:", reserveResponse.status);
+          console.log("Debug - Error data:", JSON.stringify(errorData, null, 2));
+          console.log("Debug - Result error:", errorData.result?.error);
+          console.log("Debug - Direct error:", errorData.error);
+          
           // If subdomain already exists, that's actually success - continue with approval
           if (reserveResponse.status === 409 && 
               (errorData.result?.error?.includes('SubdomainAlreadyExistsException') || 
                errorData.error?.includes('SubdomainAlreadyExistsException'))) {
             console.log(`Subdomain ${ipeUsername}.ipecity.eth already exists - proceeding with approval`);
           } else {
+            console.log("Throwing error because condition not met");
             throw new Error(
               `Failed to reserve subdomain: ${errorData.result?.error || errorData.error || reserveResponse.statusText}`,
             );

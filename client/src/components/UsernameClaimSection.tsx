@@ -22,15 +22,12 @@ export function UsernameClaimSection({
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
   const [username, setUsername] = useState("");
+  const [member, setMember] = useState(memberProp);
   
-  // Fetch fresh member data to ensure UI updates after claim
-  const { data: freshMemberData } = useQuery({
-    queryKey: [`/api/members/check/${memberProp.farcasterFid}`],
-    enabled: !!memberProp.farcasterFid,
-  });
-  
-  // Use fresh member data if available, fallback to prop
-  const member = freshMemberData?.member || memberProp;
+  // Update local member state when prop changes
+  useEffect(() => {
+    setMember(memberProp);
+  }, [memberProp]);
 
   // Use JustaName SDK hooks
   const { invitations, isInvitationsPending, refetchInvitations } =
@@ -67,13 +64,17 @@ export function UsernameClaimSection({
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (responseData) => {
+      // Update local member state with response data for instant UI update
+      setMember(responseData.member);
+      
       toast({
         title: "Username claimed successfully!",
         description: "Your username is now pending admin approval.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/members/check/${member.farcasterFid}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] }); // Also invalidate admin member list
+      
+      // Still invalidate admin member list for admin dashboard updates
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
     },
     onError: (error: any) => {
       toast({

@@ -383,6 +383,9 @@ The application follows a monorepo structure with clear separation between clien
   - **AuthGuard Simplification**: Updated authentication logic to rely solely on `status` field instead of redundant `approved` boolean
   - **Streamlined Codebase**: Eliminated redundant legacy fields that were no longer impacting application logic
   - **Status-Based Flow**: System now uses single authoritative `status` field for all authentication and routing decisions
+  - **Missing Endpoint Restoration**: Added back `/api/passport/availability/:username` endpoint that was accidentally removed during cleanup
+  - **Fixed Passport Claiming**: Corrected field names in username claim request to match backend schema expectations
+  - **Production Ready**: Complete username claiming and availability checking system restored and functional
 
 ## User Preferences
 

@@ -46,8 +46,8 @@ export function UsernameClaimSection({
         },
         body: JSON.stringify({
           farcasterFid,
-          ipeUsername: username,
-          walletAddress,
+          passportClaimSubdomain: username,
+          passportClaimWalletAddress: walletAddress,
         }),
       });
 

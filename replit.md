@@ -386,6 +386,15 @@ The application follows a monorepo structure with clear separation between clien
   - **Missing Endpoint Restoration**: Added back `/api/passport/availability/:username` endpoint that was accidentally removed during cleanup
   - **Fixed Passport Claiming**: Corrected field names in username claim request to match backend schema expectations
   - **Production Ready**: Complete username claiming and availability checking system restored and functional
+- July 4, 2025. **COMPLETE ADMIN APPROVAL SYSTEM**: Fixed JustaName integration and real-time status updates:
+  - **JustaName API Integration**: Fixed incorrect API key usage (changed from frontend VITE_JUSTANAME_API_KEY to backend JUSTANAME_API_KEY)
+  - **Subdomain Reservation Working**: Successfully reserving subdomains via JustaName API when admins approve members
+  - **Status Update Fix**: Fixed approveMember function to properly update member status from 'pending_claim' to 'member'
+  - **Real-time UI Updates**: Added automatic status polling (10 seconds) to ID verification page and PassportVerificationSection
+  - **Enhanced Error Logging**: Added comprehensive JustaName API response logging for debugging
+  - **Admin Frontend Fix**: Corrected field mapping in admin approval to pass correct ipeUsername and userWalletAddress
+  - **Complete Workflow**: Admin approval now successfully reserves subdomain AND updates user status for instant UI feedback
+  - **Production Ready**: End-to-end reserve→approve→accept workflow fully operational with real-time status updates
 
 ## User Preferences
 

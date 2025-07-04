@@ -1337,6 +1337,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check username availability for passport claiming
+  app.get("/api/passport/availability/:username", async (req, res) => {
+    try {
+      const { username } = req.params;
+
+      if (!username || username.length < 3) {
+        return res.status(400).json({
+          error: "Username must be at least 3 characters long",
+        });
+      }
+
+      // Sanitize username (lowercase, alphanumeric only)
+      const sanitizedUsername = username
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+      if (sanitizedUsername !== username.toLowerCase()) {
+        return res.status(400).json({
+          error: "Username can only contain letters and numbers",
+        });
+      }
+
+      // Check if username is already claimed by another member
+      const existingMember = await storage.getMemberByIpePassport(sanitizedUsername);
+      if (existingMember) {
+        return res.json({
+          available: false,
+          reason: "This username is already taken",
+        });
+      }
+
+      // Check with JustaName API for blockchain availability
+      const response = await fetch(
+        `https://api.justaname.id/ens/v1/subname/available?subname=${sanitizedUsername}.ipecity.eth&chainId=1`,
+        {
+          headers: {
+            'X-API-KEY': process.env.JUSTANAME_API_KEY || '',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`JustaName API error: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+
+      res.json({
+        available: responseData.result.data.isAvailable,
+        reason: !responseData.result.data.isAvailable ? "This subdomain is already registered on-chain" : undefined,
+      });
+    } catch (error) {
+      console.error("Username availability check error:", error);
+      res.status(500).json({ error: "Failed to check username availability" });
+    }
+  });
+
   // Send passport verification email
   app.post("/api/passport/send-verification", async (req, res) => {
     try {

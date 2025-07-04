@@ -81,9 +81,8 @@ export function UsernameClaimSection({
         throw new Error("Wallet not connected");
       }
 
-      console.log("Invitations:", invitations);
       console.log("Looking for username:", `${member.ipeUsername}.ipecity.eth`);
-      
+
       // Find the invitation for this member's username
       const invitation = invitations?.find(
         (inv: any) => inv.ens === `${member.ipeUsername}.ipecity.eth`,

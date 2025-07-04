@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +15,22 @@ interface UsernameClaimSectionProps {
 }
 
 export function UsernameClaimSection({
-  member,
+  member: memberProp,
   isProfilePage = false,
 }: UsernameClaimSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { address, isConnected } = useAccount();
   const [username, setUsername] = useState("");
+  
+  // Fetch fresh member data to ensure UI updates after claim
+  const { data: freshMemberData } = useQuery({
+    queryKey: [`/api/members/check/${memberProp.farcasterFid}`],
+    enabled: !!memberProp.farcasterFid,
+  });
+  
+  // Use fresh member data if available, fallback to prop
+  const member = freshMemberData?.member || memberProp;
 
   // Use JustaName SDK hooks
   const { invitations, isInvitationsPending, refetchInvitations } =
@@ -63,7 +72,8 @@ export function UsernameClaimSection({
         title: "Username claimed successfully!",
         description: "Your username is now pending admin approval.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/members/check/${member.farcasterFid}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] }); // Also invalidate admin member list
     },
     onError: (error: any) => {
       toast({

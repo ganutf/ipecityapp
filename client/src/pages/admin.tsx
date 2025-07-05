@@ -415,7 +415,7 @@ export default function AdminPage() {
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
                     const claimSubdomain = (member as any).ipeUsername;
-                    const hasPendingApplication = memberStatus === 'pending_application' && claimSubdomain;
+                    const hasPendingApplication = memberStatus === 'pending_application_review' && claimSubdomain;
                     const needsApproval = hasPendingApplication;
                     
                     return (
@@ -519,15 +519,19 @@ export default function AdminPage() {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       (selectedMember as any).status === 'active_member'
                         ? 'bg-green-100 text-green-800'
-                        : (selectedMember as any).status === 'pending_application'
+                        : (selectedMember as any).status === 'pending_application_review'
                           ? 'bg-orange-100 text-orange-800'
-                          : (selectedMember as any).status === 'pending_claim'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-800'
+                          : (selectedMember as any).status === 'approved_application'
+                            ? 'bg-blue-100 text-blue-800'
+                            : (selectedMember as any).status === 'denied_application'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
                     }`}>
                       {(selectedMember as any).status === 'active_member' ? 'Active Member' :
-                       (selectedMember as any).status === 'pending_application' ? 'Pending Application' :
-                       (selectedMember as any).status === 'pending_claim' ? 'Pending Claim' :
+                       (selectedMember as any).status === 'pending_application_review' ? 'Pending Application Review' :
+                       (selectedMember as any).status === 'approved_application' ? 'Approved Application' :
+                       (selectedMember as any).status === 'denied_application' ? 'Denied Application' :
+                       (selectedMember as any).status === 'pending_id_verification' ? 'Pending ID Verification' :
                        'Pending Signer'}
                     </span>
                   </p>
@@ -598,7 +602,7 @@ export default function AdminPage() {
               )}
 
               {/* Action buttons for pending applications */}
-              {((selectedMember as any).status === 'pending_application' || (selectedMember as any).status === 'pending_claim') && 
+              {(selectedMember as any).status === 'pending_application_review' && 
                (selectedMember as any).ipeUsername && (
                 <div className="flex space-x-2 pt-4 border-t">
                   <Button

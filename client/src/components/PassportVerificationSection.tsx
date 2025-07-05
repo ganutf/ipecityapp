@@ -380,7 +380,7 @@ export function PassportVerificationSection({
               )}
 
               {/* Pending Application Status */}
-              {memberData?.member?.status === "pending_application" && (
+              {memberData?.member?.status === "pending_application_review" && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
                   <Clock className="h-8 w-8 text-blue-500 mx-auto mb-2" />
                   <p className="font-medium text-blue-800">Application Under Review</p>

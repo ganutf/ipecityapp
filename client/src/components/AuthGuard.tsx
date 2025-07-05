@@ -151,8 +151,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return; // Already on verification page
           }
           
-          // STATUS: 'pending_application' - User completed verification, waiting for admin approval
-          if (currentStatus === 'pending_application') {
+          // STATUS: 'pending_application' or 'pending_application_review' - User completed verification, waiting for admin approval
+          if (currentStatus === 'pending_application' || currentStatus === 'pending_application_review') {
             const currentPath = window.location.pathname;
             if (currentPath !== '/id-verification') {
               setLocation("/id-verification");

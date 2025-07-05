@@ -443,6 +443,14 @@ The application follows a monorepo structure with clear separation between clien
   - **Enhanced Error Handling**: Comprehensive verification flow that handles both EOA and smart contract wallet signatures
   - **User Experience**: Clear "Sign & Activate Membership" process with proper wallet signature prompts
   - **Production Security**: Complete cryptographic verification ensuring only domain owners can activate membership
+- July 5, 2025. **NEW APPLICATION STATE**: Added `pending_application_review` status for improved workflow visualization:
+  - **Database Schema Update**: Added new status to valid constraint (7 total states: pending_signer, pending_id_verification, pending_application, pending_application_review, approved_application, denied_application, active_member)
+  - **Application Flow Update**: Users now transition to `pending_application_review` status when submitting applications
+  - **Admin Dashboard Enhancement**: Updated status display with orange badge for "Pending Application Review" 
+  - **User Experience**: Same behavior as old `pending_application` status - users wait on ID verification page with review message
+  - **AuthGuard Update**: Added routing logic to handle new status identical to old pending_application
+  - **Frontend Updates**: Updated PassportVerificationSection and admin interface to display new status correctly
+  - **Backward Compatibility**: Admin approval process unchanged, only status visualization improved
 
 ## User Preferences
 

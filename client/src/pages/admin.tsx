@@ -155,11 +155,15 @@ export default function AdminPage() {
   }
 
   if (!isAuthenticated || !isAdmin) {
+    console.log('Admin access check:', { isAuthenticated, isAdmin, profileFid: profile?.fid });
     return (
       <div className="max-w-6xl mx-auto p-6">
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
           <p className="text-gray-600">Admin access required.</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Auth: {isAuthenticated ? 'Yes' : 'No'}, Admin: {isAdmin ? 'Yes' : 'No'}, FID: {profile?.fid}
+          </p>
         </div>
       </div>
     );

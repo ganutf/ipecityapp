@@ -309,28 +309,7 @@ export function PassportVerificationSection({
                 </div>
               )}
 
-              {/* Accept Subdomain */}
-              {memberData?.member?.status === "approved_application" && (
-                <div className="space-y-3">
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800 font-medium">Application Approved! 🎉</p>
-                    <p className="text-sm text-green-700">
-                      Your subdomain <strong>{memberData.member.ipeUsername}.ipecity.eth</strong> is ready.
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={handleAcceptSubdomain}
-                    disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
-                    className="w-full"
-                  >
-                    {(acceptSubdomainMutation.isPending || isAcceptSubnamePending) ? (
-                      "Accepting..."
-                    ) : (
-                      "Accept Your Passport"
-                    )}
-                  </Button>
-                </div>
-              )}
+
 
               {/* Approved Application - Accept Passport */}
               {memberData?.member?.status === "approved_application" && (

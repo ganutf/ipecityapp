@@ -28,6 +28,7 @@ import { mnemonicToAccount } from "viem/accounts";
 import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
+import { SiweMessage } from "siwe";
 import { lookupEnsName } from "./lib/ensLookup";
 // JustaName server-side imports removed
 
@@ -1585,12 +1586,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verify passport ownership (signature-based verification)
   app.post("/api/passport/verify", async (req, res) => {
     try {
-      const { farcasterFid, ensName, walletAddress } = req.body;
+      const { farcasterFid, ensName, walletAddress, message, signature } = req.body;
 
-      if (!farcasterFid || !ensName || !walletAddress) {
+      if (!farcasterFid || !ensName || !walletAddress || !message || !signature) {
         return res
           .status(400)
-          .json({ error: "FID, ENS name, and wallet address are required" });
+          .json({ error: "FID, ENS name, wallet address, message, and signature are required" });
       }
 
       // Verify the ENS domain is an Ipê City domain
@@ -1599,6 +1600,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error:
             "Only Ipê City domains (ipecity.eth and *.ipecity.eth) are supported",
         });
+      }
+
+      // Verify SIWE signature
+      try {
+        const siweMessage = new SiweMessage(message);
+        const verificationResult = await siweMessage.verify({ signature });
+        
+        if (!verificationResult.success) {
+          return res.status(400).json({ error: "Invalid signature" });
+        }
+
+        // Verify the wallet address matches
+        if (siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()) {
+          return res.status(400).json({ error: "Wallet address mismatch" });
+        }
+
+        // Verify the ENS domain is mentioned in the statement
+        if (!siweMessage.statement?.includes(ensName)) {
+          return res.status(400).json({ error: "ENS domain not verified in signature" });
+        }
+      } catch (error) {
+        console.error("SIWE verification error:", error);
+        return res.status(400).json({ error: "Signature verification failed" });
       }
 
       // Get member and update with passport verification
@@ -1613,7 +1637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? "ipecity"
           : ensName.replace(".ipecity.eth", "");
 
-      // Automatically set active_member status when ENS domain is detected
+      // Set active_member status after successful signature verification
       const updatedMember = await storage.updateMember(farcasterFid, {
         ipePassport: passportName,
         passportVerified: true,

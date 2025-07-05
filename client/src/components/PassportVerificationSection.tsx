@@ -72,20 +72,52 @@ export function PassportVerificationSection({
     }
   }, [isConnected, address, walletConnectedForVerification]);
 
-  // Automatic passport verification mutation (no signature required)
+  // Passport verification mutation with SIWE signature
   const verifyPassportMutation = useMutation({
     mutationFn: async (walletAddress: string) => {
       if (!ensName) {
         throw new Error("No ENS domain found for this wallet");
       }
 
-      return apiRequest("/api/passport/verify", {
-        method: "POST",
-        body: JSON.stringify({
-          farcasterFid,
-          ensName,
-          walletAddress,
-        }),
+      // Create SIWE message for signature verification
+      const message = createSiweMessage({
+        address: walletAddress as `0x${string}`,
+        chainId: mainnet.id,
+        domain: window.location.host,
+        uri: window.location.origin,
+        version: "1",
+        statement: `Verify ownership of ${ensName} for Ipê City membership activation.`,
+        nonce: Math.random().toString(36).substring(2, 15),
+      });
+
+      // Request signature from user's wallet
+      return new Promise((resolve, reject) => {
+        signMessage(
+          { message },
+          {
+            onSuccess: async (signature) => {
+              try {
+                // Send verification request with signature
+                const response = await apiRequest("/api/passport/verify", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    farcasterFid,
+                    ensName,
+                    walletAddress,
+                    message,
+                    signature,
+                  }),
+                });
+                resolve(response);
+              } catch (error) {
+                reject(error);
+              }
+            },
+            onError: (error) => {
+              reject(new Error("Signature verification cancelled or failed"));
+            },
+          }
+        );
       });
     },
     onSuccess: () => {
@@ -315,7 +347,7 @@ export function PassportVerificationSection({
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-green-800 font-medium">Ipê City Domain Detected!</p>
                         <p className="text-sm text-green-700">
-                          {ensName} detected! Click to activate your membership.
+                          {ensName} detected! Sign a message to verify ownership and activate your membership.
                         </p>
                       </div>
                       <Button 
@@ -323,7 +355,8 @@ export function PassportVerificationSection({
                         disabled={verifyPassportMutation.isPending}
                         className="w-full"
                       >
-                        {verifyPassportMutation.isPending ? "Verifying..." : "Activate Membership"}
+                        <Wallet className="mr-2 h-4 w-4" />
+                        {verifyPassportMutation.isPending ? "Signing..." : "Sign & Activate Membership"}
                       </Button>
                     </div>
                   ) : (

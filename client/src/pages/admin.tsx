@@ -463,10 +463,12 @@ export default function AdminPage() {
                                 variant="default"
                                 onClick={() => {
                                   console.log("Approving member:", member);
+                                  console.log("Wallet address:", member.walletAddress);
+                                  console.log("Username:", (member as any).ipeUsername || claimSubdomain);
                                   approveMemberMutation.mutate({
                                     farcasterFid: member.farcasterFid,
                                     ipeUsername: (member as any).ipeUsername || claimSubdomain,
-                                    userWalletAddress: member.passportClaimWalletAddress || undefined
+                                    userWalletAddress: member.walletAddress
                                   });
                                 }}
                                 disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}

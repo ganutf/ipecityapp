@@ -114,13 +114,20 @@ export function PassportVerificationSection({
         throw new Error("No subdomain to accept");
       }
 
+      // Use JustaName SDK to accept the subdomain
+      const result = await acceptSubname({
+        ens: `${memberData.member.ipeUsername}.ipecity.eth`,
+      });
+
       // Update backend status to active_member
-      return apiRequest("/api/passport/accept", {
+      await apiRequest("/api/passport/accept", {
         method: "POST",
         body: JSON.stringify({
           farcasterFid,
         }),
       });
+
+      return result;
     },
     onSuccess: () => {
       toast({

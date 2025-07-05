@@ -177,20 +177,11 @@ export function PassportVerificationSection({
       case "approved_application":
         return {
           title: "Accept Your Passport",
-          description: `Your subdomain ${memberData.member.ipeUsername}.ipecity.eth is ready to accept.`,
-          icon: <Globe className="h-5 w-5 text-green-500" />,
-          color: "green",
+          description: `Your subdomain ${memberData.member.ipeUsername}.ipecity.eth has been reserved and is ready to accept.`,
+          icon: <Globe className="h-5 w-5 text-blue-500" />,
+          color: "blue",
         };
       case "active_member":
-        // Check if user has reserved passport but hasn't accepted it yet
-        if (memberData.member.ipeUsername && !memberData.member.passportVerified) {
-          return {
-            title: "Accept Your Passport",
-            description: `Your subdomain ${memberData.member.ipeUsername}.ipecity.eth has been reserved and is ready to accept.`,
-            icon: <Globe className="h-5 w-5 text-blue-500" />,
-            color: "blue",
-          };
-        }
         return {
           title: "Verified Member",
           description: `Welcome! You have access as a ${memberData.member.memberType}.`,
@@ -341,45 +332,43 @@ export function PassportVerificationSection({
                 </div>
               )}
 
-              {/* Active Member - with acceptance if needed */}
+              {/* Approved Application - Accept Passport */}
+              {memberData?.member?.status === "approved_application" && (
+                <div className="space-y-3">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-blue-800 font-medium">Passport Ready! 🎉</p>
+                    <p className="text-sm text-blue-700">
+                      Your subdomain <strong>{memberData.member.ipeUsername}.ipecity.eth</strong> has been reserved and is ready to accept.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleAcceptSubdomain}
+                    disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
+                    className="w-full"
+                  >
+                    {(acceptSubdomainMutation.isPending || isAcceptSubnamePending) ? (
+                      "Accepting..."
+                    ) : (
+                      "Accept Your Passport"
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Active Member */}
               {memberData?.member?.status === "active_member" && (
-                <>
-                  {/* Show acceptance if user has reserved passport but hasn't accepted it */}
-                  {memberData.member.ipeUsername && !memberData.member.passportVerified ? (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-blue-800 font-medium">Passport Ready! 🎉</p>
-                        <p className="text-sm text-blue-700">
-                          Your subdomain <strong>{memberData.member.ipeUsername}.ipecity.eth</strong> has been reserved and is ready to accept.
-                        </p>
-                      </div>
-                      <Button 
-                        onClick={handleAcceptSubdomain}
-                        disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
-                        className="w-full"
-                      >
-                        {(acceptSubdomainMutation.isPending || isAcceptSubnamePending) ? (
-                          "Accepting..."
-                        ) : (
-                          "Accept Your Passport"
-                        )}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
-                      <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                      <p className="font-medium text-green-800">Welcome to Ipê City!</p>
-                      <p className="text-sm text-green-700">
-                        You are verified as a <strong>{memberData.member.memberType}</strong> member.
-                      </p>
-                      {memberData.member.ipePassport && (
-                        <p className="text-sm text-green-700 mt-1">
-                          Domain: <strong>{memberData.member.ipePassport}</strong>
-                        </p>
-                      )}
-                    </div>
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                  <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                  <p className="font-medium text-green-800">Welcome to Ipê City!</p>
+                  <p className="text-sm text-green-700">
+                    You are verified as a <strong>{memberData.member.memberType}</strong> member.
+                  </p>
+                  {memberData.member.ipePassport && (
+                    <p className="text-sm text-green-700 mt-1">
+                      Domain: <strong>{memberData.member.ipePassport}</strong>
+                    </p>
                   )}
-                </>
+                </div>
               )}
             </div>
           )}

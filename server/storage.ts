@@ -199,7 +199,7 @@ export class DatabaseStorage implements IStorage {
     const [member] = await db
       .update(members)
       .set({ 
-        status: "member",
+        status: "approved_application",
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, farcasterFid))

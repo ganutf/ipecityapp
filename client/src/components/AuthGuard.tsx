@@ -122,8 +122,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return;
           }
           
-          // STATUS: 'signer_approved' or 'pending_signer' - Needs email/passport verification
-          if (currentStatus === 'signer_approved' || currentStatus === 'pending_signer') {
+          // STATUS: 'signer_approved', 'pending_signer', or 'pending_id_verification' - Needs email/passport verification
+          if (currentStatus === 'signer_approved' || currentStatus === 'pending_signer' || currentStatus === 'pending_id_verification') {
             const currentPath = window.location.pathname;
             if (currentPath !== '/id-verification') {
               setLocation("/id-verification");

@@ -418,7 +418,8 @@ The application follows a monorepo structure with clear separation between clien
   - **State Machine Flow**: Admin approval → "approved_application" → User accepts passport → "active_member"
   - **Updated AuthGuard**: Added proper routing for "approved_application" status to ID verification page
   - **PassportVerificationSection**: Added dedicated handling for "approved_application" status with acceptance interface
-  - **Production Ready**: End-to-end application viewing, admin approval, and passport acceptance workflow fully operational with correct state machine
+  - **Duplicate Interface Fix**: Removed duplicate acceptance sections that were showing multiple identical interfaces simultaneously
+  - **Production Ready**: End-to-end application viewing, admin approval, and passport acceptance workflow fully operational with correct state machine and clean UI
 
 ## User Preferences
 

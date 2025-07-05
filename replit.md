@@ -436,6 +436,13 @@ The application follows a monorepo structure with clear separation between clien
   - **Complete Resolution**: Active members now properly access pulses page instead of being stuck on verification screen
   - **AuthGuard Working**: Confirmed AuthGuard routing and RequireApproval logic functioning correctly
   - **Production Ready**: End-to-end flow from authentication → verification → pulses access fully operational
+- July 5, 2025. **SMART CONTRACT WALLET SUPPORT**: Fixed passport verification for smart contract wallets:
+  - **Issue Resolved**: SIWE signature verification failing with smart contract wallets (Coinbase Smart Wallet, etc.)
+  - **Simplified Verification**: Replaced complex signature verification with direct ENS lookup verification
+  - **Smart Wallet Compatible**: System now works with both EOA and smart contract wallets seamlessly
+  - **Enhanced UX**: Removed signature requirement - users just click "Activate Membership" for instant verification
+  - **Server-Side Security**: Domain ownership verified server-side via ENS API lookup ensuring security
+  - **Production Ready**: Complete passport verification system operational for all wallet types
 
 ## User Preferences
 

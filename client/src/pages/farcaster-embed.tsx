@@ -242,12 +242,15 @@ export default function FarcasterEmbed() {
             </div>
           </div>
           <div className="mt-4">
-            <Link
-              href="/id-verification"
-              className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            <button
+              onClick={() => {
+                console.log("Navigating to /id-verification");
+                window.location.href = "/id-verification";
+              }}
+              className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm cursor-pointer"
             >
               Complete Verification
-            </Link>
+            </button>
           </div>
         </div>
       </div>

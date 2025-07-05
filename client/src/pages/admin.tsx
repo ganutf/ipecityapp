@@ -415,7 +415,7 @@ export default function AdminPage() {
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
                     const claimSubdomain = (member as any).ipeUsername;
-                    const hasPendingApplication = memberStatus === 'pending_application_review' && claimSubdomain;
+                    const hasPendingApplication = (memberStatus === 'pending_application_review' || memberStatus === 'pending_application') && claimSubdomain;
                     const needsApproval = hasPendingApplication;
                     
                     return (
@@ -439,7 +439,7 @@ export default function AdminPage() {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             memberStatus === 'active_member'
                               ? 'bg-green-100 text-green-800'
-                              : memberStatus === 'pending_application'
+                              : memberStatus === 'pending_application' || memberStatus === 'pending_application_review'
                                 ? 'bg-orange-100 text-orange-800'
                                 : memberStatus === 'approved_application'
                                   ? 'bg-blue-100 text-blue-800'
@@ -453,6 +453,7 @@ export default function AdminPage() {
                           }`}>
                             {memberStatus === 'active_member' ? 'Active Member' :
                              memberStatus === 'pending_application' ? 'Pending Application' :
+                             memberStatus === 'pending_application_review' ? 'Pending Review' :
                              memberStatus === 'approved_application' ? 'Approved Application' :
                              memberStatus === 'denied_application' ? 'Denied Application' :
                              memberStatus === 'pending_acceptance' ? 'Pending Acceptance' :

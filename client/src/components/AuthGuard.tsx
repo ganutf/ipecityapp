@@ -116,8 +116,21 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         if (isMember) {
           const currentStatus = status;
           
-          // STATUS: 'member' - Full access granted
+          // STATUS: 'member' - Check if passport acceptance is pending
           if (currentStatus === 'member') {
+            const { member } = memberStatus as any;
+            
+            // Check if user has reserved passport but hasn't accepted it yet
+            if (member && member.ipeUsername && !member.passportVerified) {
+              console.log("AuthGuard - Member has reserved passport but needs to accept it");
+              const currentPath = window.location.pathname;
+              if (currentPath !== '/id-verification') {
+                setLocation("/id-verification");
+                return;
+              }
+              return; // Already on verification page
+            }
+            
             // User completed all verifications, allow access to all pages
             return;
           }

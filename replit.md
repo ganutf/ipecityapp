@@ -408,6 +408,13 @@ The application follows a monorepo structure with clear separation between clien
   - **Dual Flow Architecture**: Users with existing domains get instant activation, new applications still use admin approval workflow
   - **Fixed Admin Access**: Resolved AuthGuard blocking admin page access by removing RequireApproval wrapper and allowing `active_member` status
   - **Production Ready**: Complete ENS detection system operational with automatic membership activation for domain holders
+- July 5, 2025. **COMPLETE APPLICATION VIEWING & PASSPORT ACCEPTANCE WORKFLOW**: Fixed admin approval flow and member routing:
+  - **Application Details Modal**: Implemented clickable member rows with comprehensive application details modal showing email, passport claim, verification status, bio, social links, and profile tags
+  - **Fixed Admin Approval**: Added missing `approveMember` storage method to properly update member status after JustaName subdomain reservation
+  - **Enhanced AuthGuard Logic**: Fixed routing for approved members who still need to accept reserved passports - now correctly redirects to ID verification instead of home page
+  - **Passport Acceptance Flow**: Admin approval now reserves subdomain and sets status to "member", then user must accept the reserved passport to complete verification
+  - **Complete Admin Workflow**: Admin can view application details, approve/deny applications, and system handles subdomain reservation with proper user redirection for acceptance
+  - **Production Ready**: End-to-end application viewing, admin approval, and passport acceptance workflow fully operational
 
 ## User Preferences
 

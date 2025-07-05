@@ -111,13 +111,10 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         }
 
         const { isMember, status } = memberStatus as any;
-        console.log("AuthGuard - Member status data:", memberStatus);
-        console.log("AuthGuard - isMember:", isMember, "status:", status);
         
         // STEP 5: Handle member registration and verification states
         if (isMember) {
           const currentStatus = status;
-          console.log("AuthGuard - Processing member with status:", currentStatus);
           
           // STATUS: 'approved_application' - Admin approved, needs to accept passport
           if (currentStatus === 'approved_application') {
@@ -132,17 +129,24 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           
           // STATUS: 'active_member' - User completed all verifications
           if (currentStatus === 'active_member') {
-            console.log("AuthGuard - Active member detected");
             const currentPath = window.location.pathname;
+            console.log("🟢 ACTIVE_MEMBER - Path:", currentPath, "RequireApproval:", requireApproval);
             
             // If active member is still on verification page, redirect to home
             if (currentPath === '/id-verification') {
-              console.log("AuthGuard - Redirecting active member from verification to home");
+              console.log("🔄 ACTIVE_MEMBER - Redirecting from verification to home");
               setLocation("/");
               return;
             }
             
+            // Check if this page requires approval
+            if (requireApproval) {
+              console.log("✅ ACTIVE_MEMBER - Has approval, granting access to page");
+              return; // Grant access
+            }
+            
             // User completed all verifications, allow access to all pages
+            console.log("✅ ACTIVE_MEMBER - No approval required, granting access");
             return;
           }
           
@@ -156,34 +160,14 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return; // Already on verification page
           }
           
-          // STATUS: 'pending_acceptance' - Partial verification complete
-          if (currentStatus === 'pending_acceptance') {
-            console.log("AuthGuard - Email verified status detected:", currentStatus);
-            
-            // Check if both email and passport verifications are complete
-            const { member } = memberStatus as any;
-            console.log("AuthGuard - Member data:", member);
-            
-            if (member && member.emailVerified && member.passportVerified) {
-              console.log("AuthGuard - Both verifications complete, granting full access");
-              // Both verifications complete - grant full member access
+          // STATUS: 'pending_application' - User completed verification, waiting for admin approval
+          if (currentStatus === 'pending_application') {
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/id-verification') {
+              setLocation("/id-verification");
               return;
             }
-            
-            // Partial verification - allow access to home, profile, and id-verification pages
-            const currentPath = window.location.pathname;
-            console.log("AuthGuard - Current path:", currentPath);
-            console.log("AuthGuard - Checking if path is allowed for partial verification");
-            
-            if (currentPath === '/' || currentPath === '/profile' || currentPath === '/id-verification') {
-              console.log("AuthGuard - Path allowed for partial verification, granting access");
-              return; // Allow access to these pages
-            }
-            
-            // For any other pages, redirect to id-verification to complete verification
-            console.log("AuthGuard - Redirecting to id-verification from:", currentPath);
-            setLocation("/id-verification");
-            return;
+            return; // Show waiting for approval on verification page
           }
 
           // STATUS: 'denied_application' - Application rejected
@@ -193,16 +177,12 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return;
           }
 
-          // FALLBACK: For any other status requiring approval
-          console.log("AuthGuard - Checking approval requirement:", { requireApproval, status, statusComparison: status !== 'active_member' });
+          // FALLBACK: Handle any unrecognized status
+          console.log("❌ UNHANDLED STATUS:", { status, requireApproval, currentPath: window.location.pathname });
           if (requireApproval && status !== 'active_member') {
-            console.log("AuthGuard - Blocking access due to approval requirement:", { requireApproval, status, profileFid: profile?.fid });
+            console.log("🚫 BLOCKING - Non-active member on approval-required page");
             setLocation("/profile");
             return;
-          }
-          
-          if (requireApproval && status === 'active_member') {
-            console.log("AuthGuard - Active member approved for access:", { requireApproval, status });
           }
         } else {
           // User has no member record - needs to complete registration

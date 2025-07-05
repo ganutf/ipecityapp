@@ -1610,7 +1610,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         // Verify the domain actually resolves to the provided wallet address
-        const ensResponse = await fetch(`${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/api/ens/lookup/${walletAddress}`);
+        const baseUrl = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
+        const ensResponse = await fetch(`${baseUrl}/api/ens/lookup/${walletAddress}`);
         const ensData = await ensResponse.json();
         
         console.log("ENS lookup result:", ensData);

@@ -468,7 +468,7 @@ export default function AdminPage() {
                                   approveMemberMutation.mutate({
                                     farcasterFid: member.farcasterFid,
                                     ipeUsername: (member as any).ipeUsername || claimSubdomain,
-                                    userWalletAddress: member.walletAddress
+                                    userWalletAddress: member.walletAddress || undefined
                                   });
                                 }}
                                 disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}

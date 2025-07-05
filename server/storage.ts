@@ -38,6 +38,7 @@ export interface IStorage {
   submitApplication(application: Application): Promise<Member>;
   getPendingApplications(): Promise<Member[]>;
   approveApplication(farcasterFid: number, memberType: string): Promise<Member>;
+  approveMember(farcasterFid: number): Promise<Member>;
   denyApplication(farcasterFid: number): Promise<Member>;
   
   // Email Verification
@@ -189,6 +190,18 @@ export class DatabaseStorage implements IStorage {
     const [member] = await db
       .update(members)
       .set({ status, updatedAt: new Date() })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async approveMember(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ 
+        status: "member",
+        updatedAt: new Date() 
+      })
       .where(eq(members.farcasterFid, farcasterFid))
       .returning();
     return member;

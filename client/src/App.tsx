@@ -86,14 +86,7 @@ function Router() {
           <Route path="/profile" component={ProfilePage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
 
-          <Route
-            path="/id-verification"
-            component={() => (
-              <RequireAuth>
-                <IdVerificationPage />
-              </RequireAuth>
-            )}
-          />
+          <Route path="/id-verification" component={IdVerificationPage} />
           <Route
             path="/verify-passport/:token"
             component={VerifyPassportPage}

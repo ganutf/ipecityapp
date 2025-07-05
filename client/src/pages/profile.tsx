@@ -23,11 +23,15 @@ interface MemberData {
     name?: string;
     email?: string;
     emailVerified?: boolean;
-    xHandle?: string;
+    passportVerified?: boolean;
+    bio?: string;
+    twitter?: string;
     linkedin?: string;
-    miniBio?: string;
+    instagram?: string;
     profileTags?: string[];
     ipePassport?: string;
+    ipeUsername?: string;
+    memberType?: string;
     profileCompleted?: boolean;
   };
 }
@@ -38,10 +42,10 @@ const PROFILE_TAGS = [
 ];
 
 const profileSchema = z.object({
-  name: z.string().optional(),
-  xHandle: z.string().optional(),
+  bio: z.string().optional(),
+  twitter: z.string().optional(),
   linkedin: z.string().optional(),
-  miniBio: z.string().optional(),
+  instagram: z.string().optional(),
   profileTags: z.array(z.string()).optional(),
 });
 
@@ -59,10 +63,10 @@ export default function ProfilePage() {
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: memberData?.member?.name || "",
-      xHandle: memberData?.member?.xHandle || "",
+      bio: memberData?.member?.bio || "",
+      twitter: memberData?.member?.twitter || "",
       linkedin: memberData?.member?.linkedin || "",
-      miniBio: memberData?.member?.miniBio || "",
+      instagram: memberData?.member?.instagram || "",
       profileTags: memberData?.member?.profileTags || [],
     },
   });
@@ -136,12 +140,101 @@ export default function ProfilePage() {
           
           <PassportVerificationSection
             farcasterFid={profile?.fid || 0}
-            currentPassport={memberData?.member?.ipePassport}
-            isVerified={!!memberData?.member?.ipePassport}
+            memberData={memberData}
+            farcasterProfile={profile}
             allowChange={true}
           />
         </div>
       </div>
+
+      <Separator />
+
+      {/* Application Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Application Information</CardTitle>
+          <CardDescription>
+            Information you provided during your application to Ipê City Pulse.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Email Address</Label>
+              <p className="text-sm">{memberData?.member?.email || "Not provided"}</p>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Ipê Passport</Label>
+              <p className="text-sm">
+                {memberData?.member?.ipePassport ? (
+                  <span className="text-green-600">✓ {memberData.member.ipePassport}</span>
+                ) : (
+                  "Not verified"
+                )}
+              </p>
+            </div>
+
+            {memberData?.member?.bio && (
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Bio</Label>
+                <p className="text-sm">{memberData.member.bio}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {memberData?.member?.twitter && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Twitter</Label>
+                  <p className="text-sm">@{memberData.member.twitter}</p>
+                </div>
+              )}
+              
+              {memberData?.member?.linkedin && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">LinkedIn</Label>
+                  <p className="text-sm">{memberData.member.linkedin}</p>
+                </div>
+              )}
+              
+              {memberData?.member?.instagram && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Instagram</Label>
+                  <p className="text-sm">@{memberData.member.instagram}</p>
+                </div>
+              )}
+            </div>
+
+            {memberData?.member?.profileTags && memberData.member.profileTags.length > 0 && (
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Profile Tags</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {memberData.member.profileTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Member Type</Label>
+                <p className="text-sm capitalize">{memberData?.member?.memberType || "Not specified"}</p>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Status</Label>
+                <p className="text-sm capitalize">{memberData?.status?.replace('_', ' ') || "Unknown"}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Separator />
 
@@ -159,20 +252,21 @@ export default function ProfilePage() {
             {/* Editable Fields */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter your full name"
-                  {...form.register("name")}
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  placeholder="Tell us a bit about yourself..."
+                  rows={3}
+                  {...form.register("bio")}
                 />
               </div>
 
               <div>
-                <Label htmlFor="xHandle">X (Twitter) Handle</Label>
+                <Label htmlFor="twitter">Twitter Handle</Label>
                 <Input
-                  id="xHandle"
-                  placeholder="@username"
-                  {...form.register("xHandle")}
+                  id="twitter"
+                  placeholder="username (without @)"
+                  {...form.register("twitter")}
                 />
               </div>
 
@@ -186,12 +280,11 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <Label htmlFor="miniBio">Mini Bio</Label>
-                <Textarea
-                  id="miniBio"
-                  placeholder="Tell us a bit about yourself..."
-                  rows={3}
-                  {...form.register("miniBio")}
+                <Label htmlFor="instagram">Instagram Handle</Label>
+                <Input
+                  id="instagram"
+                  placeholder="username (without @)"
+                  {...form.register("instagram")}
                 />
               </div>
 

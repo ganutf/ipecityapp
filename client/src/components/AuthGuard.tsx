@@ -111,10 +111,13 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         }
 
         const { isMember, status } = memberStatus as any;
+        console.log("AuthGuard - Member status data:", memberStatus);
+        console.log("AuthGuard - isMember:", isMember, "status:", status);
         
         // STEP 5: Handle member registration and verification states
         if (isMember) {
           const currentStatus = status;
+          console.log("AuthGuard - Processing member with status:", currentStatus);
           
           // STATUS: 'approved_application' - Admin approved, needs to accept passport
           if (currentStatus === 'approved_application') {

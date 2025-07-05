@@ -1604,8 +1604,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify SIWE signature
       try {
+        console.log("Received message for SIWE verification:", message);
+        console.log("Received signature:", signature);
+        console.log("Expected wallet address:", walletAddress);
+        
         const siweMessage = new SiweMessage(message);
+        console.log("Parsed SIWE message:", {
+          address: siweMessage.address,
+          statement: siweMessage.statement,
+          domain: siweMessage.domain,
+        });
+        
         const verificationResult = await siweMessage.verify({ signature });
+        console.log("SIWE verification result:", verificationResult);
         
         if (!verificationResult.success) {
           return res.status(400).json({ error: "Invalid signature" });
@@ -1620,6 +1631,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!siweMessage.statement?.includes(ensName)) {
           return res.status(400).json({ error: "ENS domain not verified in signature" });
         }
+        
+        console.log("SIWE verification successful");
       } catch (error) {
         console.error("SIWE verification error:", error);
         return res.status(400).json({ error: "Signature verification failed" });

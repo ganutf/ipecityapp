@@ -86,7 +86,7 @@ export function PassportVerificationSection({
         domain: window.location.host,
         uri: window.location.origin,
         version: "1",
-        statement: `Verify ownership of ${ensName} for Ipê City membership activation.`,
+        statement: `Verify ownership of ${ensName} for Ipe City membership activation.`,
         nonce: Math.random().toString(36).substring(2, 15),
       });
 

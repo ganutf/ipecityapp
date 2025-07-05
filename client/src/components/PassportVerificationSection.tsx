@@ -97,8 +97,8 @@ export function PassportVerificationSection({
         method: "POST",
         body: JSON.stringify({
           farcasterFid,
+          ensName,
           walletAddress,
-          ipePassport: ensName,
           message,
           signature,
         }),

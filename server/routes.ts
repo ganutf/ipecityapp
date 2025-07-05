@@ -1586,9 +1586,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verify passport ownership (signature-based verification)
   app.post("/api/passport/verify", async (req, res) => {
     try {
+      console.log("Passport verify request body:", req.body);
       const { farcasterFid, ensName, walletAddress } = req.body;
 
       if (!farcasterFid || !ensName || !walletAddress) {
+        console.log("Missing fields:", { farcasterFid: !!farcasterFid, ensName: !!ensName, walletAddress: !!walletAddress });
         return res
           .status(400)
           .json({ error: "FID, ENS name, and wallet address are required" });

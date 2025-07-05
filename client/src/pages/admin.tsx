@@ -6,7 +6,8 @@ import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Save, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Pencil, Save, X, Eye } from "lucide-react";
 import { useAccount } from "wagmi";
 // Removed useAddSubname hook - using direct API calls instead
 
@@ -33,6 +34,8 @@ export default function AdminPage() {
     date: "",
     description: "",
   });
+
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   // Check if user is admin (FID 1109894)
   const isAdmin = profile?.fid === 1109894;
@@ -411,21 +414,24 @@ export default function AdminPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
-                    const claimSubdomain = (member as any).ipeUsername || member.passportClaimSubdomain;
+                    const claimSubdomain = (member as any).ipeUsername;
                     const hasPendingClaim = memberStatus === 'pending_claim' && claimSubdomain;
                     const hasPendingApplication = memberStatus === 'pending_application' && claimSubdomain;
                     const needsApproval = hasPendingClaim || hasPendingApplication;
                     
                     return (
-                      <tr key={member.id}>
+                      <tr key={member.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedMember(member)}>
                         <td className="py-2">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {member.name || `FID ${member.farcasterFid}`}
+                          <div className="flex items-center space-x-2">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {(member as any).farcasterUsername || `FID ${member.farcasterFid}`}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                FID: {member.farcasterFid}
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-500">
-                              FID: {member.farcasterFid}
-                            </div>
+                            <Eye className="h-4 w-4 text-gray-400" />
                           </div>
                         </td>
                         <td className="py-2">
@@ -502,6 +508,145 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* Member Application Details Modal */}
+      {selectedMember && (
+        <Dialog open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Application Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Farcaster FID</label>
+                  <p className="text-sm">{selectedMember.farcasterFid}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Username</label>
+                  <p className="text-sm">{(selectedMember as any).farcasterUsername || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <p className="text-sm">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      (selectedMember as any).status === 'member' || (selectedMember as any).status === 'active_member'
+                        ? 'bg-green-100 text-green-800'
+                        : (selectedMember as any).status === 'pending_application'
+                          ? 'bg-orange-100 text-orange-800'
+                          : (selectedMember as any).status === 'pending_claim'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {(selectedMember as any).status === 'member' ? 'Member' :
+                       (selectedMember as any).status === 'active_member' ? 'Active Member' :
+                       (selectedMember as any).status === 'pending_application' ? 'Pending Application' :
+                       (selectedMember as any).status === 'pending_claim' ? 'Pending Claim' :
+                       'Pending Signer'}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Member Type</label>
+                  <p className="text-sm">{selectedMember.memberType || 'Not specified'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Email</label>
+                  <p className="text-sm">{selectedMember.email || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Email Verified</label>
+                  <p className="text-sm">{selectedMember.emailVerified ? '✓ Yes' : '✗ No'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Passport Claim</label>
+                  <p className="text-sm">
+                    {(selectedMember as any).ipeUsername ? 
+                      `${(selectedMember as any).ipeUsername}.ipecity.eth` : 
+                      'Not claimed'}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Passport Verified</label>
+                  <p className="text-sm">{selectedMember.passportVerified ? '✓ Yes' : '✗ No'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Wallet Address</label>
+                  <p className="text-sm font-mono text-xs">{selectedMember.walletAddress || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Registration Date</label>
+                  <p className="text-sm">
+                    {(selectedMember as any).createdAt ? 
+                      new Date((selectedMember as any).createdAt).toLocaleDateString() : 
+                      'Unknown'}
+                  </p>
+                </div>
+              </div>
+              
+              {(selectedMember as any).bio && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Bio</label>
+                  <p className="text-sm mt-1">{(selectedMember as any).bio}</p>
+                </div>
+              )}
+              
+              {(selectedMember as any).socials && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Social Links</label>
+                  <p className="text-sm mt-1">{(selectedMember as any).socials}</p>
+                </div>
+              )}
+              
+              {(selectedMember as any).profileTags && (selectedMember as any).profileTags.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Profile Tags</label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {(selectedMember as any).profileTags.map((tag: string, index: number) => (
+                      <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons for pending applications */}
+              {((selectedMember as any).status === 'pending_application' || (selectedMember as any).status === 'pending_claim') && 
+               (selectedMember as any).ipeUsername && (
+                <div className="flex space-x-2 pt-4 border-t">
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      approveMemberMutation.mutate({
+                        farcasterFid: selectedMember.farcasterFid,
+                        ipeUsername: (selectedMember as any).ipeUsername,
+                        userWalletAddress: selectedMember.walletAddress || undefined
+                      });
+                      setSelectedMember(null);
+                    }}
+                    disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+                  >
+                    {approveMemberMutation.isPending ? "Reserving..." : "Approve & Reserve"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      denyMemberMutation.mutate(selectedMember.farcasterFid);
+                      setSelectedMember(null);
+                    }}
+                    disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
+                  >
+                    {denyMemberMutation.isPending ? "..." : "Deny"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

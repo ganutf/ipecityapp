@@ -114,24 +114,71 @@ export function PassportVerificationSection({
         throw new Error("No subdomain to accept");
       }
 
-      // Use JustaName SDK to accept the subdomain
-      const result = await acceptSubname({
-        ens: `${memberData.member.ipeUsername}.ipecity.eth`,
-      });
+      const ensName = `${memberData.member.ipeUsername}.ipecity.eth`;
 
-      // Update backend status to active_member
-      await apiRequest("/api/passport/accept", {
-        method: "POST",
-        body: JSON.stringify({
-          farcasterFid,
-        }),
-      });
+      try {
+        // Use JustaName SDK to accept the subdomain
+        const result = await acceptSubname({
+          ens: ensName,
+        });
 
-      return result;
+        // Update backend status to active_member
+        await apiRequest("/api/passport/accept", {
+          method: "POST",
+          body: JSON.stringify({
+            farcasterFid,
+          }),
+        });
+
+        return result;
+      } catch (error: any) {
+        // Handle 409 Conflict as success (subdomain already accepted)
+        if (error?.response?.status === 409 || 
+            error?.message?.includes('SubdomainAlreadyAcceptedException') ||
+            error?.message?.includes('already accepted')) {
+          
+          // Verify domain is actually associated with the wallet
+          if (address) {
+            try {
+              const response = await fetch(`/api/ens/lookup/${address}`);
+              const data = await response.json();
+              
+              if (data.ensName === ensName) {
+                // Domain is verified as belonging to wallet, update backend
+                await apiRequest("/api/passport/accept", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    farcasterFid,
+                  }),
+                });
+                return { success: true, alreadyAccepted: true };
+              }
+            } catch (lookupError) {
+              console.log('ENS lookup error:', lookupError);
+            }
+          }
+          
+          // If verification fails, still update backend but note the conflict
+          await apiRequest("/api/passport/accept", {
+            method: "POST",
+            body: JSON.stringify({
+              farcasterFid,
+            }),
+          });
+          return { success: true, alreadyAccepted: true };
+        }
+        
+        // Re-throw other errors
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      const message = result?.alreadyAccepted 
+        ? "Subdomain was already accepted!"
+        : "Subdomain accepted successfully!";
+      
       toast({
-        title: "Subdomain accepted successfully!",
+        title: message,
         description: `${memberData.member.ipeUsername}.ipecity.eth is now yours.`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });

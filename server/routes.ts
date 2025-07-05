@@ -1571,8 +1571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verify passport ownership (signature-based verification)
   app.post("/api/passport/verify", async (req, res) => {
     try {
-      const { farcasterFid, ensName, walletAddress, signature, message } =
-        req.body;
+      const { farcasterFid, ensName, walletAddress } = req.body;
 
       if (!farcasterFid || !ensName || !walletAddress) {
         return res
@@ -1600,16 +1599,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? "ipecity"
           : ensName.replace(".ipecity.eth", "");
 
-      // Update member with verified passport and set status to 'member'
+      // Automatically set active_member status when ENS domain is detected
       const updatedMember = await storage.updateMember(farcasterFid, {
         ipePassport: passportName,
         passportVerified: true,
-        status: "member",
+        status: "active_member",
+        walletAddress: walletAddress,
       });
 
       res.json({
         success: true,
-        message: "Passport verified successfully",
+        message: "Passport verified successfully - active member status granted",
         member: updatedMember,
       });
     } catch (error) {

@@ -72,26 +72,12 @@ export function PassportVerificationSection({
     }
   }, [isConnected, address, walletConnectedForVerification]);
 
-  // SIWE verification mutation
+  // Automatic passport verification mutation (no signature required)
   const verifyPassportMutation = useMutation({
     mutationFn: async (walletAddress: string) => {
       if (!ensName) {
         throw new Error("No ENS domain found for this wallet");
       }
-
-      const message = createSiweMessage({
-        domain: window.location.host,
-        address: walletAddress as `0x${string}`,
-        statement: `Verify ownership of ${ensName} for Ipê City registration`,
-        uri: window.location.origin,
-        version: "1",
-        chainId: mainnet.id,
-        nonce: Math.random().toString(36).substring(2, 15),
-      });
-
-      const signature = await signMessage({
-        message: message,
-      });
 
       return apiRequest("/api/passport/verify", {
         method: "POST",
@@ -99,8 +85,6 @@ export function PassportVerificationSection({
           farcasterFid,
           ensName,
           walletAddress,
-          message,
-          signature,
         }),
       });
     },
@@ -283,7 +267,7 @@ export function PassportVerificationSection({
                       <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-green-800 font-medium">Ipê City Domain Detected!</p>
                         <p className="text-sm text-green-700">
-                          Verify ownership of {ensName} to complete registration.
+                          {ensName} detected! Click to activate your membership.
                         </p>
                       </div>
                       <Button 
@@ -291,7 +275,7 @@ export function PassportVerificationSection({
                         disabled={verifyPassportMutation.isPending}
                         className="w-full"
                       >
-                        {verifyPassportMutation.isPending ? "Verifying..." : "Verify Domain Ownership"}
+                        {verifyPassportMutation.isPending ? "Verifying..." : "Activate Membership"}
                       </Button>
                     </div>
                   ) : (

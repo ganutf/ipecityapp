@@ -114,13 +114,7 @@ export function PassportVerificationSection({
         throw new Error("No subdomain to accept");
       }
 
-      // Accept via JustaName first  
-      await acceptSubname({
-        subname: memberData.member.ipeUsername,
-        chainId: mainnet.id,
-      });
-
-      // Update backend status
+      // Update backend status to active_member
       return apiRequest("/api/passport/accept", {
         method: "POST",
         body: JSON.stringify({

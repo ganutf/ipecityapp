@@ -845,9 +845,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Member not found" });
       }
 
-      // Check if member is in pending_acceptance state
-      if (member.status !== "pending_acceptance") {
-        return res.status(400).json({ error: "Member is not in pending_acceptance state" });
+      // Check if member is in approved_application state
+      if (member.status !== "approved_application") {
+        return res.status(400).json({ error: "Member is not in approved_application state" });
       }
 
       // Update status to member after client-side JustaName acceptance

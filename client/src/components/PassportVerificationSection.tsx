@@ -442,7 +442,9 @@ export function PassportVerificationSection({
           farcasterProfile={farcasterProfile}
           onSuccess={() => {
             setShowApplicationForm(false);
+            // Invalidate both general and specific member queries to update UI immediately
             queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+            queryClient.invalidateQueries({ queryKey: [`/api/members/check/${farcasterFid}`] });
           }}
         />
       )}

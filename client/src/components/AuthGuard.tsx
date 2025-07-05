@@ -151,7 +151,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             const { member } = memberStatus as any;
             console.log("AuthGuard - Member data:", member);
             
-            if (member && member.emailVerified && member.ipePassport) {
+            if (member && member.emailVerified && member.passportVerified) {
               console.log("AuthGuard - Both verifications complete, granting full access");
               // Both verifications complete - grant full member access
               return;

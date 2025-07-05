@@ -368,11 +368,23 @@ export function PassportVerificationSection({
                         </p>
                       </div>
                       <Button 
-                        onClick={() => setShowApplicationForm(true)}
+                        onClick={() => {
+                          setShowApplicationForm(true);
+                          // Scroll to the application form after a brief delay to allow DOM update
+                          setTimeout(() => {
+                            const formElement = document.getElementById('application-form');
+                            if (formElement) {
+                              formElement.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'start' 
+                              });
+                            }
+                          }, 100);
+                        }}
                         className="w-full"
                       >
                         <Users className="mr-2 h-4 w-4" />
-                        Submit Application
+                        Start Application
                       </Button>
                     </div>
                   )}

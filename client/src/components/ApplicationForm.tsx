@@ -157,7 +157,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card id="application-form" className="max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5" />

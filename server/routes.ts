@@ -1278,6 +1278,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Check if member should be promoted from pending_signer to pending_id_verification
+      if (member && member.status === "pending_signer") {
+        try {
+          // Check if their signer is approved
+          const userSigner = await storage.getUserSigner(farcasterFid);
+          if (userSigner && userSigner.status === "approved") {
+            member = await storage.updateMemberStatus(farcasterFid, "pending_id_verification");
+            console.log(`Auto-promoted FID ${farcasterFid} from pending_signer to pending_id_verification (signer approved)`);
+          }
+        } catch (signerError) {
+          console.error("Error checking signer status for promotion:", signerError);
+        }
+      }
+
       // Check if member should be automatically promoted to 'active_member' status
       if (
         member &&

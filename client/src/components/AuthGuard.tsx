@@ -194,10 +194,15 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           }
 
           // FALLBACK: For any other status requiring approval
+          console.log("AuthGuard - Checking approval requirement:", { requireApproval, status, statusComparison: status !== 'active_member' });
           if (requireApproval && status !== 'active_member') {
-            console.log("AuthGuard - Blocking admin access:", { requireApproval, status, profileFid: profile?.fid });
+            console.log("AuthGuard - Blocking access due to approval requirement:", { requireApproval, status, profileFid: profile?.fid });
             setLocation("/profile");
             return;
+          }
+          
+          if (requireApproval && status === 'active_member') {
+            console.log("AuthGuard - Active member approved for access:", { requireApproval, status });
           }
         } else {
           // User has no member record - needs to complete registration

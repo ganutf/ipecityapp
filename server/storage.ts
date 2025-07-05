@@ -144,6 +144,7 @@ export class DatabaseStorage implements IStorage {
       .update(members)
       .set({ 
         status: "active_member",
+        passportVerified: true,
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, farcasterFid))

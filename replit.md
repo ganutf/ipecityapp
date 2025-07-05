@@ -420,6 +420,14 @@ The application follows a monorepo structure with clear separation between clien
   - **PassportVerificationSection**: Added dedicated handling for "approved_application" status with acceptance interface
   - **Duplicate Interface Fix**: Removed duplicate acceptance sections that were showing multiple identical interfaces simultaneously
   - **Production Ready**: End-to-end application viewing, admin approval, and passport acceptance workflow fully operational with correct state machine and clean UI
+- July 5, 2025. **DATABASE STATUS RESTRICTION IMPLEMENTATION**: Added strict database-level validation for member status field:
+  - **CHECK Constraint Applied**: Database now enforces only 7 valid status values: pending_signer, pending_id_verification, pending_application, approved_application, denied_application, pending_acceptance, active_member
+  - **Legacy Status Cleanup**: Updated existing "member" status to "active_member" and removed all invalid status references from codebase
+  - **Enhanced Data Integrity**: Invalid status values are now impossible to insert at database level, preventing data corruption
+  - **Updated Schema Documentation**: Added comments documenting the 7 valid status values in shared/schema.ts
+  - **Codebase Cleanup**: Removed references to invalid statuses (email_verified, pending_claim, signer_approved, pending, denied, member) from AuthGuard, admin dashboard, and server routes
+  - **Admin Dashboard Enhancement**: Updated status display to show all 7 valid statuses with appropriate color coding
+  - **Production Ready**: Database constraint prevents status field corruption and ensures consistent state machine behavior
 
 ## User Preferences
 

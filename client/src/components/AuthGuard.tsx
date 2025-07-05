@@ -133,8 +133,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return;
           }
           
-          // STATUS: 'signer_approved', 'pending_signer', or 'pending_id_verification' - Needs email/passport verification
-          if (currentStatus === 'signer_approved' || currentStatus === 'pending_signer' || currentStatus === 'pending_id_verification') {
+          // STATUS: 'pending_signer' or 'pending_id_verification' - Needs email/passport verification
+          if (currentStatus === 'pending_signer' || currentStatus === 'pending_id_verification') {
             const currentPath = window.location.pathname;
             if (currentPath !== '/id-verification') {
               setLocation("/id-verification");
@@ -143,8 +143,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return; // Already on verification page
           }
           
-          // STATUS: 'email_verified', 'pending_claim', or 'pending_acceptance' - Partial verification complete
-          if (currentStatus === 'email_verified' || currentStatus === 'pending_claim' || currentStatus === 'pending_acceptance') {
+          // STATUS: 'pending_acceptance' - Partial verification complete
+          if (currentStatus === 'pending_acceptance') {
             console.log("AuthGuard - Email verified status detected:", currentStatus);
             
             // Check if both email and passport verifications are complete
@@ -173,22 +173,15 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return;
           }
 
-          // STATUS: 'pending' - Awaiting admin approval
-          if (status === "pending") {
-            // Registration pending admin approval - show on profile page
-            setLocation("/profile");
-            return;
-          }
-
-          // STATUS: 'denied' - Application rejected
-          if (status === "denied") {
+          // STATUS: 'denied_application' - Application rejected
+          if (status === "denied_application") {
             // Registration denied - show denial message on profile page
             setLocation("/profile");
             return;
           }
 
           // FALLBACK: For any other status requiring approval
-          if (requireApproval && status !== 'member' && status !== 'active_member') {
+          if (requireApproval && status !== 'active_member') {
             console.log("AuthGuard - Blocking admin access:", { requireApproval, status, profileFid: profile?.fid });
             setLocation("/profile");
             return;

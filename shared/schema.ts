@@ -44,7 +44,9 @@ export const members = pgTable("members", {
   farcasterFid: integer("farcaster_fid").notNull().unique(),
   walletAddress: varchar("wallet_address", { length: 255 }),
   
-  // State machine fields
+  // State machine fields - restricted by database CHECK constraint
+  // Valid values: pending_signer, pending_id_verification, pending_application, 
+  // approved_application, denied_application, pending_acceptance, active_member
   status: varchar("status", { length: 30 }).default("pending_signer").notNull(),
   memberType: varchar("member_type", { length: 20 }).default("pending").notNull(),
   

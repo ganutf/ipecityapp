@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const member = await storage.updateMember(farcasterFid, {
         ipeUsername: sanitizedUsername,
         passportClaimWalletAddress: walletAddress,
-        status: "pending_claim",
+        status: "pending_application",
       });
 
       res.json({ success: true, member, username: sanitizedUsername });
@@ -272,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Member or username not found" });
       }
 
-      if (member.status !== "member") {
+      if (member.status !== "approved_application") {
         return res
           .status(400)
           .json({ error: "Subdomain must be approved first" });
@@ -449,7 +449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               try {
                 const member = await storage.getMember(fid);
                 if (member && member.status === "pending_signer") {
-                  await storage.updateMemberStatus(fid, "signer_approved");
+                  await storage.updateMemberStatus(fid, "pending_id_verification");
                   console.log("Updated member status to signer_approved");
                 }
               } catch (memberError) {

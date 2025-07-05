@@ -415,9 +415,8 @@ export default function AdminPage() {
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
                     const claimSubdomain = (member as any).ipeUsername;
-                    const hasPendingClaim = memberStatus === 'pending_claim' && claimSubdomain;
                     const hasPendingApplication = memberStatus === 'pending_application' && claimSubdomain;
-                    const needsApproval = hasPendingClaim || hasPendingApplication;
+                    const needsApproval = hasPendingApplication;
                     
                     return (
                       <tr key={member.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedMember(member)}>
@@ -440,16 +439,22 @@ export default function AdminPage() {
                               ? 'bg-green-100 text-green-800'
                               : memberStatus === 'pending_application'
                                 ? 'bg-orange-100 text-orange-800'
-                                : memberStatus === 'pending_claim'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : memberStatus === 'email_verified'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-gray-100 text-gray-800'
+                                : memberStatus === 'approved_application'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : memberStatus === 'denied_application'
+                                    ? 'bg-red-100 text-red-800'
+                                    : memberStatus === 'pending_acceptance'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : memberStatus === 'pending_id_verification'
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : 'bg-gray-100 text-gray-800'
                           }`}>
                             {memberStatus === 'active_member' ? 'Active Member' :
                              memberStatus === 'pending_application' ? 'Pending Application' :
-                             memberStatus === 'pending_claim' ? 'Pending Claim' :
-                             memberStatus === 'email_verified' ? 'Email Verified' :
+                             memberStatus === 'approved_application' ? 'Approved Application' :
+                             memberStatus === 'denied_application' ? 'Denied Application' :
+                             memberStatus === 'pending_acceptance' ? 'Pending Acceptance' :
+                             memberStatus === 'pending_id_verification' ? 'Pending Verification' :
                              'Pending Signer'}
                           </span>
                         </td>

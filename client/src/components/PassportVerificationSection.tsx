@@ -86,7 +86,7 @@ export function PassportVerificationSection({
         uri: window.location.origin,
         version: "1",
         chainId: mainnet.id,
-        nonce: Math.random().toString(36),
+        nonce: Math.random().toString(36).substring(2, 15),
       });
 
       const signature = await signMessage({

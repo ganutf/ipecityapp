@@ -34,8 +34,8 @@ export default function AdminPage() {
     description: "",
   });
 
-  // Check if user is admin (FID 2790)
-  const isAdmin = profile?.fid === 2790;
+  // Check if user is admin (FID 1109894)
+  const isAdmin = profile?.fid === 1109894;
 
   // Fetch all pulses - must be called before any returns
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({

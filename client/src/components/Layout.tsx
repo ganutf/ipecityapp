@@ -14,7 +14,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const [location] = useLocation();
   
-  const isAdmin = profile?.fid === 2790; // Jean Hansen's FID
+  const isAdmin = profile?.fid === 1109894; // Admin FID
   
   // Don't render navigation until auth is determined
   if (isLoading) {

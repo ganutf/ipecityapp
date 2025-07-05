@@ -429,6 +429,13 @@ The application follows a monorepo structure with clear separation between clien
   - **Admin Dashboard Enhancement**: Updated status display to show all 6 valid statuses with appropriate color coding
   - **Simplified State Machine**: Removed pending_acceptance status - applications go directly from approved_application to active_member
   - **Production Ready**: Database constraint prevents status field corruption and ensures consistent state machine behavior
+- July 5, 2025. **CRITICAL BUG FIX**: Resolved home page access issue for verified members:
+  - **Root Cause**: FarcasterEmbed component was checking for old 'member' status instead of correct 'active_member' status
+  - **Status Logic Fix**: Updated status comparison from `!== 'member'` to `!== 'active_member'` in verification condition
+  - **Additional Fixes**: Updated id-verification.tsx redirect logic to use 'active_member' status
+  - **Complete Resolution**: Active members now properly access pulses page instead of being stuck on verification screen
+  - **AuthGuard Working**: Confirmed AuthGuard routing and RequireApproval logic functioning correctly
+  - **Production Ready**: End-to-end flow from authentication → verification → pulses access fully operational
 
 ## User Preferences
 

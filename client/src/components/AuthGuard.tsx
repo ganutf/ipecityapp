@@ -130,23 +130,14 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           // STATUS: 'active_member' - User completed all verifications
           if (currentStatus === 'active_member') {
             const currentPath = window.location.pathname;
-            console.log("🟢 ACTIVE_MEMBER - Path:", currentPath, "RequireApproval:", requireApproval);
             
             // If active member is still on verification page, redirect to home
             if (currentPath === '/id-verification') {
-              console.log("🔄 ACTIVE_MEMBER - Redirecting from verification to home");
               setLocation("/");
               return;
             }
             
-            // Check if this page requires approval
-            if (requireApproval) {
-              console.log("✅ ACTIVE_MEMBER - Has approval, granting access to page");
-              return; // Grant access
-            }
-            
             // User completed all verifications, allow access to all pages
-            console.log("✅ ACTIVE_MEMBER - No approval required, granting access");
             return;
           }
           
@@ -178,9 +169,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           }
 
           // FALLBACK: Handle any unrecognized status
-          console.log("❌ UNHANDLED STATUS:", { status, requireApproval, currentPath: window.location.pathname });
           if (requireApproval && status !== 'active_member') {
-            console.log("🚫 BLOCKING - Non-active member on approval-required page");
             setLocation("/profile");
             return;
           }

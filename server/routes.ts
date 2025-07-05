@@ -1587,13 +1587,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/passport/verify", async (req, res) => {
     try {
       console.log("Passport verify request body:", req.body);
-      const { farcasterFid, ensName, walletAddress } = req.body;
+      const { farcasterFid, ensName, walletAddress, message, signature } = req.body;
 
-      if (!farcasterFid || !ensName || !walletAddress) {
-        console.log("Missing fields:", { farcasterFid: !!farcasterFid, ensName: !!ensName, walletAddress: !!walletAddress });
+      if (!farcasterFid || !ensName || !walletAddress || !message || !signature) {
+        console.log("Missing fields:", { 
+          farcasterFid: !!farcasterFid, 
+          ensName: !!ensName, 
+          walletAddress: !!walletAddress,
+          message: !!message,
+          signature: !!signature
+        });
         return res
           .status(400)
-          .json({ error: "FID, ENS name, and wallet address are required" });
+          .json({ error: "FID, ENS name, wallet address, message, and signature are required" });
       }
 
       // Verify the ENS domain is an Ipê City domain
@@ -1604,28 +1610,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // For existing domain holders, we'll verify domain ownership via ENS lookup
-      // instead of complex signature verification that may fail with smart contract wallets
-      console.log("Verifying domain ownership via ENS lookup...");
-      
+      // Verify SIWE signature for wallet ownership proof
       try {
-        // Verify the domain actually resolves to the provided wallet address
-        const baseUrl = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
-        const ensResponse = await fetch(`${baseUrl}/api/ens/lookup/${walletAddress}`);
-        const ensData = await ensResponse.json();
+        console.log("Received message for SIWE verification:", message);
+        console.log("Received signature length:", signature.length);
+        console.log("Expected wallet address:", walletAddress);
         
-        console.log("ENS lookup result:", ensData);
+        const siweMessage = new SiweMessage(message);
+        console.log("Parsed SIWE message:", {
+          address: siweMessage.address,
+          statement: siweMessage.statement,
+          domain: siweMessage.domain,
+        });
         
-        if (!ensData.ensName || ensData.ensName !== ensName) {
-          return res.status(400).json({ 
-            error: "Domain ownership verification failed. The connected wallet does not own the specified domain." 
-          });
+        // Verify signature with enhanced error handling for smart contract wallets
+        const verificationResult = await siweMessage.verify({ signature });
+        
+        console.log("SIWE verification result:", verificationResult);
+        
+        if (!verificationResult.success) {
+          console.error("SIWE verification failed:", verificationResult.error);
+          
+          // For smart contract wallets, also verify via ENS lookup as fallback
+          console.log("Attempting ENS lookup fallback for smart contract wallet...");
+          try {
+            const baseUrl = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
+            const ensResponse = await fetch(`${baseUrl}/api/ens/lookup/${walletAddress}`);
+            const ensData = await ensResponse.json();
+            
+            if (ensData.ensName === ensName) {
+              console.log("ENS lookup fallback successful - smart contract wallet verified");
+            } else {
+              return res.status(400).json({ 
+                error: "Signature verification failed and ENS lookup does not match" 
+              });
+            }
+          } catch (ensError) {
+            return res.status(400).json({ 
+              error: "Signature verification failed and ENS lookup unavailable" 
+            });
+          }
+        } else {
+          // Verify the wallet address matches
+          if (siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()) {
+            return res.status(400).json({ error: "Wallet address mismatch" });
+          }
+
+          // Verify the ENS domain is mentioned in the statement
+          if (!siweMessage.statement?.includes(ensName)) {
+            return res.status(400).json({ error: "ENS domain not verified in signature" });
+          }
         }
         
-        console.log("Domain ownership verified successfully");
+        console.log("Wallet ownership verification successful");
       } catch (error) {
-        console.error("ENS lookup error:", error);
-        return res.status(400).json({ error: "Failed to verify domain ownership" });
+        console.error("SIWE verification error:", error);
+        return res.status(400).json({ error: "Signature verification failed" });
       }
 
       // Get member and update with passport verification

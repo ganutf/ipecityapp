@@ -79,18 +79,46 @@ export function PassportVerificationSection({
         throw new Error("No ENS domain found for this wallet");
       }
 
-      // Send verification request with just the essential data
-      // Domain ownership is verified server-side via ENS lookup
-      const response = await apiRequest("/api/passport/verify", {
-        method: "POST",
-        body: JSON.stringify({
-          farcasterFid,
-          ensName,
-          walletAddress,
-        }),
+      // Create SIWE message for signature verification
+      const message = createSiweMessage({
+        address: walletAddress as `0x${string}`,
+        chainId: mainnet.id,
+        domain: window.location.host,
+        uri: window.location.origin,
+        version: "1",
+        statement: `Verify ownership of ${ensName} for Ipe City membership activation.`,
+        nonce: Math.random().toString(36).substring(2, 15),
       });
-      
-      return response;
+
+      // Request signature from user's wallet
+      return new Promise((resolve, reject) => {
+        signMessage(
+          { message },
+          {
+            onSuccess: async (signature) => {
+              try {
+                // Send verification request with signature
+                const response = await apiRequest("/api/passport/verify", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    farcasterFid,
+                    ensName,
+                    walletAddress,
+                    message,
+                    signature,
+                  }),
+                });
+                resolve(response);
+              } catch (error) {
+                reject(error);
+              }
+            },
+            onError: (error) => {
+              reject(new Error("Signature verification cancelled or failed"));
+            },
+          }
+        );
+      });
     },
     onSuccess: () => {
       setVerificationStatus("verified");
@@ -328,7 +356,7 @@ export function PassportVerificationSection({
                         className="w-full"
                       >
                         <Wallet className="mr-2 h-4 w-4" />
-                        {verifyPassportMutation.isPending ? "Verifying..." : "Activate Membership"}
+                        {verifyPassportMutation.isPending ? "Signing..." : "Sign & Activate Membership"}
                       </Button>
                     </div>
                   ) : (

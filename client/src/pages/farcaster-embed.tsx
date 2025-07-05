@@ -234,8 +234,8 @@ export default function FarcasterEmbed() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Passport Verification:</span>
-              {member?.ipePassport ? (
-                <span className="text-green-600 text-sm">✓ Verified ({member.ipePassport})</span>
+              {member?.passportVerified ? (
+                <span className="text-green-600 text-sm">✓ Verified {member.ipePassport ? `(${member.ipePassport})` : ''}</span>
               ) : (
                 <span className="text-orange-600 text-sm">Pending</span>
               )}

@@ -141,13 +141,18 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
               return;
             }
             
-            // Partial verification - allow limited access (home/profile only)
+            // Partial verification - allow limited access (home/profile/id-verification)
             const currentPath = window.location.pathname;
             if (requireApproval && currentPath !== '/' && currentPath !== '/profile' && currentPath !== '/id-verification') {
               setLocation("/id-verification");
               return;
             }
-            // Allow access to home page and profile
+            // Allow access to home page, profile, and id-verification page
+            if (currentPath === '/' || currentPath === '/profile' || currentPath === '/id-verification') {
+              return;
+            }
+            // For other pages, redirect to id-verification to complete verification
+            setLocation("/id-verification");
             return;
           }
 

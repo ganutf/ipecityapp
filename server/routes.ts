@@ -415,13 +415,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid FID" });
       }
 
-      console.log(`Looking for signer for FID: ${fid} - ALWAYS REQUIRING NEW APPROVAL`);
+      console.log(`Looking for signer for FID: ${fid}`);
 
-      // FORCE NEW SIGNER CREATION FOR EVERY LOGIN SESSION
-      // This ensures users must approve their signer after each login, matching old behavior
-      // Skip checking for existing signers to always require fresh approval
-      
-      if (false) { // Disabled - always create new signer
+      // Check if user already has a signer
+      let userSigner;
+      try {
+        userSigner = await storage.getUserSigner(fid);
+        console.log("Existing signer found:", userSigner);
+      } catch (dbError) {
+        console.error("Database error when fetching signer:", dbError);
+        return res.status(500).json({ error: "Database connection error" });
+      }
+
+      if (userSigner) {
         // If signer is pending, check current status with Neynar
         if (userSigner.status === "pending_approval") {
           try {
@@ -478,10 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ? "Existing approved signer found"
               : "Existing signer requires approval",
         });
-      } 
-      
-      // ALWAYS CREATE NEW SIGNER - Forces approval flow every login session
-      {
+      } else {
         // Create new signer with proper registration and sponsorship
         console.log("Creating new sponsored signer for FID:", fid);
         const signerData = await getSignedKey(true); // sponsored = true

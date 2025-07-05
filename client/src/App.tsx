@@ -75,14 +75,7 @@ function Router() {
               </RequireApproval>
             )}
           />
-          <Route
-            path="/admin"
-            component={() => (
-              <RequireApproval>
-                <AdminPage />
-              </RequireApproval>
-            )}
-          />
+          <Route path="/admin" component={AdminPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
 

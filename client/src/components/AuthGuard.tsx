@@ -178,6 +178,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
 
           // FALLBACK: For any other status requiring approval
           if (requireApproval && status !== 'member' && status !== 'active_member') {
+            console.log("AuthGuard - Blocking admin access:", { requireApproval, status, profileFid: profile?.fid });
             setLocation("/profile");
             return;
           }

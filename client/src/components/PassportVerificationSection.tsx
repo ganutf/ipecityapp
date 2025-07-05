@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useAccount, useSignMessage } from "wagmi";
+import { useAccount, useSignMessage, useDisconnect } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
@@ -44,6 +44,7 @@ export function PassportVerificationSection({
   const { profile } = usePersistentAuth();
   const { address, isConnected } = useAccount();
   const { signMessage } = useSignMessage();
+  const { disconnect } = useDisconnect();
   
   const [verificationStatus, setVerificationStatus] = useState<
     "idle" | "checking" | "verifying" | "verified" | "failed"
@@ -129,9 +130,9 @@ export function PassportVerificationSection({
         throw new Error("No subdomain to accept");
       }
 
-      // Accept via JustaName first
+      // Accept via JustaName first  
       await acceptSubname({
-        username: memberData.member.ipeUsername,
+        subname: memberData.member.ipeUsername,
         chainId: mainnet.id,
       });
 
@@ -257,6 +258,21 @@ export function PassportVerificationSection({
                     <p className="text-sm text-gray-500">No ENS domain</p>
                   )}
                 </div>
+              </div>
+              
+              {/* Disconnect Wallet Button */}
+              <div className="text-center">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    disconnect();
+                    setWalletConnectedForVerification(false);
+                    setVerificationStatus("idle");
+                  }}
+                >
+                  Disconnect Wallet
+                </Button>
               </div>
 
               {/* Action based on current status */}

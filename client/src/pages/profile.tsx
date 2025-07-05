@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
+import { SocialLinksFields } from "@/components/SocialLinksFields";
+import { ProfileTagsField } from "@/components/ProfileTagsField";
 import { User, Twitter, Linkedin, Instagram, Edit3, X, Check } from "lucide-react";
 
 interface MemberData {
@@ -40,10 +42,7 @@ interface MemberData {
   };
 }
 
-const PROFILE_TAGS = [
-  'tech founder', 'student', 'developer', 'lawyer', 'scientist',
-  'public servant', 'designer', 'creator', 'technologist', 'researcher'
-];
+
 
 const profileSchema = z.object({
   bio: z.string().optional(),
@@ -133,13 +132,7 @@ export default function ProfilePage() {
     });
   };
 
-  const handleTagToggle = (tag: string) => {
-    const currentTags = form.getValues("profileTags") || [];
-    const newTags = currentTags.includes(tag)
-      ? currentTags.filter(t => t !== tag)
-      : [...currentTags, tag];
-    form.setValue("profileTags", newTags);
-  };
+
 
   if (!memberData?.isMember) {
     return (
@@ -318,86 +311,10 @@ export default function ProfilePage() {
                 />
 
                 {/* Social Links */}
-                <div className="space-y-4">
-                  <Label className="text-sm font-medium">Social Links</Label>
-                  
-                  <FormField
-                    control={form.control}
-                    name="twitter"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Twitter className="h-4 w-4 text-blue-500" />
-                          Twitter Handle
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="username (without @)" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="linkedin"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Linkedin className="h-4 w-4 text-blue-600" />
-                          LinkedIn Profile
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://linkedin.com/in/username" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="instagram"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Instagram className="h-4 w-4 text-pink-500" />
-                          Instagram Handle
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="username (without @)" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <SocialLinksFields control={form.control} layout="vertical" />
 
                 {/* Profile Tags */}
-                <FormField
-                  control={form.control}
-                  name="profileTags"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Profile Tags</FormLabel>
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {PROFILE_TAGS.map((tag) => (
-                          <div key={tag} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={tag}
-                              checked={(form.watch("profileTags") || []).includes(tag)}
-                              onCheckedChange={() => handleTagToggle(tag)}
-                            />
-                            <Label htmlFor={tag} className="text-sm capitalize cursor-pointer">
-                              {tag}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <ProfileTagsField control={form.control} />
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">

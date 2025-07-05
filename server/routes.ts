@@ -244,10 +244,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Note: Availability should be checked by frontend before calling this endpoint
 
-      // Update member with claimed username, wallet address, and change status to pending_claim
+      // Update member with claimed username, wallet address, and change status to pending_application
       const member = await storage.updateMember(farcasterFid, {
         ipeUsername: sanitizedUsername,
-        passportClaimWalletAddress: walletAddress,
+        walletAddress: walletAddress,
         status: "pending_application",
       });
 
@@ -450,7 +450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const member = await storage.getMember(fid);
                 if (member && member.status === "pending_signer") {
                   await storage.updateMemberStatus(fid, "pending_id_verification");
-                  console.log("Updated member status to signer_approved");
+                  console.log("Updated member status to pending_id_verification");
                 }
               } catch (memberError) {
                 console.error("Error updating member status:", memberError);

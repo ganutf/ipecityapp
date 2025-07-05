@@ -177,7 +177,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           }
 
           // FALLBACK: For any other status requiring approval
-          if (requireApproval && status !== 'member') {
+          if (requireApproval && status !== 'member' && status !== 'active_member') {
             setLocation("/profile");
             return;
           }

@@ -543,12 +543,6 @@ export default function AdminPage() {
                   <p className="text-sm">{selectedMember.emailVerified ? '✓ Yes' : '✗ No'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Username</label>
-                  <p className="text-sm font-mono">
-                    {(selectedMember as any).ipeUsername || 'Not specified'}
-                  </p>
-                </div>
-                <div>
                   <label className="text-sm font-medium text-gray-500">Passport Claim</label>
                   <p className="text-sm">
                     {(selectedMember as any).ipeUsername ? 
@@ -618,7 +612,7 @@ export default function AdminPage() {
                     disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                     className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
                   >
-                    {approveMemberMutation.isPending ? "Reserving..." : "Approve & Reserve"}
+                    {approveMemberMutation.isPending ? "Approving..." : "Approve"}
                   </Button>
                   <Button
                     variant="destructive"

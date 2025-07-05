@@ -401,6 +401,13 @@ The application follows a monorepo structure with clear separation between clien
   - **Updated Status Flow**: Admin approval now sets status to 'pending_acceptance', user acceptance completes to 'member'
   - **Enhanced UI Display**: Accept button shows blue "Accept Your Passport" with proper status display and polling
   - **Production Ready**: Complete reserve→approve→accept workflow with actual JustaName subdomain transfer
+- July 5, 2025. **AUTOMATIC ENS VERIFICATION SYSTEM COMPLETED**: Implemented streamlined passport verification for existing domain holders:
+  - **Removed Signature Requirements**: ENS domain detection now automatically grants `active_member` status without SIWE verification
+  - **Updated Backend Logic**: `/api/passport/verify` endpoint simplified to only require FID, ENS name, and wallet address
+  - **Enhanced Frontend UX**: Changed button from "Verify Domain Ownership" to "Activate Membership" with clearer messaging
+  - **Dual Flow Architecture**: Users with existing domains get instant activation, new applications still use admin approval workflow
+  - **Fixed Admin Access**: Resolved AuthGuard blocking admin page access by removing RequireApproval wrapper and allowing `active_member` status
+  - **Production Ready**: Complete ENS detection system operational with automatic membership activation for domain holders
 
 ## User Preferences
 

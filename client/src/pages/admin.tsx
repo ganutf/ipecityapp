@@ -424,11 +424,13 @@ export default function AdminPage() {
                           <div className="flex items-center space-x-2">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {(member as any).farcasterUsername || `FID ${member.farcasterFid}`}
+                                FID {member.farcasterFid}
                               </div>
-                              <div className="text-sm text-gray-500">
-                                FID: {member.farcasterFid}
-                              </div>
+                              {(member as any).farcasterUsername && (
+                                <div className="text-sm text-gray-500">
+                                  {(member as any).farcasterUsername}
+                                </div>
+                              )}
                             </div>
                             <Eye className="h-4 w-4 text-gray-400" />
                           </div>
@@ -466,17 +468,21 @@ export default function AdminPage() {
                           ) : '-'}
                         </td>
                         <td className="py-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedMember(member);
-                            }}
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            Review
-                          </Button>
+                          {hasPendingApplication ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedMember(member);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Review
+                            </Button>
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
                         </td>
                       </tr>
                     );

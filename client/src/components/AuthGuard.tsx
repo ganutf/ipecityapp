@@ -129,6 +129,16 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           
           // STATUS: 'active_member' - User completed all verifications
           if (currentStatus === 'active_member') {
+            console.log("AuthGuard - Active member detected");
+            const currentPath = window.location.pathname;
+            
+            // If active member is still on verification page, redirect to home
+            if (currentPath === '/id-verification') {
+              console.log("AuthGuard - Redirecting active member from verification to home");
+              setLocation("/");
+              return;
+            }
+            
             // User completed all verifications, allow access to all pages
             return;
           }

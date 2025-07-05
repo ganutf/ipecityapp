@@ -260,7 +260,7 @@ export function PassportVerificationSection({
               </div>
 
               {/* Action based on current status */}
-              {(memberData?.member?.status === "pending_id_verification" || memberData?.member?.status === "email_verified") && (
+              {memberData?.member && memberData.member.status !== "active_member" && (
                 <div className="space-y-4">
                   {hasIpeCityDomain ? (
                     <div className="space-y-3">

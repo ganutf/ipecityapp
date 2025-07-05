@@ -436,7 +436,7 @@ export default function AdminPage() {
                         </td>
                         <td className="py-2">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            memberStatus === 'member' || memberStatus === 'active_member'
+                            memberStatus === 'active_member'
                               ? 'bg-green-100 text-green-800'
                               : memberStatus === 'pending_application'
                                 ? 'bg-orange-100 text-orange-800'
@@ -446,8 +446,7 @@ export default function AdminPage() {
                                     ? 'bg-blue-100 text-blue-800'
                                     : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {memberStatus === 'member' ? 'Member' :
-                             memberStatus === 'active_member' ? 'Active Member' :
+                            {memberStatus === 'active_member' ? 'Active Member' :
                              memberStatus === 'pending_application' ? 'Pending Application' :
                              memberStatus === 'pending_claim' ? 'Pending Claim' :
                              memberStatus === 'email_verified' ? 'Email Verified' :
@@ -493,7 +492,7 @@ export default function AdminPage() {
                                 {denyMemberMutation.isPending ? "..." : "Deny"}
                               </Button>
                             </div>
-                          ) : memberStatus === 'member' ? (
+                          ) : memberStatus === 'active_member' ? (
                             <span className="text-sm text-gray-500">Completed</span>
                           ) : (
                             <span className="text-sm text-gray-400">-</span>
@@ -530,7 +529,7 @@ export default function AdminPage() {
                   <label className="text-sm font-medium text-gray-500">Status</label>
                   <p className="text-sm">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      (selectedMember as any).status === 'member' || (selectedMember as any).status === 'active_member'
+                      (selectedMember as any).status === 'active_member'
                         ? 'bg-green-100 text-green-800'
                         : (selectedMember as any).status === 'pending_application'
                           ? 'bg-orange-100 text-orange-800'
@@ -538,8 +537,7 @@ export default function AdminPage() {
                             ? 'bg-yellow-100 text-yellow-800'
                             : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {(selectedMember as any).status === 'member' ? 'Member' :
-                       (selectedMember as any).status === 'active_member' ? 'Active Member' :
+                      {(selectedMember as any).status === 'active_member' ? 'Active Member' :
                        (selectedMember as any).status === 'pending_application' ? 'Pending Application' :
                        (selectedMember as any).status === 'pending_claim' ? 'Pending Claim' :
                        'Pending Signer'}

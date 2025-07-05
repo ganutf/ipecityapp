@@ -116,13 +116,13 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         if (isMember) {
           const currentStatus = status;
           
-          // STATUS: 'member' - Check if passport acceptance is pending
-          if (currentStatus === 'member') {
+          // STATUS: 'active_member' - Check if passport acceptance is pending
+          if (currentStatus === 'active_member') {
             const { member } = memberStatus as any;
             
             // Check if user has reserved passport but hasn't accepted it yet
             if (member && member.ipeUsername && !member.passportVerified) {
-              console.log("AuthGuard - Member has reserved passport but needs to accept it");
+              console.log("AuthGuard - Active member has reserved passport but needs to accept it");
               const currentPath = window.location.pathname;
               if (currentPath !== '/id-verification') {
                 setLocation("/id-verification");

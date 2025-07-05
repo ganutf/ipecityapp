@@ -414,7 +414,8 @@ The application follows a monorepo structure with clear separation between clien
   - **Enhanced AuthGuard Logic**: Fixed routing for approved members who still need to accept reserved passports - now correctly redirects to ID verification instead of home page
   - **Passport Acceptance Flow**: Admin approval now reserves subdomain and sets status to "member", then user must accept the reserved passport to complete verification
   - **Complete Admin Workflow**: Admin can view application details, approve/deny applications, and system handles subdomain reservation with proper user redirection for acceptance
-  - **Production Ready**: End-to-end application viewing, admin approval, and passport acceptance workflow fully operational
+  - **Fixed State Machine**: Updated all status references from "member" to "active_member" to align with correct state machine architecture
+  - **Production Ready**: End-to-end application viewing, admin approval, and passport acceptance workflow fully operational with correct status handling
 
 ## User Preferences
 

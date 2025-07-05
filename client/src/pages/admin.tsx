@@ -537,6 +537,12 @@ export default function AdminPage() {
                   <p className="text-sm">{selectedMember.emailVerified ? '✓ Yes' : '✗ No'}</p>
                 </div>
                 <div>
+                  <label className="text-sm font-medium text-gray-500">Username</label>
+                  <p className="text-sm font-mono">
+                    {(selectedMember as any).ipeUsername || 'Not specified'}
+                  </p>
+                </div>
+                <div>
                   <label className="text-sm font-medium text-gray-500">Passport Claim</label>
                   <p className="text-sm">
                     {(selectedMember as any).ipeUsername ? 

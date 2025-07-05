@@ -175,6 +175,13 @@ export default function ProfilePage() {
               </p>
             </div>
 
+            {memberData?.member?.ipeUsername && (
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Username</Label>
+                <p className="text-sm font-mono">{memberData.member.ipeUsername}</p>
+              </div>
+            )}
+
             {memberData?.member?.bio && (
               <div>
                 <Label className="text-sm font-medium text-gray-600">Bio</Label>

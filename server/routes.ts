@@ -1682,7 +1682,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Set active_member status after successful signature verification
       const updatedMember = await storage.updateMember(farcasterFid, {
-        ipePassport: passportName,
+        ipePassport: ensName, // Store full domain (e.g., peerbase.ipecity.eth)
+        ipeUsername: passportName, // Store username only (e.g., peerbase)
         passportVerified: true,
         status: "active_member",
         walletAddress: walletAddress,

@@ -1226,7 +1226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         member = await storage.updateMember(farcasterFid, {
           email: verification.email,
           emailVerified: true,
-          status: "email_verified",
+          // Keep existing status - don't change it during email verification
         });
       }
 

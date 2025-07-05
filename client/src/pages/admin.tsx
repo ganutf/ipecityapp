@@ -413,6 +413,8 @@ export default function AdminPage() {
                     const memberStatus = (member as any).status || 'unknown';
                     const claimSubdomain = (member as any).ipeUsername || member.passportClaimSubdomain;
                     const hasPendingClaim = memberStatus === 'pending_claim' && claimSubdomain;
+                    const hasPendingApplication = memberStatus === 'pending_application' && claimSubdomain;
+                    const needsApproval = hasPendingClaim || hasPendingApplication;
                     
                     return (
                       <tr key={member.id}>
@@ -428,15 +430,19 @@ export default function AdminPage() {
                         </td>
                         <td className="py-2">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            memberStatus === 'member' 
+                            memberStatus === 'member' || memberStatus === 'active_member'
                               ? 'bg-green-100 text-green-800'
-                              : memberStatus === 'pending_claim'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : memberStatus === 'email_verified'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
+                              : memberStatus === 'pending_application'
+                                ? 'bg-orange-100 text-orange-800'
+                                : memberStatus === 'pending_claim'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : memberStatus === 'email_verified'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-gray-100 text-gray-800'
                           }`}>
                             {memberStatus === 'member' ? 'Member' :
+                             memberStatus === 'active_member' ? 'Active Member' :
+                             memberStatus === 'pending_application' ? 'Pending Application' :
                              memberStatus === 'pending_claim' ? 'Pending Claim' :
                              memberStatus === 'email_verified' ? 'Email Verified' :
                              'Pending Signer'}
@@ -450,7 +456,7 @@ export default function AdminPage() {
                           ) : '-'}
                         </td>
                         <td className="py-2">
-                          {hasPendingClaim ? (
+                          {needsApproval ? (
                             <div className="flex space-x-2">
                               <Button
                                 size="sm"

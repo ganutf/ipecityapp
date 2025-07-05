@@ -466,42 +466,17 @@ export default function AdminPage() {
                           ) : '-'}
                         </td>
                         <td className="py-2">
-                          {needsApproval ? (
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => {
-                                  console.log("Approving member:", member);
-                                  console.log("Wallet address:", member.walletAddress);
-                                  console.log("Username:", (member as any).ipeUsername || claimSubdomain);
-                                  approveMemberMutation.mutate({
-                                    farcasterFid: member.farcasterFid,
-                                    ipeUsername: (member as any).ipeUsername || claimSubdomain,
-                                    userWalletAddress: member.walletAddress || undefined
-                                  });
-                                }}
-                                disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
-                                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                              >
-                                {approveMemberMutation.isPending 
-                                  ? "Reserving..." 
-                                  : "Approve & Reserve"}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => denyMemberMutation.mutate(member.farcasterFid)}
-                                disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
-                              >
-                                {denyMemberMutation.isPending ? "..." : "Deny"}
-                              </Button>
-                            </div>
-                          ) : memberStatus === 'active_member' ? (
-                            <span className="text-sm text-gray-500">Completed</span>
-                          ) : (
-                            <span className="text-sm text-gray-400">-</span>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMember(member);
+                            }}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Review
+                          </Button>
                         </td>
                       </tr>
                     );

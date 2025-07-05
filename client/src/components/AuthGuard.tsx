@@ -134,20 +134,30 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           
           // STATUS: 'email_verified', 'pending_claim', or 'pending_acceptance' - Partial verification complete
           if (currentStatus === 'email_verified' || currentStatus === 'pending_claim' || currentStatus === 'pending_acceptance') {
+            console.log("AuthGuard - Email verified status detected:", currentStatus);
+            
             // Check if both email and passport verifications are complete
             const { member } = memberStatus as any;
+            console.log("AuthGuard - Member data:", member);
+            
             if (member && member.emailVerified && member.ipePassport) {
+              console.log("AuthGuard - Both verifications complete, granting full access");
               // Both verifications complete - grant full member access
               return;
             }
             
             // Partial verification - allow access to home, profile, and id-verification pages
             const currentPath = window.location.pathname;
+            console.log("AuthGuard - Current path:", currentPath);
+            console.log("AuthGuard - Checking if path is allowed for partial verification");
+            
             if (currentPath === '/' || currentPath === '/profile' || currentPath === '/id-verification') {
+              console.log("AuthGuard - Path allowed for partial verification, granting access");
               return; // Allow access to these pages
             }
             
             // For any other pages, redirect to id-verification to complete verification
+            console.log("AuthGuard - Redirecting to id-verification from:", currentPath);
             setLocation("/id-verification");
             return;
           }

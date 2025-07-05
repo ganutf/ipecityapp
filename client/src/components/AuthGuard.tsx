@@ -81,7 +81,8 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
 
     // STEP 1: Handle unauthenticated users
     if (requireAuth && !profile) {
-      // User not logged in but auth required - stay on current page to show sign-in
+      // User not logged in but auth required - redirect to home page
+      setLocation("/");
       return;
     }
 
@@ -194,6 +195,11 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
       </div>
     );
+  }
+
+  // Final check: block rendering if auth required but user not logged in
+  if (requireAuth && !profile) {
+    return null; // Don't render anything for unauthenticated users
   }
 
   // Render protected content when all checks pass

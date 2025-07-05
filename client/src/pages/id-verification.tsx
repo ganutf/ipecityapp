@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
-import { UsernameClaimSection } from "@/components/UsernameClaimSection";
 
 interface MemberStatus {
   isMember: boolean;
@@ -106,6 +105,8 @@ export default function IdVerificationPage() {
         isVerified={isPassportVerified}
         onVerificationComplete={handlePassportComplete}
         allowChange={true}
+        memberData={memberStatus}
+        farcasterProfile={profile}
       />
 
 

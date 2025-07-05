@@ -78,6 +78,8 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
 
+
+
   async createMember(member: InsertMember): Promise<Member> {
     const [newMember] = await db.insert(members).values(member).returning();
     return newMember;
@@ -102,34 +104,15 @@ export class DatabaseStorage implements IStorage {
     return updatedMember;
   }
 
-  async getAllMembers(): Promise<Member[]> {
-    return await db.select().from(members).orderBy(desc(members.createdAt));
+  async getPendingMembers(): Promise<Member[]> {
+    return await db.select().from(members).where(eq(members.status, 'pending_claim'));
   }
 
-  // Application Flow
-  async submitApplication(application: Application): Promise<Member> {
+  async approveMember(farcasterFid: number): Promise<Member> {
     const [member] = await db
       .update(members)
       .set({ 
-        ...application,
-        status: "pending_application",
-        updatedAt: new Date() 
-      })
-      .where(eq(members.farcasterFid, application.farcasterFid))
-      .returning();
-    return member;
-  }
-
-  async getPendingApplications(): Promise<Member[]> {
-    return await db.select().from(members).where(eq(members.status, 'pending_application'));
-  }
-
-  async approveApplication(farcasterFid: number, memberType: string): Promise<Member> {
-    const [member] = await db
-      .update(members)
-      .set({ 
-        status: "approved_application",
-        memberType: memberType,
+        status: "pending_acceptance",
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, farcasterFid))
@@ -137,14 +120,37 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
 
-  async denyApplication(farcasterFid: number): Promise<Member> {
+  async acceptSubdomain(farcasterFid: number): Promise<Member> {
     const [member] = await db
       .update(members)
       .set({ 
-        status: "denied_application",
+        status: "member",
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async denyMember(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ 
+        updatedAt: new Date() 
+      })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async registerMember(registration: Registration): Promise<Member> {
+    const [member] = await db
+      .insert(members)
+      .values({
+        ...registration,
+        emailVerified: false,
+        registeredAt: new Date(),
+      })
       .returning();
     return member;
   }
@@ -177,21 +183,11 @@ export class DatabaseStorage implements IStorage {
       .update(emailVerifications)
       .set({ verified: true })
       .where(eq(emailVerifications.farcasterFid, farcasterFid));
-      
+    
     await db
       .update(members)
       .set({ emailVerified: true, updatedAt: new Date() })
       .where(eq(members.farcasterFid, farcasterFid));
-  }
-
-  // Status Management
-  async updateMemberStatus(farcasterFid: number, status: string): Promise<Member> {
-    const [member] = await db
-      .update(members)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(members.farcasterFid, farcasterFid))
-      .returning();
-    return member;
   }
 
   // Passport Verification
@@ -223,6 +219,78 @@ export class DatabaseStorage implements IStorage {
     return verification;
   }
 
+  // Status Management
+  async updateMemberStatus(farcasterFid: number, status: string): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  // Passport Claims
+  async createPassportClaim(claim: PassportClaim): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({
+        passportClaimSubdomain: claim.passportClaimSubdomain,
+        passportClaimWalletAddress: claim.passportClaimWalletAddress,
+        passportClaimStatus: 'pending',
+        status: 'pending_claim',
+        updatedAt: new Date()
+      })
+      .where(eq(members.farcasterFid, claim.farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async getPendingClaims(): Promise<Member[]> {
+    return await db
+      .select()
+      .from(members)
+      .where(eq(members.passportClaimStatus, 'pending'))
+      .orderBy(asc(members.createdAt));
+  }
+
+  async approvePassportClaim(farcasterFid: number, ensName?: string): Promise<Member> {
+    const updateData: any = {
+      passportClaimStatus: 'approved',
+      status: 'member',
+      passportVerified: true,
+      updatedAt: new Date()
+    };
+
+    // If ENS name is provided, set it as the passport
+    if (ensName) {
+      updateData.ipePassport = ensName;
+    }
+
+    const [member] = await db
+      .update(members)
+      .set(updateData)
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async denyPassportClaim(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({
+        passportClaimStatus: 'denied',
+        status: 'signer_approved',
+        updatedAt: new Date()
+      })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async getAllMembers(): Promise<Member[]> {
+    return await db.select().from(members).orderBy(asc(members.name));
+  }
+
   // Pulses
   async getPulse(id: number): Promise<Pulse | undefined> {
     const [pulse] = await db.select().from(pulses).where(eq(pulses.id, id));
@@ -243,6 +311,28 @@ export class DatabaseStorage implements IStorage {
     return newPulse;
   }
 
+  // Pulse Executions
+  async getPulseExecution(pulseId: number, memberFarcasterFid: number, actionType: string): Promise<PulseExecution | undefined> {
+    const [execution] = await db.select().from(pulseExecutions)
+      .where(and(
+        eq(pulseExecutions.pulseId, pulseId),
+        eq(pulseExecutions.memberFarcasterFid, memberFarcasterFid),
+        eq(pulseExecutions.actionType, actionType)
+      ));
+    return execution;
+  }
+
+  async getMemberExecutions(memberFarcasterFid: number): Promise<PulseExecution[]> {
+    return await db.select().from(pulseExecutions)
+      .where(eq(pulseExecutions.memberFarcasterFid, memberFarcasterFid))
+      .orderBy(desc(pulseExecutions.executedAt));
+  }
+
+  async createPulseExecution(execution: InsertPulseExecution): Promise<PulseExecution> {
+    const [newExecution] = await db.insert(pulseExecutions).values(execution).returning();
+    return newExecution;
+  }
+
   async updatePulse(id: number, pulseData: UpdatePulse): Promise<Pulse> {
     const [updatedPulse] = await db
       .update(pulses)
@@ -252,38 +342,6 @@ export class DatabaseStorage implements IStorage {
     return updatedPulse;
   }
 
-  // Pulse Executions
-  async getPulseExecution(pulseId: number, memberFarcasterFid: number, actionType: string): Promise<PulseExecution | undefined> {
-    const [execution] = await db
-      .select()
-      .from(pulseExecutions)
-      .where(
-        and(
-          eq(pulseExecutions.pulseId, pulseId),
-          eq(pulseExecutions.memberFarcasterFid, memberFarcasterFid),
-          eq(pulseExecutions.actionType, actionType)
-        )
-      );
-    return execution;
-  }
-
-  async getMemberExecutions(memberFarcasterFid: number): Promise<PulseExecution[]> {
-    return await db
-      .select()
-      .from(pulseExecutions)
-      .where(eq(pulseExecutions.memberFarcasterFid, memberFarcasterFid))
-      .orderBy(desc(pulseExecutions.executedAt));
-  }
-
-  async createPulseExecution(execution: InsertPulseExecution): Promise<PulseExecution> {
-    const [newExecution] = await db
-      .insert(pulseExecutions)
-      .values(execution)
-      .returning();
-    return newExecution;
-  }
-
-  // User Signers
   async getUserSigner(farcasterFid: number): Promise<UserSigner | undefined> {
     const [signer] = await db
       .select()
@@ -293,20 +351,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUserSigner(signer: InsertUserSigner): Promise<UserSigner> {
-    const [newSigner] = await db
-      .insert(userSigners)
-      .values(signer)
-      .returning();
+    const [newSigner] = await db.insert(userSigners).values(signer).returning();
     return newSigner;
   }
 
   async updateUserSignerStatus(farcasterFid: number, status: string): Promise<UserSigner> {
-    const [signer] = await db
+    const [updatedSigner] = await db
       .update(userSigners)
-      .set({ status, updatedAt: new Date() })
+      .set({ status })
       .where(eq(userSigners.farcasterFid, farcasterFid))
       .returning();
-    return signer;
+    
+    if (!updatedSigner) {
+      throw new Error(`UserSigner not found for FID ${farcasterFid}`);
+    }
+    
+    return updatedSigner;
   }
 }
 

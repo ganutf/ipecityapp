@@ -11,10 +11,9 @@ import {
   updatePulseSchema,
   insertMemberSchema,
   insertPulseExecutionSchema,
-  registrationSchema,
+  applicationSchema,
   insertEmailVerificationSchema,
   insertPassportVerificationSchema,
-  passportClaimSchema,
   emailVerificationRequestSchema,
 } from "@shared/schema";
 import QRCode from "qrcode";
@@ -923,76 +922,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create passport claim
-  app.post("/api/passport/claim", async (req, res) => {
+  // Submit application
+  app.post("/api/application/submit", async (req, res) => {
     try {
-      const validatedClaim = passportClaimSchema.parse(req.body);
-      const member = await storage.createPassportClaim(validatedClaim);
+      const validatedApplication = applicationSchema.parse(req.body);
+      const member = await storage.submitApplication(validatedApplication);
       res.json({ success: true, member });
     } catch (error) {
-      console.error("Create passport claim error:", error);
-      res.status(500).json({ error: "Failed to create passport claim" });
+      console.error("Submit application error:", error);
+      res.status(500).json({ error: "Failed to submit application" });
     }
   });
 
-  // Get pending passport claims (admin only)
-  app.get("/api/passport/claims", async (req, res) => {
+  // Get pending applications (admin only)
+  app.get("/api/applications/pending", async (req, res) => {
     try {
-      const claims = await storage.getPendingClaims();
-      res.json({ claims });
+      const applications = await storage.getPendingApplications();
+      res.json({ applications });
     } catch (error) {
-      console.error("Get pending claims error:", error);
-      res.status(500).json({ error: "Failed to get pending claims" });
+      console.error("Get pending applications error:", error);
+      res.status(500).json({ error: "Failed to get pending applications" });
     }
   });
 
   // JustaName challenge endpoint removed - subdomain creation now client-side only
 
-  // Approve passport claim (admin only)
-  app.post("/api/passport/approve", async (req, res) => {
+  // Admin approve application
+  app.post("/api/admin/approve-application", async (req, res) => {
     try {
-      console.log("=== PASSPORT APPROVAL REQUEST ===");
+      console.log("=== APPLICATION APPROVAL REQUEST ===");
       console.log("Request body:", JSON.stringify(req.body, null, 2));
 
-      const { farcasterFid, skipSubdomainCreation } = req.body;
+      const { farcasterFid, memberType } = req.body;
 
-      if (!farcasterFid) {
-        console.error("Missing farcasterFid in request");
-        return res.status(400).json({ error: "FarcasterFid required" });
+      if (!farcasterFid || !memberType) {
+        console.error("Missing farcasterFid or memberType in request");
+        return res.status(400).json({ error: "FarcasterFid and memberType required" });
       }
 
-      console.log(`Processing approval for FID: ${farcasterFid}`);
+      if (!['architect', 'explorer'].includes(memberType)) {
+        return res.status(400).json({ error: "Invalid member type. Must be 'architect' or 'explorer'" });
+      }
+
+      console.log(`Processing approval for FID: ${farcasterFid} as ${memberType}`);
 
       // Get member details
       const member = await storage.getMember(farcasterFid);
-      console.log(
-        `Found member:`,
-        member
-          ? {
-              fid: member.farcasterFid,
-              claimSubdomain: member.passportClaimSubdomain,
-              status: member.status,
-            }
-          : "null",
-      );
-
-      if (!member || !member.passportClaimSubdomain) {
-        console.error("Invalid claim data - missing member or subdomain");
-        return res.status(400).json({ error: "Invalid claim data" });
+      if (!member || !member.ipeUsername) {
+        console.error("Invalid application - missing member or username");
+        return res.status(400).json({ error: "Invalid application data" });
       }
 
-      // Since subdomain creation is handled client-side, just approve the claim
-      const ensName = `${member.passportClaimSubdomain}.ipecity.eth`;
-      console.log(`Approving claim for ENS name: ${ensName}`);
+      console.log(`Found member with username: ${member.ipeUsername}`);
 
-      console.log("Calling storage.approvePassportClaim...");
-      const updatedMember = await storage.approvePassportClaim(
-        farcasterFid,
-        ensName,
-      );
-      console.log(
-        `Member updated successfully. New status: ${updatedMember.status}`,
-      );
+      // Reserve subdomain via JustaName API
+      const subdomain = member.ipeUsername;
+      const userWalletAddress = member.walletAddress;
+
+      if (!userWalletAddress) {
+        return res.status(400).json({ error: "Member wallet address required for subdomain reservation" });
+      }
+
+      console.log(`Reserving subdomain ${subdomain} for wallet ${userWalletAddress}`);
+
+      const justanameResponse = await fetch("https://api.justaname.id/api/v1/subname/reserve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.JUSTANAME_API_KEY}`,
+        },
+        body: JSON.stringify({
+          username: subdomain,
+          ensDomain: "ipecity.eth",
+          chainId: 1,
+          userAddress: userWalletAddress,
+        }),
+      });
+
+      if (!justanameResponse.ok) {
+        const errorData = await justanameResponse.json();
+        console.error("JustaName reserve error:", errorData);
+        return res.status(500).json({ error: `Failed to reserve subdomain: ${errorData.error || 'Unknown error'}` });
+      }
+
+      const justanameData = await justanameResponse.json();
+      console.log("JustaName reserve response:", JSON.stringify(justanameData, null, 2));
+
+      // Update member status and type
+      console.log("Updating member status to approved_application...");
+      const updatedMember = await storage.approveApplication(farcasterFid, memberType);
+      console.log(`Member updated successfully. New status: ${updatedMember.status}, type: ${updatedMember.memberType}`);
 
       // Send approval email (with error handling to prevent server crash)
       if (updatedMember.email) {

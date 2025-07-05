@@ -70,9 +70,9 @@ function Router() {
           <Route
             path="/"
             component={() => (
-              <RequireApproval>
+              <RequireAuth>
                 <FarcasterEmbed />
-              </RequireApproval>
+              </RequireAuth>
             )}
           />
           <Route path="/admin" component={AdminPage} />

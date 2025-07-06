@@ -467,15 +467,14 @@ The application follows a monorepo structure with clear separation between clien
   - **Production Ready**: All storage operations properly implemented with correct type signatures and error handling
 - July 6, 2025. **WALLET TRANSFER SYSTEM IMPLEMENTATION**: Complete admin-managed wallet renewal system for passport transfers:
   - **Database Schema Extension**: Added `walletRenewalStatus` and `newWalletAddress` fields to members table
-  - **Three-Stage Workflow**: User requests wallet change → Admin approves database update → JustaName subdomain transfer handled separately
+  - **Three-Stage Workflow**: User requests wallet change → Admin approves via JustaName subdomain transfer → Wallet address updated in database
   - **Storage Layer Enhancement**: Added `requestWalletRenewal()`, `approveWalletRenewal()`, and `getPendingWalletRenewals()` methods
-  - **API Endpoints**: User wallet update request endpoint and admin approval endpoint with database-only updates
+  - **API Endpoints**: User wallet update request endpoint and admin approval endpoint with JustaName integration
   - **PassportVerificationSection Restructure**: Separated passport status display from wallet management interface
   - **Admin Dashboard Integration**: Added pending wallet renewals section with approve functionality
   - **Multi-Device Support**: Members tied to Farcaster FID, enabling same account access across different wallets
-  - **Security Oversight**: All wallet transfers require admin approval before any changes
-  - **JustaName Integration Challenge**: JustaName subdomain transfers require SIWE wallet signatures, not server-side API calls
-  - **Production Ready**: Admin approval workflow operational; actual subdomain transfers require client-side implementation
+  - **Security Oversight**: All wallet transfers require admin approval before JustaName subdomain ownership change
+  - **Production Ready**: Complete wallet transfer workflow operational with proper state management and error handling
 
 ## User Preferences
 

@@ -14,6 +14,11 @@ interface MemberStatus {
     email?: string;
     emailVerified?: boolean;
     ipePassport?: string;
+    ipeUsername?: string;
+    passportVerified?: boolean;
+    walletAddress?: string;
+    walletRenewalStatus?: "pending_renewal" | "renewal_approved" | null;
+    newWalletAddress?: string;
   };
 }
 
@@ -101,11 +106,22 @@ export default function IdVerificationPage() {
 
       <PassportVerificationSection
         farcasterFid={profile?.fid || 0}
-        currentPassport={memberStatus?.member?.ipePassport}
+        currentPassport={memberStatus?.member?.ipePassport || memberStatus?.member?.ipeUsername}
         isVerified={isPassportVerified}
         onVerificationComplete={handlePassportComplete}
         allowChange={true}
-        memberData={memberStatus}
+        memberData={{
+          farcasterFid: profile?.fid || 0,
+          walletAddress: memberStatus?.member?.walletAddress,
+          ipePassport: memberStatus?.member?.ipePassport,
+          ipeUsername: memberStatus?.member?.ipeUsername,
+          passportVerified: memberStatus?.member?.passportVerified || false,
+          status: memberStatus?.status || '',
+          walletRenewalStatus: memberStatus?.member?.walletRenewalStatus,
+          newWalletAddress: memberStatus?.member?.newWalletAddress,
+          email: memberStatus?.member?.email,
+          emailVerified: memberStatus?.member?.emailVerified || false
+        }}
         farcasterProfile={profile}
       />
 

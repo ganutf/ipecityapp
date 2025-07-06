@@ -125,7 +125,7 @@ export function PassportVerificationSection({
   };
 
   const renderPassportStatus = () => {
-    const passport = memberData.ipePassport || currentPassport;
+    const passport = memberData.ipePassport || memberData.ipeUsername || currentPassport;
     const verified = memberData.passportVerified || isVerified;
 
     return (

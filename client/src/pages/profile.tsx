@@ -39,6 +39,9 @@ interface MemberData {
     ipeUsername?: string;
     memberType?: string;
     profileCompleted?: boolean;
+    walletAddress?: string;
+    walletRenewalStatus?: "pending_renewal" | "renewal_approved" | null;
+    newWalletAddress?: string;
   };
 }
 
@@ -164,7 +167,20 @@ export default function ProfilePage() {
           
           <PassportVerificationSection
             farcasterFid={profile?.fid || 0}
-            memberData={memberData}
+            currentPassport={memberData?.member?.ipePassport || memberData?.member?.ipeUsername}
+            isVerified={memberData?.member?.passportVerified || false}
+            memberData={{
+              farcasterFid: profile?.fid || 0,
+              walletAddress: memberData?.member?.walletAddress,
+              ipePassport: memberData?.member?.ipePassport,
+              ipeUsername: memberData?.member?.ipeUsername,
+              passportVerified: memberData?.member?.passportVerified || false,
+              status: memberData?.status || '',
+              walletRenewalStatus: memberData?.member?.walletRenewalStatus,
+              newWalletAddress: memberData?.member?.newWalletAddress,
+              email: memberData?.member?.email,
+              emailVerified: memberData?.member?.emailVerified || false
+            }}
             farcasterProfile={profile}
             allowChange={true}
           />

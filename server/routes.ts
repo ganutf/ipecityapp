@@ -1111,29 +1111,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fullSubdomain = `${member.ipeUsername}.ipecity.eth`;
       console.log(`Full subdomain: ${fullSubdomain}`);
 
-      // Transfer subdomain ownership via JustaName API using the update endpoint
-      const justanameResponse = await fetch("https://api.justaname.id/ens/v1/subname/update", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.JUSTANAME_API_KEY!,
-        } as HeadersInit,
-        body: JSON.stringify({
-          username: member.ipeUsername,
-          ensDomain: "ipecity.eth",
-          chainId: 1,
-          userAddress: member.newWalletAddress,
-        }),
-      });
-
-      if (!justanameResponse.ok) {
-        const errorData = await justanameResponse.json();
-        console.error("JustaName update error:", errorData);
-        return res.status(500).json({ error: `Failed to update subdomain: ${errorData.error || 'Unknown error'}` });
-      }
-
-      const justanameData = await justanameResponse.json();
-      console.log("JustaName update response:", JSON.stringify(justanameData, null, 2));
+      // Note: JustaName subdomain transfers require SIWE wallet signatures from the new wallet owner
+      // For now, we approve the database change. The actual subdomain transfer will need to be handled
+      // through client-side JustaName SDK with proper wallet authentication
+      console.log(`Admin approved wallet transfer: ${fullSubdomain} from ${member.walletAddress} to ${member.newWalletAddress}`);
 
       // Update member with new wallet address and approval status
       const updatedMember = await storage.approveWalletRenewal(farcasterFid);

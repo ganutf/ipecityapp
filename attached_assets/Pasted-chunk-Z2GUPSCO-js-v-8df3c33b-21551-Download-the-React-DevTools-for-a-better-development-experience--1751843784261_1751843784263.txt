@@ -1,0 +1,168 @@
+chunk-Z2GUPSCO.js?v=8df3c33b:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+chunk-7WLUAVPG.js?v=8df3c33b:23 Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+issueWarning @ chunk-7WLUAVPG.js?v=8df3c33b:23
+(anonymous) @ chunk-7WLUAVPG.js?v=8df3c33b:28
+App.tsx:35  POST https://pulse.walletconnect.org/e?projectId=demo&st=appkit&sv=html-core-1.7.8 400 (Bad Request)
+fetchData @ chunk-Y4VNUWRF.js?v=8df3c33b:2956
+post @ chunk-Y4VNUWRF.js?v=8df3c33b:2982
+_sendAnalyticsEvent @ chunk-Y4VNUWRF.js?v=8df3c33b:4125
+sendEvent @ chunk-Y4VNUWRF.js?v=8df3c33b:4153
+sendInitializeEvent @ core-V2SQOART.js?v=8df3c33b:9246
+initialize @ core-V2SQOART.js?v=8df3c33b:9218
+await in initialize
+AppKitBaseClient @ core-V2SQOART.js?v=8df3c33b:9203
+AppKit @ core-V2SQOART.js?v=8df3c33b:10423
+createAppKit @ core-V2SQOART.js?v=8df3c33b:10464
+initialize @ index.es-ESE6P6TU.js?v=8df3c33b:8264
+await in initialize
+init @ index.es-ESE6P6TU.js?v=8df3c33b:8116
+initProvider @ @rainbow-me_rainbowkit.js?v=8df3c33b:4631
+await in initProvider
+getProvider @ @rainbow-me_rainbowkit.js?v=8df3c33b:4648
+setup @ @rainbow-me_rainbowkit.js?v=8df3c33b:4511
+setup @ chunk-XPMLNM6D.js?v=8df3c33b:3080
+(anonymous) @ chunk-XPMLNM6D.js?v=8df3c33b:3047
+createStoreImpl @ chunk-XPMLNM6D.js?v=8df3c33b:2853
+createStore2 @ chunk-XPMLNM6D.js?v=8df3c33b:2856
+createConfig @ chunk-XPMLNM6D.js?v=8df3c33b:3043
+getDefaultConfig @ @rainbow-me_rainbowkit.js?v=8df3c33b:11926
+(anonymous) @ App.tsx:35
+AuthGuard.tsx:97 AuthGuard - Signer status: approved
+App.tsx:35  GET https://api.web3modal.org/appkit/v1/config?projectId=demo&st=appkit&sv=html-core-1.7.8 403 (Forbidden)
+fetchData @ chunk-Y4VNUWRF.js?v=8df3c33b:2956
+get @ chunk-Y4VNUWRF.js?v=8df3c33b:2972
+fetchProjectConfig @ chunk-Y4VNUWRF.js?v=8df3c33b:6106
+fetchRemoteFeatures @ core-V2SQOART.js?v=8df3c33b:9017
+initialize @ core-V2SQOART.js?v=8df3c33b:9220
+await in initialize
+AppKitBaseClient @ core-V2SQOART.js?v=8df3c33b:9203
+AppKit @ core-V2SQOART.js?v=8df3c33b:10423
+createAppKit @ core-V2SQOART.js?v=8df3c33b:10464
+initialize @ index.es-ESE6P6TU.js?v=8df3c33b:8264
+await in initialize
+init @ index.es-ESE6P6TU.js?v=8df3c33b:8116
+initProvider @ @rainbow-me_rainbowkit.js?v=8df3c33b:4631
+await in initProvider
+getProvider @ @rainbow-me_rainbowkit.js?v=8df3c33b:4648
+setup @ @rainbow-me_rainbowkit.js?v=8df3c33b:4511
+setup @ chunk-XPMLNM6D.js?v=8df3c33b:3080
+(anonymous) @ chunk-XPMLNM6D.js?v=8df3c33b:3047
+createStoreImpl @ chunk-XPMLNM6D.js?v=8df3c33b:2853
+createStore2 @ chunk-XPMLNM6D.js?v=8df3c33b:2856
+createConfig @ chunk-XPMLNM6D.js?v=8df3c33b:3043
+getDefaultConfig @ @rainbow-me_rainbowkit.js?v=8df3c33b:11926
+(anonymous) @ App.tsx:35
+App.tsx:35 [Reown Config] Failed to fetch remote project configuration. Using local/default values. Error: HTTP status code: 403
+    at fetchData (chunk-Y4VNUWRF.js?v=8df3c33b:2958:17)
+    at async FetchUtil.get (chunk-Y4VNUWRF.js?v=8df3c33b:2972:22)
+    at async Object.fetchProjectConfig (chunk-Y4VNUWRF.js?v=8df3c33b:6106:22)
+    at async Object.fetchRemoteFeatures (core-V2SQOART.js?v=8df3c33b:9017:26)
+    at async AppKit.initialize (core-V2SQOART.js?v=8df3c33b:9220:27)
+fetchRemoteFeatures @ core-V2SQOART.js?v=8df3c33b:9020
+await in fetchRemoteFeatures
+initialize @ core-V2SQOART.js?v=8df3c33b:9220
+await in initialize
+AppKitBaseClient @ core-V2SQOART.js?v=8df3c33b:9203
+AppKit @ core-V2SQOART.js?v=8df3c33b:10423
+createAppKit @ core-V2SQOART.js?v=8df3c33b:10464
+initialize @ index.es-ESE6P6TU.js?v=8df3c33b:8264
+await in initialize
+init @ index.es-ESE6P6TU.js?v=8df3c33b:8116
+initProvider @ @rainbow-me_rainbowkit.js?v=8df3c33b:4631
+await in initProvider
+getProvider @ @rainbow-me_rainbowkit.js?v=8df3c33b:4648
+setup @ @rainbow-me_rainbowkit.js?v=8df3c33b:4511
+setup @ chunk-XPMLNM6D.js?v=8df3c33b:3080
+(anonymous) @ chunk-XPMLNM6D.js?v=8df3c33b:3047
+createStoreImpl @ chunk-XPMLNM6D.js?v=8df3c33b:2853
+createStore2 @ chunk-XPMLNM6D.js?v=8df3c33b:2856
+createConfig @ chunk-XPMLNM6D.js?v=8df3c33b:3043
+getDefaultConfig @ @rainbow-me_rainbowkit.js?v=8df3c33b:11926
+(anonymous) @ App.tsx:35
+admin.tsx:153  POST https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/api/admin/approve-wallet-update 500 (Internal Server Error)
+mutationFn @ admin.tsx:153
+fn @ chunk-7X75LGXT.js?v=8df3c33b:1189
+run @ chunk-7X75LGXT.js?v=8df3c33b:494
+start @ chunk-7X75LGXT.js?v=8df3c33b:536
+execute @ chunk-7X75LGXT.js?v=8df3c33b:1225
+await in execute
+mutate @ chunk-7X75LGXT.js?v=8df3c33b:2630
+(anonymous) @ chunk-7X75LGXT.js?v=8df3c33b:3295
+onClick @ admin.tsx:440
+callCallback2 @ chunk-Z2GUPSCO.js?v=8df3c33b:3674
+invokeGuardedCallbackDev @ chunk-Z2GUPSCO.js?v=8df3c33b:3699
+invokeGuardedCallback @ chunk-Z2GUPSCO.js?v=8df3c33b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-Z2GUPSCO.js?v=8df3c33b:3736
+executeDispatch @ chunk-Z2GUPSCO.js?v=8df3c33b:7014
+processDispatchQueueItemsInOrder @ chunk-Z2GUPSCO.js?v=8df3c33b:7034
+processDispatchQueue @ chunk-Z2GUPSCO.js?v=8df3c33b:7043
+dispatchEventsForPlugins @ chunk-Z2GUPSCO.js?v=8df3c33b:7051
+(anonymous) @ chunk-Z2GUPSCO.js?v=8df3c33b:7174
+batchedUpdates$1 @ chunk-Z2GUPSCO.js?v=8df3c33b:18913
+batchedUpdates @ chunk-Z2GUPSCO.js?v=8df3c33b:3579
+dispatchEventForPluginEventSystem @ chunk-Z2GUPSCO.js?v=8df3c33b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-Z2GUPSCO.js?v=8df3c33b:5478
+dispatchEvent @ chunk-Z2GUPSCO.js?v=8df3c33b:5472
+dispatchDiscreteEvent @ chunk-Z2GUPSCO.js?v=8df3c33b:5449
+admin:1 Access to fetch at 'https://cdn.justaname.id/avatar/ipecity.eth-20250418213121.png' from origin 'https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+chunk-6NZY4OLI.js?v=8df3c33b:2099  HEAD https://cdn.justaname.id/avatar/ipecity.eth-20250418213121.png net::ERR_FAILED
+isImageUri @ chunk-6NZY4OLI.js?v=8df3c33b:2099
+parseAvatarUri @ chunk-6NZY4OLI.js?v=8df3c33b:2195
+parseAvatarRecord @ chunk-6NZY4OLI.js?v=8df3c33b:2267
+getEnsAvatar @ chunk-6NZY4OLI.js?v=8df3c33b:2361
+await in getEnsAvatar
+(anonymous) @ chunk-XPMLNM6D.js?v=8df3c33b:423
+getEnsAvatar2 @ chunk-XPMLNM6D.js?v=8df3c33b:1187
+queryFn @ chunk-XPMLNM6D.js?v=8df3c33b:4025
+fetchFn @ chunk-7X75LGXT.js?v=8df3c33b:840
+run @ chunk-7X75LGXT.js?v=8df3c33b:494
+start @ chunk-7X75LGXT.js?v=8df3c33b:536
+fetch @ chunk-7X75LGXT.js?v=8df3c33b:926
+executeFetch_fn @ chunk-7X75LGXT.js?v=8df3c33b:2211
+setOptions @ chunk-7X75LGXT.js?v=8df3c33b:1955
+(anonymous) @ chunk-7X75LGXT.js?v=8df3c33b:3032
+commitHookEffectListMount @ chunk-Z2GUPSCO.js?v=8df3c33b:16915
+commitPassiveMountOnFiber @ chunk-Z2GUPSCO.js?v=8df3c33b:18156
+commitPassiveMountEffects_complete @ chunk-Z2GUPSCO.js?v=8df3c33b:18129
+commitPassiveMountEffects_begin @ chunk-Z2GUPSCO.js?v=8df3c33b:18119
+commitPassiveMountEffects @ chunk-Z2GUPSCO.js?v=8df3c33b:18109
+flushPassiveEffectsImpl @ chunk-Z2GUPSCO.js?v=8df3c33b:19490
+flushPassiveEffects @ chunk-Z2GUPSCO.js?v=8df3c33b:19447
+commitRootImpl @ chunk-Z2GUPSCO.js?v=8df3c33b:19416
+commitRoot @ chunk-Z2GUPSCO.js?v=8df3c33b:19277
+performSyncWorkOnRoot @ chunk-Z2GUPSCO.js?v=8df3c33b:18895
+flushSyncCallbacks @ chunk-Z2GUPSCO.js?v=8df3c33b:9119
+(anonymous) @ chunk-Z2GUPSCO.js?v=8df3c33b:18627
+setTimeout
+scheduleFn @ chunk-7X75LGXT.js?v=8df3c33b:555
+flush @ chunk-7X75LGXT.js?v=8df3c33b:569
+batch @ chunk-7X75LGXT.js?v=8df3c33b:587
+dispatch_fn @ chunk-7X75LGXT.js?v=8df3c33b:996
+setData @ chunk-7X75LGXT.js?v=8df3c33b:696
+onSuccess @ chunk-7X75LGXT.js?v=8df3c33b:897
+resolve @ chunk-7X75LGXT.js?v=8df3c33b:456
+Promise.then
+run @ chunk-7X75LGXT.js?v=8df3c33b:498
+start @ chunk-7X75LGXT.js?v=8df3c33b:536
+fetch @ chunk-7X75LGXT.js?v=8df3c33b:926
+executeFetch_fn @ chunk-7X75LGXT.js?v=8df3c33b:2211
+onSubscribe @ chunk-7X75LGXT.js?v=8df3c33b:1898
+subscribe @ chunk-7X75LGXT.js?v=8df3c33b:24
+(anonymous) @ chunk-7X75LGXT.js?v=8df3c33b:3022
+subscribeToStore @ chunk-Z2GUPSCO.js?v=8df3c33b:11984
+commitHookEffectListMount @ chunk-Z2GUPSCO.js?v=8df3c33b:16915
+commitPassiveMountOnFiber @ chunk-Z2GUPSCO.js?v=8df3c33b:18156
+commitPassiveMountEffects_complete @ chunk-Z2GUPSCO.js?v=8df3c33b:18129
+commitPassiveMountEffects_begin @ chunk-Z2GUPSCO.js?v=8df3c33b:18119
+commitPassiveMountEffects @ chunk-Z2GUPSCO.js?v=8df3c33b:18109
+flushPassiveEffectsImpl @ chunk-Z2GUPSCO.js?v=8df3c33b:19490
+flushPassiveEffects @ chunk-Z2GUPSCO.js?v=8df3c33b:19447
+performSyncWorkOnRoot @ chunk-Z2GUPSCO.js?v=8df3c33b:18868
+flushSyncCallbacks @ chunk-Z2GUPSCO.js?v=8df3c33b:9119
+commitRootImpl @ chunk-Z2GUPSCO.js?v=8df3c33b:19432
+commitRoot @ chunk-Z2GUPSCO.js?v=8df3c33b:19277
+finishConcurrentRender @ chunk-Z2GUPSCO.js?v=8df3c33b:18805
+performConcurrentWorkOnRoot @ chunk-Z2GUPSCO.js?v=8df3c33b:18718
+workLoop @ chunk-Z2GUPSCO.js?v=8df3c33b:197
+flushWork @ chunk-Z2GUPSCO.js?v=8df3c33b:176
+performWorkUntilDeadline @ chunk-Z2GUPSCO.js?v=8df3c33b:384

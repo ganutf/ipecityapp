@@ -50,12 +50,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         environment: process.env.NODE_ENV || "development",
       });
     } catch (error) {
-      console.error(`Health check failed: ${error.message}`);
+      console.error(`Health check failed: ${error instanceof Error ? error.message : String(error)}`);
       res.status(503).json({
         status: "unhealthy",
         timestamp: new Date().toISOString(),
         database: "disconnected",
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
@@ -1014,6 +1014,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedMember = await storage.approveApplication(farcasterFid, memberType);
       console.log(`Member updated successfully. New status: ${updatedMember.status}, type: ${updatedMember.memberType}`);
 
+      // Construct the ENS name
+      const ensName = `${subdomain}.ipecity.eth`;
+
       // Send approval email (with error handling to prevent server crash)
       if (updatedMember.email) {
         console.log(`Sending approval email to: ${updatedMember.email}`);
@@ -1136,7 +1139,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: "email_verified",
             emailVerified: true,
             passportVerified: false,
-            profileCompleted: false,
           });
         } catch (profileError) {
           console.error("Error fetching user profile:", profileError);
@@ -1147,7 +1149,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: "email_verified",
             emailVerified: true,
             passportVerified: false,
-            profileCompleted: false,
           });
         }
       } else {
@@ -1207,7 +1208,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: "email_verified",
             emailVerified: true,
             passportVerified: false,
-            profileCompleted: false,
           });
         } catch (profileError) {
           console.error("Error fetching user profile:", profileError);
@@ -1218,7 +1218,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: "email_verified",
             emailVerified: true,
             passportVerified: false,
-            profileCompleted: false,
           });
         }
       } else {
@@ -1262,7 +1261,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: "pending_signer",
             emailVerified: false,
             passportVerified: false,
-            profileCompleted: false,
           });
 
           console.log(`Created new member record for FID ${farcasterFid}`);
@@ -1274,7 +1272,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: "pending_signer",
             emailVerified: false,
             passportVerified: false,
-            profileCompleted: false,
           });
         }
       }
@@ -1411,17 +1408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Register new member
-  app.post("/api/register", async (req, res) => {
-    try {
-      const registrationData = registrationSchema.parse(req.body);
-      const member = await storage.registerMember(registrationData);
-      res.json({ success: true, member });
-    } catch (error) {
-      console.error("Register member error:", error);
-      res.status(500).json({ error: "Failed to register member" });
-    }
-  });
+
 
   // Check Ipê passport availability
   app.get("/api/passport/check/:passport", async (req, res) => {

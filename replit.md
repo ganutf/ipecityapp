@@ -451,6 +451,20 @@ The application follows a monorepo structure with clear separation between clien
   - **AuthGuard Update**: Added routing logic to handle new status identical to old pending_application
   - **Frontend Updates**: Updated PassportVerificationSection and admin interface to display new status correctly
   - **Backward Compatibility**: Admin approval process unchanged, only status visualization improved
+- July 6, 2025. **LEGACY CODE CLEANUP**: Removed broken registration endpoint and fixed TypeScript errors:
+  - **Removed Legacy Endpoint**: Deleted unused `/api/register` endpoint that was causing TypeScript errors
+  - **Fixed Member Creation**: Removed non-existent `profileCompleted` field from member creation in `/api/members/check/:farcasterFid`
+  - **Confirmed Working Flow**: Member creation happens automatically during authentication check, not through registration endpoint
+  - **TypeScript Fixes**: Resolved `registrationSchema` undefined errors by removing unused legacy code
+  - **Streamlined Architecture**: Current registration flow uses automatic member creation → email verification → passport verification → application submission → admin approval
+  - **Production Ready**: Eliminated broken legacy code while maintaining all current functionality
+- July 6, 2025. **COMPLETE STORAGE INTERFACE IMPLEMENTATION**: Fixed all missing storage methods and TypeScript errors:
+  - **Added Missing Storage Methods**: Implemented `getPendingMembers()`, `denyMember()`, and `denyPassportClaim()` methods in DatabaseStorage class
+  - **Fixed Interface Declarations**: Updated IStorage interface to include all missing method signatures
+  - **Resolved Variable Scope Issues**: Fixed `ensName` variable construction in admin approval endpoint
+  - **TypeScript Compliance**: Corrected method implementations and variable declarations throughout storage layer
+  - **Server Stability**: Application now runs without TypeScript compilation errors, confirmed successful startup
+  - **Production Ready**: All storage operations properly implemented with correct type signatures and error handling
 
 ## User Preferences
 

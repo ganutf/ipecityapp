@@ -37,10 +37,13 @@ export interface IStorage {
   // Application Flow
   submitApplication(application: Application): Promise<Member>;
   getPendingApplications(): Promise<Member[]>;
+  getPendingMembers(): Promise<Member[]>;
   approveApplication(farcasterFid: number, memberType: string): Promise<Member>;
   approveMember(farcasterFid: number): Promise<Member>;
   acceptSubdomain(farcasterFid: number): Promise<Member>;
   denyApplication(farcasterFid: number): Promise<Member>;
+  denyMember(farcasterFid: number): Promise<Member>;
+  denyPassportClaim(farcasterFid: number): Promise<Member>;
   
   // Email Verification
   createEmailVerification(verification: InsertEmailVerification): Promise<EmailVerification>;
@@ -126,12 +129,40 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(members).where(eq(members.status, 'pending_application_review'));
   }
 
+  async getPendingMembers(): Promise<Member[]> {
+    return await db.select().from(members).where(eq(members.status, 'pending_application_review'));
+  }
+
   async approveApplication(farcasterFid: number, memberType: string): Promise<Member> {
     const [member] = await db
       .update(members)
       .set({ 
         status: "approved_application",
         memberType: memberType,
+        updatedAt: new Date() 
+      })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async denyMember(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ 
+        status: "denied_application",
+        updatedAt: new Date() 
+      })
+      .where(eq(members.farcasterFid, farcasterFid))
+      .returning();
+    return member;
+  }
+
+  async denyPassportClaim(farcasterFid: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ 
+        status: "denied_application",
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, farcasterFid))

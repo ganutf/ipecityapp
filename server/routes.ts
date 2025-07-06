@@ -1111,18 +1111,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fullSubdomain = `${member.ipeUsername}.ipecity.eth`;
       console.log(`Full subdomain: ${fullSubdomain}`);
 
-      // Transfer subdomain ownership via JustaName API using the correct endpoint structure
-      const justanameResponse = await fetch("https://api.justaname.id/ens/v1/subname/transfer", {
+      // Transfer subdomain ownership via JustaName API using the update endpoint
+      const justanameResponse = await fetch("https://api.justaname.id/ens/v1/subname/update", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": process.env.JUSTANAME_API_KEY,
-        },
+          "x-api-key": process.env.JUSTANAME_API_KEY!,
+        } as HeadersInit,
         body: JSON.stringify({
           username: member.ipeUsername,
           ensDomain: "ipecity.eth",
           chainId: 1,
-          newOwner: member.newWalletAddress,
+          userAddress: member.newWalletAddress,
         }),
       });
 

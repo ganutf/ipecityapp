@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Pencil, Save, X, Eye } from "lucide-react";
-import { useAccount } from "wagmi";
+import { useAccount, useSignMessage } from "wagmi";
 // Removed useAddSubname hook - using direct API calls instead
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -20,6 +20,7 @@ export default function AdminPage() {
   
   // Wallet connection for subdomain reservation
   const { address, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -150,16 +151,38 @@ export default function AdminPage() {
   // Approve wallet renewal mutation
   const approveWalletRenewalMutation = useMutation({
     mutationFn: async (farcasterFid: number) => {
-      const response = await fetch("/api/admin/approve-wallet-update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farcasterFid }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to approve wallet renewal");
+      if (!isConnected || !address) {
+        throw new Error("Admin wallet must be connected to approve transfers");
       }
-      return response.json();
+
+      // Generate signature message for JustaName API authentication
+      const message = `Admin approval for wallet transfer - FID: ${farcasterFid} - Timestamp: ${Date.now()}`;
+      
+      try {
+        const signature = await signMessageAsync({ message });
+        
+        const response = await fetch("/api/admin/approve-wallet-update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            farcasterFid,
+            adminSignature: signature,
+            adminMessage: message,
+            adminAddress: address,
+          }),
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to approve wallet renewal");
+        }
+        return response.json();
+      } catch (signError: any) {
+        if (signError.name === 'UserRejectedRequestError') {
+          throw new Error("Signature rejected. Admin signature required to approve wallet transfers.");
+        }
+        throw signError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-wallet-renewals"] });
@@ -438,10 +461,15 @@ export default function AdminPage() {
                       </div>
                       <Button
                         onClick={() => approveWalletRenewalMutation.mutate(member.farcasterFid)}
-                        disabled={approveWalletRenewalMutation.isPending}
-                        className="bg-green-600 hover:bg-green-700"
+                        disabled={approveWalletRenewalMutation.isPending || !isConnected}
+                        className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+                        title={!isConnected ? "Connect admin wallet to approve transfers" : ""}
                       >
-                        {approveWalletRenewalMutation.isPending ? "Approving..." : "Approve Wallet Change"}
+                        {approveWalletRenewalMutation.isPending 
+                          ? "Signing & Approving..." 
+                          : !isConnected 
+                            ? "Connect Wallet to Approve" 
+                            : "Approve Wallet Change"}
                       </Button>
                     </div>
                   </div>

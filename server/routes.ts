@@ -1090,7 +1090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Approve wallet renewal (admin action) 
   app.post("/api/admin/approve-wallet-update", async (req, res) => {
     try {
-      const { farcasterFid } = req.body;
+      const { farcasterFid, adminSignature, adminMessage, adminAddress } = req.body;
 
       if (!farcasterFid) {
         return res.status(400).json({ error: "FID is required" });
@@ -1102,10 +1102,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No pending wallet renewal found for this member" });
       }
 
+      if (!adminSignature || !adminMessage || !adminAddress) {
+        return res.status(400).json({ 
+          error: "Admin wallet signature, message, and address are required" 
+        });
+      }
+
       console.log(`Processing wallet update for FID: ${farcasterFid}`);
       console.log(`Old wallet: ${member.walletAddress}`);
       console.log(`New wallet: ${member.newWalletAddress}`);
       console.log(`Username: ${member.ipeUsername}`);
+      console.log(`Admin address: ${adminAddress}`);
       
       // Construct the full subdomain name
       const fullSubdomain = `${member.ipeUsername}.ipecity.eth`;
@@ -1117,6 +1124,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         headers: {
           "Content-Type": "application/json",
           "x-api-key": process.env.JUSTANAME_API_KEY!,
+          "x-signature": adminSignature,
+          "x-message": adminMessage,
+          "x-address": adminAddress,
         } as HeadersInit,
         body: JSON.stringify({
           username: member.ipeUsername,

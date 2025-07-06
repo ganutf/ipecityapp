@@ -1068,6 +1068,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /* ────────────────────────────────  WALLET RENEWAL ENDPOINTS  ──────────────────────────────── */
+  
+  // Request wallet renewal (user action)
+  app.post("/api/passport/request-wallet-update", async (req, res) => {
+    try {
+      const { farcasterFid, newWalletAddress } = req.body;
+
+      if (!farcasterFid || !newWalletAddress) {
+        return res.status(400).json({ error: "FID and new wallet address required" });
+      }
+
+      const member = await storage.requestWalletRenewal(farcasterFid, newWalletAddress);
+      res.json({ success: true, member });
+    } catch (error) {
+      console.error("Request wallet renewal error:", error);
+      res.status(500).json({ error: "Failed to request wallet renewal" });
+    }
+  });
+
+  // Approve wallet renewal (admin action) 
+  app.post("/api/admin/approve-wallet-update", async (req, res) => {
+    try {
+      const { farcasterFid } = req.body;
+
+      if (!farcasterFid) {
+        return res.status(400).json({ error: "FID is required" });
+      }
+
+      // Get member with pending wallet renewal
+      const member = await storage.getMember(farcasterFid);
+      if (!member || !member.newWalletAddress || member.walletRenewalStatus !== "pending_renewal") {
+        return res.status(400).json({ error: "No pending wallet renewal found for this member" });
+      }
+
+      console.log(`Processing wallet update for FID: ${farcasterFid}`);
+      console.log(`Old wallet: ${member.walletAddress}`);
+      console.log(`New wallet: ${member.newWalletAddress}`);
+      console.log(`Subdomain: ${member.ipePassport}`);
+
+      // Transfer subdomain via JustaName API (same structure as reserve)
+      const justanameResponse = await fetch("https://api.justaname.id/api/v1/subname/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.JUSTANAME_API_KEY}`,
+        },
+        body: JSON.stringify({
+          username: member.ipeUsername,
+          ensDomain: "ipecity.eth", 
+          chainId: 1,
+          userAddress: member.newWalletAddress,
+        }),
+      });
+
+      if (!justanameResponse.ok) {
+        const errorData = await justanameResponse.json();
+        console.error("JustaName update error:", errorData);
+        return res.status(500).json({ error: `Failed to update subdomain: ${errorData.error || 'Unknown error'}` });
+      }
+
+      const justanameData = await justanameResponse.json();
+      console.log("JustaName update response:", JSON.stringify(justanameData, null, 2));
+
+      // Update member with new wallet address and approval status
+      const updatedMember = await storage.approveWalletRenewal(farcasterFid);
+      
+      // Update the actual wallet address to the new one
+      await storage.updateMember(farcasterFid, {
+        walletAddress: member.newWalletAddress,
+        newWalletAddress: null, // Clear the temporary field
+        walletRenewalStatus: null, // Clear renewal status 
+      });
+
+      res.json({ success: true, member: updatedMember });
+    } catch (error) {
+      console.error("Approve wallet renewal error:", error);
+      res.status(500).json({ error: "Failed to approve wallet renewal" });
+    }
+  });
+
+  // Get pending wallet renewals (admin only)
+  app.get("/api/admin/pending-wallet-renewals", async (req, res) => {
+    try {
+      const pendingRenewals = await storage.getPendingWalletRenewals();
+      res.json({ pendingRenewals });
+    } catch (error) {
+      console.error("Get pending wallet renewals error:", error);
+      res.status(500).json({ error: "Failed to get pending wallet renewals" });
+    }
+  });
+
   // Request email verification
   app.post("/api/auth/request-email-verification", async (req, res) => {
     try {

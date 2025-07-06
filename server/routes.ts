@@ -1105,20 +1105,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Processing wallet update for FID: ${farcasterFid}`);
       console.log(`Old wallet: ${member.walletAddress}`);
       console.log(`New wallet: ${member.newWalletAddress}`);
-      console.log(`Subdomain: ${member.ipePassport}`);
+      console.log(`Username: ${member.ipeUsername}`);
+      
+      // Construct the full subdomain name
+      const fullSubdomain = `${member.ipeUsername}.ipecity.eth`;
+      console.log(`Full subdomain: ${fullSubdomain}`);
 
-      // Transfer subdomain via JustaName API (same structure as reserve)
-      const justanameResponse = await fetch("https://api.justaname.id/api/v1/subname/update", {
+      // Transfer subdomain ownership via JustaName API using the correct endpoint structure
+      const justanameResponse = await fetch("https://api.justaname.id/ens/v1/subname/transfer", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.JUSTANAME_API_KEY}`,
+          "x-api-key": process.env.JUSTANAME_API_KEY,
         },
         body: JSON.stringify({
           username: member.ipeUsername,
-          ensDomain: "ipecity.eth", 
+          ensDomain: "ipecity.eth",
           chainId: 1,
-          userAddress: member.newWalletAddress,
+          newOwner: member.newWalletAddress,
         }),
       });
 

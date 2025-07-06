@@ -205,7 +205,10 @@ export function PassportVerificationSection({
           {/* Current wallet connection status */}
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div>
-              <div className="text-sm font-medium">Currently Connected</div>
+              <div className="text-sm font-medium">Wallet Connected</div>
+              <div className="text-xs text-gray-500 mt-1">
+                This is a different wallet than the one that owns your passport.
+              </div>
               <div className="text-xs text-gray-500">
                 {isConnected && address 
                   ? `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -246,24 +249,7 @@ export function PassportVerificationSection({
           {/* ENS domain check for connected wallet */}
           {isConnected && address && (
             <div className="space-y-2">
-              <div className="text-sm text-gray-600">
-                {ensLoading ? (
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                    Looking up ENS domain...
-                  </div>
-                ) : ensName ? (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle className="h-3 w-3" />
-                    Found domain: {ensName}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <AlertCircle className="h-3 w-3" />
-                    No ENS domain found for this wallet
-                  </div>
-                )}
-              </div>
+
 
               {/* Different actions based on wallet state */}
               {address !== memberData.walletAddress && memberData.walletRenewalStatus !== "pending_renewal" && (
@@ -278,7 +264,7 @@ export function PassportVerificationSection({
                       Requesting Update...
                     </div>
                   ) : (
-                    "Request Wallet Update"
+                    "Request Passport Transfer"
                   )}
                 </Button>
               )}

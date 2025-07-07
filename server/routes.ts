@@ -1603,16 +1603,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Received signature length:", signature.length);
         console.log("Expected wallet address:", walletAddress);
         
-        // Import viem's smart-wallet-aware SIWE helper
-        const { verifySiweMessage } = await import('viem/siwe');
-        const { http } = await import('viem');
+        // Import SIWE for verification (handles both EOA and smart contract wallets)
+        const { SiweMessage } = await import('siwe');
+        const { createPublicClient, http } = await import('viem');
+        const { mainnet } = await import('viem/chains');
         
-        // Verify using viem's verifySiweMessage (handles both EOA and smart contract wallets)
-        const verificationResult = await verifySiweMessage({
-          message,
+        // Parse the SIWE message
+        const siweMessage = new SiweMessage(message);
+        
+        // Create a public client for smart contract wallet verification
+        const client = createPublicClient({
+          chain: mainnet,
+          transport: http(),
+        });
+        
+        // Verify using SIWE's verify method (automatically handles ERC-6492 for smart wallets)
+        const verificationResult = await siweMessage.verify({ 
           signature,
-          // Note: domain and nonce validation would normally be done here
-          // but for now we'll do basic verification
+          // Pass client for smart contract wallet verification
+          provider: client,
         });
         
         console.log("SIWE verification result:", verificationResult);

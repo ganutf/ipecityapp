@@ -52,12 +52,6 @@ export default function AdminPage() {
     enabled: isAuthenticated && isAdmin,
   });
 
-  // Fetch pending wallet renewals
-  const { data: pendingRenewalsData, isLoading: renewalsLoading } = useQuery({
-    queryKey: ["/api/admin/pending-wallet-renewals"],
-    enabled: isAuthenticated && isAdmin,
-  });
-
   // All mutations must also be declared before returns
   const createPulseMutation = useMutation({
     mutationFn: async (pulse: { farcasterUrl: string; date: string; description: string }) => {
@@ -141,30 +135,6 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
       toast({ title: "Success", description: "Member denied successfully" });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  // Approve wallet renewal mutation
-  const approveWalletRenewalMutation = useMutation({
-    mutationFn: async (farcasterFid: number) => {
-      const response = await fetch("/api/admin/approve-wallet-update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farcasterFid }),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to approve wallet renewal");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-wallet-renewals"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-      toast({ title: "Success", description: "Wallet renewal approved successfully" });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -411,47 +381,6 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Pending Wallet Renewals */}
-      {pendingRenewalsData?.pendingRenewals?.length > 0 && (
-        <div className="mt-8 bg-white rounded-lg shadow">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">Pending Wallet Renewals</h2>
-          </div>
-          <div className="p-6">
-            {renewalsLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-                <p className="text-gray-600 mt-4">Loading pending renewals...</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {pendingRenewalsData.pendingRenewals.map((member: any) => (
-                  <div key={member.farcasterFid} className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-2">
-                        <div className="font-medium">FID {member.farcasterFid} - Wallet Update Request</div>
-                        <div className="text-sm text-gray-600">
-                          <div>Current wallet: {member.walletAddress?.slice(0, 6)}...{member.walletAddress?.slice(-4)}</div>
-                          <div>Requested wallet: {member.newWalletAddress?.slice(0, 6)}...{member.newWalletAddress?.slice(-4)}</div>
-                          <div>Passport: {member.ipePassport}</div>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() => approveWalletRenewalMutation.mutate(member.farcasterFid)}
-                        disabled={approveWalletRenewalMutation.isPending}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        {approveWalletRenewalMutation.isPending ? "Approving..." : "Approve Wallet Change"}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Members List */}
       <div className="mt-8 bg-white rounded-lg shadow">
         <div className="p-6 border-b">
@@ -486,7 +415,7 @@ export default function AdminPage() {
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
                     const claimSubdomain = (member as any).ipeUsername;
-                    const hasPendingApplication = (memberStatus === 'pending_application_review' || memberStatus === 'pending_application') && claimSubdomain;
+                    const hasPendingApplication = memberStatus === 'pending_application' && claimSubdomain;
                     const needsApproval = hasPendingApplication;
                     
                     return (
@@ -495,13 +424,11 @@ export default function AdminPage() {
                           <div className="flex items-center space-x-2">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                FID {member.farcasterFid}
+                                {(member as any).farcasterUsername || `FID ${member.farcasterFid}`}
                               </div>
-                              {(member as any).farcasterUsername && (
-                                <div className="text-sm text-gray-500">
-                                  {(member as any).farcasterUsername}
-                                </div>
-                              )}
+                              <div className="text-sm text-gray-500">
+                                FID: {member.farcasterFid}
+                              </div>
                             </div>
                             <Eye className="h-4 w-4 text-gray-400" />
                           </div>
@@ -510,7 +437,7 @@ export default function AdminPage() {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             memberStatus === 'active_member'
                               ? 'bg-green-100 text-green-800'
-                              : memberStatus === 'pending_application' || memberStatus === 'pending_application_review'
+                              : memberStatus === 'pending_application'
                                 ? 'bg-orange-100 text-orange-800'
                                 : memberStatus === 'approved_application'
                                   ? 'bg-blue-100 text-blue-800'
@@ -524,7 +451,6 @@ export default function AdminPage() {
                           }`}>
                             {memberStatus === 'active_member' ? 'Active Member' :
                              memberStatus === 'pending_application' ? 'Pending Application' :
-                             memberStatus === 'pending_application_review' ? 'Pending Review' :
                              memberStatus === 'approved_application' ? 'Approved Application' :
                              memberStatus === 'denied_application' ? 'Denied Application' :
                              memberStatus === 'pending_acceptance' ? 'Pending Acceptance' :
@@ -540,18 +466,39 @@ export default function AdminPage() {
                           ) : '-'}
                         </td>
                         <td className="py-2">
-                          {hasPendingApplication ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedMember(member);
-                              }}
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              Review
-                            </Button>
+                          {needsApproval ? (
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => {
+                                  console.log("Approving member:", member);
+                                  console.log("Wallet address:", member.walletAddress);
+                                  console.log("Username:", (member as any).ipeUsername || claimSubdomain);
+                                  approveMemberMutation.mutate({
+                                    farcasterFid: member.farcasterFid,
+                                    ipeUsername: (member as any).ipeUsername || claimSubdomain,
+                                    userWalletAddress: member.walletAddress || undefined
+                                  });
+                                }}
+                                disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+                              >
+                                {approveMemberMutation.isPending 
+                                  ? "Reserving..." 
+                                  : "Approve & Reserve"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => denyMemberMutation.mutate(member.farcasterFid)}
+                                disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
+                              >
+                                {denyMemberMutation.isPending ? "..." : "Deny"}
+                              </Button>
+                            </div>
+                          ) : memberStatus === 'active_member' ? (
+                            <span className="text-sm text-gray-500">Completed</span>
                           ) : (
                             <span className="text-sm text-gray-400">-</span>
                           )}
@@ -581,9 +528,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Username</label>
-                  <p className="text-sm font-mono">
-                    {(selectedMember as any).ipeUsername || 'Not provided'}
-                  </p>
+                  <p className="text-sm">{(selectedMember as any).farcasterUsername || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>
@@ -591,19 +536,15 @@ export default function AdminPage() {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       (selectedMember as any).status === 'active_member'
                         ? 'bg-green-100 text-green-800'
-                        : (selectedMember as any).status === 'pending_application_review'
+                        : (selectedMember as any).status === 'pending_application'
                           ? 'bg-orange-100 text-orange-800'
-                          : (selectedMember as any).status === 'approved_application'
-                            ? 'bg-blue-100 text-blue-800'
-                            : (selectedMember as any).status === 'denied_application'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-800'
+                          : (selectedMember as any).status === 'pending_claim'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
                     }`}>
                       {(selectedMember as any).status === 'active_member' ? 'Active Member' :
-                       (selectedMember as any).status === 'pending_application_review' ? 'Pending Application Review' :
-                       (selectedMember as any).status === 'approved_application' ? 'Approved Application' :
-                       (selectedMember as any).status === 'denied_application' ? 'Denied Application' :
-                       (selectedMember as any).status === 'pending_id_verification' ? 'Pending ID Verification' :
+                       (selectedMember as any).status === 'pending_application' ? 'Pending Application' :
+                       (selectedMember as any).status === 'pending_claim' ? 'Pending Claim' :
                        'Pending Signer'}
                     </span>
                   </p>
@@ -674,7 +615,7 @@ export default function AdminPage() {
               )}
 
               {/* Action buttons for pending applications */}
-              {(selectedMember as any).status === 'pending_application_review' && 
+              {((selectedMember as any).status === 'pending_application' || (selectedMember as any).status === 'pending_claim') && 
                (selectedMember as any).ipeUsername && (
                 <div className="flex space-x-2 pt-4 border-t">
                   <Button
@@ -690,7 +631,7 @@ export default function AdminPage() {
                     disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                     className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
                   >
-                    {approveMemberMutation.isPending ? "Approving..." : "Approve"}
+                    {approveMemberMutation.isPending ? "Reserving..." : "Approve & Reserve"}
                   </Button>
                   <Button
                     variant="destructive"

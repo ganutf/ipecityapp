@@ -18,20 +18,7 @@ import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { useAcceptSubname } from "@justaname.id/react";
 import { mainnet } from "viem/chains";
 import { ApplicationForm } from "@/components/ApplicationForm";
-import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users, RefreshCw } from "lucide-react";
-
-interface Member {
-  farcasterFid: number;
-  walletAddress?: string;
-  ipePassport?: string;
-  passportVerified: boolean;
-  status: string;
-  walletRenewalStatus?: "pending_renewal" | "renewal_approved" | null;
-  newWalletAddress?: string;
-  ipeUsername?: string;
-  email?: string;
-  emailVerified: boolean;
-}
+import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users } from "lucide-react";
 
 interface PassportVerificationSectionProps {
   farcasterFid: number;
@@ -39,7 +26,7 @@ interface PassportVerificationSectionProps {
   isVerified?: boolean;
   onVerificationComplete?: () => void;
   allowChange?: boolean;
-  memberData: Member;
+  memberData: any;
   farcasterProfile: any;
 }
 
@@ -54,261 +41,411 @@ export function PassportVerificationSection({
 }: PassportVerificationSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profile } = usePersistentAuth();
   const { address, isConnected } = useAccount();
   const { signMessage } = useSignMessage();
   const { disconnect } = useDisconnect();
   
+  const [verificationStatus, setVerificationStatus] = useState<
+    "idle" | "checking" | "verifying" | "verified" | "failed"
+  >("idle");
+  const [walletConnectedForVerification, setWalletConnectedForVerification] = useState(false);
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
+  
   // ENS lookup for connected wallet
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
   
+  // JustaName accept hook for subdomain acceptance
+  const { acceptSubname, isAcceptSubnamePending } = useAcceptSubname();
+
   // Check if current wallet has Ipê City domain
   const hasIpeCityDomain = ensName && (
     ensName === "ipecity.eth" || 
     ensName.endsWith(".ipecity.eth")
   );
 
-  // Status polling for pending wallet renewal
-  const { data: memberStatus } = useQuery({
-    queryKey: ["/api/members/check", farcasterFid],
-    enabled: !!farcasterFid && memberData?.walletRenewalStatus === "pending_renewal",
-    refetchInterval: 10000, // Poll every 10 seconds
-  });
+  // Handle wallet connection for verification
+  useEffect(() => {
+    if (isConnected && address && !walletConnectedForVerification) {
+      setWalletConnectedForVerification(true);
+      setVerificationStatus("checking");
+    }
+  }, [isConnected, address, walletConnectedForVerification]);
 
-  // Request wallet renewal mutation
-  const requestWalletRenewalMutation = useMutation({
-    mutationFn: async (newWalletAddress: string) => {
-      return await apiRequest("/api/passport/request-wallet-update", {
-        method: "POST",
-        body: JSON.stringify({
-          farcasterFid,
-          newWalletAddress,
-        }),
+  // Passport verification mutation with SIWE signature
+  const verifyPassportMutation = useMutation({
+    mutationFn: async (walletAddress: string) => {
+      if (!ensName) {
+        throw new Error("No ENS domain found for this wallet");
+      }
+
+      // Create SIWE message for signature verification
+      const message = createSiweMessage({
+        address: walletAddress as `0x${string}`,
+        chainId: mainnet.id,
+        domain: window.location.host,
+        uri: window.location.origin,
+        version: "1",
+        statement: `Verify ownership of ${ensName} for Ipe City membership activation.`,
+        nonce: Math.random().toString(36).substring(2, 15),
+      });
+
+      // Request signature from user's wallet
+      return new Promise((resolve, reject) => {
+        signMessage(
+          { message },
+          {
+            onSuccess: async (signature) => {
+              try {
+                // Send verification request with signature
+                const response = await apiRequest("/api/passport/verify", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    farcasterFid,
+                    ensName,
+                    walletAddress,
+                    message,
+                    signature,
+                  }),
+                });
+                resolve(response);
+              } catch (error) {
+                reject(error);
+              }
+            },
+            onError: (error) => {
+              reject(new Error("Signature verification cancelled or failed"));
+            },
+          }
+        );
       });
     },
     onSuccess: () => {
+      setVerificationStatus("verified");
       toast({
-        title: "Wallet Update Requested",
-        description: "Your wallet update request has been submitted for admin approval.",
+        title: "Passport verified successfully!",
+        description: `Your ${ensName} domain has been verified.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/members/check", farcasterFid] });
+      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      onVerificationComplete?.();
     },
     onError: (error: Error) => {
+      setVerificationStatus("failed");
       toast({
-        title: "Error",
-        description: error.message || "Failed to request wallet update",
+        title: "Verification failed",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Handle wallet change request
-  const handleWalletUpdateRequest = () => {
-    if (!isConnected || !address) {
+  // Accept subdomain mutation (for pending acceptances)
+  const acceptSubdomainMutation = useMutation({
+    mutationFn: async () => {
+      if (!memberData?.member?.ipeUsername) {
+        throw new Error("No subdomain to accept");
+      }
+
+      const ensName = `${memberData.member.ipeUsername}.ipecity.eth`;
+
+      try {
+        // Use JustaName SDK to accept the subdomain
+        const result = await acceptSubname({
+          ens: ensName,
+        });
+
+        // Update backend status to active_member
+        await apiRequest("/api/passport/accept", {
+          method: "POST",
+          body: JSON.stringify({
+            farcasterFid,
+          }),
+        });
+
+        return result;
+      } catch (error: any) {
+        // Handle 409 Conflict as success (subdomain already accepted)
+        if (error?.response?.status === 409 || 
+            error?.message?.includes('SubdomainAlreadyAcceptedException') ||
+            error?.message?.includes('already accepted')) {
+          
+          // Verify domain is actually associated with the wallet
+          if (address) {
+            try {
+              const response = await fetch(`/api/ens/lookup/${address}`);
+              const data = await response.json();
+              
+              if (data.ensName === ensName) {
+                // Domain is verified as belonging to wallet, update backend
+                await apiRequest("/api/passport/accept", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    farcasterFid,
+                  }),
+                });
+                return { success: true, alreadyAccepted: true };
+              }
+            } catch (lookupError) {
+              console.log('ENS lookup error:', lookupError);
+            }
+          }
+          
+          // If verification fails, still update backend but note the conflict
+          await apiRequest("/api/passport/accept", {
+            method: "POST",
+            body: JSON.stringify({
+              farcasterFid,
+            }),
+          });
+          return { success: true, alreadyAccepted: true };
+        }
+        
+        // Re-throw other errors
+        throw error;
+      }
+    },
+    onSuccess: (result) => {
+      const message = result?.alreadyAccepted 
+        ? "Subdomain was already accepted!"
+        : "Subdomain accepted successfully!";
+      
       toast({
-        title: "Connect Wallet",
-        description: "Please connect your new wallet first",
+        title: message,
+        description: `${memberData.member.ipeUsername}.ipecity.eth is now yours.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      onVerificationComplete?.();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to accept subdomain",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleVerifyPassport = () => {
+    if (!address) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet first.",
         variant: "destructive",
       });
       return;
     }
 
-    if (address === memberData.walletAddress) {
-      toast({
-        title: "Same Wallet",
-        description: "This is the same wallet currently registered to your passport",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    requestWalletRenewalMutation.mutate(address);
+    setVerificationStatus("verifying");
+    verifyPassportMutation.mutate(address);
   };
 
-  const renderPassportStatus = () => {
-    const passport = memberData.ipePassport || memberData.ipeUsername || currentPassport;
-    const verified = memberData.passportVerified || isVerified;
+  const handleAcceptSubdomain = () => {
+    acceptSubdomainMutation.mutate();
+  };
 
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-blue-600" />
-            <span className="font-medium">Ipê Passport Status</span>
-          </div>
-          {verified ? (
-            <div className="flex items-center gap-1 text-green-600">
-              <CheckCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">Verified</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 text-gray-500">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">Not verified</span>
+  const getStatusDisplay = () => {
+    const status = memberData?.member?.status;
+
+    switch (status) {
+      case "pending_application":
+        return {
+          title: "Application Submitted",
+          description: "Your application is pending admin approval.",
+          icon: <Clock className="h-5 w-5 text-blue-500" />,
+          color: "blue",
+        };
+      case "approved_application":
+        return {
+          title: "Accept Your Passport",
+          description: `Your subdomain ${memberData.member.ipeUsername}.ipecity.eth has been reserved and is ready to accept.`,
+          icon: <Globe className="h-5 w-5 text-blue-500" />,
+          color: "blue",
+        };
+      case "active_member":
+        return {
+          title: "Verified Member",
+          description: `Welcome! You have access as a ${memberData.member.memberType}.`,
+          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+          color: "green",
+        };
+      default:
+        return {
+          title: "Verification Required",
+          description: "Connect your wallet to verify your Ipê City membership.",
+          icon: <Wallet className="h-5 w-5 text-gray-500" />,
+          color: "gray",
+        };
+    }
+  };
+
+  const statusDisplay = getStatusDisplay();
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {statusDisplay.icon}
+            Ipê Passport Verification
+          </CardTitle>
+          <CardDescription>{statusDisplay.description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Wallet Connection */}
+          {!isConnected && (
+            <div className="text-center">
+              <ConnectButton.Custom>
+                {({ openConnectModal }) => (
+                  <Button onClick={openConnectModal} className="w-full">
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Connect Wallet
+                  </Button>
+                )}
+              </ConnectButton.Custom>
             </div>
           )}
-        </div>
 
-        {passport && (
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-sm text-gray-600">Your Passport</div>
-            <div className="font-mono text-lg">{passport}</div>
-          </div>
-        )}
-
-        {memberData.walletAddress && (
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-sm text-gray-600">Registered Wallet</div>
-            <div className="font-mono text-sm">
-              {memberData.walletAddress.slice(0, 6)}...{memberData.walletAddress.slice(-4)}
-            </div>
-          </div>
-        )}
-
-        {/* Wallet Renewal Status */}
-        {memberData.walletRenewalStatus === "pending_renewal" && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-orange-700">
-              <Clock className="h-4 w-4" />
-              <span className="font-medium">Wallet Update Pending</span>
-            </div>
-            <div className="text-sm text-orange-600 mt-1">
-              Admin approval required for wallet change
-            </div>
-            {memberData.newWalletAddress && (
-              <div className="text-xs text-orange-600 mt-1">
-                New wallet: {memberData.newWalletAddress.slice(0, 6)}...{memberData.newWalletAddress.slice(-4)}
+          {/* ENS Domain Check */}
+          {isConnected && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">Connected Wallet</p>
+                  <p className="text-sm text-gray-600">{address?.slice(0, 6)}...{address?.slice(-4)}</p>
+                </div>
+                <div className="text-right">
+                  {ensLoading ? (
+                    <p className="text-sm text-gray-500">Looking up ENS domain...</p>
+                  ) : ensName ? (
+                    <p className="text-sm font-medium text-green-600">{ensName}</p>
+                  ) : (
+                    <p className="text-sm text-gray-500">No ENS domain</p>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderWalletManagement = () => {
-    if (!verified || !allowChange) {
-      return null;
-    }
-
-    return (
-      <div className="space-y-4 pt-4 border-t border-gray-200">
-        <div className="flex items-center gap-2">
-          <Wallet className="h-5 w-5 text-purple-600" />
-          <span className="font-medium">Wallet Management</span>
-        </div>
-
-        <div className="space-y-3">
-          <div className="text-sm text-gray-600">
-            Connect a different wallet to update your passport registration
-          </div>
-
-          {/* Current wallet connection status */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div>
-              <div className="text-sm font-medium">Currently Connected</div>
-              <div className="text-xs text-gray-500">
-                {isConnected && address 
-                  ? `${address.slice(0, 6)}...${address.slice(-4)}`
-                  : "No wallet connected"
-                }
-              </div>
-            </div>
-            
-            <ConnectButton.Custom>
-              {({ openConnectModal, openAccountModal, mounted, account }) => {
-                if (!mounted) return null;
-                
-                if (!account) {
-                  return (
-                    <Button
-                      onClick={openConnectModal}
-                      size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
-                    >
-                      Connect Wallet
-                    </Button>
-                  );
-                }
-                
-                return (
-                  <Button
-                    onClick={openAccountModal}
-                    size="sm"
-                    variant="outline"
-                  >
-                    Change Wallet
-                  </Button>
-                );
-              }}
-            </ConnectButton.Custom>
-          </div>
-
-          {/* ENS domain check for connected wallet */}
-          {isConnected && address && (
-            <div className="space-y-2">
-              <div className="text-sm text-gray-600">
-                {ensLoading ? (
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                    Looking up ENS domain...
-                  </div>
-                ) : ensName ? (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <CheckCircle className="h-3 w-3" />
-                    Found domain: {ensName}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <AlertCircle className="h-3 w-3" />
-                    No ENS domain found for this wallet
-                  </div>
-                )}
-              </div>
-
-              {/* Different actions based on wallet state */}
-              {address !== memberData.walletAddress && memberData.walletRenewalStatus !== "pending_renewal" && (
-                <Button
-                  onClick={handleWalletUpdateRequest}
-                  disabled={requestWalletRenewalMutation.isPending}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+              
+              {/* Disconnect Wallet Button */}
+              <div className="text-center">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    disconnect();
+                    setWalletConnectedForVerification(false);
+                    setVerificationStatus("idle");
+                  }}
                 >
-                  {requestWalletRenewalMutation.isPending ? (
-                    <div className="flex items-center gap-2">
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                      Requesting Update...
+                  Disconnect Wallet
+                </Button>
+              </div>
+
+              {/* Action based on current status */}
+              {memberData?.member && memberData.member.status === "pending_id_verification" && (
+                <div className="space-y-4">
+                  {hasIpeCityDomain ? (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-green-800 font-medium">Ipê City Domain Detected!</p>
+                        <p className="text-sm text-green-700">
+                          {ensName} detected! Sign a message to verify ownership and activate your membership.
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={handleVerifyPassport}
+                        disabled={verifyPassportMutation.isPending}
+                        className="w-full"
+                      >
+                        <Wallet className="mr-2 h-4 w-4" />
+                        {verifyPassportMutation.isPending ? "Signing..." : "Sign & Activate Membership"}
+                      </Button>
                     </div>
                   ) : (
-                    "Request Wallet Update"
+                    <div className="space-y-4">
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-blue-800 font-medium">No Ipê City Domain Found</p>
+                        <p className="text-sm text-blue-700">
+                          Submit an application to claim a new subdomain and join the community.
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={() => setShowApplicationForm(true)}
+                        className="w-full"
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Submit Application
+                      </Button>
+                    </div>
                   )}
-                </Button>
+                </div>
               )}
 
-              {address === memberData.walletAddress && (
-                <div className="text-xs text-green-600 p-2 bg-green-50 rounded-lg">
-                  This wallet is already registered to your passport
+              {/* Pending Application Status */}
+              {memberData?.member?.status === "pending_application" && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                  <Clock className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+                  <p className="font-medium text-blue-800">Application Under Review</p>
+                  <p className="text-sm text-blue-700">
+                    Your application for <strong>{memberData.member.ipeUsername}.ipecity.eth</strong> is being reviewed by admins.
+                  </p>
+                </div>
+              )}
+
+
+
+              {/* Approved Application - Accept Passport */}
+              {memberData?.member?.status === "approved_application" && (
+                <div className="space-y-3">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-blue-800 font-medium">Passport Ready! 🎉</p>
+                    <p className="text-sm text-blue-700">
+                      Your subdomain <strong>{memberData.member.ipeUsername}.ipecity.eth</strong> has been reserved and is ready to accept.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleAcceptSubdomain}
+                    disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
+                    className="w-full"
+                  >
+                    {(acceptSubdomainMutation.isPending || isAcceptSubnamePending) ? (
+                      "Accepting..."
+                    ) : (
+                      "Accept Your Passport"
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Active Member */}
+              {memberData?.member?.status === "active_member" && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                  <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                  <p className="font-medium text-green-800">Welcome to Ipê City!</p>
+                  <p className="text-sm text-green-700">
+                    You are verified as a <strong>{memberData.member.memberType}</strong> member.
+                  </p>
+                  {memberData.member.ipePassport && (
+                    <p className="text-sm text-green-700 mt-1">
+                      Domain: <strong>{memberData.member.ipePassport}</strong>
+                    </p>
+                  )}
                 </div>
               )}
             </div>
           )}
-        </div>
-      </div>
-    );
-  };
+        </CardContent>
+      </Card>
 
-  const verified = memberData.passportVerified || isVerified;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Ipê Passport Verification</CardTitle>
-        <CardDescription>
-          Your unique Ipê City domain registration and wallet management
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {renderPassportStatus()}
-        {renderWalletManagement()}
-      </CardContent>
-    </Card>
+      {/* Application Form Modal */}
+      {showApplicationForm && (
+        <ApplicationForm
+          memberData={memberData}
+          farcasterProfile={farcasterProfile}
+          onSuccess={() => {
+            setShowApplicationForm(false);
+            queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+          }}
+        />
+      )}
+    </div>
   );
 }

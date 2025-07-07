@@ -46,7 +46,7 @@ export const members = pgTable("members", {
   
   // State machine fields - restricted by database CHECK constraint
   // Valid values: pending_signer, pending_id_verification, pending_application, 
-  // pending_application_review, approved_application, denied_application, active_member
+  // approved_application, denied_application, active_member
   status: varchar("status", { length: 30 }).default("pending_signer").notNull(),
   memberType: varchar("member_type", { length: 20 }).default("pending").notNull(),
   
@@ -60,10 +60,6 @@ export const members = pgTable("members", {
   // Passport/Username system
   ipeUsername: varchar("ipe_username", { length: 100 }),
   ipePassport: varchar("ipe_passport", { length: 255 }),
-  
-  // Wallet renewal system
-  newWalletAddress: varchar("new_wallet_address", { length: 255 }),
-  walletRenewalStatus: varchar("wallet_renewal_status", { length: 20 }),
   
   // Profile/Application fields
   bio: text("bio"),

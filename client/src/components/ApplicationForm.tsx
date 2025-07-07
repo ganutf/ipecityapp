@@ -9,12 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, User, Globe } from "lucide-react";
+import { Loader2, CheckCircle, User, Globe, Twitter, Linkedin, Instagram, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAccount } from "wagmi";
 import { apiRequest } from "@/lib/queryClient";
-import { SocialLinksFields } from "@/components/SocialLinksFields";
-import { ProfileTagsField } from "@/components/ProfileTagsField";
 
 // Application form schema
 const applicationFormSchema = z.object({
@@ -41,6 +39,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { address } = useAccount();
+  const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
 
   const form = useForm<ApplicationFormData>({
@@ -102,9 +101,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
         title: "Application submitted successfully!",
         description: "Your application is now pending admin approval.",
       });
-      // Invalidate all member check queries to update UI immediately
       queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
       onSuccess();
     },
     onError: (error: Error) => {
@@ -128,7 +125,16 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
     submitApplicationMutation.mutate(data);
   };
 
+  const addTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim()) && tags.length < 5) {
+      setTags([...tags, tagInput.trim()]);
+      setTagInput("");
+    }
+  };
 
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
 
   const getUsernameStatusColor = () => {
     switch (usernameStatus) {
@@ -149,7 +155,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
   };
 
   return (
-    <Card id="application-form" className="max-w-2xl mx-auto">
+    <Card className="max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5" />
@@ -210,15 +216,95 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
             />
 
             {/* Social Media Fields */}
-            <SocialLinksFields control={form.control} layout="grid" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="twitter"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Twitter className="h-4 w-4" />
+                      Twitter
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="@username" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="linkedin"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Linkedin className="h-4 w-4" />
+                      LinkedIn
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="linkedin.com/in/username" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="instagram"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Instagram className="h-4 w-4" />
+                      Instagram
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="@username" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Profile Tags */}
-            <ProfileTagsField 
-              control={form.control} 
-              variant="input" 
-              currentTags={tags}
-              onTagsChange={setTags}
-            />
+            <div className="space-y-3">
+              <FormLabel className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Skills & Interests (max 5)
+              </FormLabel>
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  placeholder="Add a skill or interest..."
+                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                  disabled={tags.length >= 5}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addTag}
+                  disabled={!tagInput.trim() || tags.length >= 5}
+                >
+                  Add
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    className="cursor-pointer"
+                    onClick={() => removeTag(tag)}
+                  >
+                    {tag} ✕
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
             {/* Submit Button */}
             <Button

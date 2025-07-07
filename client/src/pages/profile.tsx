@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,15 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
-import { SocialLinksFields } from "@/components/SocialLinksFields";
-import { ProfileTagsField } from "@/components/ProfileTagsField";
-import { User, Twitter, Linkedin, Instagram, Edit3, X, Check } from "lucide-react";
 
 interface MemberData {
   isMember: boolean;
@@ -39,13 +33,13 @@ interface MemberData {
     ipeUsername?: string;
     memberType?: string;
     profileCompleted?: boolean;
-    walletAddress?: string;
-    walletRenewalStatus?: "pending_renewal" | "renewal_approved" | null;
-    newWalletAddress?: string;
   };
 }
 
-
+const PROFILE_TAGS = [
+  'tech founder', 'student', 'developer', 'lawyer', 'scientist',
+  'public servant', 'designer', 'creator', 'technologist', 'researcher'
+];
 
 const profileSchema = z.object({
   bio: z.string().optional(),
@@ -59,7 +53,6 @@ export default function ProfilePage() {
   const { profile } = usePersistentAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
 
   // Get member data
   const { data: memberData } = useQuery<MemberData>({
@@ -77,19 +70,6 @@ export default function ProfilePage() {
       profileTags: memberData?.member?.profileTags || [],
     },
   });
-
-  // Update form when member data changes
-  useEffect(() => {
-    if (memberData?.member) {
-      form.reset({
-        bio: memberData.member.bio || "",
-        twitter: memberData.member.twitter || "",
-        linkedin: memberData.member.linkedin || "",
-        instagram: memberData.member.instagram || "",
-        profileTags: memberData.member.profileTags || [],
-      });
-    }
-  }, [memberData, form]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -122,20 +102,13 @@ export default function ProfilePage() {
     updateProfileMutation.mutate(data);
   };
 
-  const handleCancel = () => {
-    form.reset();
-    setIsEditing(false);
+  const handleTagToggle = (tag: string) => {
+    const currentTags = form.getValues("profileTags") || [];
+    const newTags = currentTags.includes(tag)
+      ? currentTags.filter(t => t !== tag)
+      : [...currentTags, tag];
+    form.setValue("profileTags", newTags);
   };
-
-  const handleSave = (data: z.infer<typeof profileSchema>) => {
-    updateProfileMutation.mutate(data, {
-      onSuccess: () => {
-        setIsEditing(false);
-      }
-    });
-  };
-
-
 
   if (!memberData?.isMember) {
     return (
@@ -167,20 +140,7 @@ export default function ProfilePage() {
           
           <PassportVerificationSection
             farcasterFid={profile?.fid || 0}
-            currentPassport={memberData?.member?.ipePassport || memberData?.member?.ipeUsername}
-            isVerified={memberData?.member?.passportVerified || false}
-            memberData={{
-              farcasterFid: profile?.fid || 0,
-              walletAddress: memberData?.member?.walletAddress,
-              ipePassport: memberData?.member?.ipePassport,
-              ipeUsername: memberData?.member?.ipeUsername,
-              passportVerified: memberData?.member?.passportVerified || false,
-              status: memberData?.status || '',
-              walletRenewalStatus: memberData?.member?.walletRenewalStatus,
-              newWalletAddress: memberData?.member?.newWalletAddress,
-              email: memberData?.member?.email,
-              emailVerified: memberData?.member?.emailVerified || false
-            }}
+            memberData={memberData}
             farcasterProfile={profile}
             allowChange={true}
           />
@@ -189,177 +149,174 @@ export default function ProfilePage() {
 
       <Separator />
 
-      {/* Profile Management */}
+      {/* Application Information */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Profile Information
-            </span>
-            {!isEditing && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-2"
-              >
-                <Edit3 className="h-4 w-4" />
-                Edit Profile
-              </Button>
-            )}
-          </CardTitle>
+          <CardTitle>Application Information</CardTitle>
           <CardDescription>
-            Manage your profile information and preferences.
+            Information you provided during your application to Ipê City Pulse.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {!isEditing ? (
-            // Display Mode
-            <div className="space-y-6">
-              {/* Member Type - Always at top */}
-              <div>
-                <Label className="text-sm font-medium text-gray-600">Member Type</Label>
-                <Badge variant="secondary" className="mt-1 capitalize text-sm">
-                  {memberData?.member?.memberType || "Not specified"}
-                </Badge>
-              </div>
-              
-              {/* Email Address */}
-              <div>
-                <Label className="text-sm font-medium text-gray-600">Email Address</Label>
-                <p className="text-sm mt-1">{memberData?.member?.email || "Not provided"}</p>
-              </div>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Email Address</Label>
+              <p className="text-sm">{memberData?.member?.email || "Not provided"}</p>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Ipê Passport</Label>
+              <p className="text-sm">
+                {memberData?.member?.ipePassport ? (
+                  <span className="text-green-600">✓ {memberData.member.ipePassport}</span>
+                ) : (
+                  "Not verified"
+                )}
+              </p>
+            </div>
 
-              {/* Bio */}
+            {memberData?.member?.bio && (
               <div>
                 <Label className="text-sm font-medium text-gray-600">Bio</Label>
-                <p className="text-sm mt-1 text-gray-800">
-                  {memberData?.member?.bio || "No bio provided"}
-                </p>
+                <p className="text-sm">{memberData.member.bio}</p>
               </div>
+            )}
 
-              {/* Social Links */}
-              <div>
-                <Label className="text-sm font-medium text-gray-600 mb-3 block">Social Links</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Twitter className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm">
-                      {memberData?.member?.twitter ? (
-                        `@${memberData.member.twitter}`
-                      ) : (
-                        <span className="text-gray-400">Not provided</span>
-                      )}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Linkedin className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm">
-                      {memberData?.member?.linkedin ? (
-                        memberData.member.linkedin
-                      ) : (
-                        <span className="text-gray-400">Not provided</span>
-                      )}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Instagram className="h-4 w-4 text-pink-500" />
-                    <span className="text-sm">
-                      {memberData?.member?.instagram ? (
-                        `@${memberData.member.instagram}`
-                      ) : (
-                        <span className="text-gray-400">Not provided</span>
-                      )}
-                    </span>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {memberData?.member?.twitter && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Twitter</Label>
+                  <p className="text-sm">@{memberData.member.twitter}</p>
                 </div>
-              </div>
+              )}
+              
+              {memberData?.member?.linkedin && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">LinkedIn</Label>
+                  <p className="text-sm">{memberData.member.linkedin}</p>
+                </div>
+              )}
+              
+              {memberData?.member?.instagram && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Instagram</Label>
+                  <p className="text-sm">@{memberData.member.instagram}</p>
+                </div>
+              )}
+            </div>
 
-              {/* Profile Tags */}
+            {memberData?.member?.profileTags && memberData.member.profileTags.length > 0 && (
               <div>
                 <Label className="text-sm font-medium text-gray-600">Profile Tags</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {memberData?.member?.profileTags && memberData.member.profileTags.length > 0 ? (
-                    memberData.member.profileTags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-gray-400">No tags selected</span>
-                  )}
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {memberData.member.profileTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Member Type</Label>
+                <p className="text-sm capitalize">{memberData?.member?.memberType || "Not specified"}</p>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Status</Label>
+                <p className="text-sm capitalize">{memberData?.status?.replace('_', ' ') || "Unknown"}</p>
+              </div>
             </div>
-          ) : (
-            // Edit Mode
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
-                
-                {/* Member Type - Display only */}
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Member Type</Label>
-                  <Badge variant="secondary" className="mt-1 capitalize text-sm">
-                    {memberData?.member?.memberType || "Not specified"}
-                  </Badge>
-                </div>
-
-                {/* Bio */}
-                <FormField
-                  control={form.control}
-                  name="bio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bio</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Tell us a bit about yourself..."
-                          rows={3}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Social Links */}
-                <SocialLinksFields control={form.control} layout="vertical" />
-
-                {/* Profile Tags */}
-                <ProfileTagsField control={form.control} />
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    type="submit"
-                    disabled={updateProfileMutation.isPending}
-                    className="flex items-center gap-2"
-                  >
-                    <Check className="h-4 w-4" />
-                    {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCancel}
-                    disabled={updateProfileMutation.isPending}
-                    className="flex items-center gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          )}
+          </div>
         </CardContent>
       </Card>
 
+      <Separator />
 
+      {/* Profile Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Settings</CardTitle>
+          <CardDescription>
+            Update your profile information and preferences.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+            {/* Editable Fields */}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  placeholder="Tell us a bit about yourself..."
+                  rows={3}
+                  {...form.register("bio")}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="twitter">Twitter Handle</Label>
+                <Input
+                  id="twitter"
+                  placeholder="username (without @)"
+                  {...form.register("twitter")}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="linkedin">LinkedIn Profile</Label>
+                <Input
+                  id="linkedin"
+                  placeholder="https://linkedin.com/in/username"
+                  {...form.register("linkedin")}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="instagram">Instagram Handle</Label>
+                <Input
+                  id="instagram"
+                  placeholder="username (without @)"
+                  {...form.register("instagram")}
+                />
+              </div>
+
+              <div>
+                <Label>Profile Tags</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {PROFILE_TAGS.map((tag) => (
+                    <div key={tag} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={tag}
+                        checked={(form.watch("profileTags") || []).includes(tag)}
+                        onCheckedChange={() => handleTagToggle(tag)}
+                      />
+                      <Label htmlFor={tag} className="text-sm capitalize">
+                        {tag}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={updateProfileMutation.isPending}
+            >
+              {updateProfileMutation.isPending ? "Updating..." : "Update Profile"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

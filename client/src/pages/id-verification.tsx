@@ -14,11 +14,6 @@ interface MemberStatus {
     email?: string;
     emailVerified?: boolean;
     ipePassport?: string;
-    ipeUsername?: string;
-    passportVerified?: boolean;
-    walletAddress?: string;
-    walletRenewalStatus?: "pending_renewal" | "renewal_approved" | null;
-    newWalletAddress?: string;
   };
 }
 
@@ -51,7 +46,7 @@ export default function IdVerificationPage() {
   
   // Redirect to home if user becomes approved member
   useEffect(() => {
-    if (memberStatus?.status === 'active_member') {
+    if (memberStatus?.status === 'member') {
       setLocation("/");
     }
   }, [memberStatus?.status, setLocation]);
@@ -106,22 +101,11 @@ export default function IdVerificationPage() {
 
       <PassportVerificationSection
         farcasterFid={profile?.fid || 0}
-        currentPassport={memberStatus?.member?.ipePassport || memberStatus?.member?.ipeUsername}
+        currentPassport={memberStatus?.member?.ipePassport}
         isVerified={isPassportVerified}
         onVerificationComplete={handlePassportComplete}
         allowChange={true}
-        memberData={{
-          farcasterFid: profile?.fid || 0,
-          walletAddress: memberStatus?.member?.walletAddress,
-          ipePassport: memberStatus?.member?.ipePassport,
-          ipeUsername: memberStatus?.member?.ipeUsername,
-          passportVerified: memberStatus?.member?.passportVerified || false,
-          status: memberStatus?.status || '',
-          walletRenewalStatus: memberStatus?.member?.walletRenewalStatus,
-          newWalletAddress: memberStatus?.member?.newWalletAddress,
-          email: memberStatus?.member?.email,
-          emailVerified: memberStatus?.member?.emailVerified || false
-        }}
+        memberData={memberStatus}
         farcasterProfile={profile}
       />
 

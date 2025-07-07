@@ -216,7 +216,7 @@ export default function FarcasterEmbed() {
 
 
   // Show verification status for users who are members but not fully approved
-  if (isAuthenticated && hasValidFid && !authLoading && (memberCheck as any)?.isMember && (memberCheck as any)?.status !== 'active_member') {
+  if (isAuthenticated && hasValidFid && !authLoading && (memberCheck as any)?.isMember && (memberCheck as any)?.status !== 'member') {
     const { status, member } = memberCheck as any;
     
     return (

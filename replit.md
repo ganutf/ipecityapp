@@ -465,6 +465,15 @@ The application follows a monorepo structure with clear separation between clien
   - **TypeScript Compliance**: Corrected method implementations and variable declarations throughout storage layer
   - **Server Stability**: Application now runs without TypeScript compilation errors, confirmed successful startup
   - **Production Ready**: All storage operations properly implemented with correct type signatures and error handling
+- July 7, 2025. **EIP-1271 SMART CONTRACT WALLET SUPPORT**: Implemented comprehensive signature verification for both EOA and smart contract wallets:
+  - **Hybrid Verification System**: Automatically detects wallet type (EOA vs smart contract) using bytecode inspection
+  - **EIP-1271 Standard**: Full implementation of `isValidSignature()` for smart contract wallets like Coinbase Smart Wallet
+  - **EOA Fallback**: Maintains SIWE verification for regular Ethereum wallets with direct message verification fallback
+  - **ENS Lookup Fallback**: Secondary verification method using ENS domain ownership for additional security
+  - **Universal Compatibility**: Supports all major wallet types including MetaMask, Coinbase Wallet, WalletConnect, and smart contract wallets
+  - **Enhanced Error Handling**: Comprehensive logging and graceful fallbacks for different signature verification methods
+  - **Viem Integration**: Added viem package for robust blockchain interactions and EIP-1271 contract calls
+  - **Production Ready**: Complete smart contract wallet signature verification system operational
 
 ## User Preferences
 

@@ -1597,56 +1597,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Verify SIWE signature for wallet ownership proof
+      // Hybrid signature verification for both EOA and smart contract wallets
       try {
-        console.log("Received message for SIWE verification:", message);
+        console.log("Received message for signature verification:", message);
         console.log("Received signature length:", signature.length);
         console.log("Expected wallet address:", walletAddress);
         
-        const siweMessage = new SiweMessage(message);
-        console.log("Parsed SIWE message:", {
-          address: siweMessage.address,
-          statement: siweMessage.statement,
-          domain: siweMessage.domain,
+        // Import viem for EIP-1271 verification
+        const { createPublicClient, http, getContract, isAddressEqual, isAddress } = await import('viem');
+        const { mainnet } = await import('viem/chains');
+        
+        if (!isAddress(walletAddress)) {
+          return res.status(400).json({ error: "Invalid wallet address format" });
+        }
+        
+        // Create public client for blockchain calls
+        const publicClient = createPublicClient({
+          chain: mainnet,
+          transport: http(),
         });
         
-        // Verify signature with enhanced error handling for smart contract wallets
-        const verificationResult = await siweMessage.verify({ signature });
+        // Check if the address is a smart contract
+        const bytecode = await publicClient.getBytecode({ address: walletAddress as `0x${string}` });
+        const isSmartContract = bytecode && bytecode !== '0x';
         
-        console.log("SIWE verification result:", verificationResult);
+        console.log(`Wallet type: ${isSmartContract ? 'Smart Contract' : 'EOA'}`);
         
-        if (!verificationResult.success) {
-          console.error("SIWE verification failed:", verificationResult.error);
+        let verificationSuccess = false;
+        
+        if (isSmartContract) {
+          // EIP-1271 verification for smart contract wallets
+          console.log("Attempting EIP-1271 verification for smart contract wallet...");
           
-          // For smart contract wallets, also verify via ENS lookup as fallback
-          console.log("Attempting ENS lookup fallback for smart contract wallet...");
           try {
-            const baseUrl = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
-            const ensResponse = await fetch(`${baseUrl}/api/ens/lookup/${walletAddress}`);
-            const ensData = await ensResponse.json();
+            // EIP-1271 magic value for valid signature
+            const EIP1271_MAGIC_VALUE = '0x1626ba7e';
             
-            if (ensData.ensName === ensName) {
-              console.log("ENS lookup fallback successful - smart contract wallet verified");
-            } else {
-              return res.status(400).json({ 
-                error: "Signature verification failed and ENS lookup does not match" 
-              });
-            }
-          } catch (ensError) {
-            return res.status(400).json({ 
-              error: "Signature verification failed and ENS lookup unavailable" 
+            // Hash the message according to Ethereum signed message standard
+            const { hashMessage } = await import('viem');
+            const messageHash = hashMessage(message);
+            
+            // Call isValidSignature on the contract
+            const result = await publicClient.readContract({
+              address: walletAddress as `0x${string}`,
+              abi: [{
+                type: 'function',
+                name: 'isValidSignature',
+                inputs: [
+                  { name: '_hash', type: 'bytes32' },
+                  { name: '_signature', type: 'bytes' }
+                ],
+                outputs: [{ name: '', type: 'bytes4' }],
+                stateMutability: 'view'
+              }],
+              functionName: 'isValidSignature',
+              args: [messageHash, signature as `0x${string}`]
             });
+            
+            verificationSuccess = result === EIP1271_MAGIC_VALUE;
+            console.log(`EIP-1271 verification result: ${verificationSuccess ? 'SUCCESS' : 'FAILED'}`);
+            
+          } catch (eip1271Error) {
+            console.error("EIP-1271 verification failed:", eip1271Error);
+            
+            // Fallback: ENS lookup verification for smart contract wallets
+            console.log("Attempting ENS lookup fallback...");
+            try {
+              const baseUrl = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
+              const ensResponse = await fetch(`${baseUrl}/api/ens/lookup/${walletAddress}`);
+              const ensData = await ensResponse.json();
+              
+              if (ensData.ensName === ensName) {
+                console.log("ENS lookup fallback successful");
+                verificationSuccess = true;
+              }
+            } catch (ensError) {
+              console.error("ENS lookup fallback failed:", ensError);
+            }
           }
+          
         } else {
-          // Verify the wallet address matches
-          if (siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()) {
-            return res.status(400).json({ error: "Wallet address mismatch" });
-          }
+          // Standard SIWE verification for EOA wallets
+          console.log("Attempting SIWE verification for EOA wallet...");
+          
+          try {
+            const siweMessage = new SiweMessage(message);
+            console.log("Parsed SIWE message:", {
+              address: siweMessage.address,
+              statement: siweMessage.statement,
+              domain: siweMessage.domain,
+            });
+            
+            const verificationResult = await siweMessage.verify({ signature });
+            console.log("SIWE verification result:", verificationResult);
+            
+            if (verificationResult.success) {
+              // Verify the wallet address matches
+              if (siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()) {
+                return res.status(400).json({ error: "Wallet address mismatch" });
+              }
 
-          // Verify the ENS domain is mentioned in the statement
-          if (!siweMessage.statement?.includes(ensName)) {
-            return res.status(400).json({ error: "ENS domain not verified in signature" });
+              // Verify the ENS domain is mentioned in the statement
+              if (!siweMessage.statement?.includes(ensName)) {
+                return res.status(400).json({ error: "ENS domain not verified in signature" });
+              }
+              
+              verificationSuccess = true;
+            }
+            
+          } catch (siweError) {
+            console.error("SIWE verification failed:", siweError);
+            
+            // Fallback: Direct message verification for EOA
+            try {
+              const { verifyMessage } = await import('viem');
+              const isValid = await verifyMessage({
+                address: walletAddress as `0x${string}`,
+                message,
+                signature: signature as `0x${string}`
+              });
+              
+              if (isValid && message.includes(ensName)) {
+                console.log("Direct message verification successful for EOA");
+                verificationSuccess = true;
+              }
+            } catch (directVerifyError) {
+              console.error("Direct message verification failed:", directVerifyError);
+            }
           }
+        }
+        
+        if (!verificationSuccess) {
+          return res.status(400).json({ 
+            error: "Signature verification failed for both EOA and smart contract wallet methods" 
+          });
         }
         
         console.log("Wallet ownership verification successful");

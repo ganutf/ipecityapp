@@ -1210,7 +1210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `Updating ${member.ipeUsername}.ipecity.eth → ${member.newWalletAddress}`,
       );
 
-      const safeMessage = encodeURIComponent(siweMessage);
+      const headerSafeMessage = siweMessage.replace(/\n/g, "\\n");
 
       // ── Call JustaName /subname/update ───────────────────────────────────
       const r = await fetch("https://api.justaname.id/ens/v1/subname/update", {
@@ -1219,7 +1219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "Content-Type": "application/json",
           "x-api-key": process.env.JUSTANAME_API_KEY ?? "",
           "x-signature": siweSignature,
-          "x-message": safeMessage,
+          "x-message": headerSafeMessage,
           "x-address": adminAddress,
         },
         body: JSON.stringify({

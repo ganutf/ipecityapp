@@ -14,11 +14,6 @@ interface MemberStatus {
     email?: string;
     emailVerified?: boolean;
     ipePassport?: string;
-    ipeUsername?: string;
-    passportVerified?: boolean;
-    walletAddress?: string;
-    walletRenewalStatus?: "pending_renewal" | "renewal_approved" | null;
-    newWalletAddress?: string;
   };
 }
 
@@ -44,10 +39,9 @@ export default function IdVerificationPage() {
     },
   });
 
-  // Update completion states based on member status
+  // Update completion states based on member status (matching Profile page logic)
   const isEmailVerified = memberStatus?.member?.emailVerified || false;
-  const isPassportVerified = memberStatus?.member?.passportVerified || !!memberStatus?.member?.ipePassport || !!memberStatus?.member?.ipeUsername;
-  const hasSubmittedApplication = memberStatus?.status === 'pending_application_review' || memberStatus?.status === 'approved_application' || memberStatus?.status === 'active_member';
+  const isPassportVerified = !!memberStatus?.member?.ipePassport;
   const bothComplete = isEmailVerified && isPassportVerified;
   
   // Redirect to home if user becomes approved member
@@ -56,45 +50,6 @@ export default function IdVerificationPage() {
       setLocation("/");
     }
   }, [memberStatus?.status, setLocation]);
-
-  // Show appropriate completion message based on status
-  const getCompletionMessage = () => {
-    if (memberStatus?.status === 'pending_application_review') {
-      return {
-        title: "Application Submitted!",
-        description: "Your application is pending admin review. You'll be notified once approved.",
-        buttonText: "Continue to Home",
-        showButton: true
-      };
-    }
-    if (memberStatus?.status === 'approved_application') {
-      return {
-        title: "Application Approved!",
-        description: "Your application has been approved. Welcome to Ipê City!",
-        buttonText: "Continue to Home", 
-        showButton: true
-      };
-    }
-    if (hasSubmittedApplication) {
-      return {
-        title: "Application In Review",
-        description: "Please wait for admin approval.",
-        buttonText: "Continue to Home",
-        showButton: true
-      };
-    }
-    if (bothComplete) {
-      return {
-        title: "Verification Complete",
-        description: "You can now submit your application below.",
-        buttonText: null,
-        showButton: false
-      };
-    }
-    return null;
-  };
-
-  const completionInfo = getCompletionMessage();
 
   const handleEmailComplete = () => {
     setEmailComplete(true);
@@ -146,38 +101,21 @@ export default function IdVerificationPage() {
 
       <PassportVerificationSection
         farcasterFid={profile?.fid || 0}
-        currentPassport={memberStatus?.member?.ipePassport || memberStatus?.member?.ipeUsername}
+        currentPassport={memberStatus?.member?.ipePassport}
         isVerified={isPassportVerified}
         onVerificationComplete={handlePassportComplete}
         allowChange={true}
-        memberData={{
-          farcasterFid: profile?.fid || 0,
-          walletAddress: memberStatus?.member?.walletAddress,
-          ipePassport: memberStatus?.member?.ipePassport,
-          ipeUsername: memberStatus?.member?.ipeUsername,
-          passportVerified: memberStatus?.member?.passportVerified || false,
-          status: memberStatus?.status || '',
-          walletRenewalStatus: memberStatus?.member?.walletRenewalStatus,
-          newWalletAddress: memberStatus?.member?.newWalletAddress,
-          email: memberStatus?.member?.email,
-          emailVerified: memberStatus?.member?.emailVerified || false
-        }}
+        memberData={memberStatus}
         farcasterProfile={profile}
       />
 
 
 
-      {completionInfo && (
-        <div className="text-center pt-6">
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
-            <h3 className="font-medium text-green-800 mb-2">{completionInfo.title}</h3>
-            <p className="text-sm text-green-700">{completionInfo.description}</p>
-          </div>
-          {completionInfo.showButton && (
-            <Button onClick={handleDone} size="lg" className="w-full">
-              {completionInfo.buttonText}
-            </Button>
-          )}
+      {bothComplete && (
+        <div className="text-center pt-4">
+          <Button onClick={handleDone} size="lg" className="w-full">
+            Done - Go to Home
+          </Button>
         </div>
       )}
     </div>

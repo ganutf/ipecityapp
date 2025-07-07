@@ -303,6 +303,120 @@ export function PassportVerificationSection({
             </div>
           </div>
         )}
+
+        {/* Passport Verification Interface for non-verified users */}
+        {!verified && (
+          <div className="space-y-4 pt-4 border-t border-gray-200">
+            <div className="text-sm text-gray-600">
+              {memberData.status === "pending_application" ? (
+                "Complete your passport verification to submit your application"
+              ) : memberData.status === "pending_application_review" ? (
+                "Your application is under review"
+              ) : memberData.status === "approved_application" ? (
+                "Your application has been approved. Complete passport acceptance below"
+              ) : (
+                "Connect your wallet to verify an existing Ipê passport or claim a new one"
+              )}
+            </div>
+
+            {/* Wallet Connection */}
+            <div className="space-y-3">
+              <ConnectButton.Custom>
+                {({ openConnectModal, openAccountModal, mounted, account }) => {
+                  if (!mounted) return null;
+                  
+                  if (!account) {
+                    return (
+                      <Button 
+                        onClick={openConnectModal} 
+                        className="w-full bg-purple-600 hover:bg-purple-700"
+                      >
+                        <Wallet className="h-4 w-4 mr-2" />
+                        Connect Wallet to Verify Passport
+                      </Button>
+                    );
+                  }
+                  
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="text-sm font-medium">Wallet Connected</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {account.address.slice(0, 6)}...{account.address.slice(-4)}
+                          </div>
+                        </div>
+                        <Button onClick={openAccountModal} size="sm" variant="outline">
+                          Change
+                        </Button>
+                      </div>
+
+                      {/* ENS Domain Detection */}
+                      <div className="space-y-3">
+                        {ensLoading ? (
+                          <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded-lg">
+                            Looking up ENS domain...
+                          </div>
+                        ) : hasIpePassport ? (
+                          <div className="space-y-3">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 text-green-700 mb-2">
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="font-medium">Ipê Passport Found</span>
+                              </div>
+                              <div className="text-sm text-green-600 mb-2">
+                                Found domain: <span className="font-mono">{ensName}</span>
+                              </div>
+                            </div>
+                            
+                            <Button 
+                              onClick={() => {
+                                // Trigger passport verification API call
+                                // This would call the existing /api/passport/verify endpoint
+                              }}
+                              className="w-full bg-green-600 hover:bg-green-700"
+                            >
+                              Activate Membership with Existing Passport
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <div className="text-sm text-blue-600">
+                                No Ipê City domain found for this wallet. You can claim a new passport.
+                              </div>
+                            </div>
+                            
+                            {/* Username Claiming Interface */}
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Choose your Ipê username:</label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="username"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                />
+                                <span className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-600">
+                                  .ipecity.eth
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <Button 
+                              className="w-full bg-blue-600 hover:bg-blue-700"
+                            >
+                              Check Availability & Claim Passport
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }}
+              </ConnectButton.Custom>
+            </div>
+          </div>
+        )}
       </div>
     );
   };

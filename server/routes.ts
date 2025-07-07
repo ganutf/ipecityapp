@@ -1207,6 +1207,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(
+        `Updating wallet renewal status to awaiting_permission_grant for member: ${member.ipeUsername}`,
+      );
+
+      // Step 1: Update status to awaiting_permission_grant (client will handle permission grant)
+      await storage.updateWalletRenewalStatus(farcasterFid, "awaiting_permission_grant");
+
+      res.json({ 
+        success: true, 
+        message: "Wallet renewal approved. Admin must grant TRANSFER permission and complete revoke/reserve process.",
+        status: "awaiting_permission_grant",
+        member: {
+          farcasterFid: member.farcasterFid,
+          ipeUsername: member.ipeUsername,
+          walletAddress: member.walletAddress,
+          newWalletAddress: member.newWalletAddress
+        }
+      });
+    } catch (e) {
+      console.error("Approve wallet renewal error:", e);
+      res.status(500).json({ error: "Failed to approve wallet renewal" });
+    }
+  });
+
+  // Get pending wallet renewals (admin only)
+  app.get("/api/admin/pending-wallet-renewals", async (req, res) => {
+    try {
+      const pendingRenewals = await storage.getPendingWalletRenewals();
+      res.json({ pendingRenewals });
+    } catch (error) {
+      console.error("Get pending wallet renewals error:", error);
+      res.status(500).json({ error: "Failed to get pending wallet renewals" });
+    }
+  });
+
+  // Complete revoke and reserve after permission grant (admin triggers from client)
+  app.post("/api/admin/complete-wallet-revoke-reserve", async (req, res) => {
+    try {
+      const { farcasterFid, siweMessage, siweSignature, adminAddress } = req.body;
+
+      if (!farcasterFid || !siweMessage || !siweSignature || !adminAddress) {
+        return res.status(400).json({ 
+          error: "farcasterFid, siweMessage, siweSignature, and adminAddress are required" 
+        });
+      }
+
+      // Get member and verify they're awaiting revoke/reserve
+      const member = await storage.getMember(farcasterFid);
+      if (!member || member.walletRenewalStatus !== "awaiting_revoke_reserve") {
+        return res.status(400).json({ 
+          error: "No wallet renewal awaiting revoke/reserve for this member" 
+        });
+      }
+
+      console.log(
         `Revoking and reserving ${member.ipeUsername}.ipecity.eth: ${member.walletAddress} → ${member.newWalletAddress}`,
       );
 
@@ -1236,7 +1290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!revokeResponse.ok) {
         console.error("JustaName revoke error:", revokeResult);
         // Reset status on failure
-        await storage.updateWalletRenewalStatus(farcasterFid, "pending_renewal");
+        await storage.updateWalletRenewalStatus(farcasterFid, "awaiting_permission_grant");
         return res
           .status(revokeResponse.status)
           .json({ error: revokeResult.error || "Failed to revoke subdomain" });
@@ -1278,20 +1332,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Subdomain revoked and reserved successfully. User must accept with new wallet.",
         status: "awaiting_new_acceptance"
       });
-    } catch (e) {
-      console.error("Approve wallet renewal error:", e);
-      res.status(500).json({ error: "Failed to approve wallet renewal" });
+
+    } catch (error) {
+      console.error("Complete revoke/reserve error:", error);
+      res.status(500).json({ error: "Failed to complete revoke/reserve" });
     }
   });
 
-  // Get pending wallet renewals (admin only)
-  app.get("/api/admin/pending-wallet-renewals", async (req, res) => {
+  // Update wallet renewal status (helper endpoint)
+  app.post("/api/admin/update-wallet-renewal-status", async (req, res) => {
     try {
-      const pendingRenewals = await storage.getPendingWalletRenewals();
-      res.json({ pendingRenewals });
+      const { farcasterFid, status } = req.body;
+
+      if (!farcasterFid || !status) {
+        return res.status(400).json({ 
+          error: "farcasterFid and status are required" 
+        });
+      }
+
+      await storage.updateWalletRenewalStatus(farcasterFid, status);
+
+      res.json({ success: true, status });
     } catch (error) {
-      console.error("Get pending wallet renewals error:", error);
-      res.status(500).json({ error: "Failed to get pending wallet renewals" });
+      console.error("Update wallet renewal status error:", error);
+      res.status(500).json({ error: "Failed to update status" });
     }
   });
 

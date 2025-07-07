@@ -15,7 +15,7 @@ import { createSiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
-import { useAcceptSubname, useUpdateSubname } from "@justaname.id/react";
+import { useAcceptSubname } from "@justaname.id/react";
 import { mainnet } from "viem/chains";
 import { ApplicationForm } from "@/components/ApplicationForm";
 import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users, RefreshCw } from "lucide-react";
@@ -26,6 +26,8 @@ interface Member {
   ipePassport?: string;
   passportVerified: boolean;
   status: string;
+  walletRenewalStatus?: "pending_renewal" | "renewal_approved" | null;
+  newWalletAddress?: string;
   ipeUsername?: string;
   email?: string;
   emailVerified: boolean;
@@ -65,12 +67,17 @@ export function PassportVerificationSection({
     ensName.endsWith(".ipecity.eth")
   );
 
+  // Status polling for pending wallet renewal
+  const { data: memberStatus } = useQuery({
+    queryKey: ["/api/members/check", farcasterFid],
+    enabled: !!farcasterFid && memberData?.walletRenewalStatus === "pending_renewal",
+    refetchInterval: 10000, // Poll every 10 seconds
+  });
 
-
-  // Update wallet in database after JustaName transfer
-  const updateWalletMutation = useMutation({
+  // Request wallet renewal mutation
+  const requestWalletRenewalMutation = useMutation({
     mutationFn: async (newWalletAddress: string) => {
-      return await apiRequest("/api/passport/update-wallet", {
+      return await apiRequest("/api/passport/request-wallet-update", {
         method: "POST",
         body: JSON.stringify({
           farcasterFid,
@@ -80,31 +87,22 @@ export function PassportVerificationSection({
     },
     onSuccess: () => {
       toast({
-        title: "Wallet Updated",
-        description: "Your passport has been successfully transferred to the new wallet.",
+        title: "Wallet Update Requested",
+        description: "Your wallet update request has been submitted for admin approval.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/members/check", farcasterFid] });
-      onVerificationComplete?.();
     },
     onError: (error: Error) => {
       toast({
-        title: "Database Error",
-        description: error.message || "Failed to update wallet in database",
+        title: "Error",
+        description: error.message || "Failed to request wallet update",
         variant: "destructive",
       });
     },
   });
 
-  // JustaName updateSubname hook for client-side subdomain transfer
-  const {
-    updateSubname,
-    isUpdateSubnamePending,
-  } = useUpdateSubname({ 
-    chainId: mainnet.id 
-  });
-
-  // Handle wallet transfer
-  const handleWalletTransfer = async () => {
+  // Handle wallet change request
+  const handleWalletUpdateRequest = () => {
     if (!isConnected || !address) {
       toast({
         title: "Connect Wallet",
@@ -117,39 +115,13 @@ export function PassportVerificationSection({
     if (address === memberData.walletAddress) {
       toast({
         title: "Same Wallet",
-        description: "This wallet is already registered to your passport",
+        description: "This is the same wallet currently registered to your passport",
         variant: "destructive",
       });
       return;
     }
 
-    if (!memberData.ipeUsername) {
-      toast({
-        title: "No Username",
-        description: "No username found for passport transfer",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Use JustaName hook to transfer subdomain
-      await updateSubname({
-        ens: `${memberData.ipeUsername}.ipecity.eth`,
-        addresses: [{ address: address as `0x${string}`, coinType: 60 }],
-      });
-      
-      // If successful, update database
-      await updateWalletMutation.mutateAsync(address);
-      
-    } catch (error) {
-      console.error("Wallet transfer error:", error);
-      toast({
-        title: "Transfer Failed",
-        description: error instanceof Error ? error.message : "Failed to transfer passport to new wallet",
-        variant: "destructive",
-      });
-    }
+    requestWalletRenewalMutation.mutate(address);
   };
 
   const renderPassportStatus = () => {
@@ -185,10 +157,28 @@ export function PassportVerificationSection({
 
         {memberData.walletAddress && (
           <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-sm text-gray-600">Current Passport Wallet</div>
+            <div className="text-sm text-gray-600">Registered Wallet</div>
             <div className="font-mono text-sm">
               {memberData.walletAddress.slice(0, 6)}...{memberData.walletAddress.slice(-4)}
             </div>
+          </div>
+        )}
+
+        {/* Wallet Renewal Status */}
+        {memberData.walletRenewalStatus === "pending_renewal" && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-orange-700">
+              <Clock className="h-4 w-4" />
+              <span className="font-medium">Wallet Update Pending</span>
+            </div>
+            <div className="text-sm text-orange-600 mt-1">
+              Admin approval required for wallet change
+            </div>
+            {memberData.newWalletAddress && (
+              <div className="text-xs text-orange-600 mt-1">
+                New wallet: {memberData.newWalletAddress.slice(0, 6)}...{memberData.newWalletAddress.slice(-4)}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -209,7 +199,7 @@ export function PassportVerificationSection({
 
         <div className="space-y-3">
           <div className="text-sm text-gray-600">
-            Transfer your passport to a different wallet instantly
+            Connect a different wallet to update your passport registration
           </div>
 
           {/* Current wallet connection status */}
@@ -261,27 +251,27 @@ export function PassportVerificationSection({
             <div className="space-y-2">
 
 
-              {/* Wallet transfer action */}
-              {address !== memberData.walletAddress && (
+              {/* Different actions based on wallet state */}
+              {address !== memberData.walletAddress && memberData.walletRenewalStatus !== "pending_renewal" && (
                 <Button
-                  onClick={handleWalletTransfer}
-                  disabled={isUpdateSubnamePending || updateWalletMutation.isPending}
+                  onClick={handleWalletUpdateRequest}
+                  disabled={requestWalletRenewalMutation.isPending}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
-                  {isUpdateSubnamePending || updateWalletMutation.isPending ? (
+                  {requestWalletRenewalMutation.isPending ? (
                     <div className="flex items-center gap-2">
                       <RefreshCw className="h-3 w-3 animate-spin" />
-                      {isUpdateSubnamePending ? "Transferring..." : "Updating Database..."}
+                      Requesting Update...
                     </div>
                   ) : (
-                    "Transfer Passport to This Wallet"
+                    "Request Passport Transfer"
                   )}
                 </Button>
               )}
 
               {address === memberData.walletAddress && (
                 <div className="text-xs text-green-600 p-2 bg-green-50 rounded-lg">
-                  ✓ This wallet owns your passport
+                  This wallet is already registered to your passport
                 </div>
               )}
             </div>

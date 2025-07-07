@@ -1117,10 +1117,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  /* ────────────────────────────────  WALLET UPDATE ENDPOINTS  ──────────────────────────────── */
+  /* ────────────────────────────────  WALLET RENEWAL ENDPOINTS  ──────────────────────────────── */
 
-  // Update wallet address (user action after JustaName transfer)
-  app.post("/api/passport/update-wallet", async (req, res) => {
+  // Request wallet renewal (user action)
+  app.post("/api/passport/request-wallet-update", async (req, res) => {
     try {
       const { farcasterFid, newWalletAddress } = req.body;
 
@@ -1130,18 +1130,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "FID and new wallet address required" });
       }
 
-      const updatedMember = await storage.updateMember(farcasterFid, {
-        walletAddress: newWalletAddress,
-      });
-      
-      res.json({ success: true, member: updatedMember });
+      const member = await storage.requestWalletRenewal(
+        farcasterFid,
+        newWalletAddress,
+      );
+      res.json({ success: true, member });
     } catch (error) {
-      console.error("Update wallet error:", error);
-      res.status(500).json({ error: "Failed to update wallet address" });
+      console.error("Request wallet renewal error:", error);
+      res.status(500).json({ error: "Failed to request wallet renewal" });
     }
   });
 
+  /* ─────────────────────  JUSTANAME SIWE CHALLENGE  ───────────────────── */
+  app.post("/api/justaname/siwe-challenge", async (req, res) => {
+    try {
+      const { adminAddress, origin = "https://your-frontend.tld" } = req.body;
+      if (!adminAddress) {
+        return res.status(400).json({ error: "adminAddress is required" });
+      }
 
+      const r = await fetch(
+        "https://api.justaname.id/ens/v1/siwe/request-challenge",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            domain: "justaname", // literally "justaname"
+            address: adminAddress,
+            origin,
+            chainId: 1,
+          }),
+        },
+      );
+
+      if (!r.ok) {
+        const e = await r.text();
+        throw new Error(`Challenge request failed: ${e}`);
+      }
+
+      const data = await r.json(); // { result: { data: { challenge: string } } }
+      res.json({ challenge: data.result.data.challenge });
+    } catch (e) {
+      console.error("SIWE challenge error:", e);
+      res.status(500).json({ error: "Could not fetch challenge" });
+    }
+  });
+
+  // Approve wallet renewal (admin action)
+  /* ──────────────────  APPROVE WALLET RENEWAL (ADMIN)  ────────────────── */
+  app.post("/api/admin/approve-wallet-update", async (req, res) => {
+    try {
+      const { farcasterFid, siweSignature, siweMessage, adminAddress } =
+        req.body;
+
+      if (!farcasterFid) {
+        return res.status(400).json({ error: "FID is required" });
+      }
+      if (!siweSignature || !siweMessage || !adminAddress) {
+        return res
+          .status(400)
+          .json({
+            error: "siweSignature, siweMessage, and adminAddress are required",
+          });
+      }
+
+      // ── Pull the member awaiting renewal ────────────────────────────────
+      const member = await storage.getMember(farcasterFid);
+      if (
+        !member ||
+        !member.newWalletAddress ||
+        member.walletRenewalStatus !== "pending_renewal"
+      ) {
+        return res
+          .status(400)
+          .json({ error: "No pending wallet renewal found for this member" });
+      }
+
+      console.log(
+        `Updating ${member.ipeUsername}.ipecity.eth → ${member.newWalletAddress}`,
+      );
+
+      const headerSafeMessage = siweMessage.replace(/\n/g, "\\n");
+
+      // ── Call JustaName /subname/update ───────────────────────────────────
+      const r = await fetch("https://api.justaname.id/ens/v1/subname/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.JUSTANAME_API_KEY ?? "",
+          "x-signature": siweSignature,
+          "x-message": headerSafeMessage,
+          "x-address": adminAddress,
+        },
+        body: JSON.stringify({
+          username: member.ipeUsername,
+          ensDomain: "ipecity.eth",
+          chainId: 1,
+          // NEW spec: supply addresses array (coinType 60 = ETH)
+          addresses: [{ address: member.newWalletAddress, coinType: 60 }],
+        }),
+      });
+
+      const justanameJSON = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        console.error("JustaName error:", justanameJSON);
+        return res
+          .status(r.status)
+          .json({ error: justanameJSON.error || "JustaName update failed" });
+      }
+      console.log("JustaName update ok:", justanameJSON);
+
+      // ── Persist the change locally ──────────────────────────────────────
+      await storage.approveWalletRenewal(farcasterFid);
+      const updatedMember = await storage.updateMember(farcasterFid, {
+        walletAddress: member.newWalletAddress,
+        newWalletAddress: null,
+        walletRenewalStatus: null,
+      });
+
+      res.json({ success: true, member: updatedMember });
+    } catch (e) {
+      console.error("Approve wallet renewal error:", e);
+      res.status(500).json({ error: "Failed to approve wallet renewal" });
+    }
+  });
+
+  // Get pending wallet renewals (admin only)
+  app.get("/api/admin/pending-wallet-renewals", async (req, res) => {
+    try {
+      const pendingRenewals = await storage.getPendingWalletRenewals();
+      res.json({ pendingRenewals });
+    } catch (error) {
+      console.error("Get pending wallet renewals error:", error);
+      res.status(500).json({ error: "Failed to get pending wallet renewals" });
+    }
+  });
 
   // Request email verification
   app.post("/api/auth/request-email-verification", async (req, res) => {

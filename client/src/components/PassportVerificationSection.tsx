@@ -11,7 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAccount, useSignMessage, useDisconnect } from "wagmi";
-import { createSiweMessage, verifySiweMessage } from "viem/siwe";
+import { SiweMessage, generateNonce } from "siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
@@ -79,21 +79,24 @@ export function PassportVerificationSection({
         throw new Error("No ENS domain found for this wallet");
       }
 
-      // Create SIWE message for signature verification
-      const message = createSiweMessage({
-        address: walletAddress as `0x${string}`,
-        chainId: mainnet.id,
+      // Create SIWE message object
+      const siwe = new SiweMessage({
         domain: window.location.host,
+        address: walletAddress,
         uri: window.location.origin,
         version: "1",
+        chainId: mainnet.id,
         statement: `Verify ownership of ${ensName} for Ipe City membership activation.`,
-        nonce: Math.random().toString(36).substring(2, 15),
+        nonce: generateNonce(),
       });
+
+      // Get the canonical string to sign
+      const message = siwe.prepareMessage();
 
       // Request signature from user's wallet
       return new Promise((resolve, reject) => {
         signMessage(
-          { message },
+          { message }, // now a plain string
           {
             onSuccess: async (signature) => {
               try {
@@ -104,8 +107,9 @@ export function PassportVerificationSection({
                     farcasterFid,
                     ensName,
                     walletAddress,
-                    message,
+                    message, // the prepared string
                     signature,
+                    siwe, // optional but handy on the server
                   }),
                 });
                 resolve(response);

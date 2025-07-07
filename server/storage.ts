@@ -386,25 +386,11 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
 
-  async updateWalletRenewalStatus(farcasterFid: number, status: string): Promise<Member> {
+  async approveWalletRenewal(farcasterFid: number): Promise<Member> {
     const [member] = await db
       .update(members)
       .set({ 
-        walletRenewalStatus: status,
-        updatedAt: new Date() 
-      })
-      .where(eq(members.farcasterFid, farcasterFid))
-      .returning();
-    return member;
-  }
-
-  async completeWalletRenewal(farcasterFid: number, newWalletAddress: string): Promise<Member> {
-    const [member] = await db
-      .update(members)
-      .set({ 
-        walletAddress: newWalletAddress,
-        newWalletAddress: null,
-        walletRenewalStatus: "completed",
+        walletRenewalStatus: "renewal_approved",
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, farcasterFid))
@@ -417,13 +403,6 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(members)
       .where(eq(members.walletRenewalStatus, "pending_renewal"));
-  }
-
-  async getMembersAwaitingAcceptance(): Promise<Member[]> {
-    return await db
-      .select()
-      .from(members)
-      .where(eq(members.walletRenewalStatus, "awaiting_new_acceptance"));
   }
 }
 

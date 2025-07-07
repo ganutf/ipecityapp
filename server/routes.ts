@@ -1207,16 +1207,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(
-        `Revoking and reserving ${member.ipeUsername}.ipecity.eth: ${member.walletAddress} → ${member.newWalletAddress}`,
+        `Updating ${member.ipeUsername}.ipecity.eth → ${member.newWalletAddress}`,
       );
 
       const headerSafeMessage = siweMessage.replace(/\n/g, "\\n");
 
-      // Step 1: Update status to revoking_subdomain
-      await storage.updateWalletRenewalStatus(farcasterFid, "revoking_subdomain");
-
-      // Step 2: Revoke current subdomain
-      const revokeResponse = await fetch("https://api.justaname.id/ens/v1/subname/revoke", {
+      // ── Call JustaName /subname/update ───────────────────────────────────
+      const r = await fetch("https://api.justaname.id/ens/v1/subname/update", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1229,55 +1226,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: member.ipeUsername,
           ensDomain: "ipecity.eth",
           chainId: 1,
-        }),
-      });
-
-      const revokeResult = await revokeResponse.json().catch(() => ({}));
-      if (!revokeResponse.ok) {
-        console.error("JustaName revoke error:", revokeResult);
-        // Reset status on failure
-        await storage.updateWalletRenewalStatus(farcasterFid, "pending_renewal");
-        return res
-          .status(revokeResponse.status)
-          .json({ error: revokeResult.error || "Failed to revoke subdomain" });
-      }
-      console.log("JustaName revoke successful:", revokeResult);
-
-      // Step 3: Reserve subdomain for new wallet
-      const reserveResponse = await fetch("https://api.justaname.id/ens/v1/subname/reserve", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.JUSTANAME_API_KEY ?? "",
-          "x-signature": siweSignature,
-          "x-message": headerSafeMessage,
-          "x-address": adminAddress,
-        },
-        body: JSON.stringify({
-          username: member.ipeUsername,
-          ensDomain: "ipecity.eth",
-          chainId: 1,
+          // NEW spec: supply addresses array (coinType 60 = ETH)
           addresses: [{ address: member.newWalletAddress, coinType: 60 }],
         }),
       });
 
-      const reserveResult = await reserveResponse.json().catch(() => ({}));
-      if (!reserveResponse.ok) {
-        console.error("JustaName reserve error:", reserveResult);
+      const justanameJSON = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        console.error("JustaName error:", justanameJSON);
         return res
-          .status(reserveResponse.status)
-          .json({ error: reserveResult.error || "Failed to reserve subdomain" });
+          .status(r.status)
+          .json({ error: justanameJSON.error || "JustaName update failed" });
       }
-      console.log("JustaName reserve successful:", reserveResult);
+      console.log("JustaName update ok:", justanameJSON);
 
-      // Step 4: Update status to awaiting_new_acceptance
-      await storage.updateWalletRenewalStatus(farcasterFid, "awaiting_new_acceptance");
-
-      res.json({ 
-        success: true, 
-        message: "Subdomain revoked and reserved successfully. User must accept with new wallet.",
-        status: "awaiting_new_acceptance"
+      // ── Persist the change locally ──────────────────────────────────────
+      await storage.approveWalletRenewal(farcasterFid);
+      const updatedMember = await storage.updateMember(farcasterFid, {
+        walletAddress: member.newWalletAddress,
+        newWalletAddress: null,
+        walletRenewalStatus: null,
       });
+
+      res.json({ success: true, member: updatedMember });
     } catch (e) {
       console.error("Approve wallet renewal error:", e);
       res.status(500).json({ error: "Failed to approve wallet renewal" });
@@ -1292,73 +1263,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get pending wallet renewals error:", error);
       res.status(500).json({ error: "Failed to get pending wallet renewals" });
-    }
-  });
-
-  // Accept wallet renewal (user endpoint - reuses passport acceptance pattern)
-  app.post("/api/passport/accept-wallet-renewal", async (req, res) => {
-    try {
-      const { farcasterFid, walletAddress, ensName, signature, message } = req.body;
-
-      if (!farcasterFid || !walletAddress || !ensName) {
-        return res.status(400).json({ 
-          error: "farcasterFid, walletAddress, and ensName are required" 
-        });
-      }
-
-      // Get member and verify they're awaiting acceptance
-      const member = await storage.getMember(farcasterFid);
-      if (!member || member.walletRenewalStatus !== "awaiting_new_acceptance") {
-        return res.status(400).json({ 
-          error: "No wallet renewal awaiting acceptance for this member" 
-        });
-      }
-
-      // Verify the wallet address matches the requested new wallet
-      if (member.newWalletAddress !== walletAddress) {
-        return res.status(400).json({ 
-          error: "Wallet address doesn't match the reserved renewal request" 
-        });
-      }
-
-      console.log(`Accepting wallet renewal for ${member.ipeUsername}: ${walletAddress}`);
-
-      // Call JustaName accept API (reusing existing pattern)
-      const acceptResponse = await fetch("https://api.justaname.id/ens/v1/subname/accept", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.JUSTANAME_API_KEY ?? "",
-        },
-        body: JSON.stringify({
-          username: member.ipeUsername,
-          ensDomain: "ipecity.eth",
-          chainId: 1,
-        }),
-      });
-
-      const acceptResult = await acceptResponse.json().catch(() => ({}));
-      if (!acceptResponse.ok) {
-        console.error("JustaName accept error:", acceptResult);
-        return res.status(acceptResponse.status).json({ 
-          error: acceptResult.error || "Failed to accept subdomain" 
-        });
-      }
-
-      console.log("JustaName accept successful:", acceptResult);
-
-      // Complete the wallet renewal in database
-      await storage.completeWalletRenewal(farcasterFid, walletAddress);
-
-      res.json({ 
-        success: true, 
-        message: "Wallet renewal completed successfully",
-        ensName: `${member.ipeUsername}.ipecity.eth`
-      });
-
-    } catch (error) {
-      console.error("Accept wallet renewal error:", error);
-      res.status(500).json({ error: "Failed to accept wallet renewal" });
     }
   });
 

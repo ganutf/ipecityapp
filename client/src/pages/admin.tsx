@@ -5,7 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAddMAppPermission } from "@justaname.id/react";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -28,15 +27,6 @@ export default function AdminPage() {
   // Wallet connection for subdomain reservation
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
-
-  /* ──────────────────  JUSTANAME permission helper  ────────────────── */
-  const { addMAppPermission } = useAddMAppPermission({
-    chainId: 1,
-    // the wallet that will RECEIVE the permission (admin wallet).
-    // While `address` may be `undefined` on first render, the hook will
-    // refresh automatically as soon as the wallet connects.
-    mApp: address ?? "0x7582Cde92962A71143185A6f8F397F52cC86ECFf",
-  });
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -155,31 +145,12 @@ export default function AdminPage() {
       }
       return response.json();
     },
-    onSuccess: async (_data, vars) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-
-      // 2️⃣  immediately grant TRANSFER permission to the admin wallet
-      try {
-        if (vars.ipeUsername && address) {
-          await addMAppPermission({
-            subname: `${vars.ipeUsername}.ipecity.eth`, // full sub-domain
-          });
-        }
-
-        toast({
-          title: "Success",
-          description:
-            "Member approved, sub-domain reserved and TRANSFER permission granted.",
-        });
-      } catch (err: any) {
-        toast({
-          title: "Warning",
-          description:
-            err?.message ??
-            "Sub-domain reserved, but failed to add TRANSFER permission.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Success",
+        description: "Member approved and subdomain reserved",
+      });
     },
     onError: (error: Error) => {
       toast({

@@ -62,8 +62,9 @@ export const members = pgTable("members", {
   ipePassport: varchar("ipe_passport", { length: 255 }),
   
   // Wallet renewal system
+  // Valid states: pending_renewal, revoking_subdomain, awaiting_new_acceptance, completed
   newWalletAddress: varchar("new_wallet_address", { length: 255 }),
-  walletRenewalStatus: varchar("wallet_renewal_status", { length: 20 }),
+  walletRenewalStatus: varchar("wallet_renewal_status", { length: 30 }),
   
   // Profile/Application fields
   bio: text("bio"),

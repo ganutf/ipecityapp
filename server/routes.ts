@@ -50,7 +50,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         environment: process.env.NODE_ENV || "development",
       });
     } catch (error) {
-      console.error(`Health check failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        `Health check failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
       res.status(503).json({
         status: "unhealthy",
         timestamp: new Date().toISOString(),
@@ -450,8 +452,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               try {
                 const member = await storage.getMember(fid);
                 if (member && member.status === "pending_signer") {
-                  await storage.updateMemberStatus(fid, "pending_id_verification");
-                  console.log("Updated member status to pending_id_verification");
+                  await storage.updateMemberStatus(
+                    fid,
+                    "pending_id_verification",
+                  );
+                  console.log(
+                    "Updated member status to pending_id_verification",
+                  );
                 }
               } catch (memberError) {
                 console.error("Error updating member status:", memberError);
@@ -785,17 +792,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (e) {
             errorData = { error: reserveResponseText };
           }
-          
+
           console.log("Debug - Status:", reserveResponse.status);
-          console.log("Debug - Error data:", JSON.stringify(errorData, null, 2));
+          console.log(
+            "Debug - Error data:",
+            JSON.stringify(errorData, null, 2),
+          );
           console.log("Debug - Result error:", errorData.result?.error);
           console.log("Debug - Direct error:", errorData.error);
-          
+
           // If subdomain already exists, that's actually success - continue with approval
-          if (reserveResponse.status === 409 && 
-              (errorData.result?.error?.includes('SubdomainAlreadyExistsException') || 
-               errorData.error?.includes('SubdomainAlreadyExistsException'))) {
-            console.log(`Subdomain ${ipeUsername}.ipecity.eth already exists - proceeding with approval`);
+          if (
+            reserveResponse.status === 409 &&
+            (errorData.result?.error?.includes(
+              "SubdomainAlreadyExistsException",
+            ) ||
+              errorData.error?.includes("SubdomainAlreadyExistsException"))
+          ) {
+            console.log(
+              `Subdomain ${ipeUsername}.ipecity.eth already exists - proceeding with approval`,
+            );
           } else {
             console.log("Throwing error because condition not met");
             throw new Error(
@@ -838,7 +854,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "FarcasterFid required" });
       }
 
-      console.log(`Processing subdomain acceptance status update for FID: ${farcasterFid}`);
+      console.log(
+        `Processing subdomain acceptance status update for FID: ${farcasterFid}`,
+      );
 
       // Get member details
       const member = await storage.getMember(farcasterFid);
@@ -848,7 +866,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if member is in approved_application state
       if (member.status !== "approved_application") {
-        return res.status(400).json({ error: "Member is not in approved_application state" });
+        return res
+          .status(400)
+          .json({ error: "Member is not in approved_application state" });
       }
 
       // Update status to member after client-side JustaName acceptance
@@ -958,14 +978,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!farcasterFid || !memberType) {
         console.error("Missing farcasterFid or memberType in request");
-        return res.status(400).json({ error: "FarcasterFid and memberType required" });
+        return res
+          .status(400)
+          .json({ error: "FarcasterFid and memberType required" });
       }
 
-      if (!['architect', 'explorer'].includes(memberType)) {
-        return res.status(400).json({ error: "Invalid member type. Must be 'architect' or 'explorer'" });
+      if (!["architect", "explorer"].includes(memberType)) {
+        return res
+          .status(400)
+          .json({
+            error: "Invalid member type. Must be 'architect' or 'explorer'",
+          });
       }
 
-      console.log(`Processing approval for FID: ${farcasterFid} as ${memberType}`);
+      console.log(
+        `Processing approval for FID: ${farcasterFid} as ${memberType}`,
+      );
 
       // Get member details
       const member = await storage.getMember(farcasterFid);
@@ -981,38 +1009,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userWalletAddress = member.walletAddress;
 
       if (!userWalletAddress) {
-        return res.status(400).json({ error: "Member wallet address required for subdomain reservation" });
+        return res
+          .status(400)
+          .json({
+            error: "Member wallet address required for subdomain reservation",
+          });
       }
 
-      console.log(`Reserving subdomain ${subdomain} for wallet ${userWalletAddress}`);
+      console.log(
+        `Reserving subdomain ${subdomain} for wallet ${userWalletAddress}`,
+      );
 
-      const justanameResponse = await fetch("https://api.justaname.id/api/v1/subname/reserve", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.JUSTANAME_API_KEY}`,
+      const justanameResponse = await fetch(
+        "https://api.justaname.id/api/v1/subname/reserve",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.JUSTANAME_API_KEY}`,
+          },
+          body: JSON.stringify({
+            username: subdomain,
+            ensDomain: "ipecity.eth",
+            chainId: 1,
+            userAddress: userWalletAddress,
+          }),
         },
-        body: JSON.stringify({
-          username: subdomain,
-          ensDomain: "ipecity.eth",
-          chainId: 1,
-          userAddress: userWalletAddress,
-        }),
-      });
+      );
 
       if (!justanameResponse.ok) {
         const errorData = await justanameResponse.json();
         console.error("JustaName reserve error:", errorData);
-        return res.status(500).json({ error: `Failed to reserve subdomain: ${errorData.error || 'Unknown error'}` });
+        return res
+          .status(500)
+          .json({
+            error: `Failed to reserve subdomain: ${errorData.error || "Unknown error"}`,
+          });
       }
 
       const justanameData = await justanameResponse.json();
-      console.log("JustaName reserve response:", JSON.stringify(justanameData, null, 2));
+      console.log(
+        "JustaName reserve response:",
+        JSON.stringify(justanameData, null, 2),
+      );
 
       // Update member status and type
       console.log("Updating member status to approved_application...");
-      const updatedMember = await storage.approveApplication(farcasterFid, memberType);
-      console.log(`Member updated successfully. New status: ${updatedMember.status}, type: ${updatedMember.memberType}`);
+      const updatedMember = await storage.approveApplication(
+        farcasterFid,
+        memberType,
+      );
+      console.log(
+        `Member updated successfully. New status: ${updatedMember.status}, type: ${updatedMember.memberType}`,
+      );
 
       // Construct the ENS name
       const ensName = `${subdomain}.ipecity.eth`;
@@ -1069,17 +1118,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /* ────────────────────────────────  WALLET RENEWAL ENDPOINTS  ──────────────────────────────── */
-  
+
   // Request wallet renewal (user action)
   app.post("/api/passport/request-wallet-update", async (req, res) => {
     try {
       const { farcasterFid, newWalletAddress } = req.body;
 
       if (!farcasterFid || !newWalletAddress) {
-        return res.status(400).json({ error: "FID and new wallet address required" });
+        return res
+          .status(400)
+          .json({ error: "FID and new wallet address required" });
       }
 
-      const member = await storage.requestWalletRenewal(farcasterFid, newWalletAddress);
+      const member = await storage.requestWalletRenewal(
+        farcasterFid,
+        newWalletAddress,
+      );
       res.json({ success: true, member });
     } catch (error) {
       console.error("Request wallet renewal error:", error);
@@ -1087,77 +1141,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Approve wallet renewal (admin action) 
+  /* ─────────────────────  JUSTANAME SIWE CHALLENGE  ───────────────────── */
+  app.post("/api/justaname/siwe-challenge", async (req, res) => {
+    try {
+      const { adminAddress, origin = "https://your-frontend.tld" } = req.body;
+      if (!adminAddress) {
+        return res.status(400).json({ error: "adminAddress is required" });
+      }
+
+      const r = await fetch(
+        "https://api.justaname.id/ens/v1/siwe/request-challenge",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            domain: "justaname", // literally "justaname"
+            address: adminAddress,
+            origin,
+            chainId: 1,
+          }),
+        },
+      );
+
+      if (!r.ok) {
+        const e = await r.text();
+        throw new Error(`Challenge request failed: ${e}`);
+      }
+
+      const data = await r.json(); // { result: { data: { challenge: string } } }
+      res.json({ challenge: data.result.data.challenge });
+    } catch (e) {
+      console.error("SIWE challenge error:", e);
+      res.status(500).json({ error: "Could not fetch challenge" });
+    }
+  });
+
+  // Approve wallet renewal (admin action)
+  /* ──────────────────  APPROVE WALLET RENEWAL (ADMIN)  ────────────────── */
   app.post("/api/admin/approve-wallet-update", async (req, res) => {
     try {
-      const { farcasterFid, adminSignature, adminMessage, adminAddress } = req.body;
+      const { farcasterFid, siweSignature, siweMessage, adminAddress } =
+        req.body;
 
       if (!farcasterFid) {
         return res.status(400).json({ error: "FID is required" });
       }
+      if (!siweSignature || !siweMessage || !adminAddress) {
+        return res
+          .status(400)
+          .json({
+            error: "siweSignature, siweMessage, and adminAddress are required",
+          });
+      }
 
-      // Get member with pending wallet renewal
+      // ── Pull the member awaiting renewal ────────────────────────────────
       const member = await storage.getMember(farcasterFid);
-      if (!member || !member.newWalletAddress || member.walletRenewalStatus !== "pending_renewal") {
-        return res.status(400).json({ error: "No pending wallet renewal found for this member" });
+      if (
+        !member ||
+        !member.newWalletAddress ||
+        member.walletRenewalStatus !== "pending_renewal"
+      ) {
+        return res
+          .status(400)
+          .json({ error: "No pending wallet renewal found for this member" });
       }
 
-      if (!adminSignature || !adminMessage || !adminAddress) {
-        return res.status(400).json({ 
-          error: "Admin wallet signature, message, and address are required" 
-        });
-      }
+      console.log(
+        `Updating ${member.ipeUsername}.ipecity.eth → ${member.newWalletAddress}`,
+      );
 
-      console.log(`Processing wallet update for FID: ${farcasterFid}`);
-      console.log(`Old wallet: ${member.walletAddress}`);
-      console.log(`New wallet: ${member.newWalletAddress}`);
-      console.log(`Username: ${member.ipeUsername}`);
-      console.log(`Admin address: ${adminAddress}`);
-      
-      // Construct the full subdomain name
-      const fullSubdomain = `${member.ipeUsername}.ipecity.eth`;
-      console.log(`Full subdomain: ${fullSubdomain}`);
-
-      // Transfer subdomain ownership via JustaName API using the update endpoint
-      const justanameResponse = await fetch("https://api.justaname.id/ens/v1/subname/update", {
+      // ── Call JustaName /subname/update ───────────────────────────────────
+      const r = await fetch("https://api.justaname.id/ens/v1/subname/update", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": process.env.JUSTANAME_API_KEY!,
-          "x-signature": adminSignature,
-          "x-message": adminMessage,
+          "x-api-key": process.env.JUSTANAME_API_KEY ?? "",
+          "x-signature": siweSignature,
+          "x-message": siweMessage,
           "x-address": adminAddress,
-        } as HeadersInit,
+        },
         body: JSON.stringify({
           username: member.ipeUsername,
           ensDomain: "ipecity.eth",
           chainId: 1,
-          userAddress: member.newWalletAddress,
+          // NEW spec: supply addresses array (coinType 60 = ETH)
+          addresses: [{ address: member.newWalletAddress, coinType: 60 }],
         }),
       });
 
-      if (!justanameResponse.ok) {
-        const errorData = await justanameResponse.json();
-        console.error("JustaName update error:", errorData);
-        return res.status(500).json({ error: `Failed to update subdomain: ${errorData.error || 'Unknown error'}` });
+      const justanameJSON = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        console.error("JustaName error:", justanameJSON);
+        return res
+          .status(r.status)
+          .json({ error: justanameJSON.error || "JustaName update failed" });
       }
+      console.log("JustaName update ok:", justanameJSON);
 
-      const justanameData = await justanameResponse.json();
-      console.log("JustaName update response:", JSON.stringify(justanameData, null, 2));
-
-      // Update member with new wallet address and approval status
-      const updatedMember = await storage.approveWalletRenewal(farcasterFid);
-      
-      // Update the actual wallet address to the new one
-      await storage.updateMember(farcasterFid, {
+      // ── Persist the change locally ──────────────────────────────────────
+      await storage.approveWalletRenewal(farcasterFid);
+      const updatedMember = await storage.updateMember(farcasterFid, {
         walletAddress: member.newWalletAddress,
-        newWalletAddress: null, // Clear the temporary field
-        walletRenewalStatus: null, // Clear renewal status 
+        newWalletAddress: null,
+        walletRenewalStatus: null,
       });
 
       res.json({ success: true, member: updatedMember });
-    } catch (error) {
-      console.error("Approve wallet renewal error:", error);
+    } catch (e) {
+      console.error("Approve wallet renewal error:", e);
       res.status(500).json({ error: "Failed to approve wallet renewal" });
     }
   });
@@ -1387,11 +1478,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Check if their signer is approved
           const userSigner = await storage.getUserSigner(farcasterFid);
           if (userSigner && userSigner.status === "approved") {
-            member = await storage.updateMemberStatus(farcasterFid, "pending_id_verification");
-            console.log(`Auto-promoted FID ${farcasterFid} from pending_signer to pending_id_verification (signer approved)`);
+            member = await storage.updateMemberStatus(
+              farcasterFid,
+              "pending_id_verification",
+            );
+            console.log(
+              `Auto-promoted FID ${farcasterFid} from pending_signer to pending_id_verification (signer approved)`,
+            );
           }
         } catch (signerError) {
-          console.error("Error checking signer status for promotion:", signerError);
+          console.error(
+            "Error checking signer status for promotion:",
+            signerError,
+          );
         }
       }
 
@@ -1403,7 +1502,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (member as any).status !== "active_member"
       ) {
         try {
-          member = await storage.updateMemberStatus(farcasterFid, "active_member");
+          member = await storage.updateMemberStatus(
+            farcasterFid,
+            "active_member",
+          );
           console.log(
             `Auto-promoted FID ${farcasterFid} to active_member status (both verifications complete)`,
           );
@@ -1512,8 +1614,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to confirm email verification" });
     }
   });
-
-
 
   // Check Ipê passport availability
   app.get("/api/passport/check/:passport", async (req, res) => {
@@ -1679,19 +1779,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/passport/verify", async (req, res) => {
     try {
       console.log("Passport verify request body:", req.body);
-      const { farcasterFid, ensName, walletAddress, message, signature } = req.body;
+      const { farcasterFid, ensName, walletAddress, message, signature } =
+        req.body;
 
-      if (!farcasterFid || !ensName || !walletAddress || !message || !signature) {
-        console.log("Missing fields:", { 
-          farcasterFid: !!farcasterFid, 
-          ensName: !!ensName, 
+      if (
+        !farcasterFid ||
+        !ensName ||
+        !walletAddress ||
+        !message ||
+        !signature
+      ) {
+        console.log("Missing fields:", {
+          farcasterFid: !!farcasterFid,
+          ensName: !!ensName,
           walletAddress: !!walletAddress,
           message: !!message,
-          signature: !!signature
+          signature: !!signature,
         });
         return res
           .status(400)
-          .json({ error: "FID, ENS name, wallet address, message, and signature are required" });
+          .json({
+            error:
+              "FID, ENS name, wallet address, message, and signature are required",
+          });
       }
 
       // Verify the ENS domain is an Ipê City domain
@@ -1707,53 +1817,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Received message for SIWE verification:", message);
         console.log("Received signature length:", signature.length);
         console.log("Expected wallet address:", walletAddress);
-        
+
         const siweMessage = new SiweMessage(message);
         console.log("Parsed SIWE message:", {
           address: siweMessage.address,
           statement: siweMessage.statement,
           domain: siweMessage.domain,
         });
-        
+
         // Verify signature with enhanced error handling for smart contract wallets
         const verificationResult = await siweMessage.verify({ signature });
-        
+
         console.log("SIWE verification result:", verificationResult);
-        
+
         if (!verificationResult.success) {
           console.error("SIWE verification failed:", verificationResult.error);
-          
+
           // For smart contract wallets, also verify via ENS lookup as fallback
-          console.log("Attempting ENS lookup fallback for smart contract wallet...");
+          console.log(
+            "Attempting ENS lookup fallback for smart contract wallet...",
+          );
           try {
-            const baseUrl = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
-            const ensResponse = await fetch(`${baseUrl}/api/ens/lookup/${walletAddress}`);
+            const baseUrl = process.env.REPLIT_DEV_DOMAIN
+              ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+              : "http://localhost:5000";
+            const ensResponse = await fetch(
+              `${baseUrl}/api/ens/lookup/${walletAddress}`,
+            );
             const ensData = await ensResponse.json();
-            
+
             if (ensData.ensName === ensName) {
-              console.log("ENS lookup fallback successful - smart contract wallet verified");
+              console.log(
+                "ENS lookup fallback successful - smart contract wallet verified",
+              );
             } else {
-              return res.status(400).json({ 
-                error: "Signature verification failed and ENS lookup does not match" 
+              return res.status(400).json({
+                error:
+                  "Signature verification failed and ENS lookup does not match",
               });
             }
           } catch (ensError) {
-            return res.status(400).json({ 
-              error: "Signature verification failed and ENS lookup unavailable" 
+            return res.status(400).json({
+              error: "Signature verification failed and ENS lookup unavailable",
             });
           }
         } else {
           // Verify the wallet address matches
-          if (siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()) {
+          if (
+            siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()
+          ) {
             return res.status(400).json({ error: "Wallet address mismatch" });
           }
 
           // Verify the ENS domain is mentioned in the statement
           if (!siweMessage.statement?.includes(ensName)) {
-            return res.status(400).json({ error: "ENS domain not verified in signature" });
+            return res
+              .status(400)
+              .json({ error: "ENS domain not verified in signature" });
           }
         }
-        
+
         console.log("Wallet ownership verification successful");
       } catch (error) {
         console.error("SIWE verification error:", error);
@@ -1783,7 +1906,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         success: true,
-        message: "Passport verified successfully - active member status granted",
+        message:
+          "Passport verified successfully - active member status granted",
         member: updatedMember,
       });
     } catch (error) {

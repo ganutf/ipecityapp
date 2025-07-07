@@ -465,19 +465,16 @@ The application follows a monorepo structure with clear separation between clien
   - **TypeScript Compliance**: Corrected method implementations and variable declarations throughout storage layer
   - **Server Stability**: Application now runs without TypeScript compilation errors, confirmed successful startup
   - **Production Ready**: All storage operations properly implemented with correct type signatures and error handling
-- July 6, 2025. **WALLET TRANSFER SYSTEM IMPLEMENTATION**: Complete admin-managed wallet renewal system for passport transfers:
-  - **Database Schema Extension**: Added `walletRenewalStatus` and `newWalletAddress` fields to members table
-  - **Three-Stage Workflow**: User requests wallet change → Admin approves via JustaName subdomain transfer → Wallet address updated in database
-  - **Storage Layer Enhancement**: Added `requestWalletRenewal()`, `approveWalletRenewal()`, and `getPendingWalletRenewals()` methods
-  - **API Endpoints**: User wallet update request endpoint and admin approval endpoint with JustaName integration
-  - **PassportVerificationSection Restructure**: Separated passport status display from wallet management interface
-  - **Admin Dashboard Integration**: Added pending wallet renewals section with approve functionality
-  - **Multi-Device Support**: Members tied to Farcaster FID, enabling same account access across different wallets
-  - **Security Oversight**: All wallet transfers require admin approval before JustaName subdomain ownership change
-  - **JustaName API Authentication**: Implemented admin wallet signature authentication with x-signature, x-message, x-address headers
-  - **Admin Wallet Integration**: Added ConnectButton and signMessage functionality for cryptographic approval authentication
-  - **Enhanced UX**: Approve button disables when wallet disconnected with clear messaging about signature requirements
-  - **Production Ready**: Complete wallet transfer workflow operational with proper cryptographic authentication and error handling
+- July 7, 2025. **SIMPLIFIED CLIENT-SIDE WALLET TRANSFER SYSTEM**: Complete migration from admin approval to direct user control:
+  - **Database Schema Cleanup**: Removed `walletRenewalStatus` and `newWalletAddress` columns - no longer needed
+  - **Removed Admin Approval Flow**: Eliminated complex admin signature authentication and pending approval system
+  - **Direct JustaName Integration**: Users now transfer passports directly using `useUpdateSubname` hook with correct API pattern
+  - **Simplified Storage Layer**: Removed wallet renewal methods, only kept direct wallet address update endpoint
+  - **User-Controlled Transfers**: Users connect new wallet and transfer passport instantly without admin involvement
+  - **Real-time Subdomain Updates**: Passport ownership changes immediately through JustaName API with user's own wallet signature
+  - **Streamlined Admin Dashboard**: Removed wallet renewal sections focusing on pulse and member management only
+  - **Enhanced UX**: Single "Transfer Passport to This Wallet" button for immediate passport migration
+  - **Production Ready**: Complete client-side workflow using proper JustaName documentation patterns with ENS domain specification
 
 ## User Preferences
 

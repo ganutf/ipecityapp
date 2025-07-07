@@ -98,13 +98,9 @@ export function PassportVerificationSection({
   // JustaName updateSubname hook for client-side subdomain transfer
   const {
     updateSubname,
-    isLoading: isUpdatingSubname,
-    isSuccess: updateSuccess,
-    error: updateError,
-  } = useUpdateSubname({
-    username: memberData.ipeUsername || "",
-    chainId: mainnet.id,
-    addresses: address ? [{ address: address as `0x${string}`, coinType: 60 }] : [],
+    isUpdateSubnamePending,
+  } = useUpdateSubname({ 
+    chainId: mainnet.id 
   });
 
   // Handle wallet transfer
@@ -138,39 +134,23 @@ export function PassportVerificationSection({
 
     try {
       // Use JustaName hook to transfer subdomain
-      await updateSubname();
+      await updateSubname({
+        ens: `${memberData.ipeUsername}.ipecity.eth`,
+        addresses: [{ address: address as `0x${string}`, coinType: 60 }],
+      });
       
       // If successful, update database
-      if (updateSuccess) {
-        await updateWalletMutation.mutateAsync(address);
-      }
+      await updateWalletMutation.mutateAsync(address);
+      
     } catch (error) {
       console.error("Wallet transfer error:", error);
       toast({
         title: "Transfer Failed",
-        description: "Failed to transfer passport to new wallet",
+        description: error instanceof Error ? error.message : "Failed to transfer passport to new wallet",
         variant: "destructive",
       });
     }
   };
-
-  // Monitor updateSubname success
-  useEffect(() => {
-    if (updateSuccess && address) {
-      updateWalletMutation.mutate(address);
-    }
-  }, [updateSuccess, address]);
-
-  // Monitor updateSubname error
-  useEffect(() => {
-    if (updateError) {
-      toast({
-        title: "JustaName Error",
-        description: updateError.message || "Failed to transfer subdomain",
-        variant: "destructive",
-      });
-    }
-  }, [updateError]);;
 
   const renderPassportStatus = () => {
     const passport = memberData.ipePassport || memberData.ipeUsername || currentPassport;
@@ -285,13 +265,13 @@ export function PassportVerificationSection({
               {address !== memberData.walletAddress && (
                 <Button
                   onClick={handleWalletTransfer}
-                  disabled={isUpdatingSubname || updateWalletMutation.isPending}
+                  disabled={isUpdateSubnamePending || updateWalletMutation.isPending}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
-                  {isUpdatingSubname || updateWalletMutation.isPending ? (
+                  {isUpdateSubnamePending || updateWalletMutation.isPending ? (
                     <div className="flex items-center gap-2">
                       <RefreshCw className="h-3 w-3 animate-spin" />
-                      {isUpdatingSubname ? "Transferring..." : "Updating Database..."}
+                      {isUpdateSubnamePending ? "Transferring..." : "Updating Database..."}
                     </div>
                   ) : (
                     "Transfer Passport to This Wallet"

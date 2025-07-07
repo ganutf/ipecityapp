@@ -162,9 +162,7 @@ export default function AdminPage() {
       try {
         if (vars.ipeUsername && address) {
           await addMAppPermission({
-            ens: `${vars.ipeUsername}.ipecity.eth`, // full sub-domain
-            permission: "TRANSFER",
-            applicationKey: address, // admin wallet
+            subname: `${vars.ipeUsername}.ipecity.eth`, // full sub-domain
           });
         }
 

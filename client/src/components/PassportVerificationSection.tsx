@@ -357,7 +357,7 @@ export function PassportVerificationSection({
                           <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded-lg">
                             Looking up ENS domain...
                           </div>
-                        ) : hasIpePassport ? (
+                        ) : (ensName && (ensName === "ipecity.eth" || ensName.endsWith(".ipecity.eth"))) ? (
                           <div className="space-y-3">
                             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                               <div className="flex items-center gap-2 text-green-700 mb-2">

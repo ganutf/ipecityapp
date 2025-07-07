@@ -26,7 +26,7 @@ interface Member {
   ipePassport?: string;
   passportVerified: boolean;
   status: string;
-  walletRenewalStatus?: "pending_renewal" | "awaiting_permission_grant" | "awaiting_revoke_reserve" | "revoking_subdomain" | "awaiting_new_acceptance" | "completed" | null;
+  walletRenewalStatus?: "pending_renewal" | "revoking_subdomain" | "awaiting_new_acceptance" | "completed" | null;
   newWalletAddress?: string;
   ipeUsername?: string;
   email?: string;
@@ -67,14 +67,11 @@ export function PassportVerificationSection({
     ensName.endsWith(".ipecity.eth")
   );
 
-  // Status polling for wallet renewal states that need monitoring
+  // Status polling for pending wallet renewal and awaiting acceptance
   const { data: memberStatus } = useQuery({
     queryKey: ["/api/members/check", farcasterFid],
     enabled: !!farcasterFid && (
       memberData?.walletRenewalStatus === "pending_renewal" || 
-      memberData?.walletRenewalStatus === "awaiting_permission_grant" ||
-      memberData?.walletRenewalStatus === "awaiting_revoke_reserve" ||
-      memberData?.walletRenewalStatus === "revoking_subdomain" ||
       memberData?.walletRenewalStatus === "awaiting_new_acceptance"
     ),
     refetchInterval: 10000, // Poll every 10 seconds
@@ -221,30 +218,6 @@ export function PassportVerificationSection({
                 New wallet: {memberData.newWalletAddress.slice(0, 6)}...{memberData.newWalletAddress.slice(-4)}
               </div>
             )}
-          </div>
-        )}
-
-        {memberData.walletRenewalStatus === "awaiting_permission_grant" && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-blue-700">
-              <Clock className="h-4 w-4" />
-              <span className="font-medium">Admin Processing Required</span>
-            </div>
-            <div className="text-sm text-blue-600 mt-1">
-              Awaiting admin to grant TRANSFER permission and complete revoke/reserve process...
-            </div>
-          </div>
-        )}
-
-        {memberData.walletRenewalStatus === "awaiting_revoke_reserve" && (
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-purple-700">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              <span className="font-medium">Permission Granted</span>
-            </div>
-            <div className="text-sm text-purple-600 mt-1">
-              Admin will now complete the revoke and reserve process...
-            </div>
           </div>
         )}
 

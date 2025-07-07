@@ -478,17 +478,6 @@ The application follows a monorepo structure with clear separation between clien
   - **Admin Wallet Integration**: Added ConnectButton and signMessage functionality for cryptographic approval authentication
   - **Enhanced UX**: Approve button disables when wallet disconnected with clear messaging about signature requirements
   - **Production Ready**: Complete wallet transfer workflow operational with proper cryptographic authentication and error handling
-- July 7, 2025. **REVOKE-AND-RESERVE WALLET TRANSFER SYSTEM**: Implemented client-side permission granting with automatic revoke/reserve workflow:
-  - **Client-Side Permission Strategy**: Created GrantTransferPermission component using React SDK addPermission hook instead of server-side JustaName API calls
-  - **Enhanced Status Flow**: Added comprehensive status states (pending_renewal → awaiting_permission_grant → awaiting_revoke_reserve → revoking_subdomain → awaiting_new_acceptance → completed)
-  - **Admin Dashboard Redesign**: Complete rebuild with modern UI, status badges, and wallet renewal workflow integration
-  - **Automated Process**: GrantTransferPermission component grants TRANSFER permission then automatically triggers server revoke/reserve process
-  - **React SDK Integration**: Properly configured useAddPermission hook with member.ipeUsername for accurate subdomain targeting
-  - **PassportVerificationSection Enhancement**: Added support for all wallet renewal states with appropriate UI feedback and polling
-  - **Database Constraints**: Updated wallet_renewal_status column to enforce valid status values at database level
-  - **Reusable Components**: Created modular GrantTransferPermission component that handles both permission granting and process triggering
-  - **Error Handling**: Comprehensive error handling with fallback status updates and proper user feedback throughout the workflow
-  - **Production Ready**: Complete revoke-and-reserve system operational with client-side permission management and automatic process completion
 
 ## User Preferences
 

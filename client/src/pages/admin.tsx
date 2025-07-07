@@ -14,19 +14,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Pencil, Save, X, Eye } from "lucide-react";
-import { useAccount, useSignMessage } from "wagmi";
-// Removed useAddSubname hook - using direct API calls instead
-
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+// Admin dashboard imports
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Wallet connection for subdomain reservation
-  const { address, isConnected } = useAccount();
-  const { signMessageAsync } = useSignMessage();
+
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -59,11 +54,7 @@ export default function AdminPage() {
     enabled: isAuthenticated && isAdmin,
   });
 
-  // Fetch pending wallet renewals
-  const { data: pendingRenewalsData, isLoading: renewalsLoading } = useQuery({
-    queryKey: ["/api/admin/pending-wallet-renewals"],
-    enabled: isAuthenticated && isAdmin,
-  });
+
 
   // All mutations must also be declared before returns
   const createPulseMutation = useMutation({
@@ -187,73 +178,7 @@ export default function AdminPage() {
     },
   });
 
-  // Approve wallet renewal mutation
-  const approveWalletRenewalMutation = useMutation({
-    mutationFn: async (farcasterFid: number) => {
-      if (!isConnected || !address) {
-        throw new Error("Admin wallet must be connected to approve transfers");
-      }
 
-      /* 1 ── get the SIWE challenge text */
-      const { challenge } = await fetch("/api/justaname/siwe-challenge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          adminAddress: address,
-          origin: window.location.origin, // pass your site origin
-        }),
-      }).then((r) => r.json());
-
-      /* 2 ── sign the challenge */
-      let signature: `0x${string}`;
-      try {
-        signature = await signMessageAsync({ message: challenge });
-      } catch (err: any) {
-        if (err.name === "UserRejectedRequestError") {
-          throw new Error("Signature rejected. Admin signature required.");
-        }
-        throw err;
-      }
-
-      /* 3 ── call the approve endpoint */
-      const res = await fetch("/api/admin/approve-wallet-update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          farcasterFid,
-          siweSignature: signature,
-          siweMessage: challenge,
-          adminAddress: address,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to approve wallet renewal");
-      }
-
-      return res.json();
-    },
-
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["/api/admin/pending-wallet-renewals"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-      toast({
-        title: "Success",
-        description: "Wallet renewal approved successfully",
-      });
-    },
-
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   // Show loading while auth is initializing
   if (isLoading) {
@@ -313,47 +238,7 @@ export default function AdminPage() {
         </p>
       </div>
 
-      {/* Wallet Connection Section */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-blue-900">
-              Admin Wallet
-            </h3>
-            <p className="text-blue-700 text-sm">
-              {isConnected
-                ? `Connected: ${address?.slice(0, 6)}...${address?.slice(-4)}`
-                : "Connect wallet to create subdomains for passport claims"}
-            </p>
-          </div>
-          <ConnectButton.Custom>
-            {({ openConnectModal, openAccountModal, mounted, account }) => {
-              if (!mounted) return null;
 
-              if (!account) {
-                return (
-                  <Button
-                    onClick={openConnectModal}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Connect Wallet
-                  </Button>
-                );
-              }
-
-              return (
-                <Button
-                  onClick={openAccountModal}
-                  variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                >
-                  Disconnect
-                </Button>
-              );
-            }}
-          </ConnectButton.Custom>
-        </div>
-      </div>
 
       <div className="space-y-8">
         {/* Create Pulse Section */}
@@ -533,75 +418,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Pending Wallet Renewals */}
-      {pendingRenewalsData?.pendingRenewals?.length > 0 && (
-        <div className="mt-8 bg-white rounded-lg shadow">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">Pending Wallet Renewals</h2>
-          </div>
-          <div className="p-6">
-            {renewalsLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-                <p className="text-gray-600 mt-4">
-                  Loading pending renewals...
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {pendingRenewalsData.pendingRenewals.map((member: any) => (
-                  <div
-                    key={member.farcasterFid}
-                    className="bg-orange-50 border border-orange-200 rounded-lg p-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-2">
-                        <div className="font-medium">
-                          FID {member.farcasterFid} - Wallet Update Request
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          <div>
-                            Current wallet: {member.walletAddress?.slice(0, 6)}
-                            ...{member.walletAddress?.slice(-4)}
-                          </div>
-                          <div>
-                            Requested wallet:{" "}
-                            {member.newWalletAddress?.slice(0, 6)}...
-                            {member.newWalletAddress?.slice(-4)}
-                          </div>
-                          <div>Passport: {member.ipePassport}</div>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() =>
-                          approveWalletRenewalMutation.mutate(
-                            member.farcasterFid,
-                          )
-                        }
-                        disabled={
-                          approveWalletRenewalMutation.isPending || !isConnected
-                        }
-                        className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                        title={
-                          !isConnected
-                            ? "Connect admin wallet to approve transfers"
-                            : ""
-                        }
-                      >
-                        {approveWalletRenewalMutation.isPending
-                          ? "Signing & Approving..."
-                          : !isConnected
-                            ? "Connect Wallet to Approve"
-                            : "Approve Wallet Change"}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+
 
       {/* Members List */}
       <div className="mt-8 bg-white rounded-lg shadow">

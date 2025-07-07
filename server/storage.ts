@@ -372,38 +372,7 @@ export class DatabaseStorage implements IStorage {
     return signer;
   }
 
-  // Wallet Renewal Methods
-  async requestWalletRenewal(farcasterFid: number, newWalletAddress: string): Promise<Member> {
-    const [member] = await db
-      .update(members)
-      .set({ 
-        newWalletAddress: newWalletAddress,
-        walletRenewalStatus: "pending_renewal",
-        updatedAt: new Date() 
-      })
-      .where(eq(members.farcasterFid, farcasterFid))
-      .returning();
-    return member;
-  }
 
-  async approveWalletRenewal(farcasterFid: number): Promise<Member> {
-    const [member] = await db
-      .update(members)
-      .set({ 
-        walletRenewalStatus: "renewal_approved",
-        updatedAt: new Date() 
-      })
-      .where(eq(members.farcasterFid, farcasterFid))
-      .returning();
-    return member;
-  }
-
-  async getPendingWalletRenewals(): Promise<Member[]> {
-    return await db
-      .select()
-      .from(members)
-      .where(eq(members.walletRenewalStatus, "pending_renewal"));
-  }
 }
 
 export const storage = new DatabaseStorage();

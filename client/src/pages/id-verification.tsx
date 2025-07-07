@@ -46,7 +46,7 @@ export default function IdVerificationPage() {
   
   // Redirect to home if user becomes approved member
   useEffect(() => {
-    if (memberStatus?.status === 'member') {
+    if (memberStatus?.status === 'active_member') {
       setLocation("/");
     }
   }, [memberStatus?.status, setLocation]);

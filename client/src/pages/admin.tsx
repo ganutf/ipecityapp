@@ -52,6 +52,12 @@ export default function AdminPage() {
     enabled: isAuthenticated && isAdmin,
   });
 
+  // Fetch pending wallet renewals
+  const { data: pendingRenewalsData, isLoading: renewalsLoading } = useQuery({
+    queryKey: ["/api/admin/pending-wallet-renewals"],
+    enabled: isAuthenticated && isAdmin,
+  });
+
   // All mutations must also be declared before returns
   const createPulseMutation = useMutation({
     mutationFn: async (pulse: { farcasterUrl: string; date: string; description: string }) => {
@@ -135,6 +141,30 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
       toast({ title: "Success", description: "Member denied successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Approve wallet renewal mutation
+  const approveWalletRenewalMutation = useMutation({
+    mutationFn: async (farcasterFid: number) => {
+      const response = await fetch("/api/admin/approve-wallet-update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ farcasterFid }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to approve wallet renewal");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-wallet-renewals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      toast({ title: "Success", description: "Wallet renewal approved successfully" });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -380,6 +410,47 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* Pending Wallet Renewals */}
+      {pendingRenewalsData?.pendingRenewals?.length > 0 && (
+        <div className="mt-8 bg-white rounded-lg shadow">
+          <div className="p-6 border-b">
+            <h2 className="text-xl font-semibold">Pending Wallet Renewals</h2>
+          </div>
+          <div className="p-6">
+            {renewalsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                <p className="text-gray-600 mt-4">Loading pending renewals...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {pendingRenewalsData.pendingRenewals.map((member: any) => (
+                  <div key={member.farcasterFid} className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <div className="font-medium">FID {member.farcasterFid} - Wallet Update Request</div>
+                        <div className="text-sm text-gray-600">
+                          <div>Current wallet: {member.walletAddress?.slice(0, 6)}...{member.walletAddress?.slice(-4)}</div>
+                          <div>Requested wallet: {member.newWalletAddress?.slice(0, 6)}...{member.newWalletAddress?.slice(-4)}</div>
+                          <div>Passport: {member.ipePassport}</div>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => approveWalletRenewalMutation.mutate(member.farcasterFid)}
+                        disabled={approveWalletRenewalMutation.isPending}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {approveWalletRenewalMutation.isPending ? "Approving..." : "Approve Wallet Change"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Members List */}
       <div className="mt-8 bg-white rounded-lg shadow">

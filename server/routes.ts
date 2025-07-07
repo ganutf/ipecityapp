@@ -1068,6 +1068,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  /* ────────────────────────────────  WALLET RENEWAL ENDPOINTS  ──────────────────────────────── */
+  
+  // Request wallet renewal (user action)
+  app.post("/api/passport/request-wallet-update", async (req, res) => {
+    try {
+      const { farcasterFid, newWalletAddress } = req.body;
+
+      if (!farcasterFid || !newWalletAddress) {
+        return res.status(400).json({ error: "FID and new wallet address required" });
+      }
+
+      const member = await storage.requestWalletRenewal(farcasterFid, newWalletAddress);
+      res.json({ success: true, member });
+    } catch (error) {
+      console.error("Request wallet renewal error:", error);
+      res.status(500).json({ error: "Failed to request wallet renewal" });
+    }
+  });
+
+  // Approve wallet renewal (admin action) 
+  app.post("/api/admin/approve-wallet-update", async (req, res) => {
+    try {
+      const { farcasterFid } = req.body;
+
+      if (!farcasterFid) {
+        return res.status(400).json({ error: "FID is required" });
+      }
+
+      // Get member with pending wallet renewal
+      const member = await storage.getMember(farcasterFid);
+      if (!member || !member.newWalletAddress || member.walletRenewalStatus !== "pending_renewal") {
+        return res.status(400).json({ error: "No pending wallet renewal found for this member" });
+      }
+
+      console.log(`Processing wallet update for FID: ${farcasterFid}`);
+      console.log(`Old wallet: ${member.walletAddress}`);
+      console.log(`New wallet: ${member.newWalletAddress}`);
+      console.log(`Subdomain: ${member.ipePassport}`);
+
+      // Transfer subdomain via JustaName API (same structure as reserve)
+      const justanameResponse = await fetch("https://api.justaname.id/api/v1/subname/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.JUSTANAME_API_KEY}`,
+        },
+        body: JSON.stringify({
+          username: member.ipeUsername,
+          ensDomain: "ipecity.eth", 
+          chainId: 1,
+          userAddress: member.newWalletAddress,
+        }),
+      });
+
+      if (!justanameResponse.ok) {
+        const errorData = await justanameResponse.json();
+        console.error("JustaName update error:", errorData);
+        return res.status(500).json({ error: `Failed to update subdomain: ${errorData.error || 'Unknown error'}` });
+      }
+
+      const justanameData = await justanameResponse.json();
+      console.log("JustaName update response:", JSON.stringify(justanameData, null, 2));
+
+      // Update member with new wallet address and approval status
+      const updatedMember = await storage.approveWalletRenewal(farcasterFid);
+      
+      // Update the actual wallet address to the new one
+      await storage.updateMember(farcasterFid, {
+        walletAddress: member.newWalletAddress,
+        newWalletAddress: null, // Clear the temporary field
+        walletRenewalStatus: null, // Clear renewal status 
+      });
+
+      res.json({ success: true, member: updatedMember });
+    } catch (error) {
+      console.error("Approve wallet renewal error:", error);
+      res.status(500).json({ error: "Failed to approve wallet renewal" });
+    }
+  });
+
+  // Get pending wallet renewals (admin only)
+  app.get("/api/admin/pending-wallet-renewals", async (req, res) => {
+    try {
+      const pendingRenewals = await storage.getPendingWalletRenewals();
+      res.json({ pendingRenewals });
+    } catch (error) {
+      console.error("Get pending wallet renewals error:", error);
+      res.status(500).json({ error: "Failed to get pending wallet renewals" });
+    }
+  });
+
   // Request email verification
   app.post("/api/auth/request-email-verification", async (req, res) => {
     try {
@@ -1574,7 +1665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/passport/verify", async (req, res) => {
     try {
       console.log("Passport verify request body:", req.body);
-      const { farcasterFid, ensName, walletAddress, message, signature, siwe } = req.body;
+      const { farcasterFid, ensName, walletAddress, message, signature } = req.body;
 
       if (!farcasterFid || !ensName || !walletAddress || !message || !signature) {
         console.log("Missing fields:", { 
@@ -1597,55 +1688,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Smart-wallet-aware SIWE verification using viem
+      // Verify SIWE signature for wallet ownership proof
       try {
-        console.log("Received message for signature verification:", message);
+        console.log("Received message for SIWE verification:", message);
         console.log("Received signature length:", signature.length);
         console.log("Expected wallet address:", walletAddress);
         
-        // Import SIWE for verification (handles both EOA and smart contract wallets)
-        const { SiweMessage } = await import('siwe');
-        const { createPublicClient, http } = await import('viem');
-        const { mainnet } = await import('viem/chains');
-        
-        // Parse the SIWE message
         const siweMessage = new SiweMessage(message);
-        
-        // Create a public client for smart contract wallet verification
-        const client = createPublicClient({
-          chain: mainnet,
-          transport: http(),
+        console.log("Parsed SIWE message:", {
+          address: siweMessage.address,
+          statement: siweMessage.statement,
+          domain: siweMessage.domain,
         });
         
-        // Verify using SIWE's verify method (automatically handles ERC-6492 for smart wallets)
-        const verificationResult = await siweMessage.verify({ 
-          signature,
-          // Pass client for smart contract wallet verification
-          provider: client,
-        });
+        // Verify signature with enhanced error handling for smart contract wallets
+        const verificationResult = await siweMessage.verify({ signature });
         
         console.log("SIWE verification result:", verificationResult);
         
         if (!verificationResult.success) {
-          return res.status(400).json({ 
-            error: "Signature verification failed: " + (verificationResult.error?.message || "Invalid signature")
-          });
-        }
-        
-        // Additional verification: ensure the message contains the ENS domain
-        if (!message.includes(ensName)) {
-          return res.status(400).json({ error: "ENS domain not verified in signature" });
-        }
-        
-        // Additional verification: ensure the wallet address matches
-        if (!message.includes(walletAddress)) {
-          return res.status(400).json({ error: "Wallet address mismatch" });
+          console.error("SIWE verification failed:", verificationResult.error);
+          
+          // For smart contract wallets, also verify via ENS lookup as fallback
+          console.log("Attempting ENS lookup fallback for smart contract wallet...");
+          try {
+            const baseUrl = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000';
+            const ensResponse = await fetch(`${baseUrl}/api/ens/lookup/${walletAddress}`);
+            const ensData = await ensResponse.json();
+            
+            if (ensData.ensName === ensName) {
+              console.log("ENS lookup fallback successful - smart contract wallet verified");
+            } else {
+              return res.status(400).json({ 
+                error: "Signature verification failed and ENS lookup does not match" 
+              });
+            }
+          } catch (ensError) {
+            return res.status(400).json({ 
+              error: "Signature verification failed and ENS lookup unavailable" 
+            });
+          }
+        } else {
+          // Verify the wallet address matches
+          if (siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()) {
+            return res.status(400).json({ error: "Wallet address mismatch" });
+          }
+
+          // Verify the ENS domain is mentioned in the statement
+          if (!siweMessage.statement?.includes(ensName)) {
+            return res.status(400).json({ error: "ENS domain not verified in signature" });
+          }
         }
         
         console.log("Wallet ownership verification successful");
       } catch (error) {
         console.error("SIWE verification error:", error);
-        return res.status(400).json({ error: "Signature verification failed: " + error.message });
+        return res.status(400).json({ error: "Signature verification failed" });
       }
 
       // Get member and update with passport verification

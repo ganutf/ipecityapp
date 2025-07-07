@@ -11,7 +11,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAccount, useSignMessage, useDisconnect } from "wagmi";
-import { createSiweMessage } from "viem/siwe";
+import { createSiweMessage, verifySiweMessage } from "viem/siwe";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";

@@ -151,6 +151,7 @@ export default function ProfileMockupPage() {
                       Verified
                     </Badge>
                   </div>
+                  <p className="text-xs md:text-sm text-gray-500">Passport wallet: 0x7582...ECFf</p>
                   <p className="text-xs md:text-sm text-gray-500">ID: {fakeProfile.fid}</p>
                 </div>
               </div>

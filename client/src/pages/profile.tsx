@@ -144,7 +144,7 @@ export default function ProfilePage() {
         <p className="text-gray-600 mt-2">Manage your account settings and verification status</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-6">
         {/* 1. Wallet Section */}
         <Card>
           <CardHeader>
@@ -265,7 +265,7 @@ export default function ProfilePage() {
         </Card>
 
         {/* 4. Profile Information Section */}
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />

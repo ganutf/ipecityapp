@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { CheckCircle, AlertCircle } from "lucide-react";
 
 interface EmailVerificationSectionProps {
   farcasterFid: number;
@@ -137,58 +138,58 @@ export function EmailVerificationSection({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          Email Verification
-          {emailVerified && <span className="text-green-600">✓</span>}
-        </CardTitle>
-        <CardDescription>
-          {emailVerified 
-            ? "Your email address has been verified."
-            : "Verify your email address to continue."
-          }
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 text-center">
-        {emailVerified ? (
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600">{email}</p>
+    <div className="space-y-4">
+      {emailVerified ? (
+        <div className="space-y-3">
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-800">Verified Email</p>
+                <p className="text-sm text-green-700">{email}</p>
+              </div>
+              <CheckCircle className="h-5 w-5 text-green-500" />
             </div>
-            {allowChange && (
-              <Button
-                variant="outline"
-                onClick={resetVerification}
-                className="w-full"
-              >
-                Change Email Address
-              </Button>
-            )}
           </div>
-        ) : (
-          <>
-            <div>
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                disabled={showVerification}
-              />
-            </div>
+          {allowChange && (
+            <Button
+              variant="outline"
+              onClick={resetVerification}
+              className="w-full"
+            >
+              Change Email Address
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
+            <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+            <p className="text-sm text-gray-600">Email verification required</p>
+          </div>
+          
+          <div>
+            <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              className="mt-1"
+              disabled={showVerification}
+            />
+          </div>
 
-            {!showVerification ? (
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleSendVerification}
-                  disabled={sendVerificationMutation.isPending || !email || email === originalEmail}
-                  className="flex-1"
-                >
-                  {sendVerificationMutation.isPending ? "Sending..." : "Send Verification Code"}
-                </Button>
+          {!showVerification ? (
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSendVerification}
+                disabled={sendVerificationMutation.isPending || !email || email === originalEmail}
+                className="flex-1"
+              >
+                {sendVerificationMutation.isPending ? "Sending..." : "Send Verification Code"}
+              </Button>
+              {allowChange && originalEmail && (
                 <Button
                   variant="outline"
                   onClick={cancelEmailChange}
@@ -197,40 +198,41 @@ export function EmailVerificationSection({
                 >
                   Cancel
                 </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="code" className="text-sm font-medium">Verification Code</Label>
+                <Input
+                  id="code"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  className="mt-1"
+                  maxLength={6}
+                />
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="code">Verification Code</Label>
-                  <Input
-                    id="code"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                    placeholder="Enter 6-digit code"
-                    maxLength={6}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleConfirmCode}
-                    disabled={confirmVerificationMutation.isPending || verificationCode.length !== 6}
-                    className="flex-1"
-                  >
-                    {confirmVerificationMutation.isPending ? "Verifying..." : "Verify Code"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowVerification(false)}
-                    className="flex-1"
-                  >
-                    Change Email
-                  </Button>
-                </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleConfirmCode}
+                  disabled={confirmVerificationMutation.isPending || verificationCode.length !== 6}
+                  className="flex-1"
+                >
+                  {confirmVerificationMutation.isPending ? "Verifying..." : "Verify Code"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowVerification(false)}
+                  className="flex-1"
+                >
+                  Change Email
+                </Button>
               </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

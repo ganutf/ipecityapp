@@ -94,12 +94,12 @@ export default function ProfileMockupPage() {
     isMember: true,
     status: "active_member",
     member: {
-      email: "alex@example.com",
+      email: "alex.santos@example.com",
       emailVerified: true,
       ipePassport: "alex.ipecity.eth",
       bio: "Passionate builder in the web3 space. Love creating decentralized applications and contributing to open source projects. Always learning and exploring new technologies.",
-      twitter: "@alexbuilder",
-      linkedin: "linkedin.com/in/alexbuilder",
+      twitter: "@alexsantos",
+      linkedin: "linkedin.com/in/alexsantos",
       instagram: "@alexcreates",
       profileTags: ["Developer", "Builder", "DeFi", "Community"],
       profileCompleted: true,
@@ -124,8 +124,8 @@ export default function ProfileMockupPage() {
   // Fake profile data for mockup
   const fakeProfile = profile || {
     fid: 12345,
-    username: "alexbuilder",
-    displayName: "Alex Builder",
+    username: "alexsantos",
+    displayName: "Alex Santos",
     pfpUrl: "",
   };
 
@@ -144,25 +144,18 @@ export default function ProfileMockupPage() {
                   <h1 className="text-2xl font-bold text-gray-900">
                     {fakeProfile.displayName || fakeProfile.username}
                   </h1>
-                  <p className="text-gray-600">@{fakeProfile.username}</p>
-                  <p className="text-sm text-gray-500">FID: {fakeProfile.fid}</p>
+                  <p className="text-purple-600 font-medium">alex.ipecity.eth</p>
+                  <p className="text-sm text-gray-500">ID: {fakeProfile.fid}</p>
                 </div>
               </div>
               
-              {/* Verification Status */}
-              <div className="flex flex-col space-y-2">
-                {/* Passport Info */}
-                <div className="flex items-center space-x-2">
-                  <Shield className="h-4 w-4 text-purple-600" />
-                  <span className="text-sm font-medium">alex.ipecity.eth</span>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Verified
-                  </Badge>
-                </div>
-                
-                {/* Wallet with clickable address */}
-                <div className="flex items-center space-x-2">
+              {/* Wallet Status */}
+              <div className="flex items-center space-x-2">
+                <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg border ${
+                  !isWalletDisconnected 
+                    ? 'bg-blue-50 border-blue-200' 
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
                   <Wallet className={`h-4 w-4 ${!isWalletDisconnected ? 'text-blue-600' : 'text-gray-400'}`} />
                   <button
                     onClick={() => {
@@ -180,10 +173,18 @@ export default function ProfileMockupPage() {
                         });
                       }
                     }}
-                    className={`text-sm font-mono hover:underline ${!isWalletDisconnected ? 'text-blue-600' : 'text-gray-400'}`}
+                    className={`text-sm font-mono hover:underline transition-colors ${
+                      !isWalletDisconnected ? 'text-blue-600' : 'text-gray-400'
+                    }`}
                   >
                     {!isWalletDisconnected ? '0x7582...ECFf' : 'Connect Wallet'}
                   </button>
+                  {!isWalletDisconnected && (
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Connected
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -328,12 +329,29 @@ export default function ProfileMockupPage() {
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
+                  <Mail className={`h-4 w-4 ${isEmailVerified ? 'text-green-600' : 'text-yellow-600'}`} />
+                  <span className="text-sm">alex.santos@example.com</span>
+                  <Badge variant="secondary" className={isEmailVerified ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                    {isEmailVerified ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Verified
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Pending
+                      </>
+                    )}
+                  </Badge>
+                </div>
+                <div className="flex items-center space-x-2">
                   <Twitter className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm">@alexbuilder</span>
+                  <span className="text-sm">@alexsantos</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Linkedin className="h-4 w-4 text-blue-700" />
-                  <span className="text-sm">linkedin.com/in/alexbuilder</span>
+                  <span className="text-sm">linkedin.com/in/alexsantos</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Instagram className="h-4 w-4 text-pink-500" />

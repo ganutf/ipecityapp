@@ -50,35 +50,24 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
 
   /**
    * QUERY 2: Member Status Check
-   * Retrieves comprehensive member information including:
-   * - isMember: Whether user has a member record
-   * - status: Current registration state (pending_signer, signer_approved, email_verified, pending_claim, member)
-   * - approved: Admin approval status
-   * - member: Full member object with verification flags
+   * Checks if the user is a member and their current verification status.
+   * Possible statuses: pending_signer, pending_id_verification, email_verified, 
+   * pending_application, approved_application, denied_application, active_member
    */
   const { data: memberStatus, isLoading: memberLoading } = useQuery({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
 
-  // Prevent routing decisions while either query is loading
+  // Overall loading state - wait for all API responses
   const isLoading = signerLoading || memberLoading;
 
+  /**
+   * MAIN ROUTING LOGIC
+   * Processes authentication state and redirects users appropriately.
+   * Order matters: Check highest priority states first.
+   */
   useEffect(() => {
-    /**
-     * ROUTING EFFECT - Main authentication flow logic
-     * 
-     * This effect runs whenever authentication state changes and determines
-     * where the user should be redirected based on their current status.
-     * 
-     * PRIORITY ORDER:
-     * 1. Authentication check
-     * 2. Loading state handling  
-     * 3. Signer approval status
-     * 4. Member registration status
-     * 5. Verification completion status
-     */
-
     // STEP 1: Handle unauthenticated users
     if (requireAuth && !profile) {
       // User not logged in but auth required - redirect to home page
@@ -115,17 +104,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         // STEP 5: Handle member registration and verification states
         if (isMember) {
           const currentStatus = status;
-          
-          // STATUS: 'approved_application' - Admin approved, needs to accept passport
-          if (currentStatus === 'approved_application') {
-            console.log("AuthGuard - Application approved, user needs to accept passport");
-            const currentPath = window.location.pathname;
-            if (currentPath !== '/id-verification') {
-              setLocation("/id-verification");
-              return;
-            }
-            return; // Already on verification page
-          }
+          console.log("AuthGuard - Member status:", currentStatus);
           
           // STATUS: 'active_member' - User completed all verifications
           if (currentStatus === 'active_member') {
@@ -133,151 +112,69 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return;
           }
           
-          // STATUS: 'pending_signer' or 'pending_id_verification' - Needs email/passport verification
-          if (currentStatus === 'pending_signer' || currentStatus === 'pending_id_verification') {
+          // STATUS: Incomplete verification states - redirect to id-verification
+          if (currentStatus === 'pending_id_verification' || 
+              currentStatus === 'email_verified' || 
+              currentStatus === 'pending_application' ||
+              currentStatus === 'approved_application') {
+            console.log("AuthGuard - Incomplete verification, redirecting to id-verification. Status:", currentStatus);
             const currentPath = window.location.pathname;
-            if (currentPath !== '/id-verification') {
+            if (currentPath !== '/id-verification' && currentPath !== '/profile') {
               setLocation("/id-verification");
               return;
             }
-            return; // Already on verification page
+            return; // Already on allowed verification pages
           }
           
-          // STATUS: 'pending_acceptance' - Partial verification complete
-          if (currentStatus === 'pending_acceptance') {
-            console.log("AuthGuard - Email verified status detected:", currentStatus);
-            
-            // Check if both email and passport verifications are complete
-            const { member } = memberStatus as any;
-            console.log("AuthGuard - Member data:", member);
-            
-            if (member && member.emailVerified && member.passportVerified) {
-              console.log("AuthGuard - Both verifications complete, granting full access");
-              // Both verifications complete - grant full member access
+          // STATUS: 'denied_application' - Application rejected
+          if (currentStatus === 'denied_application') {
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/profile' && currentPath !== '/id-verification') {
+              setLocation("/profile");
               return;
             }
-            
-            // Partial verification - allow access to home, profile, and id-verification pages
-            const currentPath = window.location.pathname;
-            console.log("AuthGuard - Current path:", currentPath);
-            console.log("AuthGuard - Checking if path is allowed for partial verification");
-            
-            if (currentPath === '/' || currentPath === '/profile' || currentPath === '/id-verification') {
-              console.log("AuthGuard - Path allowed for partial verification, granting access");
-              return; // Allow access to these pages
-            }
-            
-            // For any other pages, redirect to id-verification to complete verification
-            console.log("AuthGuard - Redirecting to id-verification from:", currentPath);
-            setLocation("/id-verification");
-            return;
+            return; // Already on allowed page
           }
-
-          // STATUS: 'denied_application' - Application rejected
-          if (status === "denied_application") {
-            // Registration denied - show denial message on profile page
-            setLocation("/profile");
-            return;
-          }
-
-          // FALLBACK: For any other status requiring approval
-          if (requireApproval && status !== 'active_member') {
-            console.log("AuthGuard - Blocking admin access:", { requireApproval, status, profileFid: profile?.fid });
-            setLocation("/profile");
-            return;
-          }
-        } else {
-          // User has no member record - needs to complete registration
+          
+          // STATUS: Fallback for any other status
+          console.log("AuthGuard - Unhandled status, defaulting to verification:", currentStatus);
           const currentPath = window.location.pathname;
-          if (currentPath !== '/id-verification') {
+          if (currentPath !== '/id-verification' && currentPath !== '/profile') {
             setLocation("/id-verification");
             return;
           }
+          return;
         }
+
+        // Not a member - handle non-member states
+        const currentPath = window.location.pathname;
+        
+        // Allow non-members to access home page (sign-in) and profile (for error messages)
+        if (currentPath === '/' || currentPath === '/profile') {
+          return;
+        }
+        
+        // Redirect non-members to home page for all other routes
+        setLocation("/");
+        return;
       }
     }
-  }, [profile, signerData, memberStatus, isLoading, requireAuth, requireApproval, setLocation]);
 
-  /**
-   * LOADING STATE COMPONENT
-   * 
-   * Shows a spinner while authentication queries are in progress.
-   * Only displays for authenticated users to prevent flash of loading
-   * state for unauthenticated visitors.
-   */
-  if (isLoading && profile?.fid) {
+    // Allow access for unauthenticated users if authentication is not required
+  }, [profile, signerData, memberStatus, isLoading, requireAuth, setLocation]);
+
+  // Show loading state while determining authentication status
+  if (isLoading && profile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Checking authentication...</p>
+        </div>
       </div>
     );
   }
 
-  // Final check: block rendering if auth required but user not logged in
-  if (requireAuth && !profile) {
-    return null; // Don't render anything for unauthenticated users
-  }
-
-  // Render protected content when all checks pass
+  // Render children if all checks pass
   return <>{children}</>;
-}
-
-/**
- * RequireAuth Component - Basic Authentication Guard
- * 
- * Convenience wrapper for AuthGuard that requires Farcaster authentication.
- * Users must be logged in via AuthKit to access the wrapped content.
- * 
- * USAGE:
- * Wrap components that need basic authentication:
- * ```jsx
- * <RequireAuth>
- *   <ProfilePage />
- * </RequireAuth>
- * ```
- * 
- * BEHAVIOR:
- * - Unauthenticated users see sign-in interface
- * - Authenticated users proceed through verification flow as needed
- * - No additional approval requirements beyond basic auth
- */
-export function RequireAuth({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthGuard requireAuth={true}>
-      {children}
-    </AuthGuard>
-  );
-}
-
-/**
- * RequireApproval Component - Strict Access Control Guard
- * 
- * Convenience wrapper for AuthGuard that requires both authentication 
- * and full member approval. This is the highest level of access control.
- * 
- * USAGE:
- * Wrap components that need full member access:
- * ```jsx
- * <RequireApproval>
- *   <AdminDashboard />
- * </RequireApproval>
- * ```
- * 
- * BEHAVIOR:
- * - Enforces complete authentication flow
- * - Requires email verification AND passport verification
- * - May require admin approval depending on member status
- * - Blocks access until all requirements are met
- * 
- * TYPICAL USE CASES:
- * - Admin pages
- * - Protected member content
- * - Features requiring verified identity
- */
-export function RequireApproval({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthGuard requireAuth={true} requireApproval={true}>
-      {children}
-    </AuthGuard>
-  );
 }

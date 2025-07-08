@@ -66,20 +66,21 @@ export function usePersistentAuth() {
     }
   }, [kitAuth, kitProfile]);
 
-  // Clear stored data when AuthKit logs out
+  // Clear stored data when AuthKit logs out - but be more careful about auto-logout
   useEffect(() => {
     if (isInitialized && !kitAuth && restoredProfile) {
-      // Only clear if we're initialized and AuthKit has logged out
-      // but we still have restored profile data
+      // Only clear if we're initialized and AuthKit has definitely logged out
+      // and we're sure it's not just a temporary state
       const checkAuthKitLogout = () => {
         if (!kitAuth && !kitProfile?.fid) {
+          console.log("usePersistentAuth: AuthKit logged out, clearing restored profile");
           setRestoredProfile(null);
           localStorage.removeItem(AUTH_STORAGE_KEY);
         }
       };
       
-      // Small delay to ensure AuthKit state has settled
-      const timer = setTimeout(checkAuthKitLogout, 100);
+      // Longer delay to avoid clearing during page refreshes
+      const timer = setTimeout(checkAuthKitLogout, 1000);
       return () => clearTimeout(timer);
     }
   }, [kitAuth, kitProfile?.fid, restoredProfile, isInitialized]);

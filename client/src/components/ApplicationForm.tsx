@@ -103,8 +103,12 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
         title: "Application submitted successfully!",
         description: "Your application is now pending admin approval.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      // Invalidate member status queries to refresh UI
       queryClient.invalidateQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
+      // Small delay to ensure backend has processed the update
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
+      }, 500);
       onSuccess();
     },
     onError: (error: Error) => {

@@ -29,14 +29,7 @@ export default function IdVerificationPage() {
   const { data: memberStatus, refetch, isLoading: memberLoading } = useQuery<MemberStatus>({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
-    refetchInterval: (query) => {
-      // Poll every 10 seconds if user is pending application or acceptance
-      const status = (query.state.data as any)?.status;
-      if (status === 'pending_application' || status === 'approved_application') {
-        return 10000; // 10 seconds
-      }
-      return false; // Stop polling for other statuses
-    },
+
   });
 
   // Update completion states based on member status (matching Profile page logic)

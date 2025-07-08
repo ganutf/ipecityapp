@@ -1,0 +1,214 @@
+ Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: Object
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: Object
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: Object
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: Object
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth: AuthKit has no data but we have restored profile, maintaining session
+ Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+issueWarning @ chunk-7WLUAVPG.js:23
+api.web3modal.org/appkit/v1/config?projectId=demo&st=appkit&sv=html-core-1.7.8:1  Failed to load resource: the server responded with a status of 403 ()
+ [Reown Config] Failed to fetch remote project configuration. Using local/default values. 
+fetchRemoteFeatures @ core-NZB56LRN.js:9020
+pulse.walletconnect.org/e?projectId=demo&st=appkit&sv=html-core-1.7.8:1  Failed to load resource: the server responded with a status of 400 ()
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: Object
+ usePersistentAuth: Restoring valid session data
+ AuthGuard - Signer status: approved
+ AuthGuard - Member status: active_member
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: Object
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth state: Object
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: Object
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth: AuthKit has no data but we have restored profile, maintaining session
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: Object
+use-persistent-auth.ts:35 usePersistentAuth: Restoring valid session data
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:80 usePersistentAuth: AuthKit has no data but we have restored profile, maintaining session
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:23 usePersistentAuth: Initializing, checking localStorage...
+use-persistent-auth.ts:27 usePersistentAuth: Stored data found: true
+use-persistent-auth.ts:32 usePersistentAuth: Parsed data: Object
+use-persistent-auth.ts:35 usePersistentAuth: Restoring valid session data
+use-persistent-auth.ts:23 usePersistentAuth: Initializing, checking localStorage...
+use-persistent-auth.ts:27 usePersistentAuth: Stored data found: true
+use-persistent-auth.ts:32 usePersistentAuth: Parsed data: Object
+use-persistent-auth.ts:35 usePersistentAuth: Restoring valid session data
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+chunk-Z2GUPSCO.js?v=38ec0d45:521 Warning: React has detected a change in the order of Hooks called by ProfilePage. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://reactjs.org/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+1. useContext                 useContext
+2. useState                   useState
+3. useState                   useState
+4. useEffect                  useEffect
+5. useEffect                  useEffect
+6. useEffect                  useEffect
+7. useState                   useState
+8. useEffect                  useEffect
+9. useContext                 useContext
+10. useContext                useContext
+11. useContext                useContext
+12. useContext                useContext
+13. useEffect                 useEffect
+14. useState                  useState
+15. useCallback               useCallback
+16. useSyncExternalStore      useSyncExternalStore
+17. useEffect                 useEffect
+18. useRef                    useRef
+19. useRef                    useRef
+20. useState                  useState
+21. useLayoutEffect           useLayoutEffect
+22. useEffect                 useEffect
+23. useEffect                 useEffect
+24. useEffect                 useEffect
+25. useEffect                 useEffect
+26. useEffect                 useEffect
+27. useEffect                 useEffect
+28. useContext                useContext
+29. useState                  useState
+30. useEffect                 useEffect
+31. useCallback               useCallback
+32. useSyncExternalStore      useSyncExternalStore
+33. useCallback               useCallback
+34. undefined                 useContext
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    at ProfilePage (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/src/pages/profile.tsx:57:23)
+    at Route (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=38ec0d45:265:16)
+    at Switch (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=38ec0d45:321:17)
+    at div
+    at main
+    at Layout (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/src/components/Layout.tsx:28:34)
+    at AuthGuard (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/src/components/AuthGuard.tsx:22:29)
+    at Router
+    at Provider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-IDYPAGOC.js?v=38ec0d45:41:15)
+    at TooltipProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=38ec0d45:57:5)
+    at JustaNameProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@justaname__id_react.js?v=38ec0d45:56572:24)
+    at div
+    at ModalProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:10689:26)
+    at ShowBalanceProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:5808:32)
+    at TransactionStoreProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:6246:3)
+    at ModalSizeProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:6397:3)
+    at I18nProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:5514:23)
+    at WalletButtonProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:6373:33)
+    at RainbowKitChainProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:5773:3)
+    at RainbowKitProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:7179:3)
+    at QueryClientProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-7X75LGXT.js?v=38ec0d45:2805:3)
+    at Hydrate (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-QUNSDE3X.js?v=38ec0d45:3520:11)
+    at WagmiProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-QUNSDE3X.js?v=38ec0d45:3544:11)
+    at Pe (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@farcaster_auth-kit.js?v=38ec0d45:3375:11)
+    at App
+printWarning @ chunk-Z2GUPSCO.js?v=38ec0d45:521
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+chunk-Z2GUPSCO.js?v=38ec0d45:11678 Uncaught Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (chunk-Z2GUPSCO.js?v=38ec0d45:11678:21)
+    at updateRef (chunk-Z2GUPSCO.js?v=38ec0d45:12064:22)
+    at Object.useRef (chunk-Z2GUPSCO.js?v=38ec0d45:12745:22)
+    at useRef (chunk-VT65UQWK.js?v=38ec0d45:1074:29)
+    at useSyncExternalStoreWithTracked (chunk-QUNSDE3X.js?v=38ec0d45:3611:48)
+    at useAccount (chunk-QUNSDE3X.js?v=38ec0d45:3652:10)
+    at ProfilePage (profile.tsx:132:36)
+    at renderWithHooks (chunk-Z2GUPSCO.js?v=38ec0d45:11548:26)
+    at updateFunctionComponent (chunk-Z2GUPSCO.js?v=38ec0d45:14582:28)
+    at beginWork (chunk-Z2GUPSCO.js?v=38ec0d45:15924:22)
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+use-persistent-auth.ts:95 usePersistentAuth state: Object
+chunk-Z2GUPSCO.js?v=38ec0d45:11678 Uncaught Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (chunk-Z2GUPSCO.js?v=38ec0d45:11678:21)
+    at updateRef (chunk-Z2GUPSCO.js?v=38ec0d45:12064:22)
+    at Object.useRef (chunk-Z2GUPSCO.js?v=38ec0d45:12745:22)
+    at useRef (chunk-VT65UQWK.js?v=38ec0d45:1074:29)
+    at useSyncExternalStoreWithTracked (chunk-QUNSDE3X.js?v=38ec0d45:3611:48)
+    at useAccount (chunk-QUNSDE3X.js?v=38ec0d45:3652:10)
+    at ProfilePage (profile.tsx:132:36)
+    at renderWithHooks (chunk-Z2GUPSCO.js?v=38ec0d45:11548:26)
+    at updateFunctionComponent (chunk-Z2GUPSCO.js?v=38ec0d45:14582:28)
+    at beginWork (chunk-Z2GUPSCO.js?v=38ec0d45:15924:22)
+chunk-Z2GUPSCO.js?v=38ec0d45:14032 The above error occurred in the <ProfilePage> component:
+
+    at ProfilePage (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/src/pages/profile.tsx:57:23)
+    at Route (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=38ec0d45:265:16)
+    at Switch (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=38ec0d45:321:17)
+    at div
+    at main
+    at Layout (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/src/components/Layout.tsx:28:34)
+    at AuthGuard (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/src/components/AuthGuard.tsx:22:29)
+    at Router
+    at Provider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-IDYPAGOC.js?v=38ec0d45:41:15)
+    at TooltipProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=38ec0d45:57:5)
+    at JustaNameProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@justaname__id_react.js?v=38ec0d45:56572:24)
+    at div
+    at ModalProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:10689:26)
+    at ShowBalanceProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:5808:32)
+    at TransactionStoreProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:6246:3)
+    at ModalSizeProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:6397:3)
+    at I18nProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:5514:23)
+    at WalletButtonProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:6373:33)
+    at RainbowKitChainProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:5773:3)
+    at RainbowKitProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@rainbow-me_rainbowkit.js?v=38ec0d45:7179:3)
+    at QueryClientProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-7X75LGXT.js?v=38ec0d45:2805:3)
+    at Hydrate (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-QUNSDE3X.js?v=38ec0d45:3520:11)
+    at WagmiProvider (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-QUNSDE3X.js?v=38ec0d45:3544:11)
+    at Pe (https://8084bd64-d4a1-4d85-9fd4-db35b07d97c2-00-3k3dmy1cg7cbd.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@farcaster_auth-kit.js?v=38ec0d45:3375:11)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-Z2GUPSCO.js?v=38ec0d45:14032
+chunk-Z2GUPSCO.js?v=38ec0d45:19413 Uncaught Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (chunk-Z2GUPSCO.js?v=38ec0d45:11678:21)
+    at updateRef (chunk-Z2GUPSCO.js?v=38ec0d45:12064:22)
+    at Object.useRef (chunk-Z2GUPSCO.js?v=38ec0d45:12745:22)
+    at useRef (chunk-VT65UQWK.js?v=38ec0d45:1074:29)
+    at useSyncExternalStoreWithTracked (chunk-QUNSDE3X.js?v=38ec0d45:3611:48)
+    at useAccount (chunk-QUNSDE3X.js?v=38ec0d45:3652:10)
+    at ProfilePage (profile.tsx:132:36)
+    at renderWithHooks (chunk-Z2GUPSCO.js?v=38ec0d45:11548:26)
+    at updateFunctionComponent (chunk-Z2GUPSCO.js?v=38ec0d45:14582:28)
+    at beginWork (chunk-Z2GUPSCO.js?v=38ec0d45:15924:22)

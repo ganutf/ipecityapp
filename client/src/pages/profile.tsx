@@ -57,6 +57,11 @@ export default function ProfilePage() {
   const { profile } = usePersistentAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // All hooks must be called at the top level
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+  const { ensName, isLoading: ensLoading } = useEnsLookup(address);
 
   // Get member data
   const { data: memberData } = useQuery<MemberData>({
@@ -114,6 +119,7 @@ export default function ProfilePage() {
     form.setValue("profileTags", newTags);
   };
 
+  // Early return after all hooks
   if (!memberData?.isMember) {
     return (
       <div className="container mx-auto max-w-2xl py-8">
@@ -128,10 +134,6 @@ export default function ProfilePage() {
       </div>
     );
   }
-
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
-  const { ensName, isLoading: ensLoading } = useEnsLookup(address);
 
   const hasIpeCityDomain = ensName && (ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth');
 

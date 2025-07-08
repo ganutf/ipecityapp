@@ -209,14 +209,6 @@ export default function Profile2() {
 
   const hasIpeCityDomain = ensName && (ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth');
 
-  // Override profile with fake data for consistent display
-  const fakeProfile = {
-    fid: 12345,
-    username: "jeanhansen",
-    displayName: "Jean Hansen",
-    pfpUrl: "",
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 py-4 md:py-8">
       <div className="max-w-4xl mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
@@ -230,9 +222,9 @@ export default function Profile2() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-                    {fakeProfile.displayName || fakeProfile.username}
+                    {profile?.displayName || profile?.username}
                   </h1>
-                  <p className="text-xs md:text-sm text-gray-500">ID: {fakeProfile.fid}</p>
+                  <p className="text-xs md:text-sm text-gray-500">ID: {profile?.fid}</p>
                   <div className="flex items-center space-x-2 mt-2">
                     {/* TODO: Implement member type logic based on memberData.member.memberType */}
                     <div className="group relative">

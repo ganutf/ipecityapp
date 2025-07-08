@@ -30,9 +30,9 @@ export default function IdVerificationPage() {
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
     refetchInterval: (query) => {
-      // Poll every 10 seconds if user is pending_claim (waiting for admin approval)
+      // Poll every 10 seconds if user is pending application or acceptance
       const status = (query.state.data as any)?.status;
-      if (status === 'pending_claim' || status === 'pending_acceptance') {
+      if (status === 'pending_application' || status === 'approved_application') {
         return 10000; // 10 seconds
       }
       return false; // Stop polling for other statuses

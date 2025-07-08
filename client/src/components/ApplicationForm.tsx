@@ -104,6 +104,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
         description: "Your application is now pending admin approval.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
       onSuccess();
     },
     onError: (error: Error) => {

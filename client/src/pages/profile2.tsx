@@ -211,11 +211,11 @@ export default function Profile2() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 md:py-8">
-      <div className="max-w-full lg:max-w-none mx-auto px-4 md:px-6 lg:px-8 xl:px-12 space-y-4 md:space-y-6">
+      <div className="w-full px-4 md:px-6 lg:px-8 xl:px-12 space-y-4 md:space-y-6">
         {/* Header with Profile Info */}
-        <Card className="w-full">
-          <CardContent className="pt-4 md:pt-6">
-            <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
+        <Card className="w-full min-w-full">
+          <CardContent className="pt-4 md:pt-6 w-full">
+            <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0 w-full">
               <div className="flex items-center space-x-3 md:space-x-4">
                 <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
@@ -311,8 +311,8 @@ export default function Profile2() {
         </Card>
 
         {/* Bio Section */}
-        <Card className="w-full">
-          <CardHeader className="pb-3">
+        <Card className="w-full min-w-full">
+          <CardHeader className="pb-3 w-full">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base md:text-lg">About</CardTitle>
               {!editingBio && (
@@ -326,7 +326,7 @@ export default function Profile2() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="w-full">
             {editingBio ? (
               <div className="space-y-3">
                 <Textarea
@@ -365,8 +365,8 @@ export default function Profile2() {
         </Card>
 
         {/* Social Links */}
-        <Card className="w-full">
-          <CardHeader className="pb-3">
+        <Card className="w-full min-w-full">
+          <CardHeader className="pb-3 w-full">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base md:text-lg">Social Links</CardTitle>
               {!editingSocial && (
@@ -380,7 +380,7 @@ export default function Profile2() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="w-full">
             {editingSocial ? (
               <div className="space-y-4">
                 {/* Email Section with Verification */}
@@ -513,8 +513,8 @@ export default function Profile2() {
         </Card>
 
         {/* Profile Tags */}
-        <Card className="w-full">
-          <CardHeader className="pb-3">
+        <Card className="w-full min-w-full">
+          <CardHeader className="pb-3 w-full">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base md:text-lg">Profile Tags</CardTitle>
               {!editingTags && (
@@ -528,7 +528,7 @@ export default function Profile2() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="w-full">
             {editingTags ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">

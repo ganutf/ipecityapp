@@ -122,11 +122,60 @@ export default function FarcasterEmbed() {
 
   if (!isAuthenticated) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-600 mb-4">Welcome to Ipê City Pulse</p>
-        <p className="text-gray-500">
-          Please sign in to access community engagement activities.
-        </p>
+      <div className="max-w-3xl mx-auto py-12 px-6 text-center">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Welcome to Ipê City Pulse
+          </h1>
+          <p className="text-xl text-gray-600 mb-6">
+            Your community engagement tracking platform
+          </p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+            How It Works
+          </h2>
+          <div className="grid md:grid-cols-3 gap-6 text-left">
+            <div className="space-y-2">
+              <div className="text-3xl mb-2">🎯</div>
+              <h3 className="font-semibold text-gray-800">Daily Pulses</h3>
+              <p className="text-sm text-gray-600">
+                Get daily Farcaster post engagement tasks to complete with your community
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="text-3xl mb-2">✨</div>
+              <h3 className="font-semibold text-gray-800">Track Progress</h3>
+              <p className="text-sm text-gray-600">
+                Monitor your likes, recasts, and community participation over time
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="text-3xl mb-2">🌟</div>
+              <h3 className="font-semibold text-gray-800">Build Community</h3>
+              <p className="text-sm text-gray-600">
+                Strengthen connections through coordinated engagement activities
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-8">
+          <h3 className="text-lg font-semibold text-purple-800 mb-2">
+            Ready to Join?
+          </h3>
+          <p className="text-purple-700 mb-4">
+            Connect your Farcaster account to start participating in community pulses
+          </p>
+          <div className="flex justify-center">
+            <SignInButton />
+          </div>
+        </div>
+
+        <div className="text-sm text-gray-500">
+          <p>Ipê City Pulse • Community Engagement Platform</p>
+        </div>
       </div>
     );
   }

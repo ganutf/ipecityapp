@@ -93,7 +93,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
         body: JSON.stringify({
           farcasterFid: memberData.member.farcasterFid,
           ...data,
-          profileTags: tags,
+          profileTags: selectedTags,
           walletAddress: address,
         }),
       });

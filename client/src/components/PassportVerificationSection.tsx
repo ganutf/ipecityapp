@@ -64,15 +64,7 @@ export function PassportVerificationSection({
     ensName.endsWith(".ipecity.eth")
   ) : false;
   
-  // Debug logging
-  console.log("PassportVerificationSection ENS lookup:", {
-    address,
-    ensName,
-    ensLoading,
-    hasIpeCityDomain,
-    memberStatus: memberData?.member?.status,
-    showButtonCondition: isConnected && address && !ensLoading && hasIpeCityDomain === false
-  });
+
 
   // Handle wallet connection for verification
   useEffect(() => {

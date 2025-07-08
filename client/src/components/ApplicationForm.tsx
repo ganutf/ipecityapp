@@ -9,7 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle, User, Globe, Twitter, Linkedin, Instagram, Tag } from "lucide-react";
+import { PROFILE_TAGS } from "@/constants/profileTags";
 import { useToast } from "@/hooks/use-toast";
 import { useAccount } from "wagmi";
 import { apiRequest } from "@/lib/queryClient";
@@ -39,8 +42,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { address } = useAccount();
-  const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const form = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationFormSchema),
@@ -125,15 +127,18 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
     submitApplicationMutation.mutate(data);
   };
 
-  const addTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim()) && tags.length < 5) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput("");
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags(prev => {
+      const newTags = prev.includes(tag)
+        ? prev.filter(t => t !== tag)
+        : prev.length < 5 
+          ? [...prev, tag]
+          : prev; // Don't add if already at max
+      
+      // Update form value
+      form.setValue("profileTags", newTags);
+      return newTags;
+    });
   };
 
   const getUsernameStatusColor = () => {
@@ -275,35 +280,31 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
                 <Tag className="h-4 w-4" />
                 Skills & Interests (max 5)
               </FormLabel>
-              <div className="flex gap-2">
-                <Input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  placeholder="Add a skill or interest..."
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                  disabled={tags.length >= 5}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addTag}
-                  disabled={!tagInput.trim() || tags.length >= 5}
-                >
-                  Add
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="cursor-pointer"
-                    onClick={() => removeTag(tag)}
-                  >
-                    {tag} ✕
-                  </Badge>
+              <p className="text-xs text-gray-500">Select tags that describe you</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {PROFILE_TAGS.map((tag) => (
+                  <div key={tag} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={tag}
+                      checked={selectedTags.includes(tag)}
+                      onCheckedChange={() => handleTagToggle(tag)}
+                      disabled={selectedTags.length >= 5 && !selectedTags.includes(tag)}
+                    />
+                    <Label htmlFor={tag} className="text-sm cursor-pointer">
+                      {tag}
+                    </Label>
+                  </div>
                 ))}
               </div>
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedTags.map((tag) => (
+                    <Badge key={tag} variant="secondary">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}

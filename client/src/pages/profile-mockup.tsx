@@ -149,45 +149,41 @@ export default function ProfileMockupPage() {
                 </div>
               </div>
               
-              {/* Verification Status Badges - Compact */}
+              {/* Verification Status */}
               <div className="flex flex-col space-y-2">
+                {/* Passport Info */}
                 <div className="flex items-center space-x-2">
-                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs ${
-                    isEmailVerified 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    <Mail className="h-3 w-3" />
-                    <span>Email</span>
-                    {isEmailVerified && <CheckCircle className="h-3 w-3" />}
-                  </div>
-                  
-                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs ${
-                    isConnected 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    <Wallet className="h-3 w-3" />
-                    <span>Wallet</span>
-                    {isConnected && <CheckCircle className="h-3 w-3" />}
-                  </div>
-                  
-                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs ${
-                    isPassportVerified 
-                      ? 'bg-purple-100 text-purple-800' 
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    <Shield className="h-3 w-3" />
-                    <span>Passport</span>
-                    {isPassportVerified && <CheckCircle className="h-3 w-3" />}
-                  </div>
+                  <Shield className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-medium">alex.ipecity.eth</span>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
                 </div>
                 
-                {/* Compact verification details */}
-                <div className="text-right space-y-1">
-                  <p className="text-xs text-gray-500">alex@example.com</p>
-                  <p className="text-xs text-gray-500 font-mono">0x7582...ECFf</p>
-                  <p className="text-xs text-purple-600 font-mono">alex.ipecity.eth</p>
+                {/* Wallet with clickable address */}
+                <div className="flex items-center space-x-2">
+                  <Wallet className={`h-4 w-4 ${!isWalletDisconnected ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <button
+                    onClick={() => {
+                      if (!isWalletDisconnected) {
+                        setIsWalletDisconnected(true);
+                        toast({
+                          title: "Wallet disconnected",
+                          description: "Your wallet has been disconnected successfully.",
+                        });
+                      } else {
+                        setIsWalletDisconnected(false);
+                        toast({
+                          title: "Wallet connected",
+                          description: "Your wallet has been connected successfully.",
+                        });
+                      }
+                    }}
+                    className={`text-sm font-mono hover:underline ${!isWalletDisconnected ? 'text-blue-600' : 'text-gray-400'}`}
+                  >
+                    {!isWalletDisconnected ? '0x7582...ECFf' : 'Connect Wallet'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -348,253 +344,7 @@ export default function ProfileMockupPage() {
           </CardContent>
         </Card>
 
-        {/* Verification Status */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Verification Status</CardTitle>
-              {!editingVerification && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setEditingVerification(true)}
-                >
-                  <Edit3 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {editingVerification ? (
-              <div className="space-y-4">
-                {/* Email Section */}
-                <div>
-                  <Label htmlFor="email" className="flex items-center space-x-1">
-                    <Mail className="h-4 w-4" />
-                    <span>Email Address</span>
-                  </Label>
-                  <div className="flex space-x-2 mt-1">
-                    <Input
-                      id="email"
-                      value={emailValue}
-                      onChange={(e) => setEmailValue(e.target.value)}
-                      placeholder="your.email@example.com"
-                      className="flex-1"
-                    />
-                    {!isVerificationSent ? (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        disabled={isSendingVerification}
-                        onClick={() => {
-                          setIsSendingVerification(true);
-                          // Simulate API call
-                          setTimeout(() => {
-                            setIsSendingVerification(false);
-                            setIsVerificationSent(true);
-                            toast({
-                              title: "Verification email sent!",
-                              description: "Check your inbox for the verification code.",
-                            });
-                          }, 1500);
-                        }}
-                      >
-                        {isSendingVerification ? "Sending..." : "Send Verification"}
-                      </Button>
-                    ) : null}
-                  </div>
-                  
-                  {/* Verification Code Input */}
-                  {isVerificationSent && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded border">
-                      <Label htmlFor="verificationCode" className="text-sm font-medium">
-                        Enter 6-digit verification code:
-                      </Label>
-                      <div className="flex space-x-2 mt-2">
-                        <Input
-                          id="verificationCode"
-                          value={verificationCode}
-                          onChange={(e) => setVerificationCode(e.target.value)}
-                          placeholder="123456"
-                          maxLength={6}
-                          className="flex-1"
-                        />
-                        <Button 
-                          size="sm" 
-                          disabled={isVerifyingCode || verificationCode.length !== 6}
-                          onClick={() => {
-                            setIsVerifyingCode(true);
-                            setTimeout(() => {
-                              setIsVerifyingCode(false);
-                              setIsVerificationSent(false);
-                              setVerificationCode("");
-                              toast({
-                                title: "Email verified!",
-                                description: "Your email address has been successfully verified.",
-                              });
-                            }, 1000);
-                          }}
-                        >
-                          {isVerifyingCode ? "Verifying..." : "Confirm"}
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          disabled={isSendingVerification}
-                          onClick={() => {
-                            setIsSendingVerification(true);
-                            setVerificationCode("");
-                            setTimeout(() => {
-                              setIsSendingVerification(false);
-                              toast({
-                                title: "New code sent!",
-                                description: "A new verification code has been sent to your email.",
-                              });
-                            }, 1500);
-                          }}
-                        >
-                          {isSendingVerification ? "Sending..." : "Resend"}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Wallet Section */}
-                <div>
-                  <Label className="flex items-center space-x-1">
-                    <Wallet className="h-4 w-4" />
-                    <span>Connected Wallet</span>
-                  </Label>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <div className={`flex-1 px-3 py-2 rounded border text-sm font-mono ${
-                      !isWalletDisconnected 
-                        ? 'bg-gray-50' 
-                        : 'bg-red-50 text-red-600'
-                    }`}>
-                      {!isWalletDisconnected ? '0x7582...ECFf' : 'No wallet connected'}
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => {
-                        if (!isWalletDisconnected) {
-                          setIsWalletDisconnected(true);
-                          toast({
-                            title: "Wallet disconnected",
-                            description: "Your wallet has been disconnected successfully.",
-                          });
-                        } else {
-                          setIsWalletDisconnected(false);
-                          toast({
-                            title: "Wallet connected",
-                            description: "Your wallet has been connected successfully.",
-                          });
-                        }
-                      }}
-                    >
-                      {!isWalletDisconnected ? 'Disconnect' : 'Connect'}
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Passport Section */}
-                <div>
-                  <Label className="flex items-center space-x-1">
-                    <Shield className="h-4 w-4" />
-                    <span>Ipê Passport</span>
-                  </Label>
-                  <div className="space-y-2 mt-1">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1 px-3 py-2 bg-purple-50 rounded border text-sm font-mono text-purple-700">
-                        alex.ipecity.eth
-                      </div>
-                      <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Verified
-                      </Badge>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Wallet className="h-3 w-3 text-gray-500" />
-                      <span className="text-xs text-gray-500 font-mono">Associated wallet: 0x7582...ECFf</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Button size="sm" onClick={() => {
-                    // Save verification logic here
-                    setEditingVerification(false);
-                  }}>
-                    <Save className="h-4 w-4 mr-1" />
-                    Save Changes
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      setEmailValue(memberData.member?.email || "");
-                      setIsVerificationSent(false);
-                      setIsWalletDisconnected(false);
-                      setVerificationCode("");
-                      setEditingVerification(false);
-                    }}
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Mail className={`h-4 w-4 ${isEmailVerified ? 'text-green-600' : 'text-yellow-600'}`} />
-                  <span className="text-sm">alex@example.com</span>
-                  <Badge variant="secondary" className={isEmailVerified ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
-                    {isEmailVerified ? (
-                      <>
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Verified
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Pending
-                      </>
-                    )}
-                  </Badge>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Wallet className={`h-4 w-4 ${!isWalletDisconnected ? 'text-blue-600' : 'text-red-600'}`} />
-                  <span className={`text-sm font-mono ${isWalletDisconnected ? 'text-red-600' : ''}`}>
-                    {!isWalletDisconnected ? '0x7582...ECFf' : 'Not connected'}
-                  </span>
-                  <Badge variant="secondary" className={!isWalletDisconnected ? "bg-blue-100 text-blue-800" : "bg-red-100 text-red-800"}>
-                    {!isWalletDisconnected ? (
-                      <>
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Connected
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Disconnected
-                      </>
-                    )}
-                  </Badge>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Shield className="h-4 w-4 text-purple-600" />
-                  <span className="text-sm font-mono">alex.ipecity.eth</span>
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Verified
-                  </Badge>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
 
         {/* Profile Tags */}
         <Card>

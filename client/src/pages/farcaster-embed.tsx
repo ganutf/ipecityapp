@@ -120,7 +120,17 @@ export default function FarcasterEmbed() {
     );
   }
 
+  // Debug logging for FarcasterEmbed
+  console.log("FarcasterEmbed DEBUG:", {
+    authLoading,
+    isAuthenticated,
+    hasValidFid,
+    viewerFid,
+    memberCheck: memberCheck ? "Has memberCheck" : "No memberCheck"
+  });
+
   if (!isAuthenticated) {
+    console.log("FarcasterEmbed showing welcome screen");
     return (
       <div className="max-w-3xl mx-auto py-12 px-6 text-center">
         <div className="mb-8">

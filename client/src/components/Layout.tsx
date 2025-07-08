@@ -16,8 +16,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   
   const isAdmin = profile?.fid === 1109894; // Admin FID
   
+  // Debug logging for Layout
+  console.log("Layout DEBUG:", {
+    isLoading,
+    isAuthenticated,
+    profileFid: profile?.fid || "No profile"
+  });
+
   // Don't render navigation until auth is determined
   if (isLoading) {
+    console.log("Layout showing loading screen");
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="text-center py-12">

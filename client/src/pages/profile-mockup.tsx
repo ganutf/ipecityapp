@@ -145,7 +145,7 @@ export default function ProfileMockupPage() {
                     {fakeProfile.displayName || fakeProfile.username}
                   </h1>
                   <div className="mt-2">
-                    <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
                       <div className="flex items-center space-x-2">
                         <p className="text-purple-600 font-medium text-sm">alex.ipecity.eth</p>
                         <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
@@ -153,8 +153,8 @@ export default function ProfileMockupPage() {
                           Verified
                         </Badge>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        0x7582...ECFf
+                      <div className="text-xs text-gray-500 mt-1">
+                        Passport wallet: 0x7582...ECFf
                       </div>
                     </div>
                   </div>

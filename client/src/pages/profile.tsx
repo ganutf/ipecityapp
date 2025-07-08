@@ -332,12 +332,11 @@ export default function ProfilePage() {
                 <Label className="text-sm font-medium">Bio</Label>
                 {!editingBio && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setEditingBio(true)}
                   >
-                    <Edit3 className="h-4 w-4 mr-1" />
-                    Edit Bio
+                    <Edit3 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
@@ -387,12 +386,11 @@ export default function ProfilePage() {
                 <Label className="text-sm font-medium">Social Links</Label>
                 {!editingSocial && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setEditingSocial(true)}
                   >
-                    <Edit3 className="h-4 w-4 mr-1" />
-                    Edit Social Links
+                    <Edit3 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
@@ -488,12 +486,11 @@ export default function ProfilePage() {
                 <Label className="text-sm font-medium">Profile Tags</Label>
                 {!editingTags && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setEditingTags(true)}
                   >
-                    <Edit3 className="h-4 w-4 mr-1" />
-                    Edit Tags
+                    <Edit3 className="h-4 w-4" />
                   </Button>
                 )}
               </div>

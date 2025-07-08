@@ -528,7 +528,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Username</label>
-                  <p className="text-sm">{(selectedMember as any).farcasterUsername || 'Not provided'}</p>
+                  <p className="text-sm">{(selectedMember as any).ipeUsername || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>
@@ -569,10 +569,7 @@ export default function AdminPage() {
                       'Not claimed'}
                   </p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Passport Verified</label>
-                  <p className="text-sm">{selectedMember.passportVerified ? '✓ Yes' : '✗ No'}</p>
-                </div>
+
                 <div>
                   <label className="text-sm font-medium text-gray-500">Wallet Address</label>
                   <p className="text-sm font-mono text-xs">{selectedMember.walletAddress || 'Not provided'}</p>

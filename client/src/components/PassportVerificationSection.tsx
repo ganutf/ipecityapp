@@ -58,11 +58,11 @@ export function PassportVerificationSection({
   // JustaName accept hook for subdomain acceptance
   const { acceptSubname, isAcceptSubnamePending } = useAcceptSubname();
 
-  // Check if current wallet has Ipê City domain
-  const hasIpeCityDomain = ensName && (
+  // Check if current wallet has Ipê City domain - explicit boolean
+  const hasIpeCityDomain = ensName ? (
     ensName === "ipecity.eth" || 
     ensName.endsWith(".ipecity.eth")
-  );
+  ) : false;
   
   // Debug logging
   console.log("PassportVerificationSection ENS lookup:", {
@@ -70,7 +70,8 @@ export function PassportVerificationSection({
     ensName,
     ensLoading,
     hasIpeCityDomain,
-    memberStatus: memberData?.member?.status
+    memberStatus: memberData?.member?.status,
+    showButtonCondition: isConnected && address && !ensLoading && hasIpeCityDomain === false
   });
 
   // Handle wallet connection for verification

@@ -81,6 +81,11 @@ export default function ProfileMockupPage() {
   const [instagramValue, setInstagramValue] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [emailValue, setEmailValue] = useState("");
+  
+  // Fake simulation states
+  const [isVerificationSent, setIsVerificationSent] = useState(false);
+  const [isWalletDisconnected, setIsWalletDisconnected] = useState(false);
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
 
   // Fake data for mockup
   const memberData: MemberData = {
@@ -110,7 +115,7 @@ export default function ProfileMockupPage() {
   }, []);
 
   // Check verification statuses (using fake data)
-  const isEmailVerified = true;
+  const isEmailVerified = !isVerificationSent; // If we sent verification, show as pending
   const hasIpeCityDomain = true;
   const isPassportVerified = true;
 
@@ -374,8 +379,24 @@ export default function ProfileMockupPage() {
                       placeholder="your.email@example.com"
                       className="flex-1"
                     />
-                    <Button size="sm" variant="outline">
-                      Send Verification
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      disabled={isSendingVerification || isVerificationSent}
+                      onClick={() => {
+                        setIsSendingVerification(true);
+                        // Simulate API call
+                        setTimeout(() => {
+                          setIsSendingVerification(false);
+                          setIsVerificationSent(true);
+                          toast({
+                            title: "Verification email sent!",
+                            description: "Check your inbox for the verification code.",
+                          });
+                        }, 1500);
+                      }}
+                    >
+                      {isSendingVerification ? "Sending..." : isVerificationSent ? "Code Sent" : "Send Verification"}
                     </Button>
                   </div>
                 </div>
@@ -387,12 +408,45 @@ export default function ProfileMockupPage() {
                     <span>Connected Wallet</span>
                   </Label>
                   <div className="flex items-center space-x-2 mt-1">
-                    <div className="flex-1 px-3 py-2 bg-gray-50 rounded border text-sm font-mono">
-                      0x7582...ECFf
-                    </div>
-                    <Button size="sm" variant="outline">
-                      Disconnect
-                    </Button>
+                    {!isWalletDisconnected ? (
+                      <>
+                        <div className="flex-1 px-3 py-2 bg-gray-50 rounded border text-sm font-mono">
+                          0x7582...ECFf
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            setIsWalletDisconnected(true);
+                            toast({
+                              title: "Wallet disconnected",
+                              description: "Your wallet has been disconnected successfully.",
+                            });
+                          }}
+                        >
+                          Disconnect
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 px-3 py-2 bg-red-50 rounded border text-sm text-red-600">
+                          No wallet connected
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            setIsWalletDisconnected(false);
+                            toast({
+                              title: "Wallet reconnected",
+                              description: "Your wallet has been reconnected.",
+                            });
+                          }}
+                        >
+                          Reconnect
+                        </Button>
+                      </>
+                    )}
                     <ConnectButton.Custom>
                       {({ openConnectModal }) => (
                         <Button size="sm" variant="outline" onClick={openConnectModal}>
@@ -433,6 +487,8 @@ export default function ProfileMockupPage() {
                     size="sm" 
                     onClick={() => {
                       setEmailValue(memberData.member?.email || "");
+                      setIsVerificationSent(false);
+                      setIsWalletDisconnected(false);
                       setEditingVerification(false);
                     }}
                   >
@@ -444,19 +500,39 @@ export default function ProfileMockupPage() {
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-green-600" />
+                  <Mail className={`h-4 w-4 ${isEmailVerified ? 'text-green-600' : 'text-yellow-600'}`} />
                   <span className="text-sm">alex@example.com</span>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Verified
+                  <Badge variant="secondary" className={isEmailVerified ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                    {isEmailVerified ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Verified
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Pending
+                      </>
+                    )}
                   </Badge>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Wallet className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-mono">0x7582...ECFf</span>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Connected
+                  <Wallet className={`h-4 w-4 ${!isWalletDisconnected ? 'text-blue-600' : 'text-red-600'}`} />
+                  <span className={`text-sm font-mono ${isWalletDisconnected ? 'text-red-600' : ''}`}>
+                    {!isWalletDisconnected ? '0x7582...ECFf' : 'Not connected'}
+                  </span>
+                  <Badge variant="secondary" className={!isWalletDisconnected ? "bg-blue-100 text-blue-800" : "bg-red-100 text-red-800"}>
+                    {!isWalletDisconnected ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Connected
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Disconnected
+                      </>
+                    )}
                   </Badge>
                 </div>
                 <div className="flex items-center space-x-2">

@@ -66,6 +66,24 @@ export function usePersistentAuth() {
     }
   }, [kitAuth, kitProfile]);
 
+  // Clear stored data when AuthKit logs out
+  useEffect(() => {
+    if (isInitialized && !kitAuth && restoredProfile) {
+      // Only clear if we're initialized and AuthKit has logged out
+      // but we still have restored profile data
+      const checkAuthKitLogout = () => {
+        if (!kitAuth && !kitProfile?.fid) {
+          setRestoredProfile(null);
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+        }
+      };
+      
+      // Small delay to ensure AuthKit state has settled
+      const timer = setTimeout(checkAuthKitLogout, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [kitAuth, kitProfile?.fid, restoredProfile, isInitialized]);
+
   // Determine effective authentication state
   const isAuthenticated = kitAuth || (!!restoredProfile && isInitialized);
   // Use restoredProfile if kitProfile is empty or if we have valid restored data
@@ -83,5 +101,6 @@ export function usePersistentAuth() {
 // Export logout function to be used in components
 export function logout() {
   localStorage.removeItem(AUTH_STORAGE_KEY);
-  window.location.href = window.location.origin;
+  // Instead of redirecting, just reload the page to reset React state
+  window.location.reload();
 }

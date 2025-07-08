@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
-import { PassportVerificationSection } from "@/components/PassportVerificationSection";
-import { Mail, Globe } from "lucide-react";
+import { useAccount, useDisconnect } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useEnsLookup } from "@/hooks/useEnsLookup";
+import { Mail, Globe, CheckCircle, AlertCircle, Wallet } from "lucide-react";
 
 interface MemberStatus {
   isMember: boolean;
@@ -23,9 +27,44 @@ export default function IdVerificationPage() {
   const { profile } = usePersistentAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+  const { toast } = useToast();
   
   const [emailComplete, setEmailComplete] = useState(false);
   const [passportComplete, setPassportComplete] = useState(false);
+
+  // ENS lookup for connected wallet
+  const { data: ensName, isLoading: ensLoading } = useEnsLookup(address || "");
+
+  // Passport verification mutation
+  const verifyPassportMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest(`/api/passport/verify`, {
+        method: "POST",
+        body: JSON.stringify({
+          farcasterFid: profile?.fid,
+          ensName: ensName,
+          walletAddress: address,
+        }),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Membership activated",
+        description: "Your Ipê City membership has been activated successfully.",
+      });
+      handlePassportComplete();
+      queryClient.invalidateQueries({ queryKey: [`/api/members/check/${profile?.fid}`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Verification failed",
+        description: error?.message || "Failed to verify passport ownership.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Check member status to determine current verification state
   const { data: memberStatus, refetch, isLoading: memberLoading } = useQuery<MemberStatus>({
@@ -37,6 +76,7 @@ export default function IdVerificationPage() {
   // Update completion states based on member status (matching Profile page logic)
   const isEmailVerified = memberStatus?.member?.emailVerified || false;
   const isPassportVerified = !!memberStatus?.member?.ipePassport;
+  const hasIpeCityDomain = ensName && (ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth');
   const bothComplete = isEmailVerified && isPassportVerified;
   
   // Debug logging
@@ -128,16 +168,94 @@ export default function IdVerificationPage() {
             Connect your wallet and verify your ENS domain
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <PassportVerificationSection
-            farcasterFid={profile?.fid || 0}
-            currentPassport={memberStatus?.member?.ipePassport}
-            isVerified={isPassportVerified}
-            onVerificationComplete={handlePassportComplete}
-            allowChange={true}
-            memberData={memberStatus}
-            farcasterProfile={profile}
-          />
+        <CardContent className="space-y-4">
+          {memberStatus?.member?.ipePassport || hasIpeCityDomain ? (
+            <div className="space-y-3">
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-800">ENS Domain</p>
+                    <p className="text-sm text-green-700 font-mono">
+                      {memberStatus?.member?.ipePassport || ensName}
+                    </p>
+                  </div>
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                </div>
+              </div>
+              {address && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm font-medium text-blue-800">Associated Wallet</p>
+                  <p className="text-xs font-mono text-blue-700">
+                    {address}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
+                <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">Connect wallet to verify ownership</p>
+              </div>
+              
+              {isConnected ? (
+                <div className="space-y-3">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">Connected Wallet</p>
+                        <p className="text-xs font-mono text-blue-700">
+                          {address?.slice(0, 6)}...{address?.slice(-4)}
+                        </p>
+                        {ensLoading && (
+                          <p className="text-xs text-blue-600 mt-1">Looking up ENS domain...</p>
+                        )}
+                        {ensName && !hasIpeCityDomain && (
+                          <p className="text-xs text-blue-600 mt-1">ENS: {ensName}</p>
+                        )}
+                      </div>
+                      <CheckCircle className="h-5 w-5 text-blue-500" />
+                    </div>
+                  </div>
+                  
+                  {hasIpeCityDomain ? (
+                    <Button 
+                      onClick={() => verifyPassportMutation.mutate()}
+                      disabled={verifyPassportMutation.isPending}
+                      className="w-full"
+                    >
+                      {verifyPassportMutation.isPending ? "Activating..." : "Activate Membership"}
+                    </Button>
+                  ) : ensName && !hasIpeCityDomain ? (
+                    <div className="text-center text-sm text-gray-600">
+                      This wallet doesn't own an Ipê City domain. You can apply for membership instead.
+                    </div>
+                  ) : (
+                    <div className="text-center text-sm text-gray-600">
+                      No ENS domain found for this wallet.
+                    </div>
+                  )}
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => disconnect()}
+                    className="w-full"
+                  >
+                    Disconnect Wallet
+                  </Button>
+                </div>
+              ) : (
+                <ConnectButton.Custom>
+                  {({ openConnectModal }) => (
+                    <Button onClick={openConnectModal} className="w-full">
+                      <Wallet className="mr-2 h-4 w-4" />
+                      Connect Wallet
+                    </Button>
+                  )}
+                </ConnectButton.Custom>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

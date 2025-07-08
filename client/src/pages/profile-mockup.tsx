@@ -144,7 +144,13 @@ export default function ProfileMockupPage() {
                   <h1 className="text-2xl font-bold text-gray-900">
                     {fakeProfile.displayName || fakeProfile.username}
                   </h1>
-                  <p className="text-purple-600 font-medium">alex.ipecity.eth</p>
+                  <div className="flex items-center space-x-2">
+                    <p className="text-purple-600 font-medium">alex.ipecity.eth</p>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                  </div>
                   <p className="text-sm text-gray-500">ID: {fakeProfile.fid}</p>
                 </div>
               </div>
@@ -264,6 +270,99 @@ export default function ProfileMockupPage() {
           <CardContent>
             {editingSocial ? (
               <div className="space-y-4">
+                {/* Email Section */}
+                <div>
+                  <Label htmlFor="email" className="flex items-center space-x-1">
+                    <Mail className="h-4 w-4" />
+                    <span>Email Address</span>
+                  </Label>
+                  <div className="flex space-x-2 mt-1">
+                    <Input
+                      id="email"
+                      value={emailValue}
+                      onChange={(e) => setEmailValue(e.target.value)}
+                      placeholder="your.email@example.com"
+                      className="flex-1"
+                    />
+                    {!isVerificationSent ? (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        disabled={isSendingVerification}
+                        onClick={() => {
+                          setIsSendingVerification(true);
+                          // Simulate API call
+                          setTimeout(() => {
+                            setIsSendingVerification(false);
+                            setIsVerificationSent(true);
+                            toast({
+                              title: "Verification email sent!",
+                              description: "Check your inbox for the verification code.",
+                            });
+                          }, 1500);
+                        }}
+                      >
+                        {isSendingVerification ? "Sending..." : "Send Verification"}
+                      </Button>
+                    ) : null}
+                  </div>
+                  
+                  {/* Verification Code Input */}
+                  {isVerificationSent && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded border">
+                      <Label htmlFor="verificationCode" className="text-sm font-medium">
+                        Enter 6-digit verification code:
+                      </Label>
+                      <div className="flex space-x-2 mt-2">
+                        <Input
+                          id="verificationCode"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          placeholder="123456"
+                          maxLength={6}
+                          className="flex-1"
+                        />
+                        <Button 
+                          size="sm" 
+                          disabled={isVerifyingCode || verificationCode.length !== 6}
+                          onClick={() => {
+                            setIsVerifyingCode(true);
+                            setTimeout(() => {
+                              setIsVerifyingCode(false);
+                              setIsVerificationSent(false);
+                              setVerificationCode("");
+                              toast({
+                                title: "Email verified!",
+                                description: "Your email address has been successfully verified.",
+                              });
+                            }, 1000);
+                          }}
+                        >
+                          {isVerifyingCode ? "Verifying..." : "Confirm"}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          disabled={isSendingVerification}
+                          onClick={() => {
+                            setIsSendingVerification(true);
+                            setVerificationCode("");
+                            setTimeout(() => {
+                              setIsSendingVerification(false);
+                              toast({
+                                title: "New code sent!",
+                                description: "A new verification code has been sent to your email.",
+                              });
+                            }, 1500);
+                          }}
+                        >
+                          {isSendingVerification ? "Sending..." : "Resend"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 <div>
                   <Label htmlFor="twitter" className="flex items-center space-x-1">
                     <Twitter className="h-4 w-4" />
@@ -315,6 +414,9 @@ export default function ProfileMockupPage() {
                     variant="outline" 
                     size="sm" 
                     onClick={() => {
+                      setEmailValue(memberData.member?.email || "");
+                      setIsVerificationSent(false);
+                      setVerificationCode("");
                       setTwitterValue(memberData?.member?.twitter || "");
                       setLinkedinValue(memberData?.member?.linkedin || "");
                       setInstagramValue(memberData?.member?.instagram || "");

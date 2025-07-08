@@ -149,7 +149,7 @@ export default function FarcasterEmbed() {
       <div className="max-w-3xl mx-auto py-12 px-6 text-center">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Welcome to Ipê City Pulse
+            Welcome to Ipê City
           </h1>
           <p className="text-xl text-gray-600 mb-6">
             Your community engagement tracking platform
@@ -199,7 +199,7 @@ export default function FarcasterEmbed() {
         </div>
 
         <div className="text-sm text-gray-500">
-          <p>Ipê City Pulse • Community Engagement Platform</p>
+          <p>Ipê City • Community Engagement Platform</p>
         </div>
       </div>
     );

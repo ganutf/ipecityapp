@@ -348,43 +348,42 @@ export function PassportVerificationSection({
                 </Button>
               </div>
 
-              {/* Action based on current status - Show if wallet connected and ENS lookup complete */}
-              {isConnected && address && !ensLoading && (
+              {/* Show domain verification button if Ipê City domain is found */}
+              {isConnected && address && !ensLoading && hasIpeCityDomain && (
+                <div className="space-y-3">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-800 font-medium">Ipê City Domain Detected!</p>
+                    <p className="text-sm text-green-700">
+                      {ensName} detected! Sign a message to verify ownership and activate your membership.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleVerifyPassport}
+                    disabled={verifyPassportMutation.isPending}
+                    className="w-full"
+                  >
+                    <Wallet className="mr-2 h-4 w-4" />
+                    {verifyPassportMutation.isPending ? "Signing..." : "Sign & Activate Membership"}
+                  </Button>
+                </div>
+              )}
+
+              {/* Show application button only if NO Ipê City domain is found */}
+              {isConnected && address && !ensLoading && hasIpeCityDomain === false && (
                 <div className="space-y-4">
-                  {hasIpeCityDomain ? (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-green-800 font-medium">Ipê City Domain Detected!</p>
-                        <p className="text-sm text-green-700">
-                          {ensName} detected! Sign a message to verify ownership and activate your membership.
-                        </p>
-                      </div>
-                      <Button 
-                        onClick={handleVerifyPassport}
-                        disabled={verifyPassportMutation.isPending}
-                        className="w-full"
-                      >
-                        <Wallet className="mr-2 h-4 w-4" />
-                        {verifyPassportMutation.isPending ? "Signing..." : "Sign & Activate Membership"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-blue-800 font-medium">No Ipê City Domain Found</p>
-                        <p className="text-sm text-blue-700">
-                          Submit an application to claim a new subdomain and join the community.
-                        </p>
-                      </div>
-                      <Button 
-                        onClick={() => setShowApplicationForm(true)}
-                        className="w-full"
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        Submit Application
-                      </Button>
-                    </div>
-                  )}
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-blue-800 font-medium">No Ipê City Domain Found</p>
+                    <p className="text-sm text-blue-700">
+                      Submit an application to claim a new subdomain and join the community.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => setShowApplicationForm(true)}
+                    className="w-full"
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Submit Application
+                  </Button>
                 </div>
               )}
 

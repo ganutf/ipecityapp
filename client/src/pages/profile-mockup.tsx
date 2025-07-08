@@ -144,15 +144,20 @@ export default function ProfileMockupPage() {
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900">
                     {fakeProfile.displayName || fakeProfile.username}
                   </h1>
-                  <div className="flex items-center space-x-2 flex-wrap">
-                    <p className="text-purple-600 font-medium text-sm md:text-base">alex.ipecity.eth</p>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Verified
-                    </Badge>
+                  <div className="mt-2">
+                    <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <p className="text-purple-600 font-medium text-sm">alex.ipecity.eth</p>
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        0x7582...ECFf
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs md:text-sm text-gray-500">Passport wallet: 0x7582...ECFf</p>
-                  <p className="text-xs md:text-sm text-gray-500">ID: {fakeProfile.fid}</p>
                 </div>
               </div>
               

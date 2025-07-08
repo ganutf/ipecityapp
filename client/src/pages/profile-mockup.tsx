@@ -135,7 +135,7 @@ export default function ProfileMockupPage() {
         {/* Header with Profile Info */}
         <Card>
           <CardContent className="pt-4 md:pt-6">
-            <div className="flex flex-col space-y-4">
+            <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
               <div className="flex items-center space-x-3 md:space-x-4">
                 <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
@@ -148,7 +148,7 @@ export default function ProfileMockupPage() {
                 </div>
               </div>
               
-              <div className="flex flex-col items-center space-y-2">
+              <div className="flex flex-col space-y-2 lg:flex-shrink-0">
                 <div className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
                   !isWalletDisconnected 
                     ? 'bg-blue-50 border-blue-200' 

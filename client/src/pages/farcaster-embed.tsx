@@ -21,17 +21,17 @@ export default function FarcasterEmbed() {
   // Check if user is approved member
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
-    enabled: isAuthenticated && hasValidFid && !authLoading,
+    enabled: Boolean(isAuthenticated && hasValidFid && !authLoading),
   });
 
   const { data: signerData, isLoading: signerLoading, refetch: refetchSigner } = useQuery({
     queryKey: [`/api/neynar/signer/${viewerFid}`],
-    enabled:
-      isAuthenticated && !!viewerFid && (memberCheck as any)?.isMember && !authLoading,
+    enabled: Boolean(isAuthenticated && !!viewerFid && (memberCheck as any)?.isMember && !authLoading),
     staleTime: 1000, // Keep data fresh
     refetchInterval: (data) => {
       // Poll every 2 seconds if signer is pending approval, otherwise don't poll
-      return (data as any)?.status === 'pending_approval' || (data as any)?.status === 'generated' ? 2000 : false;
+      const needsPolling = (data as any)?.status === 'pending_approval' || (data as any)?.status === 'generated';
+      return needsPolling ? 2000 : false;
     },
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
@@ -58,13 +58,13 @@ export default function FarcasterEmbed() {
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: isAuthenticated && (memberCheck as any)?.isMember && !authLoading,
+    enabled: Boolean(isAuthenticated && (memberCheck as any)?.isMember && !authLoading),
   });
 
   // Get user's executions
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
     queryKey: [`/api/executions/${viewerFid}`],
-    enabled: isAuthenticated && hasValidFid && (memberCheck as any)?.isMember && !authLoading,
+    enabled: Boolean(isAuthenticated && hasValidFid && (memberCheck as any)?.isMember && !authLoading),
   });
 
   // Helper functions for date comparison

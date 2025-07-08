@@ -20,22 +20,28 @@ export function usePersistentAuth() {
 
   // Initialize and check localStorage immediately on mount
   useEffect(() => {
+    console.log("usePersistentAuth: Initializing, checking localStorage...");
     const restoreAuth = () => {
       try {
         const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        console.log("usePersistentAuth: Stored data found:", !!stored);
         
         if (stored) {
           const authData = JSON.parse(stored);
           const isExpired = Date.now() - authData.timestamp > AUTH_EXPIRY_HOURS * 60 * 60 * 1000;
+          console.log("usePersistentAuth: Parsed data:", { fid: authData.fid, age: (Date.now() - authData.timestamp) / 1000 / 60, maxMinutes: AUTH_EXPIRY_HOURS * 60 });
           
           if (!isExpired && authData.fid) {
+            console.log("usePersistentAuth: Restoring valid session data");
             setRestoredProfile(authData);
             return true;
           } else {
+            console.log("usePersistentAuth: Session expired, removing");
             localStorage.removeItem(AUTH_STORAGE_KEY);
           }
         }
       } catch (error) {
+        console.error("usePersistentAuth: Error restoring auth:", error);
         localStorage.removeItem(AUTH_STORAGE_KEY);
       }
       return false;
@@ -66,29 +72,36 @@ export function usePersistentAuth() {
     }
   }, [kitAuth, kitProfile]);
 
-  // Clear stored data when AuthKit logs out - but be more careful about auto-logout
+  // More conservative logout detection - only clear on explicit logout
   useEffect(() => {
-    if (isInitialized && !kitAuth && restoredProfile) {
-      // Only clear if we're initialized and AuthKit has definitely logged out
-      // and we're sure it's not just a temporary state
-      const checkAuthKitLogout = () => {
-        if (!kitAuth && !kitProfile?.fid) {
-          console.log("usePersistentAuth: AuthKit logged out, clearing restored profile");
-          setRestoredProfile(null);
-          localStorage.removeItem(AUTH_STORAGE_KEY);
-        }
-      };
-      
-      // Longer delay to avoid clearing during page refreshes
-      const timer = setTimeout(checkAuthKitLogout, 1000);
-      return () => clearTimeout(timer);
+    // Don't auto-clear on navigation - only manual logout should clear storage
+    // This prevents premature logout during page refreshes and navigation
+    if (isInitialized && !kitAuth && !kitProfile?.fid && restoredProfile) {
+      console.log("usePersistentAuth: AuthKit has no data but we have restored profile, maintaining session");
+      // Keep the restored profile - don't clear automatically
     }
   }, [kitAuth, kitProfile?.fid, restoredProfile, isInitialized]);
 
-  // Determine effective authentication state
-  const isAuthenticated = kitAuth || (!!restoredProfile && isInitialized);
-  // Use restoredProfile if kitProfile is empty or if we have valid restored data
-  const profile = (kitProfile && kitProfile.fid) ? kitProfile : restoredProfile;
+  // Determine effective authentication state - prioritize restored data for stability
+  const hasValidRestoredProfile = restoredProfile && restoredProfile.fid && isInitialized;
+  const hasValidKitProfile = kitProfile && kitProfile.fid;
+  
+  const isAuthenticated = kitAuth || hasValidRestoredProfile;
+  
+  // Always prefer restored profile if available, as it's more stable during navigation
+  const profile = hasValidRestoredProfile ? restoredProfile : (hasValidKitProfile ? kitProfile : null);
+  
+  // Debug logging to understand state changes
+  console.log("usePersistentAuth state:", {
+    kitAuth,
+    kitProfileFid: kitProfile?.fid,
+    restoredProfileFid: restoredProfile?.fid,
+    isInitialized,
+    finalProfile: profile?.fid,
+    isAuthenticated,
+    hasValidRestoredProfile,
+    hasValidKitProfile
+  });
   
 
 
@@ -101,7 +114,8 @@ export function usePersistentAuth() {
 
 // Export logout function to be used in components
 export function logout() {
+  console.log("logout: Explicitly clearing all auth data");
   localStorage.removeItem(AUTH_STORAGE_KEY);
-  // Instead of redirecting, just reload the page to reset React state
-  window.location.reload();
+  // Force full page reload to reset all React state and AuthKit
+  window.location.href = "/";
 }

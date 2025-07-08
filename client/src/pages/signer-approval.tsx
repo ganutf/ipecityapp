@@ -14,7 +14,7 @@ export default function SignerApprovalPage() {
   // Get signer data
   const { data: signerData, refetch: refetchSigner } = useQuery({
     queryKey: [`/api/neynar/signer/${profile?.fid}`],
-    enabled: !!profile?.fid,
+    enabled: Boolean(profile?.fid),
     refetchInterval: 3000, // Check every 3 seconds for approval
     refetchIntervalInBackground: true,
     staleTime: 0, // Always fetch fresh data for signer status

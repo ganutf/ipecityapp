@@ -69,7 +69,8 @@ export function PassportVerificationSection({
     address,
     ensName,
     ensLoading,
-    hasIpeCityDomain
+    hasIpeCityDomain,
+    memberStatus: memberData?.member?.status
   });
 
   // Handle wallet connection for verification

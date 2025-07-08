@@ -49,6 +49,7 @@ export default function IdVerificationPage() {
     isEmailVerified,
     memberEmailVerified: memberStatus?.member?.emailVerified,
     memberStatus: memberStatus?.status,
+    memberEmail: memberStatus?.member?.email,
     memberData: memberStatus?.member
   });
   
@@ -101,8 +102,8 @@ export default function IdVerificationPage() {
 
       <EmailVerificationSection
         farcasterFid={profile?.fid || 0}
-        currentEmail={memberStatus?.member?.email}
-        isVerified={isEmailVerified}
+        currentEmail={memberStatus?.member?.email || ""}
+        isVerified={memberStatus?.member?.emailVerified || false}
         onVerificationComplete={handleEmailComplete}
         allowChange={true}
       />

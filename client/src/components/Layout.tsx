@@ -9,12 +9,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const [location] = useLocation();
   
   const isAdmin = profile?.fid === 1109894; // Admin FID
+  
+  // Check member status to determine if user is in verification process
+  const { data: memberCheck } = useQuery({
+    queryKey: [`/api/members/check/${profile?.fid}`],
+    enabled: Boolean(isAuthenticated && profile?.fid),
+  });
+  
+  const memberStatus = (memberCheck as any)?.status;
+  const isInVerificationProcess = memberStatus && !['active_member'].includes(memberStatus);
   
   // Don't render navigation until auth is determined
   if (isLoading) {
@@ -34,6 +44,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   const shouldShowNavItem = (item: typeof navItems[0]) => {
+    // Hide navigation items if user is in verification process
+    if (isInVerificationProcess) return false;
+    
     if (item.showWhen === "always") return true;
     if (item.showWhen === "member" && isAuthenticated) return true;
     if (item.showWhen === "admin" && isAdmin) return true;
@@ -44,11 +57,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <main className="font-sans min-h-screen bg-gray-50 flex flex-col items-center p-6">
       <header className="w-full max-w-4xl flex items-center justify-between mb-12">
         <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-purple-600 transition-colors">
-          Ipê City Pulse
+          Ipê City
         </Link>
         
         <div className="flex items-center space-x-4">
-          {isAuthenticated && (
+          {isAuthenticated && !isInVerificationProcess && (
             <nav className="flex space-x-1">
               {navItems.filter(shouldShowNavItem).map((item) => (
                 <Link

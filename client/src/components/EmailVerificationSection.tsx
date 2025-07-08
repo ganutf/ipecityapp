@@ -34,6 +34,7 @@ export function EmailVerificationSection({
     setEmail(currentEmail || "");
     setOriginalEmail(currentEmail || "");
     setEmailVerified(isVerified || false);
+    console.log("EmailVerificationSection: Updated state - isVerified:", isVerified, "currentEmail:", currentEmail);
   }, [currentEmail, isVerified]);
 
   // Send verification email

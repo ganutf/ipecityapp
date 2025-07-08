@@ -44,6 +44,14 @@ export default function IdVerificationPage() {
   const isPassportVerified = !!memberStatus?.member?.ipePassport;
   const bothComplete = isEmailVerified && isPassportVerified;
   
+  // Debug logging
+  console.log("ID Verification Page - Email verification status:", {
+    isEmailVerified,
+    memberEmailVerified: memberStatus?.member?.emailVerified,
+    memberStatus: memberStatus?.status,
+    memberData: memberStatus?.member
+  });
+  
   // Redirect to home if user becomes approved member
   useEffect(() => {
     if (memberStatus?.status === 'active_member') {

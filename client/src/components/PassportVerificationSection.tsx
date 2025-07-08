@@ -63,6 +63,14 @@ export function PassportVerificationSection({
     ensName === "ipecity.eth" || 
     ensName.endsWith(".ipecity.eth")
   );
+  
+  // Debug logging
+  console.log("PassportVerificationSection ENS lookup:", {
+    address,
+    ensName,
+    ensLoading,
+    hasIpeCityDomain
+  });
 
   // Handle wallet connection for verification
   useEffect(() => {

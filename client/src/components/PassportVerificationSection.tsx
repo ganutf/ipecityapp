@@ -28,6 +28,7 @@ interface PassportVerificationSectionProps {
   allowChange?: boolean;
   memberData: any;
   farcasterProfile: any;
+  context?: 'profile' | 'id-verification';
 }
 
 export function PassportVerificationSection({
@@ -38,6 +39,7 @@ export function PassportVerificationSection({
   allowChange = false,
   memberData,
   farcasterProfile,
+  context = 'profile',
 }: PassportVerificationSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -319,7 +321,7 @@ export function PassportVerificationSection({
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
-                  <p className="font-medium">Connected Wallet</p>
+                  <p className="font-medium">{context === 'id-verification' ? 'Connected Wallet' : 'Associated Wallet'}</p>
                   <p className="text-sm text-gray-600">{address?.slice(0, 6)}...{address?.slice(-4)}</p>
                 </div>
                 <div className="text-right">

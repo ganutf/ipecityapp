@@ -86,6 +86,8 @@ export default function ProfileMockupPage() {
   const [isVerificationSent, setIsVerificationSent] = useState(false);
   const [isWalletDisconnected, setIsWalletDisconnected] = useState(false);
   const [isSendingVerification, setIsSendingVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
 
   // Fake data for mockup
   const memberData: MemberData = {
@@ -379,26 +381,83 @@ export default function ProfileMockupPage() {
                       placeholder="your.email@example.com"
                       className="flex-1"
                     />
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      disabled={isSendingVerification || isVerificationSent}
-                      onClick={() => {
-                        setIsSendingVerification(true);
-                        // Simulate API call
-                        setTimeout(() => {
-                          setIsSendingVerification(false);
-                          setIsVerificationSent(true);
-                          toast({
-                            title: "Verification email sent!",
-                            description: "Check your inbox for the verification code.",
-                          });
-                        }, 1500);
-                      }}
-                    >
-                      {isSendingVerification ? "Sending..." : isVerificationSent ? "Code Sent" : "Send Verification"}
-                    </Button>
+                    {!isVerificationSent ? (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        disabled={isSendingVerification}
+                        onClick={() => {
+                          setIsSendingVerification(true);
+                          // Simulate API call
+                          setTimeout(() => {
+                            setIsSendingVerification(false);
+                            setIsVerificationSent(true);
+                            toast({
+                              title: "Verification email sent!",
+                              description: "Check your inbox for the verification code.",
+                            });
+                          }, 1500);
+                        }}
+                      >
+                        {isSendingVerification ? "Sending..." : "Send Verification"}
+                      </Button>
+                    ) : null}
                   </div>
+                  
+                  {/* Verification Code Input */}
+                  {isVerificationSent && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded border">
+                      <Label htmlFor="verificationCode" className="text-sm font-medium">
+                        Enter 6-digit verification code:
+                      </Label>
+                      <div className="flex space-x-2 mt-2">
+                        <Input
+                          id="verificationCode"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          placeholder="123456"
+                          maxLength={6}
+                          className="flex-1"
+                        />
+                        <Button 
+                          size="sm" 
+                          disabled={isVerifyingCode || verificationCode.length !== 6}
+                          onClick={() => {
+                            setIsVerifyingCode(true);
+                            setTimeout(() => {
+                              setIsVerifyingCode(false);
+                              setIsVerificationSent(false);
+                              setVerificationCode("");
+                              toast({
+                                title: "Email verified!",
+                                description: "Your email address has been successfully verified.",
+                              });
+                            }, 1000);
+                          }}
+                        >
+                          {isVerifyingCode ? "Verifying..." : "Confirm"}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          disabled={isSendingVerification}
+                          onClick={() => {
+                            setIsSendingVerification(true);
+                            setVerificationCode("");
+                            setTimeout(() => {
+                              setIsSendingVerification(false);
+                              toast({
+                                title: "New code sent!",
+                                description: "A new verification code has been sent to your email.",
+                              });
+                            }, 1500);
+                          }}
+                        >
+                          {isSendingVerification ? "Sending..." : "Resend"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Wallet Section */}
@@ -408,52 +467,34 @@ export default function ProfileMockupPage() {
                     <span>Connected Wallet</span>
                   </Label>
                   <div className="flex items-center space-x-2 mt-1">
-                    {!isWalletDisconnected ? (
-                      <>
-                        <div className="flex-1 px-3 py-2 bg-gray-50 rounded border text-sm font-mono">
-                          0x7582...ECFf
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => {
-                            setIsWalletDisconnected(true);
-                            toast({
-                              title: "Wallet disconnected",
-                              description: "Your wallet has been disconnected successfully.",
-                            });
-                          }}
-                        >
-                          Disconnect
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex-1 px-3 py-2 bg-red-50 rounded border text-sm text-red-600">
-                          No wallet connected
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => {
-                            setIsWalletDisconnected(false);
-                            toast({
-                              title: "Wallet reconnected",
-                              description: "Your wallet has been reconnected.",
-                            });
-                          }}
-                        >
-                          Reconnect
-                        </Button>
-                      </>
-                    )}
-                    <ConnectButton.Custom>
-                      {({ openConnectModal }) => (
-                        <Button size="sm" variant="outline" onClick={openConnectModal}>
-                          Connect Different
-                        </Button>
-                      )}
-                    </ConnectButton.Custom>
+                    <div className={`flex-1 px-3 py-2 rounded border text-sm font-mono ${
+                      !isWalletDisconnected 
+                        ? 'bg-gray-50' 
+                        : 'bg-red-50 text-red-600'
+                    }`}>
+                      {!isWalletDisconnected ? '0x7582...ECFf' : 'No wallet connected'}
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        if (!isWalletDisconnected) {
+                          setIsWalletDisconnected(true);
+                          toast({
+                            title: "Wallet disconnected",
+                            description: "Your wallet has been disconnected successfully.",
+                          });
+                        } else {
+                          setIsWalletDisconnected(false);
+                          toast({
+                            title: "Wallet connected",
+                            description: "Your wallet has been connected successfully.",
+                          });
+                        }
+                      }}
+                    >
+                      {!isWalletDisconnected ? 'Disconnect' : 'Connect'}
+                    </Button>
                   </div>
                 </div>
                 
@@ -463,14 +504,20 @@ export default function ProfileMockupPage() {
                     <Shield className="h-4 w-4" />
                     <span>Ipê Passport</span>
                   </Label>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <div className="flex-1 px-3 py-2 bg-purple-50 rounded border text-sm font-mono text-purple-700">
-                      alex.ipecity.eth
+                  <div className="space-y-2 mt-1">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 px-3 py-2 bg-purple-50 rounded border text-sm font-mono text-purple-700">
+                        alex.ipecity.eth
+                      </div>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Verified
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Verified
-                    </Badge>
+                    <div className="flex items-center space-x-2">
+                      <Wallet className="h-3 w-3 text-gray-500" />
+                      <span className="text-xs text-gray-500 font-mono">Associated wallet: 0x7582...ECFf</span>
+                    </div>
                   </div>
                 </div>
                 
@@ -489,6 +536,7 @@ export default function ProfileMockupPage() {
                       setEmailValue(memberData.member?.email || "");
                       setIsVerificationSent(false);
                       setIsWalletDisconnected(false);
+                      setVerificationCode("");
                       setEditingVerification(false);
                     }}
                   >

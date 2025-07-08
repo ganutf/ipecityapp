@@ -1,0 +1,208 @@
+chunk-Z2GUPSCO.js?v=38ec0d45:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:23 usePersistentAuth: Initializing, checking localStorage...
+use-persistent-auth.ts:27 usePersistentAuth: Stored data found: true
+use-persistent-auth.ts:32 usePersistentAuth: Parsed data: {fid: 2790, age: 2.8412333333333333, maxMinutes: 10080}
+use-persistent-auth.ts:35 usePersistentAuth: Restoring valid session data
+use-persistent-auth.ts:23 usePersistentAuth: Initializing, checking localStorage...
+use-persistent-auth.ts:27 usePersistentAuth: Stored data found: true
+use-persistent-auth.ts:32 usePersistentAuth: Parsed data: {fid: 2790, age: 2.84125, maxMinutes: 10080}
+use-persistent-auth.ts:35 usePersistentAuth: Restoring valid session data
+AuthGuard.tsx:75 AuthGuard - ID verification page requires authentication, redirecting to home
+use-persistent-auth.ts:23 usePersistentAuth: Initializing, checking localStorage...
+use-persistent-auth.ts:27 usePersistentAuth: Stored data found: true
+use-persistent-auth.ts:32 usePersistentAuth: Parsed data: {fid: 2790, age: 2.841533333333333, maxMinutes: 10080}
+use-persistent-auth.ts:35 usePersistentAuth: Restoring valid session data
+use-persistent-auth.ts:23 usePersistentAuth: Initializing, checking localStorage...
+use-persistent-auth.ts:27 usePersistentAuth: Stored data found: true
+use-persistent-auth.ts:32 usePersistentAuth: Parsed data: {fid: 2790, age: 2.841533333333333, maxMinutes: 10080}
+use-persistent-auth.ts:35 usePersistentAuth: Restoring valid session data
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+use-persistent-auth.ts:80 usePersistentAuth: AuthKit has no data but we have restored profile, maintaining session
+chunk-7WLUAVPG.js?v=38ec0d45:23 Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information.
+issueWarning @ chunk-7WLUAVPG.js?v=38ec0d45:23
+(anonymous) @ chunk-7WLUAVPG.js?v=38ec0d45:28
+App.tsx:35  POST https://pulse.walletconnect.org/e?projectId=demo&st=appkit&sv=html-core-1.7.8 400 (Bad Request)
+fetchData @ chunk-DU2SKPKV.js?v=38ec0d45:2956
+post @ chunk-DU2SKPKV.js?v=38ec0d45:2982
+_sendAnalyticsEvent @ chunk-DU2SKPKV.js?v=38ec0d45:4125
+sendEvent @ chunk-DU2SKPKV.js?v=38ec0d45:4153
+sendInitializeEvent @ core-NZB56LRN.js?v=38ec0d45:9246
+initialize @ core-NZB56LRN.js?v=38ec0d45:9218
+await in initialize
+AppKitBaseClient @ core-NZB56LRN.js?v=38ec0d45:9203
+AppKit @ core-NZB56LRN.js?v=38ec0d45:10423
+createAppKit @ core-NZB56LRN.js?v=38ec0d45:10464
+initialize @ index.es-65SFBRAX.js?v=38ec0d45:8264
+await in initialize
+init @ index.es-65SFBRAX.js?v=38ec0d45:8116
+initProvider @ @rainbow-me_rainbowkit.js?v=38ec0d45:4631
+await in initProvider
+getProvider @ @rainbow-me_rainbowkit.js?v=38ec0d45:4648
+setup @ @rainbow-me_rainbowkit.js?v=38ec0d45:4511
+setup @ chunk-QUNSDE3X.js?v=38ec0d45:3080
+(anonymous) @ chunk-QUNSDE3X.js?v=38ec0d45:3047
+createStoreImpl @ chunk-QUNSDE3X.js?v=38ec0d45:2853
+createStore2 @ chunk-QUNSDE3X.js?v=38ec0d45:2856
+createConfig @ chunk-QUNSDE3X.js?v=38ec0d45:3043
+getDefaultConfig @ @rainbow-me_rainbowkit.js?v=38ec0d45:11926
+(anonymous) @ App.tsx:35
+App.tsx:35  GET https://api.web3modal.org/appkit/v1/config?projectId=demo&st=appkit&sv=html-core-1.7.8 403 (Forbidden)
+fetchData @ chunk-DU2SKPKV.js?v=38ec0d45:2956
+get @ chunk-DU2SKPKV.js?v=38ec0d45:2972
+fetchProjectConfig @ chunk-DU2SKPKV.js?v=38ec0d45:6106
+fetchRemoteFeatures @ core-NZB56LRN.js?v=38ec0d45:9017
+initialize @ core-NZB56LRN.js?v=38ec0d45:9220
+await in initialize
+AppKitBaseClient @ core-NZB56LRN.js?v=38ec0d45:9203
+AppKit @ core-NZB56LRN.js?v=38ec0d45:10423
+createAppKit @ core-NZB56LRN.js?v=38ec0d45:10464
+initialize @ index.es-65SFBRAX.js?v=38ec0d45:8264
+await in initialize
+init @ index.es-65SFBRAX.js?v=38ec0d45:8116
+initProvider @ @rainbow-me_rainbowkit.js?v=38ec0d45:4631
+await in initProvider
+getProvider @ @rainbow-me_rainbowkit.js?v=38ec0d45:4648
+setup @ @rainbow-me_rainbowkit.js?v=38ec0d45:4511
+setup @ chunk-QUNSDE3X.js?v=38ec0d45:3080
+(anonymous) @ chunk-QUNSDE3X.js?v=38ec0d45:3047
+createStoreImpl @ chunk-QUNSDE3X.js?v=38ec0d45:2853
+createStore2 @ chunk-QUNSDE3X.js?v=38ec0d45:2856
+createConfig @ chunk-QUNSDE3X.js?v=38ec0d45:3043
+getDefaultConfig @ @rainbow-me_rainbowkit.js?v=38ec0d45:11926
+(anonymous) @ App.tsx:35
+App.tsx:35 [Reown Config] Failed to fetch remote project configuration. Using local/default values. Error: HTTP status code: 403
+    at fetchData (chunk-DU2SKPKV.js?v=38ec0d45:2958:17)
+    at async FetchUtil.get (chunk-DU2SKPKV.js?v=38ec0d45:2972:22)
+    at async Object.fetchProjectConfig (chunk-DU2SKPKV.js?v=38ec0d45:6106:22)
+    at async Object.fetchRemoteFeatures (core-NZB56LRN.js?v=38ec0d45:9017:26)
+    at async AppKit.initialize (core-NZB56LRN.js?v=38ec0d45:9220:27)
+fetchRemoteFeatures @ core-NZB56LRN.js?v=38ec0d45:9020
+await in fetchRemoteFeatures
+initialize @ core-NZB56LRN.js?v=38ec0d45:9220
+await in initialize
+AppKitBaseClient @ core-NZB56LRN.js?v=38ec0d45:9203
+AppKit @ core-NZB56LRN.js?v=38ec0d45:10423
+createAppKit @ core-NZB56LRN.js?v=38ec0d45:10464
+initialize @ index.es-65SFBRAX.js?v=38ec0d45:8264
+await in initialize
+init @ index.es-65SFBRAX.js?v=38ec0d45:8116
+initProvider @ @rainbow-me_rainbowkit.js?v=38ec0d45:4631
+await in initProvider
+getProvider @ @rainbow-me_rainbowkit.js?v=38ec0d45:4648
+setup @ @rainbow-me_rainbowkit.js?v=38ec0d45:4511
+setup @ chunk-QUNSDE3X.js?v=38ec0d45:3080
+(anonymous) @ chunk-QUNSDE3X.js?v=38ec0d45:3047
+createStoreImpl @ chunk-QUNSDE3X.js?v=38ec0d45:2853
+createStore2 @ chunk-QUNSDE3X.js?v=38ec0d45:2856
+createConfig @ chunk-QUNSDE3X.js?v=38ec0d45:3043
+getDefaultConfig @ @rainbow-me_rainbowkit.js?v=38ec0d45:11926
+(anonymous) @ App.tsx:35
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:23 usePersistentAuth: Initializing, checking localStorage...
+use-persistent-auth.ts:27 usePersistentAuth: Stored data found: true
+use-persistent-auth.ts:32 usePersistentAuth: Parsed data: {fid: 2790, age: 2.8988, maxMinutes: 10080}
+use-persistent-auth.ts:35 usePersistentAuth: Restoring valid session data
+AuthGuard.tsx:95 AuthGuard - Signer status: approved
+AuthGuard.tsx:116 AuthGuard - Member status: pending_id_verification
+AuthGuard.tsx:129 AuthGuard - Incomplete verification, redirecting to id-verification. Status: pending_id_verification
+use-persistent-auth.ts:23 usePersistentAuth: Initializing, checking localStorage...
+use-persistent-auth.ts:27 usePersistentAuth: Stored data found: true
+use-persistent-auth.ts:32 usePersistentAuth: Parsed data: {fid: 2790, age: 2.8988333333333336, maxMinutes: 10080}
+use-persistent-auth.ts:35 usePersistentAuth: Restoring valid session data
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+use-persistent-auth.ts:95 usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+ ID Verification Page - Email verification status: {isEmailVerified: false, memberEmailVerified: undefined, memberStatus: undefined, memberEmail: undefined, memberData: undefined}
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+ ID Verification Page - Email verification status: {isEmailVerified: false, memberEmailVerified: undefined, memberStatus: undefined, memberEmail: undefined, memberData: undefined}
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+ PassportVerificationSection ENS lookup: {address: '0x57367C098Eb5DCcfE33A9C8b8d20662505920c78', ensName: null, ensLoading: true, hasIpeCityDomain: null, memberStatus: undefined}
+ PassportVerificationSection - memberData: undefined
+ PassportVerificationSection - status: undefined
+ PassportVerificationSection - hasIpeCityDomain: null
+ PassportVerificationSection - address: 0x57367C098Eb5DCcfE33A9C8b8d20662505920c78
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: undefined, isInitialized: false, finalProfile: undefined, …}
+ PassportVerificationSection ENS lookup: {address: '0x57367C098Eb5DCcfE33A9C8b8d20662505920c78', ensName: null, ensLoading: true, hasIpeCityDomain: null, memberStatus: undefined}
+ PassportVerificationSection - memberData: undefined
+ PassportVerificationSection - status: undefined
+ PassportVerificationSection - hasIpeCityDomain: null
+ PassportVerificationSection - address: 0x57367C098Eb5DCcfE33A9C8b8d20662505920c78
+ EmailVerificationSection: Updated state - isVerified: false currentEmail:  emailVerified state: false
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: {fid: 2790, age: 2.8994166666666668, maxMinutes: 10080}
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: {fid: 2790, age: 2.8996166666666667, maxMinutes: 10080}
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth: AuthKit has no data but we have restored profile, maintaining session
+ EmailVerificationSection: Updated state - isVerified: false currentEmail:  emailVerified state: false
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: {fid: 2790, age: 2.8996500000000003, maxMinutes: 10080}
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth: Initializing, checking localStorage...
+ usePersistentAuth: Stored data found: true
+ usePersistentAuth: Parsed data: {fid: 2790, age: 2.8996500000000003, maxMinutes: 10080}
+ usePersistentAuth: Restoring valid session data
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ ID Verification Page - Email verification status: {isEmailVerified: false, memberEmailVerified: false, memberStatus: 'pending_id_verification', memberEmail: null, memberData: {…}}
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ ID Verification Page - Email verification status: {isEmailVerified: false, memberEmailVerified: false, memberStatus: 'pending_id_verification', memberEmail: null, memberData: {…}}
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ PassportVerificationSection ENS lookup: {address: '0x57367C098Eb5DCcfE33A9C8b8d20662505920c78', ensName: null, ensLoading: true, hasIpeCityDomain: null, memberStatus: 'pending_id_verification'}
+ PassportVerificationSection - memberData: {isMember: true, status: 'pending_id_verification', member: {…}}
+ PassportVerificationSection - status: pending_id_verification
+ PassportVerificationSection - hasIpeCityDomain: null
+ PassportVerificationSection - address: 0x57367C098Eb5DCcfE33A9C8b8d20662505920c78
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ PassportVerificationSection ENS lookup: {address: '0x57367C098Eb5DCcfE33A9C8b8d20662505920c78', ensName: null, ensLoading: true, hasIpeCityDomain: null, memberStatus: 'pending_id_verification'}
+ PassportVerificationSection - memberData: {isMember: true, status: 'pending_id_verification', member: {…}}
+ PassportVerificationSection - status: pending_id_verification
+ PassportVerificationSection - hasIpeCityDomain: null
+ PassportVerificationSection - address: 0x57367C098Eb5DCcfE33A9C8b8d20662505920c78
+ usePersistentAuth: AuthKit has no data but we have restored profile, maintaining session
+ usePersistentAuth: AuthKit has no data but we have restored profile, maintaining session
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ PassportVerificationSection ENS lookup: {address: '0x57367C098Eb5DCcfE33A9C8b8d20662505920c78', ensName: null, ensLoading: false, hasIpeCityDomain: null, memberStatus: 'pending_id_verification'}
+ PassportVerificationSection - memberData: {isMember: true, status: 'pending_id_verification', member: {…}}
+ PassportVerificationSection - status: pending_id_verification
+ PassportVerificationSection - hasIpeCityDomain: null
+ PassportVerificationSection - address: 0x57367C098Eb5DCcfE33A9C8b8d20662505920c78
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ PassportVerificationSection ENS lookup: {address: '0x57367C098Eb5DCcfE33A9C8b8d20662505920c78', ensName: null, ensLoading: false, hasIpeCityDomain: null, memberStatus: 'pending_id_verification'}
+ PassportVerificationSection - memberData: {isMember: true, status: 'pending_id_verification', member: {…}}
+ PassportVerificationSection - status: pending_id_verification
+ PassportVerificationSection - hasIpeCityDomain: null
+ PassportVerificationSection - address: 0x57367C098Eb5DCcfE33A9C8b8d20662505920c78
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ PassportVerificationSection ENS lookup: {address: '0x57367C098Eb5DCcfE33A9C8b8d20662505920c78', ensName: null, ensLoading: false, hasIpeCityDomain: null, memberStatus: 'pending_id_verification'}
+ PassportVerificationSection - memberData: {isMember: true, status: 'pending_id_verification', member: {…}}
+ PassportVerificationSection - status: pending_id_verification
+ PassportVerificationSection - hasIpeCityDomain: null
+ PassportVerificationSection - address: 0x57367C098Eb5DCcfE33A9C8b8d20662505920c78
+ usePersistentAuth state: {kitAuth: false, kitProfileFid: undefined, restoredProfileFid: 2790, isInitialized: true, finalProfile: 2790, …}
+ PassportVerificationSection ENS lookup: {address: '0x57367C098Eb5DCcfE33A9C8b8d20662505920c78', ensName: null, ensLoading: false, hasIpeCityDomain: null, memberStatus: 'pending_id_verification'}
+ PassportVerificationSection - memberData: {isMember: true, status: 'pending_id_verification', member: {…}}
+ PassportVerificationSection - status: pending_id_verification
+ PassportVerificationSection - hasIpeCityDomain: null
+ PassportVerificationSection - address: 0x57367C098Eb5DCcfE33A9C8b8d20662505920c78

@@ -289,12 +289,6 @@ export function PassportVerificationSection({
 
   const statusDisplay = getStatusDisplay();
 
-  // Debug logging
-  console.log("PassportVerificationSection - memberData:", memberData);
-  console.log("PassportVerificationSection - status:", memberData?.member?.status);
-  console.log("PassportVerificationSection - hasIpeCityDomain:", hasIpeCityDomain);
-  console.log("PassportVerificationSection - address:", address);
-
   return (
     <div className="space-y-6">
       <Card>
@@ -354,8 +348,8 @@ export function PassportVerificationSection({
                 </Button>
               </div>
 
-              {/* Action based on current status */}
-              {memberData?.member && (memberData.member.status === "pending_id_verification" || memberData.member.status === "email_verified") && (
+              {/* Action based on current status - Show if wallet connected and ENS lookup complete */}
+              {isConnected && address && hasIpeCityDomain !== null && (
                 <div className="space-y-4">
                   {hasIpeCityDomain ? (
                     <div className="space-y-3">

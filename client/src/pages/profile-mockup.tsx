@@ -123,7 +123,7 @@ export default function ProfileMockupPage() {
   const isPassportVerified = true;
 
   // Fake profile data for mockup
-  const fakeProfile = profile || {
+  const fakeProfile = {
     fid: 12345,
     username: "jeanhansen",
     displayName: "Jean Hansen",

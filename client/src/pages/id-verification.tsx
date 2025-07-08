@@ -35,7 +35,7 @@ export default function IdVerificationPage() {
   const [passportComplete, setPassportComplete] = useState(false);
 
   // ENS lookup for connected wallet
-  const { data: ensName, isLoading: ensLoading } = useEnsLookup(address || "");
+  const { ensName, isLoading: ensLoading } = useEnsLookup(address || "");
 
   // Passport verification mutation
   const verifyPassportMutation = useMutation({

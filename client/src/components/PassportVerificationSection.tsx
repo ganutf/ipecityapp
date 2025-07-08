@@ -349,7 +349,7 @@ export function PassportVerificationSection({
               </div>
 
               {/* Action based on current status - Show if wallet connected and ENS lookup complete */}
-              {isConnected && address && hasIpeCityDomain !== null && (
+              {isConnected && address && !ensLoading && (
                 <div className="space-y-4">
                   {hasIpeCityDomain ? (
                     <div className="space-y-3">

@@ -199,7 +199,7 @@ export default function FarcasterEmbed() {
         </div>
 
         <div className="text-sm text-gray-500">
-          <p>Ipê City • Community Engagement Platform</p>
+          <p>Ipê City • A Network State community</p>
         </div>
       </div>
     );

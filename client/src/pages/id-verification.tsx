@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
+import { Mail, Globe } from "lucide-react";
 
 interface MemberStatus {
   isMember: boolean;
@@ -93,23 +95,51 @@ export default function IdVerificationPage() {
         </p>
       </div>
 
-      <EmailVerificationSection
-        farcasterFid={profile?.fid || 0}
-        currentEmail={memberStatus?.member?.email || ""}
-        isVerified={memberStatus?.member?.emailVerified || false}
-        onVerificationComplete={handleEmailComplete}
-        allowChange={true}
-      />
+      {/* Email Verification Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Email Verification
+          </CardTitle>
+          <CardDescription>
+            Manage your email address and verification status
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EmailVerificationSection
+            farcasterFid={profile?.fid || 0}
+            currentEmail={memberStatus?.member?.email || ""}
+            isVerified={memberStatus?.member?.emailVerified || false}
+            onVerificationComplete={handleEmailComplete}
+            allowChange={true}
+          />
+        </CardContent>
+      </Card>
 
-      <PassportVerificationSection
-        farcasterFid={profile?.fid || 0}
-        currentPassport={memberStatus?.member?.ipePassport}
-        isVerified={isPassportVerified}
-        onVerificationComplete={handlePassportComplete}
-        allowChange={true}
-        memberData={memberStatus}
-        farcasterProfile={profile}
-      />
+      {/* Passport Verification Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Ipê Passport
+          </CardTitle>
+          <CardDescription>
+            Connect your wallet and verify your ENS domain
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PassportVerificationSection
+            farcasterFid={profile?.fid || 0}
+            currentPassport={memberStatus?.member?.ipePassport}
+            isVerified={isPassportVerified}
+            onVerificationComplete={handlePassportComplete}
+            allowChange={true}
+            memberData={memberStatus}
+            farcasterProfile={profile}
+          />
+        </CardContent>
+      </Card>
 
 
 

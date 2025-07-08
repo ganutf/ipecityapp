@@ -213,7 +213,7 @@ export default function Profile2() {
     <div className="min-h-screen bg-gray-50 py-4 md:py-8">
       <div className="max-w-full lg:max-w-none mx-auto px-4 md:px-6 lg:px-8 xl:px-12 space-y-4 md:space-y-6">
         {/* Header with Profile Info */}
-        <Card>
+        <Card className="w-full">
           <CardContent className="pt-4 md:pt-6">
             <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
               <div className="flex items-center space-x-3 md:space-x-4">
@@ -311,7 +311,7 @@ export default function Profile2() {
         </Card>
 
         {/* Bio Section */}
-        <Card>
+        <Card className="w-full">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base md:text-lg">About</CardTitle>
@@ -365,7 +365,7 @@ export default function Profile2() {
         </Card>
 
         {/* Social Links */}
-        <Card>
+        <Card className="w-full">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base md:text-lg">Social Links</CardTitle>
@@ -513,7 +513,7 @@ export default function Profile2() {
         </Card>
 
         {/* Profile Tags */}
-        <Card>
+        <Card className="w-full">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base md:text-lg">Profile Tags</CardTitle>

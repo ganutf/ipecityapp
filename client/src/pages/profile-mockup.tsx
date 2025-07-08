@@ -72,6 +72,7 @@ export default function ProfileMockupPage() {
   const [editingBio, setEditingBio] = useState(false);
   const [editingSocial, setEditingSocial] = useState(false);
   const [editingTags, setEditingTags] = useState(false);
+  const [editingVerification, setEditingVerification] = useState(false);
 
   // Form states
   const [bioValue, setBioValue] = useState("");
@@ -79,6 +80,7 @@ export default function ProfileMockupPage() {
   const [linkedinValue, setLinkedinValue] = useState("");
   const [instagramValue, setInstagramValue] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [emailValue, setEmailValue] = useState("");
 
   // Fake data for mockup
   const memberData: MemberData = {
@@ -104,6 +106,7 @@ export default function ProfileMockupPage() {
     setLinkedinValue(memberData.member?.linkedin || "");
     setInstagramValue(memberData.member?.instagram || "");
     setSelectedTags(memberData.member?.profileTags || []);
+    setEmailValue(memberData.member?.email || "");
   }, []);
 
   // Check verification statuses (using fake data)
@@ -338,6 +341,137 @@ export default function ProfileMockupPage() {
           </CardContent>
         </Card>
 
+        {/* Verification Status */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Verification Status</CardTitle>
+              {!editingVerification && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingVerification(true)}
+                >
+                  <Edit3 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {editingVerification ? (
+              <div className="space-y-4">
+                {/* Email Section */}
+                <div>
+                  <Label htmlFor="email" className="flex items-center space-x-1">
+                    <Mail className="h-4 w-4" />
+                    <span>Email Address</span>
+                  </Label>
+                  <div className="flex space-x-2 mt-1">
+                    <Input
+                      id="email"
+                      value={emailValue}
+                      onChange={(e) => setEmailValue(e.target.value)}
+                      placeholder="your.email@example.com"
+                      className="flex-1"
+                    />
+                    <Button size="sm" variant="outline">
+                      Send Verification
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Wallet Section */}
+                <div>
+                  <Label className="flex items-center space-x-1">
+                    <Wallet className="h-4 w-4" />
+                    <span>Connected Wallet</span>
+                  </Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <div className="flex-1 px-3 py-2 bg-gray-50 rounded border text-sm font-mono">
+                      0x7582...ECFf
+                    </div>
+                    <Button size="sm" variant="outline">
+                      Disconnect
+                    </Button>
+                    <ConnectButton.Custom>
+                      {({ openConnectModal }) => (
+                        <Button size="sm" variant="outline" onClick={openConnectModal}>
+                          Connect Different
+                        </Button>
+                      )}
+                    </ConnectButton.Custom>
+                  </div>
+                </div>
+                
+                {/* Passport Section */}
+                <div>
+                  <Label className="flex items-center space-x-1">
+                    <Shield className="h-4 w-4" />
+                    <span>Ipê Passport</span>
+                  </Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <div className="flex-1 px-3 py-2 bg-purple-50 rounded border text-sm font-mono text-purple-700">
+                      alex.ipecity.eth
+                    </div>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button size="sm" onClick={() => {
+                    // Save verification logic here
+                    setEditingVerification(false);
+                  }}>
+                    <Save className="h-4 w-4 mr-1" />
+                    Save Changes
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setEmailValue(memberData.member?.email || "");
+                      setEditingVerification(false);
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4 text-green-600" />
+                  <span className="text-sm">alex@example.com</span>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Wallet className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-mono">0x7582...ECFf</span>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Connected
+                  </Badge>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Shield className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-mono">alex.ipecity.eth</span>
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Profile Tags */}
         <Card>
           <CardHeader className="pb-3">
@@ -388,7 +522,7 @@ export default function ProfileMockupPage() {
                     variant="outline" 
                     size="sm" 
                     onClick={() => {
-                      setSelectedTags(memberData?.member?.profileTags || []);
+                      setSelectedTags(memberData.member?.profileTags || []);
                       setEditingTags(false);
                     }}
                   >
@@ -408,25 +542,7 @@ export default function ProfileMockupPage() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" className="w-full">
-                <Wallet className="h-4 w-4 mr-2" />
-                Disconnect Wallet
-              </Button>
-              
-              <Button variant="outline" className="w-full">
-                <Mail className="h-4 w-4 mr-2" />
-                Update Email
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
     </div>
   );

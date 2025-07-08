@@ -166,6 +166,9 @@ export default function IdVerificationPage() {
           </CardTitle>
           <CardDescription>
             Connect your wallet and verify your ENS domain
+            {!isPassportVerified && !isConnected && (
+              <span className="text-xs text-gray-500 block mt-1">(wallet connection required)</span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -193,11 +196,6 @@ export default function IdVerificationPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
-                <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-600">Connect wallet to verify ownership</p>
-              </div>
-              
               {isConnected ? (
                 <div className="space-y-3">
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -227,12 +225,42 @@ export default function IdVerificationPage() {
                       {verifyPassportMutation.isPending ? "Activating..." : "Activate Membership"}
                     </Button>
                   ) : ensName && !hasIpeCityDomain ? (
-                    <div className="text-center text-sm text-gray-600">
-                      This wallet doesn't own an Ipê City domain. You can apply for membership instead.
+                    <div className="text-center space-y-3">
+                      <div className="text-sm text-gray-600">
+                        This wallet doesn't own an Ipê City domain.
+                      </div>
+                      <Button 
+                        onClick={() => {
+                          // Handle application process or show application form
+                          toast({
+                            title: "Application Process",
+                            description: "Please complete email verification first to apply for membership.",
+                          });
+                        }}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Apply for Membership
+                      </Button>
                     </div>
                   ) : (
-                    <div className="text-center text-sm text-gray-600">
-                      No ENS domain found for this wallet.
+                    <div className="text-center space-y-3">
+                      <div className="text-sm text-gray-600">
+                        No ENS domain found for this wallet.
+                      </div>
+                      <Button 
+                        onClick={() => {
+                          // Handle application process
+                          toast({
+                            title: "Application Process", 
+                            description: "Please complete email verification first to apply for membership.",
+                          });
+                        }}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Apply for Membership
+                      </Button>
                     </div>
                   )}
                   

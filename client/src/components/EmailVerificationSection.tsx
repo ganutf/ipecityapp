@@ -162,13 +162,12 @@ export function EmailVerificationSection({
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
-            <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">Email verification required</p>
-          </div>
           
           <div>
-            <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
+            <Label htmlFor="email" className="text-sm font-medium">
+              Email Address
+              <span className="text-xs text-gray-500 ml-2">(verification required)</span>
+            </Label>
             <Input
               id="email"
               type="email"

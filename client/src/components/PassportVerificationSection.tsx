@@ -289,6 +289,12 @@ export function PassportVerificationSection({
 
   const statusDisplay = getStatusDisplay();
 
+  // Debug logging
+  console.log("PassportVerificationSection - memberData:", memberData);
+  console.log("PassportVerificationSection - status:", memberData?.member?.status);
+  console.log("PassportVerificationSection - hasIpeCityDomain:", hasIpeCityDomain);
+  console.log("PassportVerificationSection - address:", address);
+
   return (
     <div className="space-y-6">
       <Card>

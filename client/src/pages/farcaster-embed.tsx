@@ -306,7 +306,7 @@ export default function FarcasterEmbed() {
     );
   }
 
-  if (authLoading || (isAuthenticated && hasValidFid && (!memberCheck || pulsesLoading || executionsLoading || signerData === undefined))) {
+  if (authLoading || (isAuthenticated && hasValidFid && (!memberCheck || pulsesLoading || executionsLoading))) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="text-center py-12">

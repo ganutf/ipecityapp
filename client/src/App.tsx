@@ -17,6 +17,7 @@ import {
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
+import ProfileMockupPage from "@/pages/profile-mockup";
 import SignerApprovalPage from "@/pages/signer-approval";
 import VerifyPassportPage from "@/pages/verify-passport";
 
@@ -73,6 +74,7 @@ function Router() {
           />
           <Route path="/admin" component={AdminPage} />
           <Route path="/profile" component={ProfilePage} />
+          <Route path="/profile-mockup" component={ProfileMockupPage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
 
           <Route path="/id-verification" component={IdVerificationPage} />

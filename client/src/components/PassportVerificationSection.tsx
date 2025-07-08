@@ -52,6 +52,13 @@ export function PassportVerificationSection({
   const [walletConnectedForVerification, setWalletConnectedForVerification] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   
+  // Hide application form if user gets approved
+  useEffect(() => {
+    if (memberData?.member?.status === "approved_application" || memberData?.member?.status === "active_member") {
+      setShowApplicationForm(false);
+    }
+  }, [memberData?.member?.status]);
+  
   // ENS lookup for connected wallet
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
   
@@ -361,8 +368,10 @@ export function PassportVerificationSection({
                 </div>
               )}
 
-              {/* Show application button only if NO Ipê City domain is found */}
-              {isConnected && address && !ensLoading && hasIpeCityDomain === false && (
+              {/* Show application button only if NO Ipê City domain is found AND not approved */}
+              {isConnected && address && !ensLoading && hasIpeCityDomain === false && 
+               memberData?.member?.status !== "approved_application" && 
+               memberData?.member?.status !== "active_member" && (
                 <div className="space-y-4">
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-blue-800 font-medium">No Ipê City Domain Found</p>
@@ -436,8 +445,8 @@ export function PassportVerificationSection({
         </CardContent>
       </Card>
 
-      {/* Application Form Modal */}
-      {showApplicationForm && (
+      {/* Application Form Modal - Only show if not approved */}
+      {showApplicationForm && memberData?.member?.status !== "approved_application" && memberData?.member?.status !== "active_member" && (
         <ApplicationForm
           memberData={memberData}
           farcasterProfile={farcasterProfile}

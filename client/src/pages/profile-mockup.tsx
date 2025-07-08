@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Wallet,
   Shield,
+  Compass,
   Twitter,
   Linkedin,
   Instagram
@@ -145,6 +146,32 @@ export default function ProfileMockupPage() {
                     {fakeProfile.displayName || fakeProfile.username}
                   </h1>
                   <p className="text-xs md:text-sm text-gray-500">ID: {fakeProfile.fid}</p>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <div className="group relative">
+                      <div className="h-6 w-6 bg-purple-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-purple-200 transition-colors">
+                        <User className="h-3 w-3 text-purple-600" />
+                      </div>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        Architect
+                      </div>
+                    </div>
+                    <div className="group relative">
+                      <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-200 transition-colors">
+                        <Compass className="h-3 w-3 text-blue-600" />
+                      </div>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        Explorer
+                      </div>
+                    </div>
+                    <div className="group relative">
+                      <div className="h-6 w-6 bg-green-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-green-200 transition-colors">
+                        <Shield className="h-3 w-3 text-green-600" />
+                      </div>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        Guardian
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               

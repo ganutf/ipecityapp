@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,7 +18,8 @@ import { PassportVerificationSection } from "@/components/PassportVerificationSe
 import { useAccount, useDisconnect } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
-import { Wallet, Mail, Globe, User, CheckCircle, AlertCircle, Edit3 } from "lucide-react";
+import { Wallet, Mail, Globe, User, CheckCircle, AlertCircle, Edit3, Save, X } from "lucide-react";
+import { PROFILE_TAGS } from "@/constants/profileTags";
 
 interface MemberData {
   isMember: boolean;
@@ -40,10 +42,7 @@ interface MemberData {
   };
 }
 
-const PROFILE_TAGS = [
-  'tech founder', 'student', 'developer', 'lawyer', 'scientist',
-  'public servant', 'designer', 'creator', 'technologist', 'researcher'
-];
+
 
 const profileSchema = z.object({
   bio: z.string().optional(),
@@ -63,26 +62,44 @@ export default function ProfilePage() {
   const { disconnect } = useDisconnect();
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
 
+  // Edit mode states
+  const [editingBio, setEditingBio] = useState(false);
+  const [editingSocial, setEditingSocial] = useState(false);
+  const [editingTags, setEditingTags] = useState(false);
+
+  // Form states for editing
+  const [bioValue, setBioValue] = useState("");
+  const [twitterValue, setTwitterValue] = useState("");
+  const [linkedinValue, setLinkedinValue] = useState("");
+  const [instagramValue, setInstagramValue] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
   // Get member data
   const { data: memberData } = useQuery<MemberData>({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
 
-  const form = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      bio: memberData?.member?.bio || "",
-      twitter: memberData?.member?.twitter || "",
-      linkedin: memberData?.member?.linkedin || "",
-      instagram: memberData?.member?.instagram || "",
-      profileTags: memberData?.member?.profileTags || [],
-    },
-  });
+  // Update form values when member data loads
+  useEffect(() => {
+    if (memberData?.member) {
+      setBioValue(memberData.member.bio || "");
+      setTwitterValue(memberData.member.twitter || "");
+      setLinkedinValue(memberData.member.linkedin || "");
+      setInstagramValue(memberData.member.instagram || "");
+      setSelectedTags(memberData.member.profileTags || []);
+    }
+  }, [memberData]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof profileSchema>) => {
+    mutationFn: async (data: Partial<{
+      bio: string;
+      twitter: string;
+      linkedin: string;
+      instagram: string;
+      profileTags: string[];
+    }>) => {
       return apiRequest(`/api/members/${profile?.fid}`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -97,6 +114,10 @@ export default function ProfilePage() {
         description: "Your profile has been successfully updated.",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/members/check/${profile?.fid}`] });
+      // Reset edit modes
+      setEditingBio(false);
+      setEditingSocial(false);
+      setEditingTags(false);
     },
     onError: () => {
       toast({
@@ -107,16 +128,45 @@ export default function ProfilePage() {
     },
   });
 
-  const onSubmit = (data: z.infer<typeof profileSchema>) => {
-    updateProfileMutation.mutate(data);
+  const handleBioSave = () => {
+    updateProfileMutation.mutate({ bio: bioValue });
+  };
+
+  const handleSocialSave = () => {
+    updateProfileMutation.mutate({
+      twitter: twitterValue,
+      linkedin: linkedinValue,
+      instagram: instagramValue,
+    });
+  };
+
+  const handleTagsSave = () => {
+    updateProfileMutation.mutate({ profileTags: selectedTags });
   };
 
   const handleTagToggle = (tag: string) => {
-    const currentTags = form.getValues("profileTags") || [];
-    const newTags = currentTags.includes(tag)
-      ? currentTags.filter(t => t !== tag)
-      : [...currentTags, tag];
-    form.setValue("profileTags", newTags);
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  const cancelBioEdit = () => {
+    setBioValue(memberData?.member?.bio || "");
+    setEditingBio(false);
+  };
+
+  const cancelSocialEdit = () => {
+    setTwitterValue(memberData?.member?.twitter || "");
+    setLinkedinValue(memberData?.member?.linkedin || "");
+    setInstagramValue(memberData?.member?.instagram || "");
+    setEditingSocial(false);
+  };
+
+  const cancelTagsEdit = () => {
+    setSelectedTags(memberData?.member?.profileTags || []);
+    setEditingTags(false);
   };
 
   // Early return after all hooks
@@ -275,111 +325,236 @@ export default function ProfilePage() {
               Update your bio, social links, and profile tags
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Bio Section */}
-              <div>
-                <Label htmlFor="bio" className="text-sm font-medium">Bio</Label>
-                <Textarea
-                  id="bio"
-                  placeholder="Tell us about yourself..."
-                  className="mt-1"
-                  {...form.register("bio")}
-                />
+          <CardContent className="space-y-6">
+            {/* Bio Section */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-sm font-medium">Bio</Label>
+                {!editingBio && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingBio(true)}
+                  >
+                    <Edit3 className="h-4 w-4 mr-1" />
+                    Edit Bio
+                  </Button>
+                )}
               </div>
+              
+              {editingBio ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={bioValue}
+                    onChange={(e) => setBioValue(e.target.value)}
+                    placeholder="Tell us about yourself..."
+                    className="min-h-[100px]"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleBioSave}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      {updateProfileMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={cancelBioEdit}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-lg min-h-[60px] flex items-center">
+                  <p className="text-sm text-gray-700">
+                    {memberData?.member?.bio || "No bio provided"}
+                  </p>
+                </div>
+              )}
+            </div>
 
-              {/* Social Links */}
-              <div>
+            <Separator />
+
+            {/* Social Links Section */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
                 <Label className="text-sm font-medium">Social Links</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                  <div>
-                    <Label htmlFor="twitter" className="text-xs text-gray-500">Twitter</Label>
-                    <Input
-                      id="twitter"
-                      placeholder="username"
-                      className="mt-1"
-                      {...form.register("twitter")}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="linkedin" className="text-xs text-gray-500">LinkedIn</Label>
-                    <Input
-                      id="linkedin"
-                      placeholder="profile URL"
-                      className="mt-1"
-                      {...form.register("linkedin")}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="instagram" className="text-xs text-gray-500">Instagram</Label>
-                    <Input
-                      id="instagram"
-                      placeholder="username"
-                      className="mt-1"
-                      {...form.register("instagram")}
-                    />
-                  </div>
-                </div>
+                {!editingSocial && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingSocial(true)}
+                  >
+                    <Edit3 className="h-4 w-4 mr-1" />
+                    Edit Social Links
+                  </Button>
+                )}
               </div>
-
-              {/* Profile Tags */}
-              <div>
-                <Label className="text-sm font-medium">Profile Tags</Label>
-                <p className="text-xs text-gray-500 mb-3">Select tags that describe you</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {PROFILE_TAGS.map((tag) => (
-                    <div key={tag} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={tag}
-                        checked={(form.watch("profileTags") || []).includes(tag)}
-                        onCheckedChange={() => handleTagToggle(tag)}
+              
+              {editingSocial ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="twitter" className="text-xs text-gray-500">Twitter</Label>
+                      <Input
+                        id="twitter"
+                        value={twitterValue}
+                        onChange={(e) => setTwitterValue(e.target.value)}
+                        placeholder="username"
+                        className="mt-1"
                       />
-                      <Label htmlFor={tag} className="text-sm cursor-pointer">
-                        {tag}
-                      </Label>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Current Profile Preview */}
-              {(memberData?.member?.bio || (memberData?.member?.profileTags && memberData.member.profileTags.length > 0)) && (
-                <div className="border-t pt-6">
-                  <Label className="text-sm font-medium text-gray-700">Current Profile</Label>
-                  <div className="mt-2 space-y-3">
-                    {memberData?.member?.bio && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm">{memberData.member.bio}</p>
-                      </div>
-                    )}
                     
-                    {memberData?.member?.profileTags && memberData.member.profileTags.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {memberData.member.profileTags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div>
+                      <Label htmlFor="linkedin" className="text-xs text-gray-500">LinkedIn</Label>
+                      <Input
+                        id="linkedin"
+                        value={linkedinValue}
+                        onChange={(e) => setLinkedinValue(e.target.value)}
+                        placeholder="profile URL"
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="instagram" className="text-xs text-gray-500">Instagram</Label>
+                      <Input
+                        id="instagram"
+                        value={instagramValue}
+                        onChange={(e) => setInstagramValue(e.target.value)}
+                        placeholder="username"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleSocialSave}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      {updateProfileMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={cancelSocialEdit}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-1">Twitter</p>
+                    <p className="text-sm text-gray-700">
+                      {memberData?.member?.twitter || "Not provided"}
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-1">LinkedIn</p>
+                    <p className="text-sm text-gray-700">
+                      {memberData?.member?.linkedin || "Not provided"}
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-1">Instagram</p>
+                    <p className="text-sm text-gray-700">
+                      {memberData?.member?.instagram || "Not provided"}
+                    </p>
                   </div>
                 </div>
               )}
+            </div>
 
-              <Button
-                type="submit"
-                disabled={updateProfileMutation.isPending}
-                className="w-full"
-              >
-                <Edit3 className="mr-2 h-4 w-4" />
-                {updateProfileMutation.isPending ? "Updating..." : "Update Profile"}
-              </Button>
-            </form>
+            <Separator />
+
+            {/* Profile Tags Section */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-sm font-medium">Profile Tags</Label>
+                {!editingTags && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditingTags(true)}
+                  >
+                    <Edit3 className="h-4 w-4 mr-1" />
+                    Edit Tags
+                  </Button>
+                )}
+              </div>
+              
+              {editingTags ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-gray-500">Select tags that describe you</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {PROFILE_TAGS.map((tag) => (
+                      <div key={tag} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={tag}
+                          checked={selectedTags.includes(tag)}
+                          onCheckedChange={() => handleTagToggle(tag)}
+                        />
+                        <Label htmlFor={tag} className="text-sm cursor-pointer">
+                          {tag}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleTagsSave}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      {updateProfileMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={cancelTagsEdit}
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-lg min-h-[60px] flex items-center">
+                  {memberData?.member?.profileTags && memberData.member.profileTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {memberData.member.profileTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-700">No tags selected</p>
+                  )}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

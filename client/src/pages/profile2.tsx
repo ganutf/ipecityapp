@@ -214,18 +214,18 @@ export default function Profile2() {
       <div className="max-w-4xl mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
         {/* Header with Profile Info */}
         <Card>
-          <CardContent className="pt-4 md:pt-6">
-            <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
-              <div className="flex items-center space-x-3 md:space-x-4">
-                <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
+          <CardContent className="pt-3 md:pt-4">
+            <div className="flex flex-col space-y-3 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
+              <div className="flex items-center space-x-3">
+                <div className="h-12 w-12 md:h-14 md:w-14 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="h-6 w-6 md:h-7 md:w-7 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                  <h1 className="text-lg md:text-xl font-bold text-gray-900">
                     {profile?.displayName || profile?.username}
                   </h1>
-                  <p className="text-xs md:text-sm text-gray-500">ID: {profile?.fid}</p>
-                  <div className="flex items-center space-x-2 mt-2">
+                  <p className="text-xs text-gray-500">ID: {profile?.fid}</p>
+                  <div className="flex items-center space-x-1.5 mt-1">
                     {/* TODO: Implement member type logic based on memberData.member.memberType */}
                     <div className="group relative">
                       <div className="h-6 w-6 bg-purple-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-purple-200 transition-colors">
@@ -255,19 +255,19 @@ export default function Profile2() {
                 </div>
               </div>
               
-              <div className="flex flex-col space-y-2 lg:flex-shrink-0">
+              <div className="flex flex-col space-y-1.5 lg:flex-shrink-0">
                 {/* Wallet Info Box */}
-                <div className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
+                <div className={`flex items-center space-x-2 px-2 md:px-3 py-1 rounded-lg border ${
                   isConnected 
                     ? 'bg-blue-50 border-blue-200' 
                     : 'bg-gray-50 border-gray-200'
                 }`}>
-                  <Wallet className={`h-4 w-4 ${isConnected ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <Wallet className={`h-3.5 w-3.5 ${isConnected ? 'text-blue-600' : 'text-gray-400'}`} />
                   {isConnected ? (
                     <>
                       <button
                         onClick={() => disconnect()}
-                        className="text-xs md:text-sm font-mono hover:underline transition-colors text-blue-600"
+                        className="text-xs font-mono hover:underline transition-colors text-blue-600"
                       >
                         {address?.slice(0, 6)}...{address?.slice(-4)}
                       </button>
@@ -281,7 +281,7 @@ export default function Profile2() {
                       {({ openConnectModal }) => (
                         <button
                           onClick={openConnectModal}
-                          className="text-xs md:text-sm text-gray-400 hover:underline transition-colors"
+                          className="text-xs text-gray-400 hover:underline transition-colors"
                         >
                           Connect Wallet
                         </button>
@@ -292,15 +292,15 @@ export default function Profile2() {
                 
                 {/* Passport Info Box */}
                 {memberData?.member?.ipePassport && (
-                  <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="inline-block px-2 md:px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <p className="text-purple-600 font-medium text-sm">{memberData.member.ipePassport}</p>
+                      <p className="text-purple-600 font-medium text-xs md:text-sm">{memberData.member.ipePassport}</p>
                       <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Verified
                       </Badge>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-gray-500 mt-0.5">
                       Passport wallet: {address?.slice(0, 6)}...{address?.slice(-4)}
                     </div>
                   </div>

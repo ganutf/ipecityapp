@@ -317,8 +317,26 @@ export default function FarcasterEmbed() {
     );
   }
 
+  // Debug logging
+  console.log("Debug info:", {
+    isAuthenticated,
+    hasValidFid,
+    memberCheck,
+    pulsesData,
+    activePulse,
+    authLoading,
+    pulsesLoading,
+    executionsLoading
+  });
+
   return (
     <div className="w-full max-w-4xl mx-auto">
+      <div className="bg-yellow-100 p-4 mb-4 text-sm">
+        <p>DEBUG: Authenticated user reached main content area</p>
+        <p>Active pulse: {activePulse ? "Found" : "None"}</p>
+        <p>Pulses count: {(pulsesData as any)?.pulses?.length || 0}</p>
+      </div>
+      
       {/* Active Pulse Section */}
       {activePulse ? (
         <div className="mb-12 flex justify-center">

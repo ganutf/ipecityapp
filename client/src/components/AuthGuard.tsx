@@ -68,20 +68,29 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
    * Order matters: Check highest priority states first.
    */
   useEffect(() => {
-    // STEP 1: Handle unauthenticated users
+    const currentPath = window.location.pathname;
+    
+    // STEP 1: Protect ID verification page - always requires authentication
+    if (currentPath === '/id-verification' && !profile?.fid) {
+      console.log("AuthGuard - ID verification page requires authentication, redirecting to home");
+      setLocation("/");
+      return;
+    }
+    
+    // STEP 2: Handle unauthenticated users for other pages
     if (requireAuth && !profile) {
       // User not logged in but auth required - redirect to home page
       setLocation("/");
       return;
     }
 
-    // STEP 2: Wait for API responses before making routing decisions
+    // STEP 3: Wait for API responses before making routing decisions
     if (isLoading) {
       return;
     }
 
     if (profile && profile.fid) {
-      // STEP 3: Check Farcaster signer approval status (highest priority)
+      // STEP 4: Check Farcaster signer approval status (highest priority)
       if (signerData) {
         console.log("AuthGuard - Signer status:", (signerData as any).status);
         if ((signerData as any).status === 'pending_approval') {
@@ -92,7 +101,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         }
       }
 
-      // STEP 4: Process member status (only after signer is approved)
+      // STEP 5: Process member status (only after signer is approved)
       if (signerData && (signerData as any).status === 'approved') {
         // Wait for member status API response
         if (!memberStatus) {
@@ -101,7 +110,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
 
         const { isMember, status } = memberStatus as any;
         
-        // STEP 5: Handle member registration and verification states
+        // STEP 6: Handle member registration and verification states
         if (isMember) {
           const currentStatus = status;
           console.log("AuthGuard - Member status:", currentStatus);

@@ -139,23 +139,23 @@ export default function FarcasterEmbed() {
           <div className="grid md:grid-cols-3 gap-6 text-left">
             <div className="space-y-2">
               <div className="text-3xl mb-2">🎯</div>
-              <h3 className="font-semibold text-gray-800">Daily Pulses</h3>
+              <h3 className="font-semibold text-gray-800">Pulse</h3>
               <p className="text-sm text-gray-600">
-                Get daily Farcaster post engagement tasks to complete with your community
+                Engage in collective activities to help the community move forward.
               </p>
             </div>
             <div className="space-y-2">
               <div className="text-3xl mb-2">✨</div>
-              <h3 className="font-semibold text-gray-800">Track Progress</h3>
+              <h3 className="font-semibold text-gray-800">Collaborate</h3>
               <p className="text-sm text-gray-600">
-                Monitor your likes, recasts, and community participation over time
+                Monitor your contribution to the community and your governance power.
               </p>
             </div>
             <div className="space-y-2">
               <div className="text-3xl mb-2">🌟</div>
-              <h3 className="font-semibold text-gray-800">Build Community</h3>
+              <h3 className="font-semibold text-gray-800">Connect</h3>
               <p className="text-sm text-gray-600">
-                Strengthen connections through coordinated engagement activities
+                Meet Ipê members and learn about their projects.
               </p>
             </div>
           </div>

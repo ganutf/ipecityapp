@@ -81,13 +81,13 @@ export async function sendApprovalEmail(email: string, ipePassport: string): Pro
     to: email,
     from: fromEmail,
     subject: 'Welcome to Ipê City Pulse!',
-    text: `Your registration has been approved! Your Ipê passport is: ${ipePassport}.ipecity.eth`,
+    text: `Your registration has been approved! Your Ipê passport is: ${ipePassport}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Welcome to Ipê City Pulse!</h2>
         <p>Congratulations! Your registration has been approved.</p>
         <p>Your Ipê passport is:</p>
-        <h3 style="color: #8B5CF6;">${ipePassport}.ipecity.eth</h3>
+        <h3 style="color: #8B5CF6;">${ipePassport}</h3>
         <p>You can now access the platform and participate in daily pulse activities.</p>
       </div>
     `

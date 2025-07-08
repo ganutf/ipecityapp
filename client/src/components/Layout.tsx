@@ -24,7 +24,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   });
   
   const memberStatus = (memberCheck as any)?.status;
-  const isInVerificationProcess = memberStatus && !['active_member'].includes(memberStatus);
+  const isInVerificationProcess = Boolean(isAuthenticated && memberStatus && !['active_member'].includes(memberStatus));
   
   // Don't render navigation until auth is determined
   if (isLoading) {

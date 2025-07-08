@@ -135,7 +135,7 @@ export default function ProfileMockupPage() {
         {/* Header with Profile Info */}
         <Card>
           <CardContent className="pt-4 md:pt-6">
-            <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
+            <div className="flex flex-col space-y-4">
               <div className="flex items-center space-x-3 md:space-x-4">
                 <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
@@ -144,25 +144,11 @@ export default function ProfileMockupPage() {
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900">
                     {fakeProfile.displayName || fakeProfile.username}
                   </h1>
-                  <div className="mt-2">
-                    <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <p className="text-purple-600 font-medium text-sm">alex.ipecity.eth</p>
-                        <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Verified
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Passport wallet: 0x7582...ECFf
-                      </div>
-                    </div>
-                  </div>
+                  <p className="text-xs md:text-sm text-gray-500">ID: {fakeProfile.fid}</p>
                 </div>
               </div>
               
-              {/* Wallet Status */}
-              <div className="flex items-center space-x-2 lg:flex-shrink-0">
+              <div className="flex flex-col items-center space-y-2">
                 <div className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
                   !isWalletDisconnected 
                     ? 'bg-blue-50 border-blue-200' 
@@ -197,6 +183,19 @@ export default function ProfileMockupPage() {
                       Connected
                     </Badge>
                   )}
+                </div>
+                
+                <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <p className="text-purple-600 font-medium text-sm">alex.ipecity.eth</p>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Passport wallet: 0x7582...ECFf
+                  </div>
                 </div>
               </div>
             </div>

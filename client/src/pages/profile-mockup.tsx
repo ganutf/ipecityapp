@@ -130,34 +130,34 @@ export default function ProfileMockupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 space-y-6">
+    <div className="min-h-screen bg-gray-50 py-4 md:py-8">
+      <div className="max-w-4xl mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
         {/* Header with Profile Info */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="h-16 w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
-                  <User className="h-8 w-8 text-white" />
+          <CardContent className="pt-4 md:pt-6">
+            <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
+              <div className="flex items-center space-x-3 md:space-x-4">
+                <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl md:text-2xl font-bold text-gray-900">
                     {fakeProfile.displayName || fakeProfile.username}
                   </h1>
-                  <div className="flex items-center space-x-2">
-                    <p className="text-purple-600 font-medium">alex.ipecity.eth</p>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                  <div className="flex items-center space-x-2 flex-wrap">
+                    <p className="text-purple-600 font-medium text-sm md:text-base">alex.ipecity.eth</p>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Verified
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-500">ID: {fakeProfile.fid}</p>
+                  <p className="text-xs md:text-sm text-gray-500">ID: {fakeProfile.fid}</p>
                 </div>
               </div>
               
               {/* Wallet Status */}
-              <div className="flex items-center space-x-2">
-                <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg border ${
+              <div className="flex items-center space-x-2 lg:flex-shrink-0">
+                <div className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
                   !isWalletDisconnected 
                     ? 'bg-blue-50 border-blue-200' 
                     : 'bg-gray-50 border-gray-200'
@@ -179,14 +179,14 @@ export default function ProfileMockupPage() {
                         });
                       }
                     }}
-                    className={`text-sm font-mono hover:underline transition-colors ${
+                    className={`text-xs md:text-sm font-mono hover:underline transition-colors ${
                       !isWalletDisconnected ? 'text-blue-600' : 'text-gray-400'
                     }`}
                   >
                     {!isWalletDisconnected ? '0x7582...ECFf' : 'Connect Wallet'}
                   </button>
                   {!isWalletDisconnected && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs hidden md:inline-flex">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Connected
                     </Badge>
@@ -201,7 +201,7 @@ export default function ProfileMockupPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">About</CardTitle>
+              <CardTitle className="text-base md:text-lg">About</CardTitle>
               {!editingBio && (
                 <Button
                   variant="ghost"
@@ -222,11 +222,11 @@ export default function ProfileMockupPage() {
                   placeholder="Tell us about yourself..."
                   className="min-h-[100px]"
                 />
-                <div className="flex space-x-2">
+                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
                   <Button size="sm" onClick={() => {
                     // Save bio logic here
                     setEditingBio(false);
-                  }}>
+                  }} className="flex-1 sm:flex-none">
                     <Save className="h-4 w-4 mr-1" />
                     Save
                   </Button>
@@ -234,9 +234,10 @@ export default function ProfileMockupPage() {
                     variant="outline" 
                     size="sm" 
                     onClick={() => {
-                      setBioValue(memberData?.member?.bio || "");
+                      setBioValue(memberData.member?.bio || "");
                       setEditingBio(false);
                     }}
+                    className="flex-1 sm:flex-none"
                   >
                     <X className="h-4 w-4 mr-1" />
                     Cancel
@@ -255,7 +256,7 @@ export default function ProfileMockupPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Social Links</CardTitle>
+              <CardTitle className="text-base md:text-lg">Social Links</CardTitle>
               {!editingSocial && (
                 <Button
                   variant="ghost"
@@ -313,7 +314,7 @@ export default function ProfileMockupPage() {
                       <Label htmlFor="verificationCode" className="text-sm font-medium">
                         Enter 6-digit verification code:
                       </Label>
-                      <div className="flex space-x-2 mt-2">
+                      <div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2 mt-2">
                         <Input
                           id="verificationCode"
                           value={verificationCode}
@@ -322,42 +323,46 @@ export default function ProfileMockupPage() {
                           maxLength={6}
                           className="flex-1"
                         />
-                        <Button 
-                          size="sm" 
-                          disabled={isVerifyingCode || verificationCode.length !== 6}
-                          onClick={() => {
-                            setIsVerifyingCode(true);
-                            setTimeout(() => {
-                              setIsVerifyingCode(false);
-                              setIsVerificationSent(false);
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            disabled={isVerifyingCode || verificationCode.length !== 6}
+                            onClick={() => {
+                              setIsVerifyingCode(true);
+                              setTimeout(() => {
+                                setIsVerifyingCode(false);
+                                setIsVerificationSent(false);
+                                setVerificationCode("");
+                                toast({
+                                  title: "Email verified!",
+                                  description: "Your email address has been successfully verified.",
+                                });
+                              }, 1000);
+                            }}
+                            className="flex-1 md:flex-none"
+                          >
+                            {isVerifyingCode ? "Verifying..." : "Confirm"}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            disabled={isSendingVerification}
+                            onClick={() => {
+                              setIsSendingVerification(true);
                               setVerificationCode("");
-                              toast({
-                                title: "Email verified!",
-                                description: "Your email address has been successfully verified.",
-                              });
-                            }, 1000);
-                          }}
-                        >
-                          {isVerifyingCode ? "Verifying..." : "Confirm"}
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          disabled={isSendingVerification}
-                          onClick={() => {
-                            setIsSendingVerification(true);
-                            setVerificationCode("");
-                            setTimeout(() => {
-                              setIsSendingVerification(false);
-                              toast({
-                                title: "New code sent!",
-                                description: "A new verification code has been sent to your email.",
-                              });
-                            }, 1500);
-                          }}
-                        >
-                          {isSendingVerification ? "Sending..." : "Resend"}
-                        </Button>
+                              setTimeout(() => {
+                                setIsSendingVerification(false);
+                                toast({
+                                  title: "New code sent!",
+                                  description: "A new verification code has been sent to your email.",
+                                });
+                              }, 1500);
+                            }}
+                            className="flex-1 md:flex-none"
+                          >
+                            {isSendingVerification ? "Sending..." : "Resend"}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -402,11 +407,11 @@ export default function ProfileMockupPage() {
                     className="mt-1"
                   />
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
                   <Button size="sm" onClick={() => {
                     // Save social links logic here
                     setEditingSocial(false);
-                  }}>
+                  }} className="flex-1 sm:flex-none">
                     <Save className="h-4 w-4 mr-1" />
                     Save
                   </Button>
@@ -422,6 +427,7 @@ export default function ProfileMockupPage() {
                       setInstagramValue(memberData?.member?.instagram || "");
                       setEditingSocial(false);
                     }}
+                    className="flex-1 sm:flex-none"
                   >
                     <X className="h-4 w-4 mr-1" />
                     Cancel
@@ -470,7 +476,7 @@ export default function ProfileMockupPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Interests & Skills</CardTitle>
+              <CardTitle className="text-base md:text-lg">Interests & Skills</CardTitle>
               {!editingTags && (
                 <Button
                   variant="ghost"
@@ -485,7 +491,7 @@ export default function ProfileMockupPage() {
           <CardContent>
             {editingTags ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {AVAILABLE_TAGS.map((tag) => (
                     <label key={tag} className="flex items-center space-x-2 cursor-pointer">
                       <input

@@ -211,7 +211,7 @@ export default function Profile2() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 md:py-8">
-      <div className="max-w-4xl mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
+      <div className="max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto px-3 md:px-4 lg:px-6 xl:px-8 space-y-4 md:space-y-6">
         {/* Header with Profile Info */}
         <Card>
           <CardContent className="pt-4 md:pt-6">

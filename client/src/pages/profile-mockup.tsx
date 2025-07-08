@@ -95,13 +95,13 @@ export default function ProfileMockupPage() {
     isMember: true,
     status: "active_member",
     member: {
-      email: "alex.santos@example.com",
+      email: "jean.hansen@example.com",
       emailVerified: true,
-      ipePassport: "alex.ipecity.eth",
+      ipePassport: "jean.ipecity.eth",
       bio: "Passionate builder in the web3 space. Love creating decentralized applications and contributing to open source projects. Always learning and exploring new technologies.",
-      twitter: "@alexsantos",
-      linkedin: "linkedin.com/in/alexsantos",
-      instagram: "@alexcreates",
+      twitter: "@jeanhansen",
+      linkedin: "linkedin.com/in/jeanhansen",
+      instagram: "@jeancreates",
       profileTags: ["Developer", "Builder", "DeFi", "Community"],
       profileCompleted: true,
     }
@@ -125,8 +125,8 @@ export default function ProfileMockupPage() {
   // Fake profile data for mockup
   const fakeProfile = profile || {
     fid: 12345,
-    username: "alexsantos",
-    displayName: "Alex Santos",
+    username: "jeanhansen",
+    displayName: "Jean Hansen",
     pfpUrl: "",
   };
 
@@ -214,7 +214,7 @@ export default function ProfileMockupPage() {
                 
                 <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <p className="text-purple-600 font-medium text-sm">alex.ipecity.eth</p>
+                    <p className="text-purple-600 font-medium text-sm">jean.ipecity.eth</p>
                     <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Verified

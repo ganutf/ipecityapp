@@ -69,11 +69,7 @@ function Router() {
         <Switch>
           <Route
             path="/"
-            component={() => (
-              <RequireApproval>
-                <FarcasterEmbed />
-              </RequireApproval>
-            )}
+            component={FarcasterEmbed}
           />
           <Route path="/admin" component={AdminPage} />
           <Route path="/profile" component={ProfilePage} />

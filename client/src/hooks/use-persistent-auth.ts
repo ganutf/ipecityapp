@@ -89,15 +89,7 @@ export function usePersistentAuth() {
   // Use restoredProfile if kitProfile is empty or if we have valid restored data
   const profile = (kitProfile && kitProfile.fid) ? kitProfile : restoredProfile;
   
-  // Debug logging
-  console.log("usePersistentAuth DEBUG:", {
-    isInitialized,
-    kitAuth,
-    kitProfile: kitProfile?.fid ? `FID: ${kitProfile.fid}` : "No kitProfile",
-    restoredProfile: restoredProfile?.fid ? `FID: ${restoredProfile.fid}` : "No restoredProfile",
-    isAuthenticated,
-    isLoading: !isInitialized
-  });
+
 
   return {
     isAuthenticated,

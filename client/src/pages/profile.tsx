@@ -8,9 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
@@ -18,7 +25,22 @@ import { PassportVerificationSection } from "@/components/PassportVerificationSe
 import { useAccount, useDisconnect } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
-import { Wallet, Mail, Globe, User, CheckCircle, AlertCircle, Edit3, Save, X } from "lucide-react";
+import {
+  Wallet,
+  Mail,
+  Globe,
+  User,
+  CheckCircle,
+  AlertCircle,
+  Edit3,
+  Save,
+  X,
+  Shield,
+  Compass,
+  Twitter,
+  Linkedin,
+  Instagram,
+} from "lucide-react";
 import { PROFILE_TAGS } from "@/constants/profileTags";
 
 interface MemberData {
@@ -42,8 +64,6 @@ interface MemberData {
   };
 }
 
-
-
 const profileSchema = z.object({
   bio: z.string().optional(),
   twitter: z.string().optional(),
@@ -52,54 +72,47 @@ const profileSchema = z.object({
   profileTags: z.array(z.string()).optional(),
 });
 
-export default function ProfilePage() {
+export default function Profile2() {
   const { profile } = usePersistentAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  // All hooks must be called at the top level
+
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
 
-  // Edit mode states
+  // Edit states
   const [editingBio, setEditingBio] = useState(false);
   const [editingSocial, setEditingSocial] = useState(false);
   const [editingTags, setEditingTags] = useState(false);
 
-  // Form states for editing
+  // Form values
   const [bioValue, setBioValue] = useState("");
   const [twitterValue, setTwitterValue] = useState("");
   const [linkedinValue, setLinkedinValue] = useState("");
   const [instagramValue, setInstagramValue] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  // Get member data
-  const { data: memberData } = useQuery<MemberData>({
+  // Email verification states for social section
+  const [emailValue, setEmailValue] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [isVerificationSent, setIsVerificationSent] = useState(false);
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+
+  const { data: memberData, isLoading } = useQuery({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
 
-  // Update form values when member data loads
-  useEffect(() => {
-    if (memberData?.member) {
-      setBioValue(memberData.member.bio || "");
-      setTwitterValue(memberData.member.twitter || "");
-      setLinkedinValue(memberData.member.linkedin || "");
-      setInstagramValue(memberData.member.instagram || "");
-      setSelectedTags(memberData.member.profileTags || []);
-    }
-  }, [memberData]);
-
-  // Update profile mutation
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: Partial<{
-      bio: string;
-      twitter: string;
-      linkedin: string;
-      instagram: string;
-      profileTags: string[];
-    }>) => {
+    mutationFn: (data: {
+      bio?: string;
+      twitter?: string;
+      linkedin?: string;
+      instagram?: string;
+      profileTags?: string[];
+    }) => {
       return apiRequest(`/api/members/${profile?.fid}`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -113,7 +126,9 @@ export default function ProfilePage() {
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/members/check/${profile?.fid}`] });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/members/check/${profile?.fid}`],
+      });
       // Reset edit modes
       setEditingBio(false);
       setEditingSocial(false);
@@ -145,10 +160,8 @@ export default function ProfilePage() {
   };
 
   const handleTagToggle = (tag: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -161,13 +174,28 @@ export default function ProfilePage() {
     setTwitterValue(memberData?.member?.twitter || "");
     setLinkedinValue(memberData?.member?.linkedin || "");
     setInstagramValue(memberData?.member?.instagram || "");
+    setEmailValue(memberData?.member?.email || "");
     setEditingSocial(false);
+    setIsVerificationSent(false);
+    setVerificationCode("");
   };
 
   const cancelTagsEdit = () => {
     setSelectedTags(memberData?.member?.profileTags || []);
     setEditingTags(false);
   };
+
+  // Initialize form values when memberData loads
+  useEffect(() => {
+    if (memberData?.member) {
+      setBioValue(memberData.member.bio || "");
+      setTwitterValue(memberData.member.twitter || "");
+      setLinkedinValue(memberData.member.linkedin || "");
+      setInstagramValue(memberData.member.instagram || "");
+      setEmailValue(memberData.member.email || "");
+      setSelectedTags(memberData.member.profileTags || []);
+    }
+  }, [memberData]);
 
   // Early return after all hooks
   if (!memberData?.isMember) {
@@ -177,7 +205,8 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Complete Verification</CardTitle>
             <CardDescription>
-              Please complete email and passport verification to access your profile.
+              Please complete email and passport verification to access your
+              profile.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -185,373 +214,415 @@ export default function ProfilePage() {
     );
   }
 
-  const hasIpeCityDomain = ensName && (ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth');
+  const hasIpeCityDomain =
+    ensName && (ensName.endsWith(".ipecity.eth") || ensName === "ipecity.eth");
 
   return (
-    <div className="container mx-auto max-w-4xl py-8 space-y-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
-        <p className="text-gray-600 mt-2">Manage your account settings and verification status</p>
-      </div>
-
-      <div className="space-y-6">
-        {/* 1. Wallet Section */}
+    <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
+      <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
+        {/* Header with Profile Info */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
-              Wallet Connection
-            </CardTitle>
-            <CardDescription>
-              Connect your wallet to manage your Ipê City identity
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isConnected ? (
-              <div className="space-y-3">
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-800">Connected Wallet</p>
-                      <p className="text-xs font-mono text-green-700">
-                        {address?.slice(0, 6)}...{address?.slice(-4)}
-                      </p>
+          <CardContent className="pt-4 md:pt-6">
+            <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
+              <div className="flex items-center space-x-3 md:space-x-4">
+                <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                    {profile?.displayName || profile?.username}
+                  </h1>
+                  <p className="text-xs md:text-sm text-gray-500">
+                    ID: {profile?.fid}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-2">
+                    {/* TODO: Implement member type logic based on memberData.member.memberType */}
+                    <div className="group relative">
+                      <div className="h-6 w-6 bg-purple-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-purple-200 transition-colors">
+                        <User className="h-3 w-3 text-purple-600" />
+                      </div>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        Architect
+                      </div>
                     </div>
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <div className="group relative">
+                      <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-200 transition-colors">
+                        <Compass className="h-3 w-3 text-blue-600" />
+                      </div>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        Explorer
+                      </div>
+                    </div>
+                    <div className="group relative">
+                      <div className="h-6 w-6 bg-green-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-green-200 transition-colors">
+                        <Shield className="h-3 w-3 text-green-600" />
+                      </div>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        Guardian
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  onClick={() => disconnect()}
-                  className="w-full"
+              </div>
+
+              <div className="flex flex-col space-y-2 lg:flex-shrink-0">
+                {/* Wallet Info Box */}
+                <div
+                  className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
+                    isConnected
+                      ? "bg-blue-50 border-blue-200"
+                      : "bg-gray-50 border-gray-200"
+                  }`}
                 >
-                  Disconnect Wallet
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
-                  <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">No wallet connected</p>
-                </div>
-                <ConnectButton.Custom>
-                  {({ openConnectModal }) => (
-                    <Button onClick={openConnectModal} className="w-full">
-                      <Wallet className="mr-2 h-4 w-4" />
-                      Connect Wallet
-                    </Button>
+                  <Wallet
+                    className={`h-4 w-4 ${isConnected ? "text-blue-600" : "text-gray-400"}`}
+                  />
+                  {isConnected ? (
+                    <>
+                      <button
+                        onClick={() => disconnect()}
+                        className="text-xs md:text-sm font-mono hover:underline transition-colors text-blue-600"
+                      >
+                        {address?.slice(0, 6)}...{address?.slice(-4)}
+                      </button>
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-100 text-green-800 text-xs hidden md:inline-flex"
+                      >
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Connected
+                      </Badge>
+                    </>
+                  ) : (
+                    <ConnectButton.Custom>
+                      {({ openConnectModal }) => (
+                        <button
+                          onClick={openConnectModal}
+                          className="text-xs md:text-sm text-gray-400 hover:underline transition-colors"
+                        >
+                          Connect Wallet
+                        </button>
+                      )}
+                    </ConnectButton.Custom>
                   )}
-                </ConnectButton.Custom>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 2. Passport Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Ipê Passport
-            </CardTitle>
-            <CardDescription>
-              Your ENS subdomain and associated wallet
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {memberData?.member?.ipePassport || hasIpeCityDomain ? (
-              <div className="space-y-3">
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-800">ENS Domain</p>
-                      <p className="text-sm text-green-700 font-mono">
-                        {memberData?.member?.ipePassport || ensName}
-                      </p>
-                    </div>
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  </div>
                 </div>
-                {address && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm font-medium text-blue-800">Associated Wallet</p>
-                    <p className="text-xs font-mono text-blue-700">
-                      {address}
-                    </p>
+
+                {/* Passport Info Box */}
+                {memberData?.member?.ipePassport && (
+                  <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <p className="text-purple-600 font-medium text-sm">
+                        {memberData.member.ipePassport}
+                      </p>
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-100 text-green-800 text-xs"
+                      >
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Verified
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Passport wallet: {address?.slice(0, 6)}...
+                      {address?.slice(-4)}
+                    </div>
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
-                  <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">No ENS domain verified</p>
-                  <p className="text-xs text-gray-500 mt-1">Complete verification to claim your passport</p>
-                </div>
-              </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* 3. Email Section */}
+        {/* Bio Section */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Email Verification
-            </CardTitle>
-            <CardDescription>
-              Manage your email address and verification status
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base md:text-lg">About</CardTitle>
+              {!editingBio && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingBio(true)}
+                >
+                  <Edit3 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <EmailVerificationSection
-              farcasterFid={profile?.fid || 0}
-              currentEmail={memberData?.member?.email}
-              isVerified={memberData?.member?.emailVerified || false}
-              allowChange={true}
-            />
+            {editingBio ? (
+              <div className="space-y-3">
+                <Textarea
+                  value={bioValue}
+                  onChange={(e) => setBioValue(e.target.value)}
+                  placeholder="Tell us about yourself..."
+                  className="min-h-[100px]"
+                />
+                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={handleBioSave}
+                    disabled={updateProfileMutation.isPending}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelBioEdit}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-700">
+                {memberData?.member?.bio ||
+                  "No bio provided yet. Click the edit button to add one."}
+              </p>
+            )}
           </CardContent>
         </Card>
 
-        {/* 4. Profile Information Section */}
+        {/* Social Links */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Profile Information
-            </CardTitle>
-            <CardDescription>
-              Update your bio, social links, and profile tags
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base md:text-lg">
+                Social Links
+              </CardTitle>
+              {!editingSocial && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingSocial(true)}
+                >
+                  <Edit3 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Bio Section */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-medium">Bio</Label>
-                {!editingBio && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingBio(true)}
-                  >
-                    <Edit3 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              
-              {editingBio ? (
-                <div className="space-y-3">
-                  <Textarea
-                    value={bioValue}
-                    onChange={(e) => setBioValue(e.target.value)}
-                    placeholder="Tell us about yourself..."
-                    className="min-h-[100px]"
+          <CardContent>
+            {editingSocial ? (
+              <div className="space-y-4">
+                {/* Email Section with Verification */}
+                <div>
+                  <EmailVerificationSection
+                    farcasterFid={profile?.fid || 0}
+                    currentEmail={memberData?.member?.email}
+                    isVerified={memberData?.member?.emailVerified || false}
+                    allowChange={true}
                   />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={handleBioSave}
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      <Save className="h-4 w-4 mr-1" />
-                      {updateProfileMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={cancelBioEdit}
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Cancel
-                    </Button>
-                  </div>
                 </div>
-              ) : (
-                <div className="p-3 bg-gray-50 rounded-lg min-h-[60px] flex items-center">
-                  <p className="text-sm text-gray-700">
-                    {memberData?.member?.bio || "No bio provided"}
-                  </p>
-                </div>
-              )}
-            </div>
 
-            <Separator />
+                <Separator />
 
-            {/* Social Links Section */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-medium">Social Links</Label>
-                {!editingSocial && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingSocial(true)}
-                  >
-                    <Edit3 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              
-              {editingSocial ? (
+                {/* Social Media Links */}
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="twitter" className="text-xs text-gray-500">Twitter</Label>
-                      <Input
-                        id="twitter"
-                        value={twitterValue}
-                        onChange={(e) => setTwitterValue(e.target.value)}
-                        placeholder="username"
-                        className="mt-1"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="linkedin" className="text-xs text-gray-500">LinkedIn</Label>
-                      <Input
-                        id="linkedin"
-                        value={linkedinValue}
-                        onChange={(e) => setLinkedinValue(e.target.value)}
-                        placeholder="profile URL"
-                        className="mt-1"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="instagram" className="text-xs text-gray-500">Instagram</Label>
-                      <Input
-                        id="instagram"
-                        value={instagramValue}
-                        onChange={(e) => setInstagramValue(e.target.value)}
-                        placeholder="username"
-                        className="mt-1"
-                      />
-                    </div>
+                  <div>
+                    <Label
+                      htmlFor="twitter"
+                      className="flex items-center space-x-1"
+                    >
+                      <Twitter className="h-4 w-4" />
+                      <span>Twitter</span>
+                    </Label>
+                    <Input
+                      id="twitter"
+                      value={twitterValue}
+                      onChange={(e) => setTwitterValue(e.target.value)}
+                      placeholder="@username"
+                      className="mt-1"
+                    />
                   </div>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={handleSocialSave}
-                      disabled={updateProfileMutation.isPending}
+
+                  <div>
+                    <Label
+                      htmlFor="linkedin"
+                      className="flex items-center space-x-1"
                     >
-                      <Save className="h-4 w-4 mr-1" />
-                      {updateProfileMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={cancelSocialEdit}
-                      disabled={updateProfileMutation.isPending}
+                      <Linkedin className="h-4 w-4" />
+                      <span>LinkedIn</span>
+                    </Label>
+                    <Input
+                      id="linkedin"
+                      value={linkedinValue}
+                      onChange={(e) => setLinkedinValue(e.target.value)}
+                      placeholder="linkedin.com/in/username"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="instagram"
+                      className="flex items-center space-x-1"
                     >
-                      <X className="h-4 w-4 mr-1" />
-                      Cancel
-                    </Button>
+                      <Instagram className="h-4 w-4" />
+                      <span>Instagram</span>
+                    </Label>
+                    <Input
+                      id="instagram"
+                      value={instagramValue}
+                      onChange={(e) => setInstagramValue(e.target.value)}
+                      placeholder="@username"
+                      className="mt-1"
+                    />
                   </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">Twitter</p>
-                    <p className="text-sm text-gray-700">
-                      {memberData?.member?.twitter || "Not provided"}
-                    </p>
-                  </div>
-                  
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">LinkedIn</p>
-                    <p className="text-sm text-gray-700">
-                      {memberData?.member?.linkedin || "Not provided"}
-                    </p>
-                  </div>
-                  
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">Instagram</p>
-                    <p className="text-sm text-gray-700">
-                      {memberData?.member?.instagram || "Not provided"}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
 
-            <Separator />
-
-            {/* Profile Tags Section */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-medium">Profile Tags</Label>
-                {!editingTags && (
+                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
                   <Button
-                    variant="ghost"
                     size="sm"
-                    onClick={() => setEditingTags(true)}
+                    onClick={handleSocialSave}
+                    disabled={updateProfileMutation.isPending}
+                    className="flex-1 sm:flex-none"
                   >
-                    <Edit3 className="h-4 w-4" />
+                    <Save className="h-4 w-4 mr-1" />
+                    Save
                   </Button>
-                )}
-              </div>
-              
-              {editingTags ? (
-                <div className="space-y-4">
-                  <p className="text-xs text-gray-500">Select tags that describe you</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {PROFILE_TAGS.map((tag) => (
-                      <div key={tag} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={tag}
-                          checked={selectedTags.includes(tag)}
-                          onCheckedChange={() => handleTagToggle(tag)}
-                        />
-                        <Label htmlFor={tag} className="text-sm cursor-pointer">
-                          {tag}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={handleTagsSave}
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      <Save className="h-4 w-4 mr-1" />
-                      {updateProfileMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={cancelTagsEdit}
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Cancel
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelSocialEdit}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
                 </div>
-              ) : (
-                <div className="p-3 bg-gray-50 rounded-lg min-h-[60px] flex items-center">
-                  {memberData?.member?.profileTags && memberData.member.profileTags.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {memberData.member.profileTags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Email Display */}
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">
+                    {memberData?.member?.email || "No email provided"}
+                  </span>
+                  {memberData?.member?.emailVerified ? (
+                    <Badge
+                      variant="secondary"
+                      className="bg-green-100 text-green-800"
+                    >
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
                   ) : (
-                    <p className="text-sm text-gray-700">No tags selected</p>
+                    <Badge
+                      variant="secondary"
+                      className="bg-yellow-100 text-yellow-800"
+                    >
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Unverified
+                    </Badge>
                   )}
                 </div>
+
+                <Separator />
+
+                {/* Social Links Display */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Twitter className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-700">
+                      {memberData?.member?.twitter || "Not provided"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Linkedin className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-700">
+                      {memberData?.member?.linkedin || "Not provided"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Instagram className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-700">
+                      {memberData?.member?.instagram || "Not provided"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Profile Tags */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base md:text-lg">
+                Profile Tags
+              </CardTitle>
+              {!editingTags && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingTags(true)}
+                >
+                  <Edit3 className="h-4 w-4" />
+                </Button>
               )}
             </div>
+          </CardHeader>
+          <CardContent>
+            {editingTags ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {PROFILE_TAGS.map((tag) => (
+                    <div key={tag} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={tag}
+                        checked={selectedTags.includes(tag)}
+                        onCheckedChange={() => handleTagToggle(tag)}
+                      />
+                      <Label htmlFor={tag} className="text-sm">
+                        {tag}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={handleTagsSave}
+                    disabled={updateProfileMutation.isPending}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelTagsEdit}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {memberData?.member?.profileTags &&
+                memberData.member.profileTags.length > 0 ? (
+                  memberData.member.profileTags.map((tag) => (
+                    <Badge key={tag} variant="secondary">
+                      {tag}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">
+                    No tags selected yet. Click edit to choose tags.
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

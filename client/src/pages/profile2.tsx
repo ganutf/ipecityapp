@@ -3,7 +3,14 @@ import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { usePersistentAuth, logout } from "@/hooks/use-persistent-auth";
+import { Link, useLocation } from "wouter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -208,10 +215,100 @@ export default function Profile2() {
   }
 
   const hasIpeCityDomain = ensName && (ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth');
+  const [location] = useLocation();
+  const isAdmin = profile?.fid === 1109894; // Admin FID
+
+  // Check member status to determine if user is in verification process
+  const { data: memberCheck } = useQuery({
+    queryKey: [`/api/members/check/${profile?.fid}`],
+    enabled: Boolean(profile?.fid),
+  });
+  
+  const memberStatus = (memberCheck as any)?.status;
+  const isInVerificationProcess = Boolean(memberStatus && !['active_member'].includes(memberStatus));
+
+  const navItems = [
+    { path: "/", label: "Pulses", showWhen: "member" },
+    { path: "/admin", label: "Admin", showWhen: "admin" },
+  ];
+
+  const shouldShowNavItem = (item: typeof navItems[0]) => {
+    // Hide navigation items if user is in verification process
+    if (isInVerificationProcess) return false;
+    
+    if (item.showWhen === "always") return true;
+    if (item.showWhen === "member") return true;
+    if (item.showWhen === "admin" && isAdmin) return true;
+    return false;
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 md:py-8">
-      <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
+    <div className="font-sans min-h-screen bg-gray-50">
+      {/* Custom Header */}
+      <header className="w-full flex items-center justify-between p-6">
+        <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-purple-600 transition-colors">
+          Ipê City
+        </Link>
+        
+        <div className="flex items-center space-x-4">
+          {!isInVerificationProcess && (
+            <nav className="flex space-x-1">
+              {navItems.filter(shouldShowNavItem).map((item) => (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`text-sm px-3 py-2 rounded-lg transition-colors ${
+                    location === item.path
+                      ? "bg-purple-100 text-purple-700"
+                      : "text-gray-600 hover:text-purple-600 hover:bg-gray-100"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          )}
+          
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600">
+              Hello, {profile?.displayName || profile?.username || '?'}
+            </span>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 rounded-full p-0">
+                  {profile?.pfpUrl ? (
+                    <img 
+                      src={profile.pfpUrl} 
+                      alt="Profile" 
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                      <span className="text-purple-600 text-sm font-semibold">
+                        {(profile?.displayName || profile?.username || '?')[0].toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
+
+      {/* Full Width Content */}
+      <div className="w-full px-4 md:px-6 lg:px-8 space-y-4 md:space-y-6">
         {/* Header with Profile Info */}
         <Card>
           <CardContent className="pt-4 md:pt-6">

@@ -67,33 +67,26 @@ const justaNameConfig = {
 function Router() {
   return (
     <AuthGuard>
-      <Switch>
-        {/* Profile2 bypasses Layout for full-width control */}
-        <Route path="/profile2" component={Profile2Page} />
-        
-        {/* All other routes use Layout wrapper */}
-        <Route>
-          <Layout>
-            <Switch>
-              <Route
-                path="/"
-                component={FarcasterEmbed}
-              />
-              <Route path="/admin" component={AdminPage} />
-              <Route path="/profile" component={ProfilePage} />
-              <Route path="/profile-mockup" component={ProfileMockupPage} />
-              <Route path="/signer-approval" component={SignerApprovalPage} />
+      <Layout>
+        <Switch>
+          <Route
+            path="/"
+            component={FarcasterEmbed}
+          />
+          <Route path="/admin" component={AdminPage} />
+          <Route path="/profile" component={ProfilePage} />
+          <Route path="/profile-mockup" component={ProfileMockupPage} />
+          <Route path="/profile2" component={Profile2Page} />
+          <Route path="/signer-approval" component={SignerApprovalPage} />
 
-              <Route path="/id-verification" component={IdVerificationPage} />
-              <Route
-                path="/verify-passport/:token"
-                component={VerifyPassportPage}
-              />
-              <Route component={NotFound} />
-            </Switch>
-          </Layout>
-        </Route>
-      </Switch>
+          <Route path="/id-verification" component={IdVerificationPage} />
+          <Route
+            path="/verify-passport/:token"
+            component={VerifyPassportPage}
+          />
+          <Route component={NotFound} />
+        </Switch>
+      </Layout>
     </AuthGuard>
   );
 }

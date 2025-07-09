@@ -137,7 +137,9 @@ export function PassportVerificationSection({
         title: "Passport verified successfully!",
         description: `Your ${ensName} domain has been verified.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      }
       onVerificationComplete?.();
     },
     onError: (error: Error) => {
@@ -224,7 +226,9 @@ export function PassportVerificationSection({
         title: message,
         description: `${memberData.member.ipeUsername}.ipecity.eth is now yours.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      }
       onVerificationComplete?.();
     },
     onError: (error: Error) => {

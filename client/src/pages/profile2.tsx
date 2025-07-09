@@ -312,9 +312,7 @@ export default function Profile2() {
                   <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center space-x-2">
                       <p className="text-purple-600 font-medium text-sm">
-                        {memberData.member.ipePassport.includes('.eth') 
-                          ? memberData.member.ipePassport 
-                          : `${memberData.member.ipePassport}.ipecity.eth`}
+                        {memberData.member.ipePassport}
                       </p>
                       <Badge
                         variant="secondary"

@@ -55,7 +55,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="font-sans min-h-screen bg-gray-50 flex flex-col items-center p-6">
-      <header className="w-full max-w-4xl flex items-center justify-between mb-12">
+      <header className="w-full flex items-center justify-between mb-12 px-4">
         <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-purple-600 transition-colors">
           Ipê City
         </Link>
@@ -121,7 +121,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       
-      <div className="w-full max-w-4xl flex flex-col items-center">
+      <div className="w-full flex flex-col items-center">
         {children}
       </div>
     </main>

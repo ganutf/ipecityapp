@@ -438,6 +438,12 @@ The application follows a monorepo structure with clear separation between clien
   - **Profile Management**: Complete profile editing system with bio, social links, and profile tags sections
   - **File Reorganization**: Renamed profile.tsx to profile-old.tsx and profile2.tsx to profile.tsx (new main profile page)
   - **Production Ready**: Fully functional enhanced profile interface with all verification components integrated
+- July 9, 2025. **PASSPORT STORAGE FIX**: Fixed passport verification to store complete ENS domain in database:
+  - **Full ENS Domain Storage**: Passport verification now stores complete ENS domain (jean.ipecity.eth) instead of just subdomain (jean)
+  - **Database Consistency**: ipePassport field now contains full domain for accurate identification and display
+  - **Backend Update**: Modified /api/passport/verify endpoint to store fullEnsName instead of extracted passport name
+  - **QueryClient Error Fix**: Added null checks for queryClient in PassportVerificationSection to prevent "queryClient is not defined" errors
+  - **Production Ready**: Passport verification system now stores and displays complete ENS domains correctly
 
 ## User Preferences
 

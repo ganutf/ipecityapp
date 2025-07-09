@@ -1655,15 +1655,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Member not found" });
       }
 
-      // Extract passport name from ENS domain
-      const passportName =
-        ensName === "ipecity.eth"
-          ? "ipecity"
-          : ensName.replace(".ipecity.eth", "");
+      // Store the full ENS domain (not just the subdomain name)
+      const fullEnsName = ensName; // Store complete domain like "jean.ipecity.eth" or "ipecity.eth"
 
       // Set active_member status after successful signature verification
       const updatedMember = await storage.updateMember(farcasterFid, {
-        ipePassport: passportName,
+        ipePassport: fullEnsName,
         passportVerified: true,
         status: "active_member",
         walletAddress: walletAddress,

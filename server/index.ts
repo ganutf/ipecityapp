@@ -3,11 +3,12 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { db } from "./db";
 
+
 // Enhanced logging function with error handling
 function enhancedLog(message: string, level: 'info' | 'error' = 'info') {
   const timestamp = new Date().toISOString();
   const logMessage = `${timestamp} [${level.toUpperCase()}] ${message}`;
-  
+
   if (level === 'error') {
     console.error(logMessage);
   } else {
@@ -19,12 +20,12 @@ function enhancedLog(message: string, level: 'info' | 'error' = 'info') {
 function validateEnvironment() {
   const required = ['DATABASE_URL'];
   const missing = required.filter(key => !process.env[key]);
-  
+
   if (missing.length > 0) {
     enhancedLog(`Missing required environment variables: ${missing.join(', ')}`, 'error');
     process.exit(1);
   }
-  
+
   enhancedLog('Environment validation passed');
 }
 
@@ -92,7 +93,7 @@ app.use((req, res, next) => {
         enhancedLog(`Stack trace: ${err.stack}`, 'error');
       }
 
-      res.status(status).json({ 
+      res.status(status).json({
         error: message,
         status,
         timestamp: new Date().toISOString()
@@ -112,7 +113,7 @@ app.use((req, res, next) => {
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
     const port = 5000;
-    
+
     const serverInstance = server.listen({
       port,
       host: "0.0.0.0",
@@ -125,7 +126,7 @@ app.use((req, res, next) => {
     // Graceful shutdown handling
     const gracefulShutdown = (signal: string) => {
       enhancedLog(`Received ${signal}, initiating graceful shutdown...`);
-      
+
       serverInstance.close(() => {
         enhancedLog('HTTP server closed');
         process.exit(0);

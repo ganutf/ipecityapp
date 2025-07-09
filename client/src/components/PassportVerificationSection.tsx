@@ -458,7 +458,9 @@ export function PassportVerificationSection({
           farcasterProfile={farcasterProfile}
           onSuccess={() => {
             setShowApplicationForm(false);
-            queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+            if (queryClient) {
+              queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+            }
           }}
         />
       )}

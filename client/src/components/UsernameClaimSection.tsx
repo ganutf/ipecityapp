@@ -74,7 +74,9 @@ export function UsernameClaimSection({
       });
       
       // Still invalidate admin member list for admin dashboard updates
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -157,7 +159,9 @@ export function UsernameClaimSection({
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+      }
     },
   });
 

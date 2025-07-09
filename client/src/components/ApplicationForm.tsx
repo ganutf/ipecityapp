@@ -104,11 +104,13 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
         description: "Your application is now pending admin approval.",
       });
       // Invalidate member status queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
-      // Small delay to ensure backend has processed the update
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
-      }, 500);
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
+        // Small delay to ensure backend has processed the update
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
+        }, 500);
+      }
       onSuccess();
     },
     onError: (error: Error) => {

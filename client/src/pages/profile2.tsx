@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -19,21 +25,21 @@ import { PassportVerificationSection } from "@/components/PassportVerificationSe
 import { useAccount, useDisconnect } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
-import { 
-  Wallet, 
-  Mail, 
-  Globe, 
-  User, 
-  CheckCircle, 
-  AlertCircle, 
-  Edit3, 
-  Save, 
+import {
+  Wallet,
+  Mail,
+  Globe,
+  User,
+  CheckCircle,
+  AlertCircle,
+  Edit3,
+  Save,
   X,
   Shield,
   Compass,
   Twitter,
   Linkedin,
-  Instagram
+  Instagram,
 } from "lucide-react";
 import { PROFILE_TAGS } from "@/constants/profileTags";
 
@@ -70,7 +76,7 @@ export default function Profile2() {
   const { profile } = usePersistentAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
@@ -120,7 +126,9 @@ export default function Profile2() {
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/members/check/${profile?.fid}`] });
+      queryClient.invalidateQueries({
+        queryKey: [`/api/members/check/${profile?.fid}`],
+      });
       // Reset edit modes
       setEditingBio(false);
       setEditingSocial(false);
@@ -152,10 +160,8 @@ export default function Profile2() {
   };
 
   const handleTagToggle = (tag: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -199,7 +205,8 @@ export default function Profile2() {
           <CardHeader>
             <CardTitle>Complete Verification</CardTitle>
             <CardDescription>
-              Please complete email and passport verification to access your profile.
+              Please complete email and passport verification to access your
+              profile.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -207,10 +214,11 @@ export default function Profile2() {
     );
   }
 
-  const hasIpeCityDomain = ensName && (ensName.endsWith('.ipecity.eth') || ensName === 'ipecity.eth');
+  const hasIpeCityDomain =
+    ensName && (ensName.endsWith(".ipecity.eth") || ensName === "ipecity.eth");
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 md:py-8">
+    <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
       <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
         {/* Header with Profile Info */}
         <Card>
@@ -224,7 +232,9 @@ export default function Profile2() {
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900">
                     {profile?.displayName || profile?.username}
                   </h1>
-                  <p className="text-xs md:text-sm text-gray-500">ID: {profile?.fid}</p>
+                  <p className="text-xs md:text-sm text-gray-500">
+                    ID: {profile?.fid}
+                  </p>
                   <div className="flex items-center space-x-2 mt-2">
                     {/* TODO: Implement member type logic based on memberData.member.memberType */}
                     <div className="group relative">
@@ -254,15 +264,19 @@ export default function Profile2() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex flex-col space-y-2 lg:flex-shrink-0">
                 {/* Wallet Info Box */}
-                <div className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
-                  isConnected 
-                    ? 'bg-blue-50 border-blue-200' 
-                    : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <Wallet className={`h-4 w-4 ${isConnected ? 'text-blue-600' : 'text-gray-400'}`} />
+                <div
+                  className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
+                    isConnected
+                      ? "bg-blue-50 border-blue-200"
+                      : "bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <Wallet
+                    className={`h-4 w-4 ${isConnected ? "text-blue-600" : "text-gray-400"}`}
+                  />
                   {isConnected ? (
                     <>
                       <button
@@ -271,7 +285,10 @@ export default function Profile2() {
                       >
                         {address?.slice(0, 6)}...{address?.slice(-4)}
                       </button>
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs hidden md:inline-flex">
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-100 text-green-800 text-xs hidden md:inline-flex"
+                      >
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Connected
                       </Badge>
@@ -289,19 +306,25 @@ export default function Profile2() {
                     </ConnectButton.Custom>
                   )}
                 </div>
-                
+
                 {/* Passport Info Box */}
                 {memberData?.member?.ipePassport && (
                   <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <p className="text-purple-600 font-medium text-sm">{memberData.member.ipePassport}</p>
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                      <p className="text-purple-600 font-medium text-sm">
+                        {memberData.member.ipePassport}
+                      </p>
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-100 text-green-800 text-xs"
+                      >
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Verified
                       </Badge>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Passport wallet: {address?.slice(0, 6)}...{address?.slice(-4)}
+                      Passport wallet: {address?.slice(0, 6)}...
+                      {address?.slice(-4)}
                     </div>
                   </div>
                 )}
@@ -336,8 +359,8 @@ export default function Profile2() {
                   className="min-h-[100px]"
                 />
                 <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={handleBioSave}
                     disabled={updateProfileMutation.isPending}
                     className="flex-1 sm:flex-none"
@@ -345,9 +368,9 @@ export default function Profile2() {
                     <Save className="h-4 w-4 mr-1" />
                     Save
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={cancelBioEdit}
                     className="flex-1 sm:flex-none"
                   >
@@ -358,7 +381,8 @@ export default function Profile2() {
               </div>
             ) : (
               <p className="text-gray-700">
-                {memberData?.member?.bio || "No bio provided yet. Click the edit button to add one."}
+                {memberData?.member?.bio ||
+                  "No bio provided yet. Click the edit button to add one."}
               </p>
             )}
           </CardContent>
@@ -368,7 +392,9 @@ export default function Profile2() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg">Social Links</CardTitle>
+              <CardTitle className="text-base md:text-lg">
+                Social Links
+              </CardTitle>
               {!editingSocial && (
                 <Button
                   variant="ghost"
@@ -398,7 +424,10 @@ export default function Profile2() {
                 {/* Social Media Links */}
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="twitter" className="flex items-center space-x-1">
+                    <Label
+                      htmlFor="twitter"
+                      className="flex items-center space-x-1"
+                    >
                       <Twitter className="h-4 w-4" />
                       <span>Twitter</span>
                     </Label>
@@ -412,7 +441,10 @@ export default function Profile2() {
                   </div>
 
                   <div>
-                    <Label htmlFor="linkedin" className="flex items-center space-x-1">
+                    <Label
+                      htmlFor="linkedin"
+                      className="flex items-center space-x-1"
+                    >
                       <Linkedin className="h-4 w-4" />
                       <span>LinkedIn</span>
                     </Label>
@@ -426,7 +458,10 @@ export default function Profile2() {
                   </div>
 
                   <div>
-                    <Label htmlFor="instagram" className="flex items-center space-x-1">
+                    <Label
+                      htmlFor="instagram"
+                      className="flex items-center space-x-1"
+                    >
                       <Instagram className="h-4 w-4" />
                       <span>Instagram</span>
                     </Label>
@@ -441,8 +476,8 @@ export default function Profile2() {
                 </div>
 
                 <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={handleSocialSave}
                     disabled={updateProfileMutation.isPending}
                     className="flex-1 sm:flex-none"
@@ -450,9 +485,9 @@ export default function Profile2() {
                     <Save className="h-4 w-4 mr-1" />
                     Save
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={cancelSocialEdit}
                     className="flex-1 sm:flex-none"
                   >
@@ -464,20 +499,24 @@ export default function Profile2() {
             ) : (
               <div className="space-y-3">
                 {/* Email Display */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-700">
-                      {memberData?.member?.email || "No email provided"}
-                    </span>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">
+                    {memberData?.member?.email || "No email provided"}
+                  </span>
                   {memberData?.member?.emailVerified ? (
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    <Badge
+                      variant="secondary"
+                      className="bg-green-100 text-green-800"
+                    >
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Verified
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                    <Badge
+                      variant="secondary"
+                      className="bg-yellow-100 text-yellow-800"
+                    >
                       <AlertCircle className="h-3 w-3 mr-1" />
                       Unverified
                     </Badge>
@@ -516,7 +555,9 @@ export default function Profile2() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg">Profile Tags</CardTitle>
+              <CardTitle className="text-base md:text-lg">
+                Profile Tags
+              </CardTitle>
               {!editingTags && (
                 <Button
                   variant="ghost"
@@ -546,8 +587,8 @@ export default function Profile2() {
                   ))}
                 </div>
                 <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={handleTagsSave}
                     disabled={updateProfileMutation.isPending}
                     className="flex-1 sm:flex-none"
@@ -555,9 +596,9 @@ export default function Profile2() {
                     <Save className="h-4 w-4 mr-1" />
                     Save
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={cancelTagsEdit}
                     className="flex-1 sm:flex-none"
                   >
@@ -568,14 +609,17 @@ export default function Profile2() {
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {memberData?.member?.profileTags && memberData.member.profileTags.length > 0 ? (
+                {memberData?.member?.profileTags &&
+                memberData.member.profileTags.length > 0 ? (
                   memberData.member.profileTags.map((tag) => (
                     <Badge key={tag} variant="secondary">
                       {tag}
                     </Badge>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-sm">No tags selected yet. Click edit to choose tags.</p>
+                  <p className="text-gray-500 text-sm">
+                    No tags selected yet. Click edit to choose tags.
+                  </p>
                 )}
               </div>
             )}

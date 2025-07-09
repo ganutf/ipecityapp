@@ -4,7 +4,13 @@ import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,21 +19,21 @@ import { Separator } from "@/components/ui/separator";
 import { useAccount, useDisconnect } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
-import { 
-  User, 
-  Mail, 
-  Globe, 
-  Edit3, 
-  Save, 
-  X, 
-  CheckCircle, 
+import {
+  User,
+  Mail,
+  Globe,
+  Edit3,
+  Save,
+  X,
+  CheckCircle,
   AlertCircle,
   Wallet,
   Shield,
   Compass,
   Twitter,
   Linkedin,
-  Instagram
+  Instagram,
 } from "lucide-react";
 import * as z from "zod";
 
@@ -56,15 +62,25 @@ const profileSchema = z.object({
 });
 
 const AVAILABLE_TAGS = [
-  "Developer", "Designer", "Builder", "Community", "DeFi", "NFTs", 
-  "Gaming", "Art", "Music", "Writing", "Investing", "Trading"
+  "Developer",
+  "Designer",
+  "Builder",
+  "Community",
+  "DeFi",
+  "NFTs",
+  "Gaming",
+  "Art",
+  "Music",
+  "Writing",
+  "Investing",
+  "Trading",
 ];
 
 export default function ProfileMockupPage() {
   const { profile } = usePersistentAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
@@ -82,7 +98,7 @@ export default function ProfileMockupPage() {
   const [instagramValue, setInstagramValue] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [emailValue, setEmailValue] = useState("");
-  
+
   // Fake simulation states
   const [isVerificationSent, setIsVerificationSent] = useState(false);
   const [isWalletDisconnected, setIsWalletDisconnected] = useState(false);
@@ -98,13 +114,13 @@ export default function ProfileMockupPage() {
       email: "jean.hansen@example.com",
       emailVerified: true,
       ipePassport: "jean.ipecity.eth",
-      bio: "Passionate builder in the web3 space. Love creating decentralized applications and contributing to open source projects. Always learning and exploring new technologies.",
+      bio: ".",
       twitter: "@jeanhansen",
       linkedin: "linkedin.com/in/jeanhansen",
       instagram: "@jeancreates",
       profileTags: ["Developer", "Builder", "DeFi", "Community"],
       profileCompleted: true,
-    }
+    },
   };
 
   // Initialize form values with fake data
@@ -131,7 +147,7 @@ export default function ProfileMockupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 md:py-8">
+    <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
       <div className="max-w-4xl mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
         {/* Header with Profile Info */}
         <Card>
@@ -145,7 +161,9 @@ export default function ProfileMockupPage() {
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900">
                     {fakeProfile.displayName || fakeProfile.username}
                   </h1>
-                  <p className="text-xs md:text-sm text-gray-500">ID: {fakeProfile.fid}</p>
+                  <p className="text-xs md:text-sm text-gray-500">
+                    ID: {fakeProfile.fid}
+                  </p>
                   <div className="flex items-center space-x-2 mt-2">
                     <div className="group relative">
                       <div className="h-6 w-6 bg-purple-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-purple-200 transition-colors">
@@ -174,48 +192,62 @@ export default function ProfileMockupPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex flex-col space-y-2 lg:flex-shrink-0">
-                <div className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
-                  !isWalletDisconnected 
-                    ? 'bg-blue-50 border-blue-200' 
-                    : 'bg-gray-50 border-gray-200'
-                }`}>
-                  <Wallet className={`h-4 w-4 ${!isWalletDisconnected ? 'text-blue-600' : 'text-gray-400'}`} />
+                <div
+                  className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
+                    !isWalletDisconnected
+                      ? "bg-blue-50 border-blue-200"
+                      : "bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <Wallet
+                    className={`h-4 w-4 ${!isWalletDisconnected ? "text-blue-600" : "text-gray-400"}`}
+                  />
                   <button
                     onClick={() => {
                       if (!isWalletDisconnected) {
                         setIsWalletDisconnected(true);
                         toast({
                           title: "Wallet disconnected",
-                          description: "Your wallet has been disconnected successfully.",
+                          description:
+                            "Your wallet has been disconnected successfully.",
                         });
                       } else {
                         setIsWalletDisconnected(false);
                         toast({
                           title: "Wallet connected",
-                          description: "Your wallet has been connected successfully.",
+                          description:
+                            "Your wallet has been connected successfully.",
                         });
                       }
                     }}
                     className={`text-xs md:text-sm font-mono hover:underline transition-colors ${
-                      !isWalletDisconnected ? 'text-blue-600' : 'text-gray-400'
+                      !isWalletDisconnected ? "text-blue-600" : "text-gray-400"
                     }`}
                   >
-                    {!isWalletDisconnected ? '0x7582...ECFf' : 'Connect Wallet'}
+                    {!isWalletDisconnected ? "0x7582...ECFf" : "Connect Wallet"}
                   </button>
                   {!isWalletDisconnected && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs hidden md:inline-flex">
+                    <Badge
+                      variant="secondary"
+                      className="bg-green-100 text-green-800 text-xs hidden md:inline-flex"
+                    >
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Connected
                     </Badge>
                   )}
                 </div>
-                
+
                 <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <p className="text-purple-600 font-medium text-sm">jean.ipecity.eth</p>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                    <p className="text-purple-600 font-medium text-sm">
+                      jean.ipecity.eth
+                    </p>
+                    <Badge
+                      variant="secondary"
+                      className="bg-green-100 text-green-800 text-xs"
+                    >
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Verified
                     </Badge>
@@ -255,16 +287,20 @@ export default function ProfileMockupPage() {
                   className="min-h-[100px]"
                 />
                 <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-                  <Button size="sm" onClick={() => {
-                    // Save bio logic here
-                    setEditingBio(false);
-                  }} className="flex-1 sm:flex-none">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      // Save bio logic here
+                      setEditingBio(false);
+                    }}
+                    className="flex-1 sm:flex-none"
+                  >
                     <Save className="h-4 w-4 mr-1" />
                     Save
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setBioValue(memberData.member?.bio || "");
                       setEditingBio(false);
@@ -277,9 +313,7 @@ export default function ProfileMockupPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-gray-700">
-                Passionate builder in the web3 space. Love creating decentralized applications and contributing to open source projects. Always learning and exploring new technologies.
-              </p>
+              <p className="text-gray-700">.</p>
             )}
           </CardContent>
         </Card>
@@ -288,7 +322,9 @@ export default function ProfileMockupPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg">Social Links</CardTitle>
+              <CardTitle className="text-base md:text-lg">
+                Social Links
+              </CardTitle>
               {!editingSocial && (
                 <Button
                   variant="ghost"
@@ -305,7 +341,10 @@ export default function ProfileMockupPage() {
               <div className="space-y-4">
                 {/* Email Section */}
                 <div>
-                  <Label htmlFor="email" className="flex items-center space-x-1">
+                  <Label
+                    htmlFor="email"
+                    className="flex items-center space-x-1"
+                  >
                     <Mail className="h-4 w-4" />
                     <span>Email Address</span>
                   </Label>
@@ -318,8 +357,8 @@ export default function ProfileMockupPage() {
                       className="flex-1"
                     />
                     {!isVerificationSent ? (
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="outline"
                         disabled={isSendingVerification}
                         onClick={() => {
@@ -330,20 +369,26 @@ export default function ProfileMockupPage() {
                             setIsVerificationSent(true);
                             toast({
                               title: "Verification email sent!",
-                              description: "Check your inbox for the verification code.",
+                              description:
+                                "Check your inbox for the verification code.",
                             });
                           }, 1500);
                         }}
                       >
-                        {isSendingVerification ? "Sending..." : "Send Verification"}
+                        {isSendingVerification
+                          ? "Sending..."
+                          : "Send Verification"}
                       </Button>
                     ) : null}
                   </div>
-                  
+
                   {/* Verification Code Input */}
                   {isVerificationSent && (
                     <div className="mt-3 p-3 bg-blue-50 rounded border">
-                      <Label htmlFor="verificationCode" className="text-sm font-medium">
+                      <Label
+                        htmlFor="verificationCode"
+                        className="text-sm font-medium"
+                      >
                         Enter 6-digit verification code:
                       </Label>
                       <div className="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2 mt-2">
@@ -356,9 +401,11 @@ export default function ProfileMockupPage() {
                           className="flex-1"
                         />
                         <div className="flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            disabled={isVerifyingCode || verificationCode.length !== 6}
+                          <Button
+                            size="sm"
+                            disabled={
+                              isVerifyingCode || verificationCode.length !== 6
+                            }
                             onClick={() => {
                               setIsVerifyingCode(true);
                               setTimeout(() => {
@@ -367,7 +414,8 @@ export default function ProfileMockupPage() {
                                 setVerificationCode("");
                                 toast({
                                   title: "Email verified!",
-                                  description: "Your email address has been successfully verified.",
+                                  description:
+                                    "Your email address has been successfully verified.",
                                 });
                               }, 1000);
                             }}
@@ -375,8 +423,8 @@ export default function ProfileMockupPage() {
                           >
                             {isVerifyingCode ? "Verifying..." : "Confirm"}
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             disabled={isSendingVerification}
                             onClick={() => {
@@ -386,7 +434,8 @@ export default function ProfileMockupPage() {
                                 setIsSendingVerification(false);
                                 toast({
                                   title: "New code sent!",
-                                  description: "A new verification code has been sent to your email.",
+                                  description:
+                                    "A new verification code has been sent to your email.",
                                 });
                               }, 1500);
                             }}
@@ -399,9 +448,12 @@ export default function ProfileMockupPage() {
                     </div>
                   )}
                 </div>
-                
+
                 <div>
-                  <Label htmlFor="twitter" className="flex items-center space-x-1">
+                  <Label
+                    htmlFor="twitter"
+                    className="flex items-center space-x-1"
+                  >
                     <Twitter className="h-4 w-4" />
                     <span>Twitter</span>
                   </Label>
@@ -414,7 +466,10 @@ export default function ProfileMockupPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="linkedin" className="flex items-center space-x-1">
+                  <Label
+                    htmlFor="linkedin"
+                    className="flex items-center space-x-1"
+                  >
                     <Linkedin className="h-4 w-4" />
                     <span>LinkedIn</span>
                   </Label>
@@ -427,7 +482,10 @@ export default function ProfileMockupPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="instagram" className="flex items-center space-x-1">
+                  <Label
+                    htmlFor="instagram"
+                    className="flex items-center space-x-1"
+                  >
                     <Instagram className="h-4 w-4" />
                     <span>Instagram</span>
                   </Label>
@@ -440,16 +498,20 @@ export default function ProfileMockupPage() {
                   />
                 </div>
                 <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-                  <Button size="sm" onClick={() => {
-                    // Save social links logic here
-                    setEditingSocial(false);
-                  }} className="flex-1 sm:flex-none">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      // Save social links logic here
+                      setEditingSocial(false);
+                    }}
+                    className="flex-1 sm:flex-none"
+                  >
                     <Save className="h-4 w-4 mr-1" />
                     Save
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setEmailValue(memberData.member?.email || "");
                       setIsVerificationSent(false);
@@ -469,9 +531,18 @@ export default function ProfileMockupPage() {
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Mail className={`h-4 w-4 ${isEmailVerified ? 'text-green-600' : 'text-yellow-600'}`} />
+                  <Mail
+                    className={`h-4 w-4 ${isEmailVerified ? "text-green-600" : "text-yellow-600"}`}
+                  />
                   <span className="text-sm">alex.santos@example.com</span>
-                  <Badge variant="secondary" className={isEmailVerified ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                  <Badge
+                    variant="secondary"
+                    className={
+                      isEmailVerified
+                        ? "bg-green-100 text-green-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }
+                  >
                     {isEmailVerified ? (
                       <>
                         <CheckCircle className="h-3 w-3 mr-1" />
@@ -502,13 +573,13 @@ export default function ProfileMockupPage() {
           </CardContent>
         </Card>
 
-
-
         {/* Profile Tags */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg">Interests & Skills</CardTitle>
+              <CardTitle className="text-base md:text-lg">
+                Interests & Skills
+              </CardTitle>
               {!editingTags && (
                 <Button
                   variant="ghost"
@@ -525,7 +596,10 @@ export default function ProfileMockupPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {AVAILABLE_TAGS.map((tag) => (
-                    <label key={tag} className="flex items-center space-x-2 cursor-pointer">
+                    <label
+                      key={tag}
+                      className="flex items-center space-x-2 cursor-pointer"
+                    >
                       <input
                         type="checkbox"
                         checked={selectedTags.includes(tag)}
@@ -533,7 +607,9 @@ export default function ProfileMockupPage() {
                           if (e.target.checked) {
                             setSelectedTags([...selectedTags, tag]);
                           } else {
-                            setSelectedTags(selectedTags.filter(t => t !== tag));
+                            setSelectedTags(
+                              selectedTags.filter((t) => t !== tag),
+                            );
                           }
                         }}
                         className="rounded"
@@ -543,16 +619,19 @@ export default function ProfileMockupPage() {
                   ))}
                 </div>
                 <div className="flex space-x-2">
-                  <Button size="sm" onClick={() => {
-                    // Save tags logic here
-                    setEditingTags(false);
-                  }}>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      // Save tags logic here
+                      setEditingTags(false);
+                    }}
+                  >
                     <Save className="h-4 w-4 mr-1" />
                     Save
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setSelectedTags(memberData.member?.profileTags || []);
                       setEditingTags(false);
@@ -573,8 +652,6 @@ export default function ProfileMockupPage() {
             )}
           </CardContent>
         </Card>
-
-
       </div>
     </div>
   );

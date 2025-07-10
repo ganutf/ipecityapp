@@ -12,6 +12,7 @@ import { useAccount } from "wagmi";
 // Removed useAddSubname hook - using direct API calls instead
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { authenticatedPost, authenticatedGet, authenticatedPut } from "@/lib/api";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
@@ -37,8 +38,14 @@ export default function AdminPage() {
 
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
-  // Check if user is admin (FID 1109894)
-  const isAdmin = profile?.fid === 1109894;
+  // Check current user's member data to determine admin status
+  const { data: currentMemberData } = useQuery({
+    queryKey: [`/api/members/check/${profile?.fid}`],
+    enabled: Boolean(profile?.fid),
+  });
+
+  // Check if user is admin based on memberType
+  const isAdmin = (currentMemberData as any)?.member?.memberType === 'admin';
 
   // Fetch all pulses - must be called before any returns
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
@@ -95,20 +102,11 @@ export default function AdminPage() {
 
   const approveMemberMutation = useMutation({
     mutationFn: async (member: { farcasterFid: number; ipeUsername?: string; userWalletAddress?: string }) => {
-      const response = await fetch("/api/admin/approve-member", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          farcasterFid: member.farcasterFid,
-          ipeUsername: member.ipeUsername,
-          userWalletAddress: member.userWalletAddress
-        }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to approve member");
-      }
-      return response.json();
+      return authenticatedPost("/api/admin/approve-member", { 
+        farcasterFid: member.farcasterFid,
+        ipeUsername: member.ipeUsername,
+        userWalletAddress: member.userWalletAddress
+      }, profile?.fid);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
@@ -121,16 +119,7 @@ export default function AdminPage() {
 
   const denyMemberMutation = useMutation({
     mutationFn: async (farcasterFid: number) => {
-      const response = await fetch("/api/admin/deny-member", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ farcasterFid }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to deny member");
-      }
-      return response.json();
+      return authenticatedPost("/api/admin/deny-member", { farcasterFid }, profile?.fid);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });

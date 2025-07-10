@@ -58,7 +58,7 @@ shared/
 
 ### Database Schema
 The system uses a state machine approach for member progression:
-- `pending_signer` → `pending_id_verification` → `email_verified` → `pending_application` → `approved_application` → `active_member`
+- `pending_signer` → `pending_id_verification` → `email_verified` → `pending_application` → `pending_application_review` → `approved_application` → `active_member`
 
 Key tables:
 - `members`: Core member data with status tracking

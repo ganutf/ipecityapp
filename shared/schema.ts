@@ -48,6 +48,7 @@ export const members = pgTable("members", {
   // Valid values: pending_signer, pending_id_verification, pending_application, 
   // approved_application, denied_application, active_member
   status: varchar("status", { length: 30 }).default("pending_signer").notNull(),
+  // Valid member types: pending, architect, explorer, admin
   memberType: varchar("member_type", { length: 20 }).default("pending").notNull(),
   
   // Verification flags
@@ -154,6 +155,10 @@ export const passportVerifications = pgTable("passport_verifications", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Member type validation
+export const memberTypeEnum = z.enum(['pending', 'architect', 'explorer', 'admin']);
+export type MemberType = z.infer<typeof memberTypeEnum>;
 
 // Insert schemas
 export const insertMemberSchema = createInsertSchema(members).omit({

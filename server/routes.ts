@@ -30,6 +30,13 @@ import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
 import { SiweMessage } from "siwe";
 import { lookupEnsName } from "./lib/ensLookup";
+import { 
+  authenticateUser, 
+  requireAdmin, 
+  requireOwnership, 
+  auditLogger,
+  type AuthenticatedRequest 
+} from "./middleware/auth";
 // JustaName server-side imports removed
 
 /* local unions for clarity */
@@ -655,11 +662,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new pulse (admin only)
-  app.post("/api/pulses", async (req, res) => {
+  app.post("/api/pulses", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("CREATE_PULSE"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       const pulseData = {
         ...req.body,
-        createdBy: "admin", // Default admin identifier
+        createdBy: `admin-${req.user!.fid}`, // Admin FID identifier
       };
       const validatedData = insertPulseSchema.parse(pulseData);
       const pulse = await storage.createPulse(validatedData);
@@ -671,7 +682,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update pulse (admin only)
-  app.put("/api/pulses/:id", async (req, res) => {
+  app.put("/api/pulses/:id", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("UPDATE_PULSE"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       const pulseId = parseInt(req.params.id);
       if (isNaN(pulseId)) {
@@ -688,7 +703,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get member executions for a specific user
-  app.get("/api/executions/:farcasterFid", async (req, res) => {
+  app.get("/api/executions/:farcasterFid", 
+    authenticateUser, 
+    requireOwnership('farcasterFid'),
+    auditLogger("GET_MEMBER_EXECUTIONS"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       const farcasterFid = parseInt(req.params.farcasterFid);
       const executions = await storage.getMemberExecutions(farcasterFid);
@@ -716,7 +735,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get pending members (admin only)
-  app.get("/api/admin/pending-members", async (req, res) => {
+  app.get("/api/admin/pending-members", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("GET_PENDING_MEMBERS"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       const pendingMembers = await storage.getPendingMembers();
       res.json({ members: pendingMembers });
@@ -727,7 +750,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Approve member (admin only)
-  app.post("/api/admin/approve-member", async (req, res) => {
+  app.post("/api/admin/approve-member", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("APPROVE_MEMBER"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       const { farcasterFid, ipeUsername, userWalletAddress } = req.body;
 
@@ -863,7 +890,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Deny member (admin only)
-  app.post("/api/admin/deny-member", async (req, res) => {
+  app.post("/api/admin/deny-member", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("DENY_MEMBER"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       const { farcasterFid } = req.body;
       const member = await storage.denyMember(farcasterFid);
@@ -881,7 +912,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all members (admin only)
-  app.get("/api/members", async (req, res) => {
+  app.get("/api/members", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("GET_ALL_MEMBERS"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       const members = await storage.getAllMembers();
       res.json({ members });
@@ -892,7 +927,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get individual member by FID
-  app.get("/api/members/:fid", async (req, res) => {
+  app.get("/api/members/:fid", 
+    authenticateUser, 
+    requireOwnership('fid'),
+    auditLogger("GET_INDIVIDUAL_MEMBER"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       const fid = parseInt(req.params.fid);
       if (isNaN(fid)) {
@@ -949,7 +988,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // JustaName challenge endpoint removed - subdomain creation now client-side only
 
   // Admin approve application
-  app.post("/api/admin/approve-application", async (req, res) => {
+  app.post("/api/admin/approve-application", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("APPROVE_APPLICATION"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       console.log("=== APPLICATION APPROVAL REQUEST ===");
       console.log("Request body:", JSON.stringify(req.body, null, 2));
@@ -961,8 +1004,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "FarcasterFid and memberType required" });
       }
 
-      if (!['architect', 'explorer'].includes(memberType)) {
-        return res.status(400).json({ error: "Invalid member type. Must be 'architect' or 'explorer'" });
+      if (!['architect', 'explorer', 'admin'].includes(memberType)) {
+        return res.status(400).json({ error: "Invalid member type. Must be 'architect', 'explorer', or 'admin'" });
       }
 
       console.log(`Processing approval for FID: ${farcasterFid} as ${memberType}`);
@@ -1747,7 +1790,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update member profile
-  app.patch("/api/members/:farcasterFid", async (req, res) => {
+  app.patch("/api/members/:farcasterFid", 
+    authenticateUser, 
+    requireOwnership('farcasterFid'),
+    auditLogger("UPDATE_MEMBER_PROFILE"),
+    async (req: AuthenticatedRequest, res) => {
     try {
       const farcasterFid = parseInt(req.params.farcasterFid);
       const updateData = req.body;

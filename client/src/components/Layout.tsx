@@ -15,13 +15,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const [location] = useLocation();
   
-  const isAdmin = profile?.fid === 1109894; // Admin FID
-  
   // Check member status to determine if user is in verification process
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: Boolean(isAuthenticated && profile?.fid),
   });
+
+  // Check if user is admin based on memberType instead of hardcoded FID
+  const isAdmin = (memberCheck as any)?.member?.memberType === 'admin';
   
   const memberStatus = (memberCheck as any)?.status;
   const isInVerificationProcess = Boolean(isAuthenticated && memberStatus && !['active_member'].includes(memberStatus));

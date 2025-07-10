@@ -15,7 +15,10 @@ import {
   insertEmailVerificationSchema,
   insertPassportVerificationSchema,
   emailVerificationRequestSchema,
+  secureUsernameSchema,
+  secureFidSchema,
 } from "@shared/schema";
+import { z } from "zod";
 import QRCode from "qrcode";
 import { getSignedKey } from "./lib/getSignedKey";
 import {
@@ -37,6 +40,27 @@ import {
   auditLogger,
   type AuthenticatedRequest 
 } from "./middleware/auth";
+import {
+  validateRequest,
+  sanitizeRequestBody,
+  securityHeaders,
+  memberRegistrationSchema,
+  pulseCreationSchema,
+  usernameClaimSchema,
+  verificationCodeSchema
+} from "./middleware/validation";
+import { 
+  justaNameClient, 
+  secureNeynarClient, 
+  secureHttpClient 
+} from "./lib/external-api";
+import { 
+  sanitizeMemberData, 
+  sanitizePulseData,
+  HtmlSanitizer,
+  IdentifierSanitizer,
+  UrlSanitizer 
+} from "./lib/sanitizer";
 // JustaName server-side imports removed
 
 /* local unions for clarity */
@@ -44,6 +68,12 @@ type Reaction = "like" | "recast";
 type CastParam = "hash" | "url";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply security headers to all routes
+  app.use(securityHeaders);
+  
+  // Apply request sanitization to all routes
+  app.use(sanitizeRequestBody);
+  
   /* ────────────────────────────────  HEALTH CHECK  ──────────────────────────────── */
   // Health check endpoint for deployment monitoring
   app.get("/health", async (req, res) => {
@@ -69,48 +99,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /* ────────────────────────────────  SUBDOMAIN AVAILABILITY  ──────────────────────────────── */
   // Check subdomain availability
-  app.get("/api/subname/available/:username", async (req, res) => {
-    try {
-      const { username } = req.params;
-
-      if (!username || username.length < 3) {
-        return res.status(400).json({
-          error: "Username must be at least 3 characters long",
+  app.get("/api/subname/available/:username", 
+    validateRequest(z.object({
+      params: z.object({
+        username: secureUsernameSchema
+      })
+    })),
+    async (req, res) => {
+      try {
+        const { username } = req.params;
+        
+        // Use secure JustaName client
+        const result = await justaNameClient.checkSubdomainAvailability(username);
+        
+        res.json(result);
+      } catch (error) {
+        console.error("Error checking subdomain availability:", error);
+        res.status(500).json({
+          error: "Failed to check subdomain availability",
         });
       }
-
-      // Sanitize username (lowercase, alphanumeric only)
-      const sanitizedUsername = username
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "");
-      if (sanitizedUsername !== username.toLowerCase()) {
-        return res.status(400).json({
-          error: "Username can only contain letters and numbers",
-        });
-      }
-
-      // Check with JustaName API
-      const response = await fetch(
-        `https://api.justaname.id/ens/v1/subname/available?subname=${sanitizedUsername}.ipecity.eth&chainId=1`,
-      );
-
-      if (!response.ok) {
-        throw new Error(`JustaName API error: ${response.status}`);
-      }
-
-      const responseData = await response.json();
-
-      res.json({
-        available: responseData.result.data.isAvailable || false,
-        username: sanitizedUsername,
-      });
-    } catch (error) {
-      console.error("Error checking subdomain availability:", error);
-      res.status(500).json({
-        error: "Failed to check subdomain availability",
-      });
     }
-  });
+  );
 
   // Debug endpoint to log JustaName request details to terminal
   app.post("/api/debug/log-justaname-request", async (req, res) => {
@@ -160,55 +170,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Accept subdomain using JustaName accept API
-  app.post("/api/subname/accept", async (req, res) => {
-    try {
-      const { farcasterFid } = req.body;
+  app.post("/api/subname/accept", 
+    authenticateUser,
+    validateRequest(z.object({
+      body: z.object({
+        farcasterFid: secureFidSchema
+      })
+    })),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const { farcasterFid } = req.body;
 
-      if (!farcasterFid) {
-        return res.status(400).json({ error: "FID is required" });
+        // Get member data
+        const member = await storage.getMember(farcasterFid);
+        if (!member || !member.ipeUsername) {
+          return res
+            .status(404)
+            .json({ error: "Member not found or no username claimed" });
+        }
+
+        // Use secure JustaName client
+        const data = await justaNameClient.reserveSubdomain(
+          member.ipeUsername,
+          member.walletAddress || ''
+        );
+
+        // Update member status to active
+        await storage.updateMember(farcasterFid, { status: "active_member" });
+
+        res.json({ success: true, data });
+      } catch (error) {
+        console.error("Error accepting subdomain:", error);
+        res.status(500).json({ error: "Failed to accept subdomain" });
       }
-
-      // Get member data
-      const member = await storage.getMember(farcasterFid);
-      if (!member || !member.ipeUsername) {
-        return res
-          .status(404)
-          .json({ error: "Member not found or no username claimed" });
-      }
-
-      // Call JustaName accept API
-      const response = await fetch(
-        "https://api.justaname.id/api/v1/subname/accept",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.JUSTANAME_API_KEY}`,
-          },
-          body: JSON.stringify({
-            subname: member.ipeUsername,
-            ensDomain: "ipecity.eth",
-            signature: "user_signed", // This should be replaced with actual wallet signature
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to accept subdomain");
-      }
-
-      const data = await response.json();
-
-      // Update member status to active
-      await storage.updateMember(farcasterFid, { status: "active_member" });
-
-      res.json({ success: true, data });
-    } catch (error) {
-      console.error("Error accepting subdomain:", error);
-      res.status(500).json({ error: "Failed to accept subdomain" });
     }
-  });
+  );
 
   // Update member status
   app.post("/api/members/update-status", async (req, res) => {
@@ -228,43 +224,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Claim username (update ipe_username field)
-  app.post("/api/username/claim", async (req, res) => {
-    try {
-      const { farcasterFid, username, walletAddress } = req.body;
+  app.post("/api/username/claim", 
+    authenticateUser,
+    validateRequest(usernameClaimSchema),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const { farcasterFid, username, walletAddress } = req.body;
 
-      if (!farcasterFid || !username) {
-        return res.status(400).json({ error: "FID and username are required" });
+        // Sanitize inputs
+        const sanitizedData = {
+          farcasterFid: IdentifierSanitizer.sanitizeFid(farcasterFid),
+          username: IdentifierSanitizer.sanitizeUsername(username),
+          walletAddress: IdentifierSanitizer.sanitizeWalletAddress(walletAddress)
+        };
+
+        if (!sanitizedData.farcasterFid || !sanitizedData.username || !sanitizedData.walletAddress) {
+          return res.status(400).json({ error: "Invalid input data" });
+        }
+
+        // Update member with claimed username, wallet address, and change status to pending_application
+        const member = await storage.updateMember(sanitizedData.farcasterFid, {
+          ipeUsername: sanitizedData.username,
+          walletAddress: sanitizedData.walletAddress,
+          status: "pending_application",
+        });
+
+        res.json({ success: true, member, username: sanitizedData.username });
+      } catch (error) {
+        console.error("Error claiming username:", error);
+        res.status(500).json({ error: "Failed to claim username" });
       }
-
-      if (!walletAddress) {
-        return res.status(400).json({ error: "Wallet address is required" });
-      }
-
-      // Sanitize username
-      const sanitizedUsername = username
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "");
-      if (sanitizedUsername.length < 3) {
-        return res
-          .status(400)
-          .json({ error: "Username must be at least 3 characters" });
-      }
-
-      // Note: Availability should be checked by frontend before calling this endpoint
-
-      // Update member with claimed username, wallet address, and change status to pending_application
-      const member = await storage.updateMember(farcasterFid, {
-        ipeUsername: sanitizedUsername,
-        walletAddress: walletAddress,
-        status: "pending_application",
-      });
-
-      res.json({ success: true, member, username: sanitizedUsername });
-    } catch (error) {
-      console.error("Error claiming username:", error);
-      res.status(500).json({ error: "Failed to claim username" });
     }
-  });
+  );
 
   // Accept reserved subdomain (user action after admin approval)
   app.post("/api/subname/accept", async (req, res) => {
@@ -326,29 +317,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /* ────────────────────────────────  QR CODE GENERATION  ──────────────────────────────── */
-  app.post("/api/qrcode", async (req, res) => {
-    try {
-      const { url } = req.body;
-      if (!url) {
-        return res.status(400).json({ error: "URL is required" });
+  app.post("/api/qrcode", 
+    authenticateUser,
+    validateRequest(z.object({
+      body: z.object({
+        url: z.string().url("Invalid URL").max(2048, "URL too long")
+      })
+    })),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const { url } = req.body;
+        
+        // Sanitize URL
+        const sanitizedUrl = UrlSanitizer.sanitizeUrl(url);
+        if (!sanitizedUrl) {
+          return res.status(400).json({ error: "Invalid URL provided" });
+        }
+
+        const qrCodeDataUrl = await QRCode.toDataURL(sanitizedUrl, {
+          width: 256,
+          margin: 2,
+          color: {
+            dark: "#000000",
+            light: "#FFFFFF",
+          },
+        });
+
+        res.set("Content-Type", "text/plain");
+        res.send(qrCodeDataUrl);
+      } catch (error) {
+        console.error("QR code generation error:", error);
+        res.status(500).json({ error: "Failed to generate QR code" });
       }
-
-      const qrCodeDataUrl = await QRCode.toDataURL(url, {
-        width: 256,
-        margin: 2,
-        color: {
-          dark: "#000000",
-          light: "#FFFFFF",
-        },
-      });
-
-      res.set("Content-Type", "text/plain");
-      res.send(qrCodeDataUrl);
-    } catch (error) {
-      console.error("QR code generation error:", error);
-      res.status(500).json({ error: "Failed to generate QR code" });
     }
-  });
+  );
 
   /* ────────────────────────────────  SDK  ──────────────────────────────── */
   const neynar = new NeynarAPIClient(
@@ -359,76 +361,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   /* ──────────────────  LIKE / plain RECAST  ────────────────── */
-  app.post("/api/neynar/reaction", async (req, res) => {
-    try {
-      const { signer_uuid, reaction_type, target } = req.body as {
-        signer_uuid: string;
-        reaction_type: Reaction; // "like" | "recast"
-        target: string; // cast hash
-      };
+  app.post("/api/neynar/reaction", 
+    authenticateUser,
+    validateRequest(z.object({
+      body: z.object({
+        signer_uuid: z.string().uuid("Invalid signer UUID"),
+        reaction_type: z.enum(['like', 'recast'], { required_error: "Invalid reaction type" }),
+        target: z.string().min(1, "Target hash required").max(100, "Target hash too long")
+      })
+    })),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const { signer_uuid, reaction_type, target } = req.body;
+        
+        // Sanitize inputs
+        const sanitizedTarget = HtmlSanitizer.sanitizeText(target, 100);
+        
+        const out = await neynar.publishReaction({
+          signerUuid: signer_uuid,
+          reactionType: reaction_type,
+          target: sanitizedTarget,
+        });
 
-      const out = await neynar.publishReaction({
-        signerUuid: signer_uuid,
-        reactionType: reaction_type,
-        target,
-      });
-
-      res.json(out);
-    } catch (e) {
-      const msg = isApiErrorResponse(e)
-        ? e.response.data
-        : (e as Error).message;
-      res.status(e.statusCode ?? 500).json({ error: msg });
+        res.json(out);
+      } catch (e) {
+        const msg = isApiErrorResponse(e)
+          ? e.response.data
+          : (e as Error).message;
+        res.status(e.statusCode ?? 500).json({ error: msg });
+      }
     }
-  });
+  );
 
   /* ───────────────────  QUOTE-CAST / new cast  ─────────────────── */
-  app.post("/api/neynar/cast", async (req, res) => {
-    try {
-      const {
-        signer_uuid,
-        text = "",
-        embeds,
-      } = req.body as {
-        signer_uuid: string;
-        text?: string;
-        embeds?: any[];
-      };
+  app.post("/api/neynar/cast", 
+    authenticateUser,
+    validateRequest(z.object({
+      body: z.object({
+        signer_uuid: z.string().uuid("Invalid signer UUID"),
+        text: z.string().max(320, "Cast text too long").optional(),
+        embeds: z.array(z.any()).max(10, "Too many embeds").optional()
+      })
+    })),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const {
+          signer_uuid,
+          text = "",
+          embeds,
+        } = req.body;
+        
+        // Sanitize text content
+        const sanitizedText = text ? HtmlSanitizer.sanitizeText(text, 320) : "";
 
-      const out = await neynar.publishCast({
-        signerUuid: signer_uuid,
-        text,
-        embeds,
-      });
+        const out = await neynar.publishCast({
+          signerUuid: signer_uuid,
+          text: sanitizedText,
+          embeds,
+        });
 
-      res.json(out);
-    } catch (e) {
-      const msg = isApiErrorResponse(e)
-        ? e.response.data
-        : (e as Error).message;
-      res.status(e.statusCode ?? 500).json({ error: msg });
+        res.json(out);
+      } catch (e) {
+        const msg = isApiErrorResponse(e)
+          ? e.response.data
+          : (e as Error).message;
+        res.status(e.statusCode ?? 500).json({ error: msg });
+      }
     }
-  });
+  );
 
   /* ────────────────  USER SIGNER MANAGEMENT  ──────────────── */
-  app.get("/api/neynar/signer/:fid", async (req, res) => {
-    // Prevent caching to ensure real-time signer status checks
-    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.set("Pragma", "no-cache");
-    res.set("Expires", "0");
+  app.get("/api/neynar/signer/:fid", 
+    authenticateUser,
+    validateRequest(z.object({
+      params: z.object({
+        fid: z.string().regex(/^\d+$/, "FID must be numeric").transform(Number)
+      })
+    })),
+    async (req: AuthenticatedRequest, res) => {
+      // Prevent caching to ensure real-time signer status checks
+      res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.set("Pragma", "no-cache");
+      res.set("Expires", "0");
 
-    try {
-      const fid = parseInt(req.params.fid);
-      if (isNaN(fid)) {
-        return res.status(400).json({ error: "Invalid FID" });
-      }
+      try {
+        const fid = req.params.fid as unknown as number;
+        
+        // Validate FID
+        const sanitizedFid = IdentifierSanitizer.sanitizeFid(fid);
+        if (!sanitizedFid) {
+          return res.status(400).json({ error: "Invalid FID" });
+        }
 
-      console.log(`Looking for signer for FID: ${fid}`);
+      console.log(`Looking for signer for FID: ${sanitizedFid}`);
 
       // Check if user already has a signer
       let userSigner;
       try {
-        userSigner = await storage.getUserSigner(fid);
+        userSigner = await storage.getUserSigner(sanitizedFid);
         console.log("Existing signer found:", userSigner);
       } catch (dbError) {
         console.error("Database error when fetching signer:", dbError);
@@ -450,14 +480,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             if (signerStatus.status === "approved") {
               // Update database with approved status
-              await storage.updateUserSignerStatus(fid, "approved");
+              await storage.updateUserSignerStatus(sanitizedFid, "approved");
               console.log("Signer approved! Updated database status.");
 
               // Also update member status to 'signer_approved' if they're still pending_signer
               try {
-                const member = await storage.getMember(fid);
+                const member = await storage.getMember(sanitizedFid);
                 if (member && member.status === "pending_signer") {
-                  await storage.updateMemberStatus(fid, "pending_id_verification");
+                  await storage.updateMemberStatus(sanitizedFid, "pending_id_verification");
                   console.log("Updated member status to pending_id_verification");
                 }
               } catch (memberError) {
@@ -494,13 +524,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Create new signer with proper registration and sponsorship
-        console.log("Creating new sponsored signer for FID:", fid);
+        console.log("Creating new sponsored signer for FID:", sanitizedFid);
         const signerData = await getSignedKey(true); // sponsored = true
         console.log("Created and registered signer:", signerData);
 
         // Store the signer in database
         const newSigner = await storage.createUserSigner({
-          farcasterFid: fid,
+          farcasterFid: sanitizedFid,
           signerUuid: signerData.signer_uuid,
           publicKey: signerData.public_key || "",
           status:
@@ -531,40 +561,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check signer status and update if approved
-  app.post("/api/neynar/signer/check/:fid", async (req, res) => {
-    try {
-      const fid = parseInt(req.params.fid);
-      if (isNaN(fid)) {
-        return res.status(400).json({ error: "Invalid FID" });
-      }
-
-      const userSigner = await storage.getUserSigner(fid);
-      if (!userSigner) {
-        return res.status(404).json({ error: "Signer not found" });
-      }
-
-      // Check signer status with Neynar
+  app.post("/api/neynar/signer/check/:fid", 
+    authenticateUser,
+    validateRequest(z.object({
+      params: z.object({
+        fid: z.string().regex(/^\d+$/, "FID must be numeric").transform(Number)
+      })
+    })),
+    async (req: AuthenticatedRequest, res) => {
       try {
-        const signerInfo = await neynar.lookupSigner({
-          signerUuid: userSigner.signerUuid,
-        });
-        console.log("Signer info from Neynar:", signerInfo);
-
-        // Update status if it has changed
-        if (signerInfo.status !== userSigner.status) {
-          await storage.updateUserSignerStatus(fid, signerInfo.status);
-          res.json({
-            status: signerInfo.status,
-            updated: true,
-            signer_uuid: userSigner.signerUuid,
-          });
-        } else {
-          res.json({
-            status: userSigner.status,
-            updated: false,
-            signer_uuid: userSigner.signerUuid,
-          });
+        const fid = req.params.fid as unknown as number;
+        
+        // Validate FID
+        const sanitizedFid = IdentifierSanitizer.sanitizeFid(fid);
+        if (!sanitizedFid) {
+          return res.status(400).json({ error: "Invalid FID" });
         }
+
+        const userSigner = await storage.getUserSigner(sanitizedFid);
+        if (!userSigner) {
+          return res.status(404).json({ error: "Signer not found" });
+        }
+
+        // Check signer status with Neynar
+        try {
+          const signerInfo = await neynar.lookupSigner({
+            signerUuid: userSigner.signerUuid,
+          });
+          console.log("Signer info from Neynar:", signerInfo);
+
+          // Update status if it has changed
+          if (signerInfo.status !== userSigner.status) {
+            await storage.updateUserSignerStatus(sanitizedFid, signerInfo.status);
+            res.json({
+              status: signerInfo.status,
+              updated: true,
+              signer_uuid: userSigner.signerUuid,
+            });
+          } else {
+            res.json({
+              status: userSigner.status,
+              updated: false,
+              signer_uuid: userSigner.signerUuid,
+            });
+          }
       } catch (neynarError) {
         console.log("Neynar lookup error:", neynarError);
         // If we can't check with Neynar, return current status

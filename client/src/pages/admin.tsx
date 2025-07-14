@@ -444,13 +444,14 @@ export default function AdminPage() {
                             </span>
                           ) : '-'}
                         </td>
-                        <td className="py-2">
+                        <td className="py-2" onClick={(e) => e.stopPropagation()}>
                           {needsApproval ? (
                             <div className="flex space-x-2">
                               <Button
                                 size="sm"
                                 variant="default"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   console.log("Approving member:", member);
                                   console.log("Wallet address:", member.walletAddress);
                                   console.log("Username:", (member as any).ipeUsername || claimSubdomain);
@@ -470,7 +471,10 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                onClick={() => denyMemberMutation.mutate(member.farcasterFid)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  denyMemberMutation.mutate(member.farcasterFid);
+                                }}
                                 disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                               >
                                 {denyMemberMutation.isPending ? "..." : "Deny"}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,6 +43,23 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
   const queryClient = useQueryClient();
   const { address } = useAccount();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to form when component mounts
+  useEffect(() => {
+    const scrollToForm = () => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    };
+    
+    // Small delay to ensure the form has fully rendered
+    const timeoutId = setTimeout(scrollToForm, 100);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const form = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationFormSchema),
@@ -167,7 +184,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card ref={formRef} className="max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5" />

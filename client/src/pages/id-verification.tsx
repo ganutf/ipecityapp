@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,7 @@ interface MemberStatus {
 export default function IdVerificationPage() {
   const { profile } = usePersistentAuth();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   
   const [emailComplete, setEmailComplete] = useState(false);
   const [passportComplete, setPassportComplete] = useState(false);

@@ -10,9 +10,7 @@ import { mainnet } from "wagmi/chains";
 import { http } from "wagmi";
 import { JustaNameProvider } from "@justaname.id/react";
 import {
-  AuthGuard,
-  RequireAuth,
-  RequireApproval,
+  AuthGuard
 } from "@/components/AuthGuard";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
@@ -29,7 +27,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 
 const authKitConfig = {
   relay: "https://relay.farcaster.xyz",
-  rpcUrl: "https://mainnet.optimism.io",
+  rpcUrl: "https://optimism.publicnode.com",
   domain: window.location.hostname,
   siweUri: window.location.origin,
 };

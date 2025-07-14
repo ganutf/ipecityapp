@@ -18,13 +18,15 @@ interface EmailVerificationSectionProps {
 
 export function EmailVerificationSection({
   farcasterFid,
-  currentEmail = "",
+  currentEmail,
   isVerified = false,
   onVerificationComplete,
   allowChange = false
 }: EmailVerificationSectionProps) {
-  const [email, setEmail] = useState(currentEmail);
-  const [originalEmail, setOriginalEmail] = useState(currentEmail);
+  // Ensure we always have string values, never null/undefined
+  const initialEmail = currentEmail || "";
+  const [email, setEmail] = useState(initialEmail);
+  const [originalEmail, setOriginalEmail] = useState(initialEmail);
   const [verificationCode, setVerificationCode] = useState("");
   const [showVerification, setShowVerification] = useState(false);
   const [emailVerified, setEmailVerified] = useState(isVerified);
@@ -32,8 +34,9 @@ export function EmailVerificationSection({
 
   // Sync local state with props when they change (for page refreshes)
   useEffect(() => {
-    setEmail(currentEmail || "");
-    setOriginalEmail(currentEmail || "");
+    const emailValue = currentEmail || "";
+    setEmail(emailValue);
+    setOriginalEmail(emailValue);
     setEmailVerified(isVerified || false);
     console.log("EmailVerificationSection: Updated state - isVerified:", isVerified, "currentEmail:", currentEmail, "emailVerified state:", emailVerified);
   }, [currentEmail, isVerified]);

@@ -14,7 +14,7 @@ export default function FarcasterEmbed() {
     profile,
     isLoading: authLoading,
   } = usePersistentAuth();
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+  // QR code state removed - handled by /signer-approval page
 
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
@@ -56,20 +56,7 @@ export default function FarcasterEmbed() {
   const signerStatus = (signerData as any)?.status || "pending_approval";
   const approvalUrl = (signerData as any)?.signer_approval_url;
 
-  // Generate QR code when approval URL is available
-  useEffect(() => {
-    if (approvalUrl) {
-      // Generate QR code via API
-      fetch("/api/qrcode", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: approvalUrl }),
-      })
-        .then((res) => res.text())
-        .then((dataUrl) => setQrCodeUrl(dataUrl))
-        .catch(console.error);
-    }
-  }, [approvalUrl]);
+  // QR code generation is now handled by the dedicated /signer-approval page
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
@@ -205,172 +192,11 @@ export default function FarcasterEmbed() {
     );
   }
 
-  // Show signer approval screen when needed (only if signer is not approved)
-  if (
-    isAuthenticated &&
-    (memberCheck as any)?.isMember &&
-    signerData &&
-    signerStatus !== "approved" &&
-    (signerStatus === "generated" || signerStatus === "pending_approval") &&
-    approvalUrl
-  ) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
-          <h2 className="text-2xl font-bold mb-4 text-gray-900">
-            Approve Your Signer
-          </h2>
-          <p className="text-gray-600 mb-6">
-            To participate in pulse activities, you need to approve a signer for
-            your account.
-          </p>
-          <div className="mb-4 p-3 bg-yellow-50 rounded-lg text-sm">
-            <p className="text-yellow-800 font-medium mb-2">Instructions:</p>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-yellow-800 font-medium mb-2">
-                  Option 1: Mobile Device
-                </p>
-                <ol className="text-yellow-700 space-y-1 list-decimal list-inside text-xs">
-                  <li>Scan the QR code with your phone camera</li>
-                  <li>
-                    This will open the Farcaster app on your mobile device
-                  </li>
-                  <li>Approve the signer request</li>
-                  <li>Return here and click "Check Status"</li>
-                </ol>
-              </div>
-              <div>
-                <p className="text-yellow-800 font-medium mb-2">
-                  Option 2: Direct Link
-                </p>
-                <ol className="text-yellow-700 space-y-1 list-decimal list-inside text-xs">
-                  <li>Click "Open Farcaster" below</li>
-                  <li>If you have Farcaster installed, it will open</li>
-                  <li>Approve the signer request</li>
-                  <li>Return here and click "Check Status"</li>
-                </ol>
-              </div>
-            </div>
-          </div>
+  // Signer approval is now handled by the dedicated /signer-approval route
+  // AuthGuard will redirect users to /signer-approval when needed
 
-          {qrCodeUrl && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-gray-700 mb-3">
-                Scan with your phone:
-              </p>
-              <div className="flex justify-center">
-                <img
-                  src={qrCodeUrl}
-                  alt="QR Code for Farcaster approval"
-                  className="rounded-lg shadow-sm"
-                />
-              </div>
-            </div>
-          )}
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              Status:{" "}
-              <span className="font-semibold">
-                {signerStatus === "generated"
-                  ? "Ready for approval"
-                  : signerStatus}
-              </span>
-            </p>
-          </div>
-          <a
-            href={approvalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium mb-4"
-          >
-            Open Farcaster
-          </a>
-          <br />
-          <button
-            onClick={async () => {
-              try {
-                const response = await fetch(
-                  `/api/neynar/signer/check/${viewerFid}`,
-                  { method: "POST" },
-                );
-                const data = await response.json();
-                if (data.status === "approved") {
-                  // Refetch the signer data to update the UI immediately
-                  await refetchSigner();
-                } else {
-                  alert(
-                    "Signer not yet approved. Please complete the approval process first.",
-                  );
-                }
-              } catch (error) {
-                console.error("Error checking signer status:", error);
-                await refetchSigner();
-              }
-            }}
-            className="text-sm text-gray-600 hover:text-gray-800 underline"
-          >
-            Check Status
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show verification status for users who are members but not fully approved
-  if (
-    isAuthenticated &&
-    hasValidFid &&
-    !authLoading &&
-    (memberCheck as any)?.isMember &&
-    (memberCheck as any)?.status !== "active_member"
-  ) {
-    const { status, member } = memberCheck as any;
-
-    return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-blue-800 mb-3">
-            Verification Status
-          </h2>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Email Verification:</span>
-              {member?.emailVerified ? (
-                <span className="text-green-600 text-sm">✓ Verified</span>
-              ) : (
-                <span className="text-orange-600 text-sm">Pending</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">
-                Passport Verification:
-              </span>
-              {member?.passportVerified ? (
-                <span className="text-green-600 text-sm">
-                  ✓ Verified{" "}
-                  {member.ipePassport ? `(${member.ipePassport})` : ""}
-                </span>
-              ) : (
-                <span className="text-orange-600 text-sm">Pending</span>
-              )}
-            </div>
-          </div>
-          <div className="mt-4">
-            <button
-              onClick={() => {
-                console.log("Navigating to /id-verification");
-                window.location.href = "/id-verification";
-              }}
-              className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm cursor-pointer"
-            >
-              Complete Verification
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Verification status and routing is now handled by AuthGuard
+  // AuthGuard will redirect users to appropriate verification pages
 
   if (
     authLoading ||

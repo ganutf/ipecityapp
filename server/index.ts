@@ -1,7 +1,23 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { db } from "./db";
+import { initializeDatabase, db } from "./db";
+import { initializeKeyManager } from "./lib/keyManagement";
+import { readFileSync } from "fs";
+import { join } from "path";
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// Load environment variables from .env file
+const envPath = resolve(process.cwd(), '.env');
+console.log('Loading environment variables from:', envPath);
+config({ path: envPath });
+
+// Log some key environment variables for debugging
+console.log('Environment check:');
+console.log('  EMAIL_TEST_MODE:', process.env.EMAIL_TEST_MODE);
+console.log('  RESEND_API_KEY:', process.env.RESEND_API_KEY ? 'Set' : 'Not set');
+console.log('  NODE_ENV:', process.env.NODE_ENV);
 
 
 // Enhanced logging function with error handling
@@ -18,7 +34,9 @@ function enhancedLog(message: string, level: 'info' | 'error' = 'info') {
 
 // Validate required environment variables
 function validateEnvironment() {
-  const required = ['DATABASE_URL'];
+  // Note: DATABASE_URL is now handled by secure key management
+  // Other critical environment variables can be added here if needed
+  const required: string[] = [];
   const missing = required.filter(key => !process.env[key]);
 
   if (missing.length > 0) {
@@ -27,6 +45,35 @@ function validateEnvironment() {
   }
 
   enhancedLog('Environment validation passed');
+}
+
+// Initialize secure key management
+async function initializeSecureKeys() {
+  try {
+    // Try to load master password from file
+    const masterKeyPath = join(process.cwd(), '.master-key');
+    let masterPassword: string;
+    
+    try {
+      masterPassword = readFileSync(masterKeyPath, 'utf8').trim();
+      enhancedLog('Master password loaded from file');
+    } catch (error) {
+      enhancedLog('Master password file not found, using fallback', 'error');
+      // In production, this should fail or use a secure key management service
+      if (process.env.NODE_ENV === 'production') {
+        enhancedLog('Production environment requires secure master password', 'error');
+        process.exit(1);
+      }
+      // For development, generate a temporary password
+      masterPassword = 'development-master-password-not-secure-for-production-use';
+    }
+    
+    initializeKeyManager(masterPassword);
+    enhancedLog('Secure key management initialized');
+  } catch (error) {
+    enhancedLog(`Key management initialization failed: ${error.message}`, 'error');
+    process.exit(1);
+  }
 }
 
 // Test database connection
@@ -76,6 +123,12 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Initialize secure keys first
+    await initializeSecureKeys();
+    
+    // Initialize database connection with secure configuration
+    await initializeDatabase();
+    
     // Validate environment and test database connection
     validateEnvironment();
     await testDatabaseConnection();

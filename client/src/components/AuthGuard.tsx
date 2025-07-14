@@ -42,10 +42,13 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
    * QUERY 1: Signer Status Check
    * Verifies whether the user's Farcaster signer has been approved via QR code.
    * Status can be: 'pending_approval' | 'approved' | 'revoked'
+   * Note: This query might fail for users with pending_signer status (no signer created yet)
    */
-  const { data: signerData, isLoading: signerLoading } = useQuery({
+  const { data: signerData, isLoading: signerLoading, error: signerError } = useQuery({
     queryKey: [`/api/neynar/signer/${profile?.fid}`],
     enabled: Boolean(profile?.fid),
+    retry: false, // Don't retry failed signer requests
+    refetchOnWindowFocus: false, // Don't auto-refetch signer data
   });
 
   /**
@@ -59,8 +62,9 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
     enabled: Boolean(profile?.fid),
   });
 
-  // Overall loading state - wait for all API responses
-  const isLoading = signerLoading || memberLoading;
+  // Overall loading state - wait for member status, but don't wait for signer if it errors
+  // (signer API fails for users with pending_signer status, which is expected)
+  const isLoading = memberLoading || (signerLoading && !signerError);
 
   /**
    * MAIN ROUTING LOGIC
@@ -70,9 +74,10 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
   useEffect(() => {
     const currentPath = window.location.pathname;
     
-    // STEP 1: Protect ID verification page - always requires authentication
-    if (currentPath === '/id-verification' && !profile?.fid) {
-      console.log("AuthGuard - ID verification page requires authentication, redirecting to home");
+    // STEP 1: Protect authenticated-only pages - always require authentication
+    const protectedPaths = ['/id-verification', '/profile', '/signer-approval'];
+    if (protectedPaths.includes(currentPath) && !profile?.fid) {
+      console.log(`AuthGuard - ${currentPath} requires authentication, redirecting to home`);
       setLocation("/");
       return;
     }
@@ -90,7 +95,18 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
     }
 
     if (profile && profile.fid) {
-      // STEP 4: Check Farcaster signer approval status (highest priority)
+      // STEP 4: Check if member has pending_signer status first (highest priority)
+      // This handles users who don't have a signer created yet
+      if (memberStatus && (memberStatus as any).isMember) {
+        const { status } = memberStatus as any;
+        if (status === 'pending_signer') {
+          console.log("AuthGuard - Member has pending_signer status, redirecting to signer approval");
+          setLocation("/signer-approval");
+          return;
+        }
+      }
+
+      // STEP 5: Check Farcaster signer approval status (for users with existing signers)
       if (signerData) {
         console.log("AuthGuard - Signer status:", (signerData as any).status);
         if ((signerData as any).status === 'pending_approval') {
@@ -101,7 +117,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         }
       }
 
-      // STEP 5: Process member status (only after signer is approved)
+      // STEP 6: Process member status (only after signer is approved)
       if (signerData && (signerData as any).status === 'approved') {
         // Wait for member status API response
         if (!memberStatus) {
@@ -110,7 +126,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
 
         const { isMember, status } = memberStatus as any;
         
-        // STEP 6: Handle member registration and verification states
+        // STEP 7: Handle member registration and verification states
         if (isMember) {
           const currentStatus = status;
           console.log("AuthGuard - Member status:", currentStatus);
@@ -121,18 +137,18 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
             return;
           }
           
-          // STATUS: Incomplete verification states - redirect to id-verification
+          // STATUS: Incomplete verification states - restrict to id-verification only
           if (currentStatus === 'pending_id_verification' || 
               currentStatus === 'email_verified' || 
               currentStatus === 'pending_application' ||
               currentStatus === 'approved_application') {
-            console.log("AuthGuard - Incomplete verification, redirecting to id-verification. Status:", currentStatus);
+            console.log("AuthGuard - Incomplete verification, only allowing id-verification access. Status:", currentStatus);
             const currentPath = window.location.pathname;
-            if (currentPath !== '/id-verification' && currentPath !== '/profile') {
+            if (currentPath !== '/id-verification') {
               setLocation("/id-verification");
               return;
             }
-            return; // Already on allowed verification pages
+            return; // Already on id-verification page
           }
           
           // STATUS: 'denied_application' - Application rejected

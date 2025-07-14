@@ -1,11 +1,12 @@
-import { neynarClient } from "./neynarClient";
+import { neynar } from "./neynarClient";
 import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 import { bytesToHex, hexToBytes } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { getFid } from "./getFid";
+import { getSecureEnvironmentVariable } from "./keyManagement";
 
 export const getSignedKey = async (is_sponsored: boolean = true) => {
-  const createSigner = await neynarClient.createSigner();
+  const createSigner = await neynar.createSigner();
   const { deadline, signature, sponsor } = await generate_signature(
     createSigner.public_key,
     is_sponsored
@@ -17,7 +18,7 @@ export const getSignedKey = async (is_sponsored: boolean = true) => {
 
   const fid = await getFid();
 
-  const signedKey = await neynarClient.registerSignedKey({
+  const signedKey = await neynar.registerSignedKey({
     signerUuid: createSigner.signer_uuid,
     appFid: fid,
     deadline,
@@ -38,14 +39,14 @@ const generate_signature = async function (
   public_key: string,
   is_sponsored = false
 ) {
-  if (typeof process.env.FARCASTER_DEVELOPER_MNEMONIC === "undefined") {
-    throw new Error("FARCASTER_DEVELOPER_MNEMONIC is not defined");
+  const mnemonic = await getSecureEnvironmentVariable('farcaster_developer_mnemonic', 'FARCASTER_DEVELOPER_MNEMONIC');
+  if (!mnemonic) {
+    throw new Error("FARCASTER_DEVELOPER_MNEMONIC is not available in secure storage or environment variables.");
   }
 
-  const FARCASTER_DEVELOPER_MNEMONIC = process.env.FARCASTER_DEVELOPER_MNEMONIC;
   const FID = await getFid();
 
-  const account = mnemonicToAccount(FARCASTER_DEVELOPER_MNEMONIC);
+  const account = mnemonicToAccount(mnemonic);
   const appAccountKey = new ViemLocalEip712Signer(account as any);
 
   // Generates an expiration date for the signature (24 hours from now).

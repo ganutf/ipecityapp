@@ -202,7 +202,7 @@ export const secureBioSchema = z.string()
 
 export const secureSocialHandleSchema = z.string()
   .max(100, "Social media handle too long")
-  .regex(/^[a-zA-Z0-9_.-]*$/, "Invalid characters in social media handle")
+  .regex(/^[@]?[a-zA-Z0-9_.-]*$/, "Invalid characters in social media handle")
   .refine(val => !val.includes('..'), "Invalid handle format")
   .optional();
 

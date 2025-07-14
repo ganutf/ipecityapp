@@ -303,10 +303,11 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   // Content Security Policy
   res.setHeader('Content-Security-Policy', 
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-    "style-src 'self' 'unsafe-inline'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
     "img-src 'self' data: https:; " +
-    "connect-src 'self' https://api.neynar.com https://api.justaname.id; " +
+    "connect-src 'self' https://api.neynar.com https://api.justaname.id https://relay.farcaster.xyz https://pulse.walletconnect.org https://api.web3modal.org https://mainnet.infura.io https://rpc.ankr.com https://mainnet.optimism.io https://optimism-mainnet.infura.io https://opt-mainnet.g.alchemy.com https://ethereum.publicnode.com https://optimism.publicnode.com https://rpc.payload.de https://eth.blockrazor.xyz; " +
     "frame-ancestors 'none'"
   );
   

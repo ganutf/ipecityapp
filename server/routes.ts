@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import {
   NeynarAPIClient,
@@ -26,6 +26,8 @@ import {
   sendApprovalEmail,
   sendDenialEmail,
   generateVerificationCode,
+  canSendEmails,
+  getEmailConfig,
 } from "./lib/email";
 import { mnemonicToAccount } from "viem/accounts";
 import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
@@ -33,6 +35,12 @@ import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
 import { SiweMessage } from "siwe";
 import { lookupEnsName } from "./lib/ensLookup";
+import { 
+  verifyWalletSignature, 
+  logSignatureVerification,
+  generateChallengeMessage 
+} from "./lib/cryptography";
+import { getSecureEnvironmentVariable } from "./lib/keyManagement";
 import { 
   authenticateUser, 
   requireAdmin, 
@@ -317,48 +325,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /* ────────────────────────────────  QR CODE GENERATION  ──────────────────────────────── */
-  app.post("/api/qrcode", 
-    authenticateUser,
-    validateRequest(z.object({
-      body: z.object({
-        url: z.string().url("Invalid URL").max(2048, "URL too long")
-      })
-    })),
-    async (req: AuthenticatedRequest, res) => {
-      try {
-        const { url } = req.body;
-        
-        // Sanitize URL
-        const sanitizedUrl = UrlSanitizer.sanitizeUrl(url);
-        if (!sanitizedUrl) {
-          return res.status(400).json({ error: "Invalid URL provided" });
-        }
-
-        const qrCodeDataUrl = await QRCode.toDataURL(sanitizedUrl, {
-          width: 256,
-          margin: 2,
-          color: {
-            dark: "#000000",
-            light: "#FFFFFF",
-          },
-        });
-
-        res.set("Content-Type", "text/plain");
-        res.send(qrCodeDataUrl);
-      } catch (error) {
-        console.error("QR code generation error:", error);
-        res.status(500).json({ error: "Failed to generate QR code" });
+  // Public QR code endpoint - no authentication required for signer approval
+  app.post("/api/qrcode", async (req: Request, res) => {
+    try {
+      console.log('QR Code API called - no auth required');
+      
+      const { url } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({ error: "URL is required" });
       }
+      
+      // Basic URL validation
+      try {
+        new URL(url);
+      } catch {
+        return res.status(400).json({ error: "Invalid URL format" });
+      }
+      
+      if (url.length > 2048) {
+        return res.status(400).json({ error: "URL too long" });
+      }
+      
+      // Sanitize URL
+      const sanitizedUrl = UrlSanitizer.sanitizeUrl(url);
+      if (!sanitizedUrl) {
+        return res.status(400).json({ error: "Invalid URL provided" });
+      }
+
+      const qrCodeDataUrl = await QRCode.toDataURL(sanitizedUrl, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF",
+        },
+      });
+
+      res.set("Content-Type", "text/plain");
+      res.send(qrCodeDataUrl);
+    } catch (error) {
+      console.error("QR code generation error:", error);
+      res.status(500).json({ error: "Failed to generate QR code" });
     }
-  );
+  });
 
   /* ────────────────────────────────  SDK  ──────────────────────────────── */
-  const neynar = new NeynarAPIClient(
-    new Configuration({
-      apiKey: process.env.NEYNAR_API_KEY ?? "NEYNAR_API_DOCS",
-      baseOptions: { headers: { "x-neynar-experimental": true } },
-    }),
-  );
+  // Import neynar client from separate module for proper API key handling
+  const { neynar } = await import("./lib/neynarClient");
 
   /* ──────────────────  LIKE / plain RECAST  ────────────────── */
   app.post("/api/neynar/reaction", 
@@ -432,13 +446,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   /* ────────────────  USER SIGNER MANAGEMENT  ──────────────── */
   app.get("/api/neynar/signer/:fid", 
-    authenticateUser,
     validateRequest(z.object({
       params: z.object({
         fid: z.string().regex(/^\d+$/, "FID must be numeric").transform(Number)
       })
     })),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: Request, res: Response) => {
       // Prevent caching to ensure real-time signer status checks
       res.set("Cache-Control", "no-cache, no-store, must-revalidate");
       res.set("Pragma", "no-cache");
@@ -447,23 +460,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const fid = req.params.fid as unknown as number;
         
+        console.log(`=== SIGNER LOOKUP DEBUG START ===`);
+        console.log(`Raw FID from params: ${fid}`);
+        
         // Validate FID
         const sanitizedFid = IdentifierSanitizer.sanitizeFid(fid);
         if (!sanitizedFid) {
+          console.log(`FID validation failed for: ${fid}`);
           return res.status(400).json({ error: "Invalid FID" });
         }
 
-      console.log(`Looking for signer for FID: ${sanitizedFid}`);
+        console.log(`Sanitized FID: ${sanitizedFid}`);
 
-      // Check if user already has a signer
-      let userSigner;
-      try {
-        userSigner = await storage.getUserSigner(sanitizedFid);
-        console.log("Existing signer found:", userSigner);
-      } catch (dbError) {
-        console.error("Database error when fetching signer:", dbError);
-        return res.status(500).json({ error: "Database connection error" });
-      }
+        // Check if member exists
+        const member = await storage.getMember(sanitizedFid);
+        console.log(`Member lookup result:`, member ? {
+          id: member.id,
+          farcasterFid: member.farcasterFid,
+          status: member.status,
+          memberType: member.memberType
+        } : 'NOT FOUND');
+
+        if (!member) {
+          console.log(`No member found for FID ${sanitizedFid} - returning 404`);
+          return res.status(404).json({ 
+            error: "Member not found",
+            message: "No member record exists for this FID. Please sign up first." 
+          });
+        }
+
+        console.log(`Looking for signer for FID: ${sanitizedFid}`);
+
+        // Check if user already has a signer
+        let userSigner;
+        try {
+          userSigner = await storage.getUserSigner(sanitizedFid);
+          console.log("Existing signer lookup result:", userSigner ? {
+            farcasterFid: userSigner.farcasterFid,
+            signerUuid: userSigner.signerUuid,
+            status: userSigner.status
+          } : 'NO SIGNER FOUND');
+        } catch (dbError) {
+          console.error("Database error when fetching signer:", dbError);
+          return res.status(500).json({ error: "Database connection error" });
+        }
 
       if (userSigner) {
         // If signer is pending, check current status with Neynar
@@ -508,7 +548,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "Error checking signer status with Neynar:",
               statusError,
             );
-            // Fall through to return cached status if Neynar check fails
+            
+            // Handle 404 (signer not found) and 429 (rate limit) errors
+            if (statusError.status === 404 || statusError.response?.status === 404) {
+              console.log("Signer not found on Neynar - cleaning up stale record");
+              
+              try {
+                // Delete the stale signer record
+                await storage.deleteUserSigner(sanitizedFid);
+                console.log("Deleted stale signer record");
+                
+                // Return error asking user to try again instead of immediately creating new signer
+                // This prevents rate limit issues from rapid signer creation
+                return res.status(404).json({
+                  error: "Stale signer found",
+                  message: "Your previous signer was invalid and has been cleaned up. Please refresh the page to get a new signer.",
+                  action: "refresh_required"
+                });
+                
+              } catch (cleanupError) {
+                console.error("Error cleaning up stale signer:", cleanupError);
+                return res.status(500).json({ 
+                  error: "Failed to cleanup stale signer",
+                  details: cleanupError.message 
+                });
+              }
+            }
+            
+            // Handle rate limiting errors
+            if (statusError.status === 429 || statusError.response?.status === 429) {
+              console.log("Rate limit hit when checking signer status");
+              const retryAfter = statusError.response?.headers?.['retry-after'] || 60;
+              
+              return res.status(429).json({
+                error: "Rate limit exceeded",
+                message: `Too many requests to Neynar API. Please wait ${retryAfter} seconds before trying again.`,
+                retryAfter: parseInt(retryAfter),
+                action: "wait_and_retry"
+              });
+            }
+            
+            // Fall through to return cached status if other Neynar errors
           }
         }
 
@@ -524,32 +604,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         // Create new signer with proper registration and sponsorship
+        console.log("=== CREATING NEW SIGNER ===");
         console.log("Creating new sponsored signer for FID:", sanitizedFid);
-        const signerData = await getSignedKey(true); // sponsored = true
-        console.log("Created and registered signer:", signerData);
+        console.log("Member status:", member.status);
+        
+        try {
+          const signerData = await getSignedKey(true); // sponsored = true
+          console.log("Created and registered signer:", {
+            signer_uuid: signerData.signer_uuid,
+            status: signerData.status,
+            approval_url: signerData.deep_link_url,
+            signedKey_approval_url: signerData.signedKey?.signer_approval_url
+          });
 
-        // Store the signer in database
-        const newSigner = await storage.createUserSigner({
-          farcasterFid: sanitizedFid,
-          signerUuid: signerData.signer_uuid,
-          publicKey: signerData.public_key || "",
-          status:
-            signerData.signedKey?.status ||
-            signerData.status ||
-            "pending_approval",
-          approvalUrl:
-            signerData.signedKey?.signer_approval_url ||
-            signerData.deep_link_url ||
-            `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${signerData.public_key}`,
-        });
+          // Store the signer in database
+          const newSigner = await storage.createUserSigner({
+            farcasterFid: sanitizedFid,
+            signerUuid: signerData.signer_uuid,
+            publicKey: signerData.public_key || "",
+            status:
+              signerData.signedKey?.status ||
+              signerData.status ||
+              "pending_approval",
+            approvalUrl:
+              signerData.signedKey?.signer_approval_url ||
+              signerData.deep_link_url ||
+              `https://client.farcaster.xyz/deeplinks/signed-key-request?token=${signerData.public_key}`,
+          });
 
-        res.json({
-          signer_uuid: newSigner.signerUuid,
-          status: newSigner.status,
-          signer_approval_url: newSigner.approvalUrl,
-          message:
-            "Sponsored signer created and registered - approval required via QR code or mobile app",
-        });
+          console.log("Signer stored in database:", {
+            id: newSigner.id,
+            farcasterFid: newSigner.farcasterFid,
+            signerUuid: newSigner.signerUuid,
+            status: newSigner.status
+          });
+
+          res.json({
+            signer_uuid: newSigner.signerUuid,
+            status: newSigner.status,
+            signer_approval_url: newSigner.approvalUrl,
+            message:
+              "Sponsored signer created and registered - approval required via QR code or mobile app",
+          });
+        } catch (signerError) {
+          console.error("Error creating signer:", signerError);
+          
+          // Handle rate limiting specifically
+          if (signerError.status === 429 || signerError.response?.status === 429) {
+            const retryAfter = signerError.response?.headers?.['retry-after'] || 60;
+            
+            return res.status(429).json({
+              error: "Rate limit exceeded",
+              message: `Too many signer creation requests. Please wait ${retryAfter} seconds before trying again.`,
+              retryAfter: parseInt(retryAfter),
+              action: "wait_and_retry"
+            });
+          }
+          
+          return res.status(500).json({ 
+            error: "Failed to create signer", 
+            details: signerError.message,
+            message: "Unable to create Farcaster signer. Please try again in a few minutes."
+          });
+        }
       }
     } catch (e) {
       console.error("Signer endpoint error:", e);
@@ -1148,11 +1265,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email configuration test endpoint
+  app.get("/api/email/config", async (req, res) => {
+    try {
+      const config = getEmailConfig();
+      res.json({
+        success: true,
+        config,
+        environment: process.env.NODE_ENV,
+        hasResendKey: !!process.env.RESEND_API_KEY,
+        testMode: process.env.EMAIL_TEST_MODE
+      });
+    } catch (error) {
+      console.error("Email config error:", error);
+      res.status(500).json({ error: "Failed to get email config" });
+    }
+  });
+
   // Request email verification
   app.post("/api/auth/request-email-verification", async (req, res) => {
     try {
       const validatedRequest = emailVerificationRequestSchema.parse(req.body);
       const { farcasterFid, email } = validatedRequest;
+
+      // Check if email system can send emails
+      if (!canSendEmails()) {
+        const config = getEmailConfig();
+        console.error('📧 Email system not configured:', config);
+        return res.status(500).json({ 
+          error: "Email system not configured",
+          details: config.testMode 
+            ? "Test mode is enabled but not working properly" 
+            : "RESEND_API_KEY is missing or invalid"
+        });
+      }
 
       // Generate verification code
       const code = generateVerificationCode();
@@ -1169,12 +1315,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailSent = await sendVerificationEmail(email, code);
 
       if (!emailSent) {
-        return res
-          .status(500)
-          .json({ error: "Failed to send verification email" });
+        const config = getEmailConfig();
+        console.error('📧 Failed to send verification email:', config);
+        return res.status(500).json({ 
+          error: "Failed to send verification email",
+          details: config.testMode 
+            ? "Test mode enabled - check server logs for email content" 
+            : "Email service error - check API key and configuration"
+        });
       }
 
-      res.json({ success: true, message: "Verification code sent" });
+      const config = getEmailConfig();
+      res.json({ 
+        success: true, 
+        message: config.testMode 
+          ? "Verification code generated (test mode - check server logs)" 
+          : "Verification code sent to your email"
+      });
     } catch (error) {
       console.error("Request email verification error:", error);
       res.status(500).json({ error: "Failed to request email verification" });
@@ -1685,48 +1842,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Verify message content without signature verification for smart contract wallets
+      // Enhanced secure signature verification for both EOA and smart contract wallets
       try {
-        console.log("Received message for verification:", message);
-        console.log("Signature type detected:", signature.length > 200 ? "Smart Contract Wallet" : "EOA Wallet");
-        console.log("Expected wallet address:", walletAddress);
+        console.log("Starting secure signature verification for:", walletAddress);
         
-        const siweMessage = new SiweMessage(message);
-        console.log("Parsed SIWE message:", {
-          address: siweMessage.address,
-          statement: siweMessage.statement,
-          domain: siweMessage.domain,
-        });
-        
-        // Verify the wallet address matches
-        if (siweMessage.address.toLowerCase() !== walletAddress.toLowerCase()) {
-          return res.status(400).json({ error: "Wallet address mismatch" });
-        }
-
-        // Verify the ENS domain is mentioned in the statement
-        if (!siweMessage.statement?.includes(ensName)) {
-          return res.status(400).json({ error: "ENS domain not verified in statement" });
-        }
-
-        // For smart contract wallets (long signatures), skip cryptographic verification
-        // and rely on the fact that the user connected the correct wallet in the frontend
-        if (signature.length > 200) {
-          console.log("Smart contract wallet detected - verifying based on message content only");
-        } else {
-          // For EOA wallets, attempt SIWE verification
-          try {
-            const verificationResult = await siweMessage.verify({ signature });
-            if (!verificationResult.success) {
-              console.log("SIWE verification failed for EOA wallet, but allowing based on address match");
-            } else {
-              console.log("SIWE verification successful for EOA wallet");
-            }
-          } catch (verifyError) {
-            console.log("SIWE verification threw error, but allowing based on address match:", verifyError.message);
+        // Use the enhanced signature verification with proper smart contract support
+        const verificationResult = await verifyWalletSignature(
+          message, 
+          signature, 
+          walletAddress,
+          {
+            domain: req.get('host') || 'localhost:5000',
+            requiredStatement: ensName,
+            allowContentOnlyVerification: true // Allow fallback for complex smart contract wallets
           }
+        );
+
+        // Log the verification attempt for security audit
+        logSignatureVerification(
+          verificationResult,
+          walletAddress,
+          req.get('user-agent'),
+          req.ip || req.connection.remoteAddress
+        );
+
+        if (!verificationResult.success) {
+          console.error("Signature verification failed:", verificationResult.error);
+          return res.status(400).json({ 
+            error: "Signature verification failed",
+            details: verificationResult.error,
+            walletType: verificationResult.walletType
+          });
         }
-        
-        console.log("Message verification completed successfully");
+
+        console.log(`Signature verification successful for ${verificationResult.walletType} wallet using ${verificationResult.verificationMethod}`);
       } catch (error) {
         console.error("Message verification error:", error);
         return res.status(400).json({ error: "Message verification failed" });
@@ -1889,12 +2038,12 @@ async function generateSignature(
   requestFid: number,
   isSponsored = true,
 ) {
-  if (typeof process.env.FARCASTER_DEVELOPER_MNEMONIC === "undefined") {
-    throw new Error("FARCASTER_DEVELOPER_MNEMONIC is not defined");
+  const mnemonic = await getSecureEnvironmentVariable('farcaster_developer_mnemonic', 'FARCASTER_DEVELOPER_MNEMONIC');
+  if (!mnemonic) {
+    throw new Error("FARCASTER_DEVELOPER_MNEMONIC is not available in secure storage or environment variables.");
   }
 
-  const FARCASTER_DEVELOPER_MNEMONIC = process.env.FARCASTER_DEVELOPER_MNEMONIC;
-  const account = mnemonicToAccount(FARCASTER_DEVELOPER_MNEMONIC);
+  const account = mnemonicToAccount(mnemonic);
 
   console.log("Developer wallet address:", account.address);
 

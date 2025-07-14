@@ -12,7 +12,7 @@ import { useAccount } from "wagmi";
 // Removed useAddSubname hook - using direct API calls instead
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { authenticatedPost, authenticatedGet, authenticatedPut } from "@/lib/api";
+import { authenticatedPost, authenticatedGet, authenticatedPatch } from "@/lib/api";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
@@ -50,25 +50,21 @@ export default function AdminPage() {
   // Fetch all pulses - must be called before any returns
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    enabled: Boolean(isAuthenticated && isAdmin),
+    queryFn: () => authenticatedGet("/api/pulses", profile?.fid),
+    enabled: Boolean(isAuthenticated && isAdmin && profile?.fid),
   });
 
   // Fetch all members
   const { data: membersData, isLoading: membersLoading } = useQuery({
     queryKey: ["/api/members"],
-    enabled: Boolean(isAuthenticated && isAdmin),
+    queryFn: () => authenticatedGet("/api/members", profile?.fid),
+    enabled: Boolean(isAuthenticated && isAdmin && profile?.fid),
   });
 
   // All mutations must also be declared before returns
   const createPulseMutation = useMutation({
     mutationFn: async (pulse: { farcasterUrl: string; date: string; description: string }) => {
-      const response = await fetch("/api/pulses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pulse),
-      });
-      if (!response.ok) throw new Error("Failed to create pulse");
-      return response.json();
+      return authenticatedPost("/api/pulses", pulse, profile?.fid);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
@@ -82,13 +78,7 @@ export default function AdminPage() {
 
   const updatePulseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: { farcasterUrl: string; date: string; description: string } }) => {
-      const response = await fetch(`/api/pulses/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to update pulse");
-      return response.json();
+      return authenticatedPatch(`/api/pulses/${id}`, data, profile?.fid);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });

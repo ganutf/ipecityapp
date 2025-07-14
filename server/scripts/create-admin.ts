@@ -13,8 +13,10 @@
  * - Creates member record if doesn't exist
  */
 
+import 'dotenv/config';
 import { storage } from '../storage';
-import { db } from '../db';
+import { initializeDatabase, getDatabase } from '../db';
+import { initializeKeyManager } from '../lib/keyManagement';
 
 const ADMIN_FID = process.argv[2];
 
@@ -39,7 +41,20 @@ async function createAdmin() {
   console.log(`🔍 Checking FID: ${fid}`);
 
   try {
+    // Initialize key manager first (for secure storage)
+    try {
+      initializeKeyManager();
+      console.log('✅ Key manager initialized');
+    } catch (error) {
+      console.log('⚠️  Key manager not available, using environment variables');
+    }
+    
+    // Initialize database connection
+    await initializeDatabase();
+    console.log('✅ Database connection initialized');
+    
     // Test database connection
+    const { db } = getDatabase();
     await db.execute('SELECT 1 as test');
     console.log('✅ Database connection successful');
 

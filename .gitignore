@@ -74,3 +74,8 @@ jspm_packages/
 # Temporary files
 *.tmp
 *.temp
+
+# Secure key storage (DO NOT COMMIT)
+.master-key
+.keys/
+*.enc

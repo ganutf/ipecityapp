@@ -32,6 +32,7 @@ export interface IStorage {
   getMemberByIpePassport(passport: string): Promise<Member | undefined>;
   createMember(member: InsertMember): Promise<Member>;
   updateMember(farcasterFid: number, member: UpdateMember): Promise<Member>;
+  deleteMember(farcasterFid: number): Promise<void>;
   getAllMembers(): Promise<Member[]>;
   
   // Application Flow
@@ -73,6 +74,7 @@ export interface IStorage {
   getUserSigner(farcasterFid: number): Promise<UserSigner | undefined>;
   createUserSigner(signer: InsertUserSigner): Promise<UserSigner>;
   updateUserSignerStatus(farcasterFid: number, status: string): Promise<UserSigner>;
+  deleteUserSigner(farcasterFid: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -104,6 +106,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(members.farcasterFid, farcasterFid))
       .returning();
     return updatedMember;
+  }
+
+  async deleteMember(farcasterFid: number): Promise<void> {
+    // Delete all related data first (cascading deletion)
+    // This ensures referential integrity and prevents orphaned records
+    
+    // Delete pulse executions
+    await db.delete(pulseExecutions).where(eq(pulseExecutions.memberFarcasterFid, farcasterFid));
+    
+    // Delete email verifications
+    await db.delete(emailVerifications).where(eq(emailVerifications.farcasterFid, farcasterFid));
+    
+    // Delete passport verifications
+    await db.delete(passportVerifications).where(eq(passportVerifications.farcasterFid, farcasterFid));
+    
+    // Delete user signers
+    await db.delete(userSigners).where(eq(userSigners.farcasterFid, farcasterFid));
+    
+    // Finally, delete the member record
+    await db.delete(members).where(eq(members.farcasterFid, farcasterFid));
   }
 
   async getAllMembers(): Promise<Member[]> {
@@ -146,11 +168,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async acceptSubdomain(farcasterFid: number): Promise<Member> {
+    // First get the current member data to access ipeUsername
+    const existingMember = await this.getMember(farcasterFid);
+    if (!existingMember) {
+      throw new Error("Member not found");
+    }
+
+    // Build the passport name from the username
+    const ipePassport = existingMember.ipeUsername 
+      ? `${existingMember.ipeUsername}.ipecity.eth` 
+      : null;
+
     const [member] = await db
       .update(members)
       .set({ 
         status: "active_member",
         passportVerified: true,
+        ipePassport: ipePassport,
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, farcasterFid))
@@ -352,6 +386,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userSigners.farcasterFid, farcasterFid))
       .returning();
     return signer;
+  }
+
+  async deleteUserSigner(farcasterFid: number): Promise<void> {
+    await db
+      .delete(userSigners)
+      .where(eq(userSigners.farcasterFid, farcasterFid));
   }
 }
 

@@ -1,6 +1,37 @@
 import { Resend } from 'resend';
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Lazy-loaded email configuration
+let resend: Resend | null = null;
+let configLogged = false;
+
+function getEmailConfig() {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const EMAIL_TEST_MODE = process.env.EMAIL_TEST_MODE === 'true';
+  const NODE_ENV = process.env.NODE_ENV;
+
+  // Initialize Resend client if needed
+  if (!resend && RESEND_API_KEY) {
+    resend = new Resend(RESEND_API_KEY);
+  }
+
+  // Log configuration once
+  if (!configLogged) {
+    console.log('📧 Email Configuration (Lazy-loaded):');
+    console.log(`  NODE_ENV: ${NODE_ENV}`);
+    console.log(`  EMAIL_TEST_MODE: ${EMAIL_TEST_MODE}`);
+    console.log(`  RESEND_API_KEY: ${RESEND_API_KEY ? 'Configured ✓' : 'Missing ✗'}`);
+    console.log(`  Resend Client: ${resend ? 'Initialized ✓' : 'Not initialized ✗'}`);
+    configLogged = true;
+  }
+
+  return {
+    testMode: EMAIL_TEST_MODE,
+    hasApiKey: !!RESEND_API_KEY,
+    clientInitialized: !!resend,
+    environment: NODE_ENV,
+    resendClient: resend
+  };
+}
 
 interface EmailParams {
   to: string;
@@ -11,23 +42,24 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const testMode = process.env.EMAIL_TEST_MODE === 'true';
-  
-  // Test mode - log emails without sending them (set EMAIL_TEST_MODE=true to enable)
-  if (isDevelopment && testMode) {
+  const config = getEmailConfig();
+
+  // Test mode - log emails without sending them (controlled by EMAIL_TEST_MODE env var)
+  if (config.testMode) {
     console.log('📧 Email would be sent (TEST MODE - NO QUOTA USED):');
     console.log('  To:', params.to);
     console.log('  From:', params.from);
     console.log('  Subject:', params.subject);
     if (params.text) console.log('  Text:', params.text);
-    if (params.html) console.log('  HTML:', params.html.substring(0, 100) + '...');
+    if (params.html) console.log('  HTML:', params.html.substring(0, 200) + '...');
+    console.log('  💡 To send real emails, set EMAIL_TEST_MODE=false in .env');
     return true;
   }
 
   // Send real emails (development or production)
-  if (!resend) {
-    console.error('RESEND_API_KEY not configured for email sending');
+  if (!config.resendClient) {
+    console.error('📧 Cannot send email: RESEND_API_KEY not configured');
+    console.error('💡 Add RESEND_API_KEY to your .env file or set EMAIL_TEST_MODE=true for testing');
     return false;
   }
 
@@ -41,7 +73,7 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     if (params.text) emailData.text = params.text;
     if (params.html) emailData.html = params.html;
     
-    const result = await resend!.emails.send(emailData);
+    const result = await config.resendClient!.emails.send(emailData);
     
     console.log(`📧 Email sent successfully to ${params.to}`, result);
     return true;
@@ -54,6 +86,17 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 export function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
+
+/**
+ * Check if emails can be sent (either in test mode or with real API)
+ */
+export function canSendEmails(): boolean {
+  const config = getEmailConfig();
+  return config.testMode || config.clientInitialized;
+}
+
+// Export the getEmailConfig function
+export { getEmailConfig };
 
 export async function sendVerificationEmail(email: string, code: string): Promise<boolean> {
   const fromEmail = 'noreply@updates.ipe.city';

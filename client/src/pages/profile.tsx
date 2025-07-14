@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,9 +74,20 @@ const profileSchema = z.object({
 });
 
 export default function Profile2() {
-  const { profile } = usePersistentAuth();
+  const { profile, isAuthenticated, isLoading: authLoading } = usePersistentAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  // Authentication check - redirect to home if not authenticated
+  // Wait for auth to stabilize before making redirect decisions
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated && !profile?.fid) {
+      console.log("Profile - Not authenticated (stable), redirecting to home");
+      setLocation("/");
+      return;
+    }
+  }, [authLoading, isAuthenticated, profile, setLocation]);
 
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
@@ -104,6 +116,26 @@ export default function Profile2() {
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
+
+  // Verification status check - redirect incomplete users to id-verification
+  useEffect(() => {
+    if (memberData && profile?.fid) {
+      const { isMember, status } = memberData as any;
+      if (isMember) {
+        const incompleteStatuses = [
+          'pending_id_verification',
+          'email_verified', 
+          'pending_application',
+          'approved_application'
+        ];
+        if (incompleteStatuses.includes(status)) {
+          console.log("Profile - Incomplete verification, redirecting to id-verification. Status:", status);
+          setLocation("/id-verification");
+          return;
+        }
+      }
+    }
+  }, [memberData, profile, setLocation]);
 
   const updateProfileMutation = useMutation({
     mutationFn: (data: {
@@ -196,6 +228,20 @@ export default function Profile2() {
       setSelectedTags(memberData.member.profileTags || []);
     }
   }, [memberData]);
+
+  // Show loading while auth is stabilizing
+  if (authLoading || (!profile?.fid && isAuthenticated)) {
+    return (
+      <div className="container mx-auto max-w-2xl py-8">
+        <Card>
+          <CardContent className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading authentication...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Early return after all hooks
   if (!memberData?.isMember) {

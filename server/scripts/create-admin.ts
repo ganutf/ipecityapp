@@ -85,22 +85,11 @@ async function createAdmin() {
         return;
       }
       
-      // Confirm promotion
-      console.log('\n🔐 SECURITY CONFIRMATION');
-      console.log('You are about to promote this user to admin status.');
+      // Confirm promotion (non-interactive for Replit environment)
+      console.log('\n🔐 PROCEEDING WITH ADMIN PROMOTION');
+      console.log('===================================');
+      console.log('Promoting user to admin status...');
       console.log('This will grant them full administrative privileges.');
-      console.log('\nPress Ctrl+C to cancel, or any key to continue...');
-      
-      // Wait for user confirmation (in a real production environment, you'd use a proper prompt)
-      await new Promise(resolve => {
-        process.stdin.setRawMode(true);
-        process.stdin.resume();
-        process.stdin.once('data', () => {
-          process.stdin.setRawMode(false);
-          process.stdin.pause();
-          resolve(void 0);
-        });
-      });
       
       // Update member to admin
       member = await storage.updateMember(fid, {

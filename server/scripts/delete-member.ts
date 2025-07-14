@@ -81,7 +81,7 @@ async function deleteMember() {
     console.log(`Created: ${member.createdAt}`);
     console.log(`Bio: ${member.bio || 'Not set'}`);
     
-    // First confirmation
+    // Confirmation (non-interactive for Replit environment)
     console.log('\n⚠️  DANGER ZONE - MEMBER DELETION');
     console.log('==================================');
     console.log('This action will:');
@@ -92,40 +92,14 @@ async function deleteMember() {
     console.log('• Delete associated signer records');
     console.log('• THIS CANNOT BE UNDONE');
     
-    console.log('\nPress Ctrl+C to cancel, or any key to continue...');
-    
-    // Wait for first confirmation
-    await new Promise(resolve => {
-      process.stdin.setRawMode(true);
-      process.stdin.resume();
-      process.stdin.once('data', () => {
-        process.stdin.setRawMode(false);
-        process.stdin.pause();
-        resolve(void 0);
-      });
-    });
-
-    // Second confirmation with member details
-    console.log('\n🔐 FINAL CONFIRMATION');
-    console.log('=====================');
-    console.log(`You are about to PERMANENTLY DELETE member:`);
+    console.log('\n🔐 PROCEEDING WITH DELETION');
+    console.log('============================');
+    console.log(`PERMANENTLY DELETING member:`);
     console.log(`• FID: ${member.farcasterFid}`);
     console.log(`• Email: ${member.email || 'Not set'}`);
     console.log(`• Status: ${member.status}`);
     console.log(`• Member Type: ${member.memberType}`);
     console.log('\nThis action is IRREVERSIBLE!');
-    console.log('\nPress Ctrl+C to cancel, or any key to proceed with deletion...');
-    
-    // Wait for final confirmation
-    await new Promise(resolve => {
-      process.stdin.setRawMode(true);
-      process.stdin.resume();
-      process.stdin.once('data', () => {
-        process.stdin.setRawMode(false);
-        process.stdin.pause();
-        resolve(void 0);
-      });
-    });
 
     console.log('\n🗑️  Starting deletion process...');
     

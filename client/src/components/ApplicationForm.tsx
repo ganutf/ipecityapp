@@ -25,7 +25,7 @@ const applicationFormSchema = z.object({
     .regex(/^[a-z0-9]+$/, "Username can only contain lowercase letters and numbers"),
   bio: z.string().optional(),
   twitter: z.string().optional(),
-  linkedin: z.string().optional(), 
+  linkedin: z.string().optional(),
   instagram: z.string().optional(),
   profileTags: z.array(z.string()).optional(),
 });
@@ -49,13 +49,13 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
   useEffect(() => {
     const scrollToForm = () => {
       if (formRef.current) {
-        formRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
+        formRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
         });
       }
     };
-    
+
     // Small delay to ensure the form has fully rendered
     const timeoutId = setTimeout(scrollToForm, 100);
     return () => clearTimeout(timeoutId);
@@ -155,10 +155,10 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
     setSelectedTags(prev => {
       const newTags = prev.includes(tag)
         ? prev.filter(t => t !== tag)
-        : prev.length < 5 
+        : prev.length < 5
           ? [...prev, tag]
           : prev; // Don't add if already at max
-      
+
       // Update form value
       form.setValue("profileTags", newTags);
       return newTags;
@@ -256,7 +256,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
                       Twitter
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="@username" />
+                      <Input {...field} placeholder="@x.com/username" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -290,7 +290,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
                       Instagram
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="@username" />
+                      <Input {...field} placeholder="instagram.com/username" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

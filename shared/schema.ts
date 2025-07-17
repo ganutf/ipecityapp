@@ -201,9 +201,24 @@ export const secureBioSchema = z.string()
   .optional();
 
 export const secureSocialHandleSchema = z.string()
-  .max(100, "Social media handle too long")
-  .regex(/^[@]?[a-zA-Z0-9_.-]*$/, "Invalid characters in social media handle")
-  .refine(val => !val.includes('..'), "Invalid handle format")
+  .max(200, "Social media URL too long")
+  .refine(val => {
+    if (!val.trim()) return true; // Empty is valid
+    
+    // Allow both handles and URLs
+    const handleRegex = /^[@]?[a-zA-Z0-9_.-]*$/;
+    
+    // More permissive URL regex that allows various path structures
+    const urlRegex = /^(https?:\/\/)?(www\.)?(x\.com|twitter\.com|linkedin\.com|instagram\.com)\/[\w\-\.\/]+\/?$/i;
+    
+    // Test simple handle first
+    if (handleRegex.test(val)) return true;
+    
+    // Test URL patterns
+    if (urlRegex.test(val)) return true;
+    
+    return false;
+  }, "Invalid social media handle or URL format")
   .optional();
 
 export const secureWalletAddressSchema = z.string()

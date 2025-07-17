@@ -16,6 +16,7 @@ import { PROFILE_TAGS } from "@/constants/profileTags";
 import { useToast } from "@/hooks/use-toast";
 import { useAccount } from "wagmi";
 import { apiRequest } from "@/lib/queryClient";
+import { validateSocialMediaUrl, type SocialPlatform } from "@/lib/utils";
 
 // Application form schema
 const applicationFormSchema = z.object({
@@ -24,9 +25,21 @@ const applicationFormSchema = z.object({
     .max(20, "Username must be at most 20 characters")
     .regex(/^[a-z0-9]+$/, "Username can only contain lowercase letters and numbers"),
   bio: z.string().optional(),
-  twitter: z.string().optional(),
-  linkedin: z.string().optional(),
-  instagram: z.string().optional(),
+  twitter: z.string().optional().refine((value) => {
+    if (!value) return true;
+    const validation = validateSocialMediaUrl(value, "twitter");
+    return validation.isValid;
+  }, "Please enter a valid Twitter/X URL"),
+  linkedin: z.string().optional().refine((value) => {
+    if (!value) return true;
+    const validation = validateSocialMediaUrl(value, "linkedin");
+    return validation.isValid;
+  }, "Please enter a valid LinkedIn URL"),
+  instagram: z.string().optional().refine((value) => {
+    if (!value) return true;
+    const validation = validateSocialMediaUrl(value, "instagram");
+    return validation.isValid;
+  }, "Please enter a valid Instagram URL"),
   profileTags: z.array(z.string()).optional(),
 });
 
@@ -105,15 +118,26 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
         throw new Error("Wallet not connected");
       }
 
-      return apiRequest("/api/application/submit", {
-        method: "POST",
-        body: JSON.stringify({
-          farcasterFid: memberData.member.farcasterFid,
-          ...data,
-          profileTags: selectedTags,
-          walletAddress: address,
-        }),
-      });
+      const payload = {
+        farcasterFid: memberData.member.farcasterFid,
+        ...data,
+        profileTags: selectedTags,
+        walletAddress: address,
+      };
+
+      console.log("Submitting application with payload:", payload);
+
+      try {
+        const response = await apiRequest("/api/application/submit", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        console.log("Application submission response:", response);
+        return response;
+      } catch (error) {
+        console.error("Application submission error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -131,15 +155,21 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
       onSuccess();
     },
     onError: (error: Error) => {
+      console.error("Application submission failed:", error);
       toast({
         title: "Failed to submit application",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: ApplicationFormData) => {
+    console.log("Form submitted with data:", data);
+    console.log("Username status:", usernameStatus);
+    console.log("Selected tags:", selectedTags);
+    console.log("Wallet address:", address);
+    
     if (usernameStatus !== "available") {
       toast({
         title: "Username not available",
@@ -148,6 +178,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
       });
       return;
     }
+    
     submitApplicationMutation.mutate(data);
   };
 
@@ -163,6 +194,18 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
       form.setValue("profileTags", newTags);
       return newTags;
     });
+  };
+
+  const handleSocialMediaBlur = (platform: SocialPlatform, value: string) => {
+    if (!value.trim()) {
+      return;
+    }
+
+    const validation = validateSocialMediaUrl(value, platform);
+    if (validation.isValid && validation.formattedUrl) {
+      // Update form value with formatted URL
+      form.setValue(platform, validation.formattedUrl);
+    }
   };
 
   const getUsernameStatusColor = () => {
@@ -253,10 +296,14 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <Twitter className="h-4 w-4" />
-                      Twitter
+                      Twitter/X
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="@x.com/username" />
+                      <Input
+                        {...field}
+                        placeholder="username or x.com/username"
+                        onBlur={(e) => handleSocialMediaBlur("twitter", e.target.value)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -273,7 +320,11 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
                       LinkedIn
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="linkedin.com/in/username" />
+                      <Input
+                        {...field}
+                        placeholder="username or linkedin.com/in/username"
+                        onBlur={(e) => handleSocialMediaBlur("linkedin", e.target.value)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -290,7 +341,11 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
                       Instagram
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="instagram.com/username" />
+                      <Input
+                        {...field}
+                        placeholder="username or instagram.com/username"
+                        onBlur={(e) => handleSocialMediaBlur("instagram", e.target.value)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

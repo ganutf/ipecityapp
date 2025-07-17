@@ -19,6 +19,17 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
@@ -62,6 +73,7 @@ interface MemberData {
     ipeUsername?: string;
     memberType?: string;
     profileCompleted?: boolean;
+    walletAddress?: string;
   };
 }
 
@@ -112,7 +124,10 @@ export default function Profile2() {
   const [isSendingVerification, setIsSendingVerification] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
 
-  const { data: memberData, isLoading } = useQuery({
+  // Wallet disconnect confirmation dialog state
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+
+  const { data: memberData, isLoading } = useQuery<MemberData>({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
@@ -195,6 +210,11 @@ export default function Profile2() {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
+  };
+
+  const handleDisconnectConfirm = () => {
+    disconnect();
+    setShowDisconnectDialog(false);
   };
 
   const cancelBioEdit = () => {
@@ -312,54 +332,75 @@ export default function Profile2() {
               </div>
 
               <div className="flex flex-col space-y-2 lg:flex-shrink-0">
-                {/* Wallet Info Box */}
+                {/* Connected Wallet Info Box */}
                 <div
-                  className={`flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-lg border ${
+                  className={`flex flex-col px-2 md:px-3 py-1.5 rounded-lg border ${
                     isConnected
                       ? "bg-blue-50 border-blue-200"
                       : "bg-gray-50 border-gray-200"
                   }`}
                 >
-                  <Wallet
-                    className={`h-4 w-4 ${isConnected ? "text-blue-600" : "text-gray-400"}`}
-                  />
-                  {isConnected ? (
-                    <>
-                      <button
-                        onClick={() => disconnect()}
-                        className="text-xs md:text-sm font-mono hover:underline transition-colors text-blue-600"
-                      >
-                        {address?.slice(0, 6)}...{address?.slice(-4)}
-                      </button>
-                      <Badge
-                        variant="secondary"
-                        className="bg-green-100 text-green-800 text-xs hidden md:inline-flex"
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Connected
-                      </Badge>
-                    </>
-                  ) : (
-                    <ConnectButton.Custom>
-                      {({ openConnectModal }) => (
-                        <button
-                          onClick={openConnectModal}
-                          className="text-xs md:text-sm text-gray-400 hover:underline transition-colors"
+                  <div className="flex items-center space-x-2">
+                    <Wallet
+                      className={`h-4 w-4 ${isConnected ? "text-blue-600" : "text-gray-400"}`}
+                    />
+                    <span className="text-xs text-gray-600 font-medium">
+                      {isConnected ? "Connected Wallet" : "Wallet Not Connected"}
+                    </span>
+                  </div>
+                  <div className="mt-1">
+                    {isConnected ? (
+                      <div className="flex items-center space-x-2">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button className="text-xs md:text-sm font-mono hover:underline transition-colors text-blue-600">
+                              {address?.slice(0, 6)}...{address?.slice(-4)}
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Disconnect Wallet</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to disconnect your wallet? You'll need to reconnect to perform transactions.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDisconnectConfirm}>
+                                Disconnect
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        <Badge
+                          variant="secondary"
+                          className="bg-green-100 text-green-800 text-xs"
                         >
-                          Connect Wallet
-                        </button>
-                      )}
-                    </ConnectButton.Custom>
-                  )}
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Connected
+                        </Badge>
+                      </div>
+                    ) : (
+                      <ConnectButton.Custom>
+                        {({ openConnectModal }) => (
+                          <button
+                            onClick={openConnectModal}
+                            className="text-xs md:text-sm text-gray-400 hover:underline transition-colors"
+                          >
+                            Connect
+                          </button>
+                        )}
+                      </ConnectButton.Custom>
+                    )}
+                  </div>
                 </div>
 
                 {/* Passport Info Box */}
-                {memberData?.member?.ipePassport && (
-                  <div className="inline-block px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                {memberData?.member?.ipePassport && memberData?.member?.passportVerified && (
+                  <div className="inline-block px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <p className="text-purple-600 font-medium text-sm">
-                        {memberData.member.ipePassport}
-                      </p>
+                      <Globe className="h-4 w-4 text-purple-600" />
+                      <span className="text-xs text-gray-600 font-medium">Ipê Passport</span>
                       <Badge
                         variant="secondary"
                         className="bg-green-100 text-green-800 text-xs"
@@ -368,9 +409,16 @@ export default function Profile2() {
                         Verified
                       </Badge>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Passport wallet: {address?.slice(0, 6)}...
-                      {address?.slice(-4)}
+                    <div className="mt-1">
+                      <p className="text-purple-600 font-medium text-sm">
+                        {memberData.member.ipePassport}
+                      </p>
+                      {memberData.member.walletAddress && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Passport wallet: {memberData.member.walletAddress?.slice(0, 6)}...
+                          {memberData.member.walletAddress?.slice(-4)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

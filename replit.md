@@ -156,9 +156,9 @@ The application follows a monorepo structure with clear separation between clien
   - Added database connection testing on startup
   - Implemented process signal handlers for clean shutdown
 - June 22, 2025. Admin Authentication Update:
-  - Changed admin check from username to FID-based authentication
-  - Admin access now verified by FID 2790 instead of username comparison
-  - More reliable authentication that doesn't depend on username changes
+  - Changed admin check from username to memberType-based authentication
+  - Admin access now verified by memberType = 'admin' instead of hardcoded FIDs
+  - More reliable authentication that supports multiple admins
 - June 22, 2025. Complete Session Persistence Implementation:
   - Successfully implemented robust localStorage-based authentication persistence
   - Fixed AuthKit profile assignment logic where empty kitProfile was overriding restored data

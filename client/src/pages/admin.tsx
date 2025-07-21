@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Pulse, Member } from "@shared/schema";
+import type { Pulse, Member, MemberType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Pencil, Save, X, Eye } from "lucide-react";
 import { useAccount } from "wagmi";
 // Removed useAddSubname hook - using direct API calls instead
@@ -37,6 +39,9 @@ export default function AdminPage() {
   });
 
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [selectedMemberType, setSelectedMemberType] = useState<MemberType>('architect');
+  const [isEditingMemberType, setIsEditingMemberType] = useState(false);
+  const [editMemberType, setEditMemberType] = useState<MemberType>('architect');
 
   // Check current user's member data to determine admin status
   const { data: currentMemberData } = useQuery({
@@ -46,6 +51,16 @@ export default function AdminPage() {
 
   // Check if user is admin based on memberType
   const isAdmin = (currentMemberData as any)?.member?.memberType === 'admin';
+
+  // Member type configuration
+  const memberTypeConfig = {
+    architect: { label: 'Architect', color: 'bg-purple-100 text-purple-800' },
+    explorer: { label: 'Explorer', color: 'bg-blue-100 text-blue-800' },
+    admin: { label: 'Admin', color: 'bg-green-100 text-green-800' },
+    org_team: { label: 'Org Team', color: 'bg-orange-100 text-orange-800' },
+    core_team: { label: 'Core Team', color: 'bg-red-100 text-red-800' },
+    pending: { label: 'Pending', color: 'bg-gray-100 text-gray-800' }
+  };
 
   // Fetch all pulses - must be called before any returns
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
@@ -91,11 +106,12 @@ export default function AdminPage() {
   });
 
   const approveMemberMutation = useMutation({
-    mutationFn: async (member: { farcasterFid: number; ipeUsername?: string; userWalletAddress?: string }) => {
+    mutationFn: async (member: { farcasterFid: number; ipeUsername?: string; userWalletAddress?: string; memberType?: MemberType }) => {
       return authenticatedPost("/api/admin/approve-member", { 
         farcasterFid: member.farcasterFid,
         ipeUsername: member.ipeUsername,
-        userWalletAddress: member.userWalletAddress
+        userWalletAddress: member.userWalletAddress,
+        memberType: member.memberType
       }, profile?.fid);
     },
     onSuccess: () => {
@@ -114,6 +130,20 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
       toast({ title: "Success", description: "Member denied successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateMemberTypeMutation = useMutation({
+    mutationFn: async ({ farcasterFid, memberType }: { farcasterFid: number; memberType: MemberType }) => {
+      return authenticatedPatch(`/api/admin/update-member-type`, { farcasterFid, memberType }, profile?.fid);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      setIsEditingMemberType(false);
+      toast({ title: "Success", description: "Member type updated successfully" });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -383,6 +413,9 @@ export default function AdminPage() {
                       Status
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Member Type
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Passport Claim
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -394,7 +427,7 @@ export default function AdminPage() {
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
                     const claimSubdomain = (member as any).ipeUsername;
-                    const hasPendingApplication = memberStatus === 'pending_application' && claimSubdomain;
+                    const hasPendingApplication = memberStatus === 'pending_application_preview' && claimSubdomain;
                     const needsApproval = hasPendingApplication;
                     
                     return (
@@ -405,9 +438,11 @@ export default function AdminPage() {
                               <div className="text-sm font-medium text-gray-900">
                                 {(member as any).farcasterUsername || `FID ${member.farcasterFid}`}
                               </div>
-                              <div className="text-sm text-gray-500">
-                                FID: {member.farcasterFid}
-                              </div>
+                              {(member as any).farcasterUsername && (
+                                <div className="text-sm text-gray-500">
+                                  FID: {member.farcasterFid}
+                                </div>
+                              )}
                             </div>
                             <Eye className="h-4 w-4 text-gray-400" />
                           </div>
@@ -416,7 +451,7 @@ export default function AdminPage() {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             memberStatus === 'active_member'
                               ? 'bg-green-100 text-green-800'
-                              : memberStatus === 'pending_application'
+                              : memberStatus === 'pending_application_preview'
                                 ? 'bg-orange-100 text-orange-800'
                                 : memberStatus === 'approved_application'
                                   ? 'bg-blue-100 text-blue-800'
@@ -429,12 +464,19 @@ export default function AdminPage() {
                                         : 'bg-gray-100 text-gray-800'
                           }`}>
                             {memberStatus === 'active_member' ? 'Active Member' :
-                             memberStatus === 'pending_application' ? 'Pending Application' :
+                             memberStatus === 'pending_application_preview' ? 'Pending Application' :
                              memberStatus === 'approved_application' ? 'Approved Application' :
                              memberStatus === 'denied_application' ? 'Denied Application' :
                              memberStatus === 'pending_acceptance' ? 'Pending Acceptance' :
                              memberStatus === 'pending_id_verification' ? 'Pending Verification' :
                              'Pending Signer'}
+                          </span>
+                        </td>
+                        <td className="py-2">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            memberTypeConfig[member.memberType as keyof typeof memberTypeConfig]?.color || 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {memberTypeConfig[member.memberType as keyof typeof memberTypeConfig]?.label || 'Unknown'}
                           </span>
                         </td>
                         <td className="py-2">
@@ -446,40 +488,17 @@ export default function AdminPage() {
                         </td>
                         <td className="py-2" onClick={(e) => e.stopPropagation()}>
                           {needsApproval ? (
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  console.log("Approving member:", member);
-                                  console.log("Wallet address:", member.walletAddress);
-                                  console.log("Username:", (member as any).ipeUsername || claimSubdomain);
-                                  approveMemberMutation.mutate({
-                                    farcasterFid: member.farcasterFid,
-                                    ipeUsername: (member as any).ipeUsername || claimSubdomain,
-                                    userWalletAddress: member.walletAddress || undefined
-                                  });
-                                }}
-                                disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
-                                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                              >
-                                {approveMemberMutation.isPending 
-                                  ? "Reserving..." 
-                                  : "Approve & Reserve"}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  denyMemberMutation.mutate(member.farcasterFid);
-                                }}
-                                disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
-                              >
-                                {denyMemberMutation.isPending ? "..." : "Deny"}
-                              </Button>
-                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedMember(member);
+                              }}
+                              className="text-xs px-3 py-1"
+                            >
+                              Review
+                            </Button>
                           ) : memberStatus === 'active_member' ? (
                             <span className="text-sm text-gray-500">Completed</span>
                           ) : (
@@ -519,14 +538,14 @@ export default function AdminPage() {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       (selectedMember as any).status === 'active_member'
                         ? 'bg-green-100 text-green-800'
-                        : (selectedMember as any).status === 'pending_application'
+                        : (selectedMember as any).status === 'pending_application_preview'
                           ? 'bg-orange-100 text-orange-800'
                           : (selectedMember as any).status === 'pending_claim'
                             ? 'bg-yellow-100 text-yellow-800'
                             : 'bg-gray-100 text-gray-800'
                     }`}>
                       {(selectedMember as any).status === 'active_member' ? 'Active Member' :
-                       (selectedMember as any).status === 'pending_application' ? 'Pending Application' :
+                       (selectedMember as any).status === 'pending_application_preview' ? 'Pending Application' :
                        (selectedMember as any).status === 'pending_claim' ? 'Pending Claim' :
                        'Pending Signer'}
                     </span>
@@ -534,7 +553,84 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Member Type</label>
-                  <p className="text-sm">{selectedMember.memberType || 'Not specified'}</p>
+                  {(selectedMember as any).status === 'pending_application_preview' || (selectedMember as any).status === 'pending_claim' ? (
+                    // For pending applications - always editable
+                    <Select 
+                      value={selectedMemberType} 
+                      onValueChange={(value) => setSelectedMemberType(value as MemberType)}
+                    >
+                      <SelectTrigger className="w-full mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="architect">Architect</SelectItem>
+                        <SelectItem value="explorer">Explorer</SelectItem>
+                        <SelectItem value="org_team">Org Team</SelectItem>
+                        <SelectItem value="core_team">Core Team</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : isEditingMemberType ? (
+                    // Edit mode for approved members
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Select 
+                        value={editMemberType} 
+                        onValueChange={(value) => setEditMemberType(value as MemberType)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="architect">Architect</SelectItem>
+                          <SelectItem value="explorer">Explorer</SelectItem>
+                          <SelectItem value="org_team">Org Team</SelectItem>
+                          <SelectItem value="core_team">Core Team</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          updateMemberTypeMutation.mutate({
+                            farcasterFid: selectedMember.farcasterFid,
+                            memberType: editMemberType
+                          });
+                        }}
+                        disabled={updateMemberTypeMutation.isPending}
+                        className="px-2"
+                      >
+                        <Save className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsEditingMemberType(false)}
+                        className="px-2"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    // View mode for approved members
+                    <div className="flex items-center justify-between mt-1">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        memberTypeConfig[selectedMember.memberType as keyof typeof memberTypeConfig]?.color || 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {memberTypeConfig[selectedMember.memberType as keyof typeof memberTypeConfig]?.label || 'Unknown'}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditMemberType(selectedMember.memberType as MemberType);
+                          setIsEditingMemberType(true);
+                        }}
+                        className="px-2 py-1 h-6 text-xs"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Email</label>
@@ -595,7 +691,7 @@ export default function AdminPage() {
               )}
 
               {/* Action buttons for pending applications */}
-              {((selectedMember as any).status === 'pending_application' || (selectedMember as any).status === 'pending_claim') && 
+              {((selectedMember as any).status === 'pending_application_preview' || (selectedMember as any).status === 'pending_claim') && 
                (selectedMember as any).ipeUsername && (
                 <div className="flex space-x-2 pt-4 border-t">
                   <Button
@@ -604,7 +700,8 @@ export default function AdminPage() {
                       approveMemberMutation.mutate({
                         farcasterFid: selectedMember.farcasterFid,
                         ipeUsername: (selectedMember as any).ipeUsername,
-                        userWalletAddress: selectedMember.walletAddress || undefined
+                        userWalletAddress: selectedMember.walletAddress || undefined,
+                        memberType: selectedMemberType
                       });
                       setSelectedMember(null);
                     }}

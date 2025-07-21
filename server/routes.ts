@@ -250,11 +250,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Invalid input data" });
         }
 
-        // Update member with claimed username, wallet address, and change status to pending_application
+        // Update member with claimed username, wallet address, and change status to pending_application_preview
         const member = await storage.updateMember(sanitizedData.farcasterFid, {
           ipeUsername: sanitizedData.username,
           walletAddress: sanitizedData.walletAddress,
-          status: "pending_application",
+          status: "pending_application_preview",
         });
 
         res.json({ success: true, member, username: sanitizedData.username });
@@ -913,7 +913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     auditLogger("APPROVE_MEMBER"),
     async (req: AuthenticatedRequest, res) => {
     try {
-      const { farcasterFid, ipeUsername, userWalletAddress } = req.body;
+      const { farcasterFid, ipeUsername, userWalletAddress, memberType } = req.body;
 
       if (!farcasterFid) {
         return res.status(400).json({ error: "FID is required" });
@@ -925,6 +925,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!ipeUsername) {
         return res.status(400).json({ error: "IpeUsername is required" });
+      }
+
+      if (memberType && !['architect', 'explorer', 'admin', 'org_team', 'core_team'].includes(memberType)) {
+        return res.status(400).json({ error: "Invalid member type. Must be 'architect', 'explorer', 'admin', 'org_team', or 'core_team'" });
       }
 
       const member = await storage.getMember(farcasterFid);
@@ -994,7 +998,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update member status to approved
-      const updatedMember = await storage.approveMember(farcasterFid);
+      const updatedMember = memberType 
+        ? await storage.approveApplication(farcasterFid, memberType)
+        : await storage.approveMember(farcasterFid);
 
       // Send approval email
       if (updatedMember.email) {
@@ -1065,6 +1071,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Deny member error:", error);
       res.status(500).json({ error: "Failed to deny member" });
+    }
+  });
+
+  // Update member type (admin only)
+  app.patch("/api/admin/update-member-type", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("UPDATE_MEMBER_TYPE"),
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const { farcasterFid, memberType } = req.body;
+
+      // Validate required fields
+      if (!farcasterFid || typeof farcasterFid !== 'number') {
+        return res.status(400).json({ error: "Valid farcasterFid is required" });
+      }
+
+      if (!memberType || typeof memberType !== 'string') {
+        return res.status(400).json({ error: "memberType is required" });
+      }
+
+      // Validate member type against allowed values
+      const validMemberTypes = ['pending', 'architect', 'explorer', 'admin', 'org_team', 'core_team'];
+      if (!validMemberTypes.includes(memberType)) {
+        return res.status(400).json({ 
+          error: "Invalid member type. Must be one of: " + validMemberTypes.join(', ')
+        });
+      }
+
+      // Check if member exists
+      const existingMember = await storage.getMember(farcasterFid);
+      if (!existingMember) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      // Update member type
+      const updatedMember = await storage.updateMember(farcasterFid, { 
+        memberType: memberType as any 
+      });
+
+      console.log(`Updated member type for FID ${farcasterFid} to ${memberType}`);
+      res.json({ success: true, member: updatedMember });
+    } catch (error) {
+      console.error("Update member type error:", error);
+      res.status(500).json({ error: "Failed to update member type" });
     }
   });
 
@@ -1161,8 +1212,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "FarcasterFid and memberType required" });
       }
 
-      if (!['architect', 'explorer', 'admin'].includes(memberType)) {
-        return res.status(400).json({ error: "Invalid member type. Must be 'architect', 'explorer', or 'admin'" });
+      if (!['architect', 'explorer', 'admin', 'org_team', 'core_team'].includes(memberType)) {
+        return res.status(400).json({ error: "Invalid member type. Must be 'architect', 'explorer', 'admin', 'org_team', or 'core_team'" });
       }
 
       console.log(`Processing approval for FID: ${farcasterFid} as ${memberType}`);

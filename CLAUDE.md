@@ -91,7 +91,8 @@ Required for development:
 - `SESSION_SECRET`: Session encryption secret
 
 ### Admin System
-- Only Jean Hansen (FID 2790) has admin privileges
+- Admin privileges are determined by `memberType = 'admin'` in the database
+- Multiple admins can be created using the `server/scripts/create-admin.ts` script
 - Admin can create/edit pulses and approve member applications
 - Admin approval triggers automatic subdomain reservation
 

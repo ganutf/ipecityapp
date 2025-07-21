@@ -52,6 +52,8 @@ import {
   Twitter,
   Linkedin,
   Instagram,
+  Users,
+  Star,
 } from "lucide-react";
 import { PROFILE_TAGS } from "@/constants/profileTags";
 
@@ -105,6 +107,52 @@ export default function Profile2() {
   const { disconnect } = useDisconnect();
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
 
+  // Member type configuration
+  const memberTypeConfig = {
+    architect: { 
+      label: 'Architect', 
+      icon: User, 
+      color: 'bg-purple-100 text-purple-600',
+      hoverColor: 'hover:bg-purple-200',
+      description: 'Building the future of communities'
+    },
+    explorer: { 
+      label: 'Explorer', 
+      icon: Compass, 
+      color: 'bg-blue-100 text-blue-600',
+      hoverColor: 'hover:bg-blue-200',
+      description: 'Discovering new possibilities'
+    },
+    admin: { 
+      label: 'Admin', 
+      icon: Shield, 
+      color: 'bg-green-100 text-green-600',
+      hoverColor: 'hover:bg-green-200',
+      description: 'Leading and managing the community'
+    },
+    org_team: { 
+      label: 'Org Team', 
+      icon: Users, 
+      color: 'bg-orange-100 text-orange-600',
+      hoverColor: 'hover:bg-orange-200',
+      description: 'Supporting organizational operations'
+    },
+    core_team: { 
+      label: 'Core Team', 
+      icon: Star, 
+      color: 'bg-red-100 text-red-600',
+      hoverColor: 'hover:bg-red-200',
+      description: 'Core development and leadership'
+    },
+    pending: { 
+      label: 'Pending', 
+      icon: AlertCircle, 
+      color: 'bg-gray-100 text-gray-600',
+      hoverColor: 'hover:bg-gray-200',
+      description: 'Awaiting approval'
+    }
+  };
+
   // Edit states
   const [editingBio, setEditingBio] = useState(false);
   const [editingSocial, setEditingSocial] = useState(false);
@@ -132,6 +180,9 @@ export default function Profile2() {
     enabled: !!profile?.fid,
   });
 
+  const currentMemberType = memberData?.member?.memberType || 'pending';
+  const memberTypeInfo = memberTypeConfig[currentMemberType as keyof typeof memberTypeConfig];
+
   // Verification status check - redirect incomplete users to id-verification
   useEffect(() => {
     if (memberData && profile?.fid) {
@@ -140,7 +191,7 @@ export default function Profile2() {
         const incompleteStatuses = [
           'pending_id_verification',
           'email_verified', 
-          'pending_application',
+          'pending_application_preview',
           'approved_application'
         ];
         if (incompleteStatuses.includes(status)) {
@@ -302,31 +353,17 @@ export default function Profile2() {
                     ID: {profile?.fid}
                   </p>
                   <div className="flex items-center space-x-2 mt-2">
-                    {/* TODO: Implement member type logic based on memberData.member.memberType */}
-                    <div className="group relative">
-                      <div className="h-6 w-6 bg-purple-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-purple-200 transition-colors">
-                        <User className="h-3 w-3 text-purple-600" />
+                    {memberTypeInfo && (
+                      <div className="group relative">
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center cursor-pointer transition-colors ${memberTypeInfo.color} ${memberTypeInfo.hoverColor}`}>
+                          <memberTypeInfo.icon className="h-5 w-5" />
+                        </div>
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          <div className="font-medium">{memberTypeInfo.label}</div>
+                          <div className="text-xs text-gray-300 mt-1">{memberTypeInfo.description}</div>
+                        </div>
                       </div>
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        Architect
-                      </div>
-                    </div>
-                    <div className="group relative">
-                      <div className="h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-200 transition-colors">
-                        <Compass className="h-3 w-3 text-blue-600" />
-                      </div>
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        Explorer
-                      </div>
-                    </div>
-                    <div className="group relative">
-                      <div className="h-6 w-6 bg-green-100 rounded-full flex items-center justify-center cursor-pointer hover:bg-green-200 transition-colors">
-                        <Shield className="h-3 w-3 text-green-600" />
-                      </div>
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        Guardian
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>

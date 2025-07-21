@@ -45,10 +45,10 @@ export const members = pgTable("members", {
   walletAddress: varchar("wallet_address", { length: 255 }),
   
   // State machine fields - restricted by database CHECK constraint
-  // Valid values: pending_signer, pending_id_verification, pending_application, 
-  // approved_application, denied_application, active_member
+  // Valid values: pending_signer, pending_id_verification, email_verified, pending_application, 
+  // pending_application_preview, approved_application, denied_application, active_member
   status: varchar("status", { length: 30 }).default("pending_signer").notNull(),
-  // Valid member types: pending, architect, explorer, admin
+  // Valid member types: pending, architect, explorer, admin, org_team, core_team
   memberType: varchar("member_type", { length: 20 }).default("pending").notNull(),
   
   // Verification flags
@@ -157,7 +157,7 @@ export const passportVerifications = pgTable("passport_verifications", {
 });
 
 // Member type validation
-export const memberTypeEnum = z.enum(['pending', 'architect', 'explorer', 'admin']);
+export const memberTypeEnum = z.enum(['pending', 'architect', 'explorer', 'admin', 'org_team', 'core_team']);
 export type MemberType = z.infer<typeof memberTypeEnum>;
 
 // Insert schemas

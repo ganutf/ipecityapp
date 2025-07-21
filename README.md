@@ -69,7 +69,8 @@ npm run dev
 ## Usage
 
 ### Admin Access
-- Only Jean Hansen (FID 2790) has admin privileges
+- Admin privileges are determined by `memberType = 'admin'` in the database
+- Multiple admins can be created using the `server/scripts/create-admin.ts` script
 - Access admin dashboard to create pulses and manage member approvals
 - Edit future pulses (past/current pulses are protected)
 

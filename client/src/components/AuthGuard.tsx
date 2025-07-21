@@ -55,7 +55,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
    * QUERY 2: Member Status Check
    * Checks if the user is a member and their current verification status.
    * Possible statuses: pending_signer, pending_id_verification, email_verified, 
-   * pending_application, approved_application, denied_application, active_member
+   * pending_application_preview, approved_application, denied_application, active_member
    */
   const { data: memberStatus, isLoading: memberLoading } = useQuery({
     queryKey: [`/api/members/check/${profile?.fid}`],
@@ -140,7 +140,7 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
           // STATUS: Incomplete verification states - restrict to id-verification only
           if (currentStatus === 'pending_id_verification' || 
               currentStatus === 'email_verified' || 
-              currentStatus === 'pending_application' ||
+              currentStatus === 'pending_application_preview' ||
               currentStatus === 'approved_application') {
             console.log("AuthGuard - Incomplete verification, only allowing id-verification access. Status:", currentStatus);
             const currentPath = window.location.pathname;

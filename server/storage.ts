@@ -138,7 +138,7 @@ export class DatabaseStorage implements IStorage {
       .update(members)
       .set({ 
         ...application,
-        status: "pending_application",
+        status: "pending_application_preview",
         updatedAt: new Date() 
       })
       .where(eq(members.farcasterFid, application.farcasterFid))
@@ -147,11 +147,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingApplications(): Promise<Member[]> {
-    return await db.select().from(members).where(eq(members.status, 'pending_application'));
+    return await db.select().from(members).where(eq(members.status, 'pending_application_preview'));
   }
 
   async getPendingMembers(): Promise<Member[]> {
-    return await db.select().from(members).where(eq(members.status, 'pending_application'));
+    return await db.select().from(members).where(eq(members.status, 'pending_application_preview'));
   }
 
   async approveApplication(farcasterFid: number, memberType: string): Promise<Member> {

@@ -1,15 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
-import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic } from "./vite";
 import { initializeDatabase, db } from "./db";
 import { initializeKeyManager } from "./lib/keyManagement";
 import { readFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { config } from "dotenv";
 import { resolve } from "path";
-import logger, { logUtils } from "./logger";
+import logger from "./logger";
 
 // Load environment variables from .env file
 const envPath = resolve(process.cwd(), '.env');
@@ -126,10 +125,29 @@ async function testDatabaseConnection() {
 
 const app = express();
 
-// Security headers and CORS configuration
+// In production, serve static assets FIRST before any middleware
+// This prevents static assets from being processed by heavy middleware
 const isProduction = process.env.NODE_ENV === 'production';
+if (isProduction) {
+  const path = require('path');
+  const distPath = path.resolve(process.cwd(), 'dist', 'public');
+  
+  // Serve static assets with optimized headers
+  app.use('/assets', express.static(path.join(distPath, 'assets'), {
+    maxAge: '1y', // Cache assets for 1 year
+    etag: false,
+    lastModified: false
+  }));
+  
+  logger.info('Static assets serving configured for production', { distPath });
+}
+
+// Security headers and CORS configuration
 const allowedOrigins = isProduction 
-  ? [process.env.FRONTEND_URL || 'https://pulse.ipecity.org'] // Production domains
+  ? [
+      process.env.FRONTEND_URL || 'https://pulse.ipecity.org',
+      'https://ipecitypulse.replit.app' // Add Replit domain
+    ] 
   : ['http://localhost:5000', 'http://127.0.0.1:5000']; // Development domains
 
 app.use(cors({
@@ -149,7 +167,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Security headers
+// Security headers (simplified - no need for asset exclusions since assets are served first)
 app.use((req, res, next) => {
   // HSTS - Force HTTPS in production
   if (isProduction) {
@@ -180,81 +198,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// Rate limiting
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isProduction ? 100 : 1000, // Limit each IP to 100 requests per windowMs in production
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-    status: 429,
-    timestamp: new Date().toISOString()
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    logger.warn('Rate limit exceeded', { 
-      ip: req.ip, 
-      path: req.path, 
-      method: req.method 
-    });
-    res.status(429).json({
-      error: 'Too many requests from this IP, please try again later.',
-      status: 429,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Stricter rate limiting for authentication endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isProduction ? 5 : 50, // Much stricter limit for auth endpoints
-  message: {
-    error: 'Too many authentication attempts, please try again later.',
-    status: 429,
-    timestamp: new Date().toISOString()
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    logUtils.logSecurityEvent('Auth rate limit exceeded', undefined, { 
-      ip: req.ip, 
-      path: req.path, 
-      method: req.method 
-    });
-    res.status(429).json({
-      error: 'Too many authentication attempts, please try again later.',
-      status: 429,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Apply general rate limiting to all routes
-app.use(generalLimiter);
-
 app.use(express.json({ limit: '10mb' })); // Limit request size
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
+// Request logging middleware (simplified - static assets served first)
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      // Use structured logging for API requests
-      logUtils.logApiRequest(req.method, path, undefined, {
+      logger.info('API Request', {
+        method: req.method,
+        path,
         statusCode: res.statusCode,
-        duration: `${duration}ms`,
-        response: capturedJsonResponse ? logUtils.sanitize(capturedJsonResponse) : undefined
+        duration: `${duration}ms`
       });
     }
   });

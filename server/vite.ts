@@ -76,10 +76,17 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve remaining static files (HTML, etc.) after assets are already handled
+  app.use(express.static(distPath, {
+    index: false, // Don't serve index.html automatically
+    maxAge: isProduction ? '1h' : '0', // Cache other static files for 1 hour in production
+  }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
+
+// Helper to check if we're in production (needed for the static serving)
+const isProduction = process.env.NODE_ENV === 'production';

@@ -7,7 +7,7 @@
 
 import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'crypto';
 import { promisify } from 'util';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 
 const scryptAsync = promisify(scrypt);
@@ -199,7 +199,6 @@ export class SecureKeyManager {
     try {
       const filePath = this.getKeyFilePath(keyName);
       if (existsSync(filePath)) {
-        const { unlinkSync } = require('fs');
         unlinkSync(filePath);
         console.log(`Key '${keyName}' deleted`);
         return true;

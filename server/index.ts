@@ -129,11 +129,10 @@ const app = express();
 // This prevents static assets from being processed by heavy middleware
 const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction) {
-  const path = require('path');
-  const distPath = path.resolve(process.cwd(), 'dist', 'public');
+  const distPath = resolve(process.cwd(), 'dist', 'public');
   
   // Serve static assets with optimized headers
-  app.use('/assets', express.static(path.join(distPath, 'assets'), {
+  app.use('/assets', express.static(join(distPath, 'assets'), {
     maxAge: '1y', // Cache assets for 1 year
     etag: false,
     lastModified: false

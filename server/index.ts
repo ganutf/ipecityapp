@@ -1,34 +1,44 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase, db } from "./db";
 import { initializeKeyManager } from "./lib/keyManagement";
-import { readFileSync } from "fs";
+import { readFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { config } from "dotenv";
 import { resolve } from "path";
+import logger, { logUtils } from "./logger";
 
 // Load environment variables from .env file
 const envPath = resolve(process.cwd(), '.env');
-console.log('Loading environment variables from:', envPath);
+logger.info('Loading environment variables', { envPath });
 config({ path: envPath });
 
-// Log some key environment variables for debugging
-console.log('Environment check:');
-console.log('  EMAIL_TEST_MODE:', process.env.EMAIL_TEST_MODE);
-console.log('  RESEND_API_KEY:', process.env.RESEND_API_KEY ? 'Set' : 'Not set');
-console.log('  NODE_ENV:', process.env.NODE_ENV);
+// Ensure logs directory exists in production
+if (process.env.NODE_ENV === 'production') {
+  try {
+    mkdirSync('logs', { recursive: true });
+  } catch (error) {
+    // Directory already exists or other error
+  }
+}
+
+// Log environment status (without sensitive values)
+logger.info('Environment check', {
+  EMAIL_TEST_MODE: process.env.EMAIL_TEST_MODE,
+  RESEND_API_KEY: process.env.RESEND_API_KEY ? 'Set' : 'Not set',
+  NODE_ENV: process.env.NODE_ENV
+});
 
 
-// Enhanced logging function with error handling
+// Legacy logging function - replaced with proper logger
 function enhancedLog(message: string, level: 'info' | 'error' = 'info') {
-  const timestamp = new Date().toISOString();
-  const logMessage = `${timestamp} [${level.toUpperCase()}] ${message}`;
-
   if (level === 'error') {
-    console.error(logMessage);
+    logger.error(message);
   } else {
-    console.log(logMessage);
+    logger.info(message);
   }
 }
 
@@ -88,8 +98,116 @@ async function testDatabaseConnection() {
 }
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Security headers and CORS configuration
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = isProduction 
+  ? [process.env.FRONTEND_URL || 'https://pulse.ipecity.org'] // Production domains
+  : ['http://localhost:5000', 'http://127.0.0.1:5000']; // Development domains
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      logger.warn('CORS blocked origin', { origin, allowedOrigins });
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Security headers
+app.use((req, res, next) => {
+  // HSTS - Force HTTPS in production
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  
+  // Prevent XSS attacks
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // CSP - Content Security Policy
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.neynar.com https://*.farcaster.xyz https://*.justaname.id",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https: blob:",
+    "connect-src 'self' https://*.neynar.com https://*.farcaster.xyz https://*.justaname.id https://*.ethereum.org wss:",
+    "frame-src 'none'",
+    "object-src 'none'",
+    "base-uri 'self'"
+  ].join('; ');
+  
+  res.setHeader('Content-Security-Policy', csp);
+  
+  next();
+});
+
+// Rate limiting
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isProduction ? 100 : 1000, // Limit each IP to 100 requests per windowMs in production
+  message: {
+    error: 'Too many requests from this IP, please try again later.',
+    status: 429,
+    timestamp: new Date().toISOString()
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn('Rate limit exceeded', { 
+      ip: req.ip, 
+      path: req.path, 
+      method: req.method 
+    });
+    res.status(429).json({
+      error: 'Too many requests from this IP, please try again later.',
+      status: 429,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Stricter rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isProduction ? 5 : 50, // Much stricter limit for auth endpoints
+  message: {
+    error: 'Too many authentication attempts, please try again later.',
+    status: 429,
+    timestamp: new Date().toISOString()
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logUtils.logSecurityEvent('Auth rate limit exceeded', undefined, { 
+      ip: req.ip, 
+      path: req.path, 
+      method: req.method 
+    });
+    res.status(429).json({
+      error: 'Too many authentication attempts, please try again later.',
+      status: 429,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Apply general rate limiting to all routes
+app.use(generalLimiter);
+
+app.use(express.json({ limit: '10mb' })); // Limit request size
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -105,16 +223,12 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      // Use structured logging for API requests
+      logUtils.logApiRequest(req.method, path, undefined, {
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+        response: capturedJsonResponse ? logUtils.sanitize(capturedJsonResponse) : undefined
+      });
     }
   });
 

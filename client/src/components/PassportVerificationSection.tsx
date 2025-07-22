@@ -47,32 +47,32 @@ export function PassportVerificationSection({
   const { address, isConnected } = useAccount();
   const { signMessage } = useSignMessage();
   const { disconnect } = useDisconnect();
-  
+
   const [verificationStatus, setVerificationStatus] = useState<
     "idle" | "checking" | "verifying" | "verified" | "failed"
   >("idle");
   const [walletConnectedForVerification, setWalletConnectedForVerification] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
-  
+
   // Hide application form if user gets approved
   useEffect(() => {
     if (memberData?.member?.status === "approved_application" || memberData?.member?.status === "active_member") {
       setShowApplicationForm(false);
     }
   }, [memberData?.member?.status]);
-  
+
   // ENS lookup for connected wallet
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
-  
+
   // JustaName accept hook for subdomain acceptance
   const { acceptSubname, isAcceptSubnamePending } = useAcceptSubname();
 
   // Check if current wallet has Ipê City domain - explicit boolean
   const hasIpeCityDomain = ensName ? (
-    ensName === "ipecity.eth" || 
+    ensName === "ipecity.eth" ||
     ensName.endsWith(".ipecity.eth")
   ) : false;
-  
+
 
 
   // Handle wallet connection for verification
@@ -178,16 +178,16 @@ export function PassportVerificationSection({
         return result;
       } catch (error: any) {
         // Handle 409 Conflict as success (subdomain already accepted)
-        if (error?.response?.status === 409 || 
-            error?.message?.includes('SubdomainAlreadyAcceptedException') ||
-            error?.message?.includes('already accepted')) {
-          
+        if (error?.response?.status === 409 ||
+          error?.message?.includes('SubdomainAlreadyAcceptedException') ||
+          error?.message?.includes('already accepted')) {
+
           // Verify domain is actually associated with the wallet
           if (address) {
             try {
               const response = await fetch(`/api/ens/lookup/${address}`);
               const data = await response.json();
-              
+
               if (data.ensName === ensName) {
                 // Domain is verified as belonging to wallet, update backend
                 await apiRequest("/api/passport/accept", {
@@ -202,7 +202,7 @@ export function PassportVerificationSection({
               console.log('ENS lookup error:', lookupError);
             }
           }
-          
+
           // If verification fails, still update backend but note the conflict
           await apiRequest("/api/passport/accept", {
             method: "POST",
@@ -212,16 +212,16 @@ export function PassportVerificationSection({
           });
           return { success: true, alreadyAccepted: true };
         }
-        
+
         // Re-throw other errors
         throw error;
       }
     },
     onSuccess: (result) => {
-      const message = result?.alreadyAccepted 
+      const message = result?.alreadyAccepted
         ? "Subdomain was already accepted!"
         : "Subdomain accepted successfully!";
-      
+
       toast({
         title: message,
         description: `${memberData.member.ipeUsername}.ipecity.eth is now yours.`,
@@ -262,7 +262,6 @@ export function PassportVerificationSection({
     const status = memberData?.member?.status;
 
     switch (status) {
-      case "pending_application_review":
       case "pending_application_review":
         return {
           title: "Application Submitted",
@@ -339,12 +338,12 @@ export function PassportVerificationSection({
                   )}
                 </div>
               </div>
-              
+
               {/* Disconnect Wallet Button */}
               <div className="text-center">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     disconnect();
                     setWalletConnectedForVerification(false);
@@ -364,7 +363,7 @@ export function PassportVerificationSection({
                       {ensName} detected! Sign a message to verify ownership and activate your membership.
                     </p>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleVerifyPassport}
                     disabled={verifyPassportMutation.isPending}
                     className="w-full"
@@ -376,26 +375,26 @@ export function PassportVerificationSection({
               )}
 
               {/* Show application button only if NO Ipê City domain is found AND not approved */}
-              {isConnected && address && !ensLoading && hasIpeCityDomain === false && 
-               memberData?.member?.status !== "approved_application" && 
-               memberData?.member?.status !== "active_member" &&
-               memberData?.member?.status !== "pending_application_review" && (
-                <div className="space-y-4">
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-blue-800 font-medium">No Ipê City Domain Found</p>
-                    <p className="text-sm text-blue-700">
-                      Submit an application to claim a new subdomain and join the community.
-                    </p>
+              {isConnected && address && !ensLoading && hasIpeCityDomain === false &&
+                memberData?.member?.status !== "approved_application" &&
+                memberData?.member?.status !== "active_member" &&
+                memberData?.member?.status !== "pending_application_review" && (
+                  <div className="space-y-4">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-blue-800 font-medium">No Ipê City Domain Found</p>
+                      <p className="text-sm text-blue-700">
+                        Submit an application to claim a new subdomain and join the community.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setShowApplicationForm(true)}
+                      className="w-full"
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Submit Application
+                    </Button>
                   </div>
-                  <Button 
-                    onClick={() => setShowApplicationForm(true)}
-                    className="w-full"
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    Submit Application
-                  </Button>
-                </div>
-              )}
+                )}
 
               {/* Pending Application Status */}
               {memberData?.member?.status === "pending_application_review" && (
@@ -419,7 +418,7 @@ export function PassportVerificationSection({
                       Your subdomain <strong>{memberData.member.ipeUsername}.ipecity.eth</strong> has been reserved and is ready to accept.
                     </p>
                   </div>
-                  <Button 
+                  <Button
                     onClick={handleAcceptSubdomain}
                     disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
                     className="w-full"

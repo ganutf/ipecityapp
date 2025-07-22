@@ -32,9 +32,16 @@ const authKitConfig = {
   siweUri: window.location.origin,
 };
 
+const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "demo";
+console.log("WalletConnect Project ID:", projectId);
+console.log("Environment variables:", {
+  VITE_WALLETCONNECT_PROJECT_ID: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID,
+  isDemoMode: projectId === "demo"
+});
+
 const wagmiConfig = getDefaultConfig({
   appName: "Ipê City Pulse",
-  projectId: "demo", // Simplified for development
+  projectId,
   chains: [mainnet],
   transports: {
     [mainnet.id]: http(),

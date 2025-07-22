@@ -68,7 +68,7 @@ export default function FarcasterEmbed() {
 
   // Get user's executions
   const { data: executionsData, isLoading: executionsLoading } = useQuery({
-    queryKey: [`/api/executions/${viewerFid}`],
+    queryKey: [`/api/executions/by-fid/${viewerFid}`],
     enabled: Boolean(
       isAuthenticated &&
         hasValidFid &&
@@ -609,7 +609,7 @@ function PostTool({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [`/api/executions/${viewerFid}`],
+        queryKey: [`/api/executions/by-fid/${viewerFid}`],
       });
     },
   });

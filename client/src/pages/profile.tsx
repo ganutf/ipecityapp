@@ -191,7 +191,7 @@ export default function Profile2() {
         const incompleteStatuses = [
           'pending_id_verification',
           'email_verified', 
-          'pending_application_preview',
+          'pending_application_review',
           'approved_application'
         ];
         if (incompleteStatuses.includes(status)) {

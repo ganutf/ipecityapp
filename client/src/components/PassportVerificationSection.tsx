@@ -262,7 +262,8 @@ export function PassportVerificationSection({
     const status = memberData?.member?.status;
 
     switch (status) {
-      case "pending_application_preview":
+      case "pending_application_review":
+      case "pending_application_review":
         return {
           title: "Application Submitted",
           description: "Your application is pending admin approval.",
@@ -378,7 +379,7 @@ export function PassportVerificationSection({
               {isConnected && address && !ensLoading && hasIpeCityDomain === false && 
                memberData?.member?.status !== "approved_application" && 
                memberData?.member?.status !== "active_member" &&
-               memberData?.member?.status !== "pending_application_preview" && (
+               memberData?.member?.status !== "pending_application_review" && (
                 <div className="space-y-4">
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-blue-800 font-medium">No Ipê City Domain Found</p>
@@ -397,7 +398,7 @@ export function PassportVerificationSection({
               )}
 
               {/* Pending Application Status */}
-              {memberData?.member?.status === "pending_application_preview" && (
+              {memberData?.member?.status === "pending_application_review" && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
                   <Clock className="h-8 w-8 text-blue-500 mx-auto mb-2" />
                   <p className="font-medium text-blue-800">Application Under Review</p>

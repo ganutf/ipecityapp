@@ -46,7 +46,7 @@ export const members = pgTable("members", {
   
   // State machine fields - restricted by database CHECK constraint
   // Valid values: pending_signer, pending_id_verification, email_verified, pending_application, 
-  // pending_application_preview, approved_application, denied_application, active_member
+  // pending_application_review, approved_application, denied_application, active_member
   status: varchar("status", { length: 30 }).default("pending_signer").notNull(),
   // Valid member types: pending, architect, explorer, admin, org_team, core_team
   memberType: varchar("member_type", { length: 20 }).default("pending").notNull(),
@@ -88,7 +88,7 @@ export const pulses = pgTable("pulses", {
 export const pulseExecutions = pgTable("pulse_executions", {
   id: serial("id").primaryKey(),
   pulseId: integer("pulse_id").notNull(),
-  memberFarcasterFid: integer("member_farcaster_fid").notNull(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
   actionType: varchar("action_type").notNull(), // 'like' | 'recast'
   executedAt: timestamp("executed_at").defaultNow(),
 });
@@ -96,7 +96,8 @@ export const pulseExecutions = pgTable("pulse_executions", {
 // User signers - individual Farcaster signers per user
 export const userSigners = pgTable("user_signers", {
   id: serial("id").primaryKey(),
-  farcasterFid: integer("farcaster_fid").unique().notNull(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  farcasterFid: integer("farcaster_fid").notNull(), // Keep for external API compatibility
   signerUuid: varchar("signer_uuid").notNull(),
   publicKey: varchar("public_key"),
   status: varchar("status"), // "pending_approval", "approved", "revoked", etc.
@@ -120,22 +121,23 @@ export const pulseExecutionsRelations = relations(pulseExecutions, ({ one }) => 
     references: [pulses.id],
   }),
   member: one(members, {
-    fields: [pulseExecutions.memberFarcasterFid],
-    references: [members.farcasterFid],
+    fields: [pulseExecutions.memberId],
+    references: [members.id],
   }),
 }));
 
 export const userSignersRelations = relations(userSigners, ({ one }) => ({
   member: one(members, {
-    fields: [userSigners.farcasterFid],
-    references: [members.farcasterFid],
+    fields: [userSigners.memberId],
+    references: [members.id],
   }),
 }));
 
 // Email verification table
 export const emailVerifications = pgTable("email_verifications", {
   id: serial("id").primaryKey(),
-  farcasterFid: integer("farcaster_fid").notNull(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  farcasterFid: integer("farcaster_fid").notNull(), // Keep for external API compatibility
   email: varchar("email").notNull(),
   verificationCode: varchar("verification_code", { length: 6 }).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
@@ -146,7 +148,8 @@ export const emailVerifications = pgTable("email_verifications", {
 // Passport verification table
 export const passportVerifications = pgTable("passport_verifications", {
   id: serial("id").primaryKey(),
-  farcasterFid: integer("farcaster_fid").notNull(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  farcasterFid: integer("farcaster_fid").notNull(), // Keep for external API compatibility
   ipePassport: varchar("ipe_passport").notNull(),
   verificationToken: varchar("verification_token").unique().notNull(),
   challengeMessage: text("challenge_message").notNull(),
@@ -259,12 +262,38 @@ export const applicationSchema = createInsertSchema(members).pick({
   walletAddress: secureWalletAddressSchema,
 });
 
+// Application schema with member ID
+export const applicationByMemberIdSchema = createInsertSchema(members).pick({
+  ipeUsername: true,
+  bio: true,
+  twitter: true,
+  linkedin: true,
+  instagram: true,
+  profileTags: true,
+  walletAddress: true,
+}).extend({
+  memberId: z.number().int().positive(),
+  ipeUsername: secureUsernameSchema,
+  bio: secureBioSchema,
+  twitter: secureSocialHandleSchema,
+  linkedin: secureSocialHandleSchema,
+  instagram: secureSocialHandleSchema,
+  profileTags: secureProfileTagsSchema,
+  walletAddress: secureWalletAddressSchema,
+});
+
 // Enhanced email verification schema
 export const emailVerificationRequestSchema = createInsertSchema(members).pick({
   farcasterFid: true,
   email: true,
 }).extend({
   farcasterFid: secureFidSchema,
+  email: secureEmailSchema,
+});
+
+// Email verification with member ID
+export const emailVerificationRequestByMemberIdSchema = z.object({
+  memberId: z.number().int().positive(),
   email: secureEmailSchema,
 });
 
@@ -305,6 +334,7 @@ export const insertEmailVerificationSchema = createInsertSchema(emailVerificatio
   id: true,
   createdAt: true,
 }).extend({
+  memberId: z.number().int().positive(),
   farcasterFid: secureFidSchema,
   email: secureEmailSchema,
   verificationCode: z.string().length(6, "Verification code must be 6 digits").regex(/^\d+$/, "Code must be numeric"),
@@ -315,6 +345,7 @@ export const insertPassportVerificationSchema = createInsertSchema(passportVerif
   createdAt: true,
   verifiedAt: true,
 }).extend({
+  memberId: z.number().int().positive(),
   farcasterFid: secureFidSchema,
   ipePassport: z.string().max(255, "Passport name too long"),
   verificationToken: z.string().min(32, "Invalid verification token"),
@@ -345,6 +376,12 @@ export const verificationCodeSchema = z.object({
   code: z.string().length(6, "Verification code must be 6 characters").regex(/^\d+$/, "Code must be numeric")
 });
 
+// Verification code validation with member ID
+export const verificationCodeByMemberIdSchema = z.object({
+  memberId: z.number().int().positive(),
+  code: z.string().length(6, "Verification code must be 6 characters").regex(/^\d+$/, "Code must be numeric")
+});
+
 // Username claim validation
 export const usernameClaimSchema = z.object({
   farcasterFid: secureFidSchema,
@@ -352,14 +389,26 @@ export const usernameClaimSchema = z.object({
   walletAddress: secureWalletAddressSchema
 });
 
+// Username claim validation with member ID
+export const usernameClaimByMemberIdSchema = z.object({
+  memberId: z.number().int().positive(),
+  username: secureUsernameSchema,
+  walletAddress: secureWalletAddressSchema
+});
+
 export const insertPulseExecutionSchema = createInsertSchema(pulseExecutions).omit({
   id: true,
   executedAt: true,
+}).extend({
+  memberId: z.number().int().positive(),
 });
 
 export const insertUserSignerSchema = createInsertSchema(userSigners).omit({
   id: true,
   createdAt: true,
+}).extend({
+  memberId: z.number().int().positive(),
+  farcasterFid: secureFidSchema,
 });
 
 // Types
@@ -381,6 +430,10 @@ export type InsertUserSigner = z.infer<typeof insertUserSignerSchema>;
 
 // Request types
 export type EmailVerificationRequest = z.infer<typeof emailVerificationRequestSchema>;
+export type EmailVerificationByMemberIdRequest = z.infer<typeof emailVerificationRequestByMemberIdSchema>;
+export type ApplicationByMemberId = z.infer<typeof applicationByMemberIdSchema>;
+export type VerificationCodeByMemberId = z.infer<typeof verificationCodeByMemberIdSchema>;
+export type UsernameClaimByMemberId = z.infer<typeof usernameClaimByMemberIdSchema>;
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;

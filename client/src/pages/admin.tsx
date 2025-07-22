@@ -427,7 +427,7 @@ export default function AdminPage() {
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
                     const claimSubdomain = (member as any).ipeUsername;
-                    const hasPendingApplication = memberStatus === 'pending_application_preview' && claimSubdomain;
+                    const hasPendingApplication = memberStatus === 'pending_application_review' && claimSubdomain;
                     const needsApproval = hasPendingApplication;
                     
                     return (
@@ -451,7 +451,7 @@ export default function AdminPage() {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             memberStatus === 'active_member'
                               ? 'bg-green-100 text-green-800'
-                              : memberStatus === 'pending_application_preview'
+                              : memberStatus === 'pending_application_review'
                                 ? 'bg-orange-100 text-orange-800'
                                 : memberStatus === 'approved_application'
                                   ? 'bg-blue-100 text-blue-800'
@@ -464,7 +464,7 @@ export default function AdminPage() {
                                         : 'bg-gray-100 text-gray-800'
                           }`}>
                             {memberStatus === 'active_member' ? 'Active Member' :
-                             memberStatus === 'pending_application_preview' ? 'Pending Application' :
+                             memberStatus === 'pending_application_review' ? 'Pending Review' :
                              memberStatus === 'approved_application' ? 'Approved Application' :
                              memberStatus === 'denied_application' ? 'Denied Application' :
                              memberStatus === 'pending_acceptance' ? 'Pending Acceptance' :
@@ -538,14 +538,14 @@ export default function AdminPage() {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       (selectedMember as any).status === 'active_member'
                         ? 'bg-green-100 text-green-800'
-                        : (selectedMember as any).status === 'pending_application_preview'
+                        : (selectedMember as any).status === 'pending_application_review'
                           ? 'bg-orange-100 text-orange-800'
                           : (selectedMember as any).status === 'pending_claim'
                             ? 'bg-yellow-100 text-yellow-800'
                             : 'bg-gray-100 text-gray-800'
                     }`}>
                       {(selectedMember as any).status === 'active_member' ? 'Active Member' :
-                       (selectedMember as any).status === 'pending_application_preview' ? 'Pending Application' :
+                       (selectedMember as any).status === 'pending_application_review' ? 'Pending Review' :
                        (selectedMember as any).status === 'pending_claim' ? 'Pending Claim' :
                        'Pending Signer'}
                     </span>
@@ -553,7 +553,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Member Type</label>
-                  {(selectedMember as any).status === 'pending_application_preview' || (selectedMember as any).status === 'pending_claim' ? (
+                  {(selectedMember as any).status === 'pending_application_review' || (selectedMember as any).status === 'pending_claim' ? (
                     // For pending applications - always editable
                     <Select 
                       value={selectedMemberType} 
@@ -691,7 +691,7 @@ export default function AdminPage() {
               )}
 
               {/* Action buttons for pending applications */}
-              {((selectedMember as any).status === 'pending_application_preview' || (selectedMember as any).status === 'pending_claim') && 
+              {((selectedMember as any).status === 'pending_application_review' || (selectedMember as any).status === 'pending_claim') && 
                (selectedMember as any).ipeUsername && (
                 <div className="flex space-x-2 pt-4 border-t">
                   <Button

@@ -49,19 +49,19 @@ async function deleteMember() {
     } catch (error) {
       console.log('⚠️  Key manager not available, using environment variables');
     }
-    
+
     // Initialize database connection
     await initializeDatabase();
     console.log('✅ Database connection initialized');
-    
+
     // Test database connection
     const { db } = getDatabase();
     await db.execute('SELECT 1 as test');
     console.log('✅ Database connection successful');
 
     // Check if member exists
-    const member = await storage.getMember(fid);
-    
+    const member = await storage.getMemberByFarcasterFid(fid);
+
     if (!member) {
       console.log('❌ Member not found in system');
       console.log(`No member exists with FID: ${fid}`);
@@ -80,7 +80,7 @@ async function deleteMember() {
     console.log(`Passport Verified: ${member.passportVerified}`);
     console.log(`Created: ${member.createdAt}`);
     console.log(`Bio: ${member.bio || 'Not set'}`);
-    
+
     // Confirmation (non-interactive for Replit environment)
     console.log('\n⚠️  DANGER ZONE - MEMBER DELETION');
     console.log('==================================');
@@ -91,7 +91,7 @@ async function deleteMember() {
     console.log('• Remove passport verification tokens');
     console.log('• Delete associated signer records');
     console.log('• THIS CANNOT BE UNDONE');
-    
+
     console.log('\n🔐 PROCEEDING WITH DELETION');
     console.log('============================');
     console.log(`PERMANENTLY DELETING member:`);
@@ -102,10 +102,10 @@ async function deleteMember() {
     console.log('\nThis action is IRREVERSIBLE!');
 
     console.log('\n🗑️  Starting deletion process...');
-    
+
     // Delete member and all related data
-    await storage.deleteMember(fid);
-    
+    await storage.deleteMember(member.id);
+
     console.log('✅ Member deleted successfully');
 
     // Audit log
@@ -119,17 +119,17 @@ async function deleteMember() {
     console.log(`Previous Member Type: ${member.memberType}`);
     console.log(`Had Email: ${member.email ? 'Yes' : 'No'}`);
     console.log(`Had Passport: ${member.ipePassport ? 'Yes' : 'No'}`);
-    
+
     console.log('\n✅ DELETION COMPLETED SUCCESSFULLY');
     console.log('==================================');
     console.log(`Member with FID ${fid} has been permanently deleted`);
     console.log('All related data has been cleaned up');
-    
+
     console.log('\n📝 SECURITY REMINDER');
     console.log('• Member deletion has been logged for audit purposes');
     console.log('• This action cannot be undone');
     console.log('• Consider backing up important data before deletions');
-    
+
   } catch (error) {
     console.error('\n❌ Error deleting member:', error);
     console.error('\nTroubleshooting:');

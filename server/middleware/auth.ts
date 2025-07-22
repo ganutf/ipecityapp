@@ -7,10 +7,11 @@ import { MemberType } from '@shared/schema';
  */
 interface AuthenticatedRequest extends Request {
   user?: {
-    fid: number;
+    id: number;         // Internal member ID (primary)
+    fid: number;        // Farcaster FID (for external APIs)
     memberType: MemberType;
     isAdmin: boolean;
-    member: any; // Full member object
+    member: any;        // Full member object
   };
 }
 
@@ -35,7 +36,7 @@ export const authenticateUser = async (
     }
 
     // Validate that the user exists in our system
-    const member = await storage.getMember(fid);
+    const member = await storage.getMemberByFarcasterFid(fid);
     if (!member) {
       return res.status(401).json({
         error: 'Unauthorized',
@@ -51,9 +52,10 @@ export const authenticateUser = async (
       });
     }
 
-    // Add user info to request
+    // Add user info to request (both internal and external IDs)
     req.user = {
-      fid,
+      id: member.id,                                    // Internal member ID
+      fid,                                              // External farcaster FID
       memberType: member.memberType as MemberType,
       isAdmin: member.memberType === 'admin',
       member
@@ -99,7 +101,38 @@ export const requireAdmin = (
  * Middleware to require user ownership of resource
  * Validates that the authenticated user owns the resource they're trying to access
  */
-export const requireOwnership = (fidParamName: string = 'fid') => {
+export const requireOwnership = (idParamName: string = 'memberId') => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'User must be authenticated'
+      });
+    }
+
+    const resourceId = extractResourceId(req, idParamName);
+
+    if (!resourceId) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: `${idParamName} parameter is required`
+      });
+    }
+
+    // Allow if user owns the resource or is admin
+    if (req.user.id !== resourceId && !req.user.isAdmin) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You can only access your own resources'
+      });
+    }
+
+    next();
+  };
+};
+
+// Legacy ownership validation for farcasterFid-based endpoints
+export const requireOwnershipByFid = (fidParamName: string = 'fid') => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({
@@ -134,13 +167,14 @@ export const requireOwnership = (fidParamName: string = 'fid') => {
  */
 export const auditLogger = (action: string) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const memberId = req.user?.id;
     const fid = req.user?.fid;
     const memberType = req.user?.memberType;
     const isAdmin = req.user?.isAdmin;
     const timestamp = new Date().toISOString();
     const ip = req.ip || req.connection.remoteAddress;
     
-    console.log(`[AUDIT] ${timestamp} - ${action} - FID: ${fid} - Type: ${memberType} - Admin: ${isAdmin} - IP: ${ip} - Path: ${req.path}`);
+    console.log(`[AUDIT] ${timestamp} - ${action} - ID: ${memberId} - FID: ${fid} - Type: ${memberType} - Admin: ${isAdmin} - IP: ${ip} - Path: ${req.path}`);
     
     // Also log request body for sensitive operations (excluding passwords/secrets)
     if (req.body && Object.keys(req.body).length > 0) {
@@ -188,7 +222,42 @@ function extractFidFromRequest(req: Request): number | null {
 }
 
 /**
- * Extract resource FID from URL parameters or request body
+ * Extract resource ID (memberId) from URL parameters or request body
+ */
+function extractResourceId(req: Request, paramName: string): number | null {
+  // Check URL parameters first
+  if (req.params[paramName]) {
+    const parsed = parseInt(req.params[paramName]);
+    if (!isNaN(parsed)) return parsed;
+  }
+
+  // Check common parameter names
+  if (req.params.memberId) {
+    const parsed = parseInt(req.params.memberId);
+    if (!isNaN(parsed)) return parsed;
+  }
+
+  if (req.params.id) {
+    const parsed = parseInt(req.params.id);
+    if (!isNaN(parsed)) return parsed;
+  }
+
+  // Check request body
+  if (req.body.memberId) {
+    const parsed = parseInt(req.body.memberId);
+    if (!isNaN(parsed)) return parsed;
+  }
+
+  if (req.body.id) {
+    const parsed = parseInt(req.body.id);
+    if (!isNaN(parsed)) return parsed;
+  }
+
+  return null;
+}
+
+/**
+ * Extract resource FID from URL parameters or request body (legacy)
  */
 function extractResourceFid(req: Request, paramName: string): number | null {
   // Check URL parameters first

@@ -277,10 +277,31 @@ export function getKeyManager(): SecureKeyManager {
 }
 
 /**
+ * Check if running in Replit environment
+ */
+function isReplitEnvironment(): boolean {
+  return !!(
+    process.env.REPL_ID || 
+    process.env.REPL_SLUG || 
+    process.env.REPLIT_DB_URL ||
+    process.env.REPL_OWNER
+  );
+}
+
+/**
  * Secure environment variable replacement
  * This function retrieves keys from secure storage instead of environment variables
+ * In Replit environment, it falls back directly to environment variables
  */
 export async function getSecureEnvironmentVariable(keyName: string, fallbackEnvVar?: string): Promise<string | undefined> {
+  // In Replit environment, skip secure storage and use environment variables directly
+  if (isReplitEnvironment()) {
+    if (fallbackEnvVar && process.env[fallbackEnvVar]) {
+      return process.env[fallbackEnvVar];
+    }
+    return undefined;
+  }
+
   try {
     const manager = getKeyManager();
     

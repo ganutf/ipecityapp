@@ -57,31 +57,58 @@ function validateEnvironment() {
   enhancedLog('Environment validation passed');
 }
 
+// Check if running in Replit environment
+function isReplitEnvironment(): boolean {
+  return !!(
+    process.env.REPL_ID || 
+    process.env.REPL_SLUG || 
+    process.env.REPLIT_DB_URL ||
+    process.env.REPL_OWNER
+  );
+}
+
 // Initialize secure key management
 async function initializeSecureKeys() {
   try {
-    // Try to load master password from file
+    const isReplit = isReplitEnvironment();
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Skip secure key management in Replit - use standard environment variables
+    if (isReplit) {
+      logger.info('Detected Replit environment, using standard environment variables');
+      logger.info('Secure key management skipped for Replit deployment');
+      return; // Skip key manager initialization in Replit
+    }
+    
+    // Try to load master password from file for non-Replit environments
     const masterKeyPath = join(process.cwd(), '.master-key');
     let masterPassword: string;
     
     try {
       masterPassword = readFileSync(masterKeyPath, 'utf8').trim();
-      enhancedLog('Master password loaded from file');
+      logger.info('Master password loaded from file');
     } catch (error) {
-      enhancedLog('Master password file not found, using fallback', 'error');
-      // In production, this should fail or use a secure key management service
-      if (process.env.NODE_ENV === 'production') {
-        enhancedLog('Production environment requires secure master password', 'error');
+      logger.warn('Master password file not found, using fallback');
+      
+      // Check for environment variable fallback
+      if (process.env.MASTER_PASSWORD) {
+        masterPassword = process.env.MASTER_PASSWORD;
+        logger.info('Master password loaded from environment variable');
+      } else if (isProduction) {
+        logger.error('Production environment requires secure master password');
+        logger.error('Either create .master-key file or set MASTER_PASSWORD environment variable');
         process.exit(1);
+      } else {
+        // For development, generate a temporary password
+        masterPassword = 'development-master-password-not-secure-for-production-use';
+        logger.info('Using temporary development master password');
       }
-      // For development, generate a temporary password
-      masterPassword = 'development-master-password-not-secure-for-production-use';
     }
     
     initializeKeyManager(masterPassword);
-    enhancedLog('Secure key management initialized');
+    logger.info('Secure key management initialized');
   } catch (error) {
-    enhancedLog(`Key management initialization failed: ${error.message}`, 'error');
+    logger.error('Key management initialization failed', { error: error.message });
     process.exit(1);
   }
 }
@@ -237,17 +264,33 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    // Initialize secure keys first
+    const startTime = Date.now();
+    logger.info('Server startup initiated');
+
+    // Initialize secure keys first (skip in Replit)
     await initializeSecureKeys();
+    logger.info(`Secure key initialization completed in ${Date.now() - startTime}ms`);
     
     // Initialize database connection with secure configuration
     await initializeDatabase();
+    logger.info(`Database initialization completed in ${Date.now() - startTime}ms`);
     
-    // Validate environment and test database connection
+    // Validate environment (lightweight check)
     validateEnvironment();
-    await testDatabaseConnection();
 
+    // Register routes
     const server = await registerRoutes(app);
+    logger.info(`Route registration completed in ${Date.now() - startTime}ms`);
+
+    // Test database connection after server is running (non-blocking for port opening)
+    setImmediate(async () => {
+      try {
+        await testDatabaseConnection();
+        logger.info(`Database connection test completed in ${Date.now() - startTime}ms`);
+      } catch (error) {
+        logger.error('Database connection test failed', { error: error.message });
+      }
+    });
 
     // Enhanced error handling middleware
     app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
@@ -286,8 +329,13 @@ app.use((req, res, next) => {
       host: "0.0.0.0",
       reusePort: true,
     }, () => {
-      enhancedLog(`Server successfully started on port ${port}`);
-      enhancedLog(`Health check available at http://0.0.0.0:${port}/health`);
+      const totalStartupTime = Date.now() - startTime;
+      logger.info(`Server successfully started on port ${port}`, { 
+        startupTime: `${totalStartupTime}ms`,
+        environment: process.env.NODE_ENV,
+        isReplit: isReplitEnvironment()
+      });
+      logger.info(`Health check available at http://0.0.0.0:${port}/health`);
     });
 
     // Graceful shutdown handling

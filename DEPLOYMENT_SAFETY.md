@@ -36,6 +36,8 @@
 ### 📋 **Phase 2: Environment & Configuration**
 
 #### **Production Environment Variables**
+
+**For Standard Production Deployments:**
 ```bash
 # Core Configuration
 NODE_ENV=production
@@ -61,6 +63,32 @@ VITE_WALLETCONNECT_PROJECT_ID=<production-walletconnect-id>
 # Security
 SESSION_SECRET=<secure-32-plus-character-secret>
 EMAIL_TEST_MODE=false
+```
+
+**For Replit Deployments:**
+```bash
+# Core Configuration (automatically detected)
+NODE_ENV=production
+
+# Database - Set in Replit Secrets
+DATABASE_URL=<your-production-database-url>
+
+# API Keys - Set in Replit Secrets
+NEYNAR_API_KEY=<production-neynar-key>
+JUSTANAME_API_KEY=<production-justaname-key>
+RESEND_API_KEY=<production-resend-key>
+SESSION_SECRET=<secure-32-plus-character-secret>
+
+# Client Configuration - Set in Replit Secrets
+VITE_NEYNAR_CLIENT_ID=<production-client-id>
+VITE_NEYNAR_SIGNER_UUID=<production-signer-uuid>
+VITE_JUSTANAME_API_KEY=<production-justaname-key>
+VITE_WALLETCONNECT_PROJECT_ID=<production-walletconnect-id>
+FARCASTER_DEVELOPER_MNEMONIC=<production-mnemonic>
+
+# Optional
+EMAIL_TEST_MODE=false
+FRONTEND_URL=https://your-repl-name.repl.co
 ```
 
 #### **Secure Key Management Setup**
@@ -120,7 +148,30 @@ Your app already has excellent security foundations:
 - Master password validation
 - Encrypted storage in `.keys/` directory
 
-## 🚨 **Final Pre-Deployment Commands**
+## 🚨 **Deployment Instructions**
+
+### **For Replit Deployment:**
+
+1. **Set Environment Variables in Replit Secrets:**
+   - Go to your Replit project → Tools → Secrets
+   - Add all required environment variables from the list above
+   - Replit will automatically detect the environment and skip secure key management
+
+2. **Deploy Commands:**
+   ```bash
+   # Test locally with Replit simulation
+   npm run scripts/test-replit-mode.sh
+   
+   # Deploy to Replit (automatic on git push)
+   git push origin main
+   ```
+
+3. **Verify Deployment:**
+   - Check Replit console for startup logs
+   - Visit `https://your-repl-name.repl.co/health` to verify server is running
+   - Monitor logs for any errors
+
+### **For Standard Production Deployment:**
 
 ```bash
 # 1. Build the application
@@ -132,10 +183,13 @@ npm run check
 # 3. Check for security vulnerabilities
 npm audit
 
-# 4. Test production build
+# 4. Run production readiness check
+npm run production:check
+
+# 5. Test production build
 NODE_ENV=production npm start
 
-# 5. Verify all endpoints are working
+# 6. Verify all endpoints are working
 curl -I https://your-domain.com/health
 ```
 

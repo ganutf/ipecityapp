@@ -48,22 +48,22 @@ async function createAdmin() {
     } catch (error) {
       console.log('⚠️  Key manager not available, using environment variables');
     }
-    
+
     // Initialize database connection
     await initializeDatabase();
     console.log('✅ Database connection initialized');
-    
+
     // Test database connection
     const { db } = getDatabase();
     await db.execute('SELECT 1 as test');
     console.log('✅ Database connection successful');
 
     // Check if user exists
-    let member = await storage.getMember(fid);
-    
+    let member = await storage.getMemberByFarcasterFid(fid);
+
     if (!member) {
       console.log('👤 User not found in system, creating new member record...');
-      
+
       // Create new member with admin privileges
       member = await storage.createMember({
         farcasterFid: fid,
@@ -72,33 +72,33 @@ async function createAdmin() {
         emailVerified: true,
         passportVerified: true,
       });
-      
+
       console.log('✅ New admin member created');
     } else {
       console.log('👤 User found in system');
       console.log(`   Current status: ${member.status}`);
       console.log(`   Current memberType: ${member.memberType}`);
-      
+
       if (member.memberType === 'admin') {
         console.log('⚠️  User is already an admin');
         console.log('🎉 No action needed');
         return;
       }
-      
+
       // Confirm promotion (non-interactive for Replit environment)
       console.log('\n🔐 PROCEEDING WITH ADMIN PROMOTION');
       console.log('===================================');
       console.log('Promoting user to admin status...');
       console.log('This will grant them full administrative privileges.');
-      
+
       // Update member to admin
-      member = await storage.updateMember(fid, {
+      member = await storage.updateMemberByFarcasterFid(fid, {
         memberType: 'admin',
         status: 'active_member',
         emailVerified: true,
         passportVerified: true,
       });
-      
+
       console.log('✅ User promoted to admin');
     }
 
@@ -110,7 +110,7 @@ async function createAdmin() {
     console.log(`Target FID: ${fid}`);
     console.log(`New memberType: admin`);
     console.log(`Status: active_member`);
-    
+
     // Display final status
     console.log('\n🎉 ADMIN CREATION SUCCESSFUL');
     console.log('================================');
@@ -119,13 +119,13 @@ async function createAdmin() {
     console.log(`Status: ${member.status}`);
     console.log(`Email Verified: ${member.emailVerified}`);
     console.log(`Passport Verified: ${member.passportVerified}`);
-    
+
     console.log('\n🔐 SECURITY REMINDER');
     console.log('• Admin users have full access to the system');
     console.log('• All admin actions are logged for audit purposes');
     console.log('• Regularly review admin user list');
     console.log('• Consider implementing 2FA for admin accounts');
-    
+
   } catch (error) {
     console.error('\n❌ Error creating admin:', error);
     console.error('\nTroubleshooting:');

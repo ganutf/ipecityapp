@@ -59,8 +59,8 @@ function validateEnvironment() {
 // Check if running in Replit environment
 function isReplitEnvironment(): boolean {
   return !!(
-    process.env.REPL_ID || 
-    process.env.REPL_SLUG || 
+    process.env.REPL_ID ||
+    process.env.REPL_SLUG ||
     process.env.REPLIT_DB_URL ||
     process.env.REPL_OWNER
   );
@@ -71,24 +71,24 @@ async function initializeSecureKeys() {
   try {
     const isReplit = isReplitEnvironment();
     const isProduction = process.env.NODE_ENV === 'production';
-    
+
     // Skip secure key management in Replit - use standard environment variables
     if (isReplit) {
       logger.info('Detected Replit environment, using standard environment variables');
       logger.info('Secure key management skipped for Replit deployment');
       return; // Skip key manager initialization in Replit
     }
-    
+
     // Try to load master password from file for non-Replit environments
     const masterKeyPath = join(process.cwd(), '.master-key');
     let masterPassword: string;
-    
+
     try {
       masterPassword = readFileSync(masterKeyPath, 'utf8').trim();
       logger.info('Master password loaded from file');
     } catch (error) {
       logger.warn('Master password file not found, using fallback');
-      
+
       // Check for environment variable fallback
       if (process.env.MASTER_PASSWORD) {
         masterPassword = process.env.MASTER_PASSWORD;
@@ -103,7 +103,7 @@ async function initializeSecureKeys() {
         logger.info('Using temporary development master password');
       }
     }
-    
+
     initializeKeyManager(masterPassword);
     logger.info('Secure key management initialized');
   } catch (error) {
@@ -130,30 +130,30 @@ const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction) {
   const distPath = resolve(process.cwd(), 'dist', 'public');
-  
+
   // Serve static assets with optimized headers
   app.use('/assets', express.static(join(distPath, 'assets'), {
     maxAge: '1y', // Cache assets for 1 year
     etag: false,
     lastModified: false
   }));
-  
+
   logger.info('Static assets serving configured for production', { distPath });
 }
 
 // Security headers and CORS configuration
-const allowedOrigins = isProduction 
+const allowedOrigins = isProduction
   ? [
-      process.env.FRONTEND_URL || 'https://pulse.ipecity.org',
-      'https://ipecitypulse.replit.app' // Add Replit domain
-    ] 
+    process.env.FRONTEND_URL || 'https://pulse.ipecity.org',
+    'https://ipecity.replit.app' // Add Replit domain
+  ]
   : ['http://localhost:5000', 'http://127.0.0.1:5000']; // Development domains
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
@@ -172,13 +172,13 @@ app.use((req, res, next) => {
   if (isProduction) {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
-  
+
   // Prevent XSS attacks
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
+
   // CSP - Content Security Policy
   const csp = [
     "default-src 'self'",
@@ -191,9 +191,9 @@ app.use((req, res, next) => {
     "object-src 'none'",
     "base-uri 'self'"
   ].join('; ');
-  
+
   res.setHeader('Content-Security-Policy', csp);
-  
+
   next();
 });
 
@@ -228,11 +228,11 @@ app.use((req, res, next) => {
     // Initialize secure keys first (skip in Replit)
     await initializeSecureKeys();
     logger.info(`Secure key initialization completed in ${Date.now() - startTime}ms`);
-    
+
     // Initialize database connection with secure configuration
     await initializeDatabase();
     logger.info(`Database initialization completed in ${Date.now() - startTime}ms`);
-    
+
     // Validate environment (lightweight check)
     validateEnvironment();
 
@@ -288,7 +288,7 @@ app.use((req, res, next) => {
       reusePort: true,
     }, () => {
       const totalStartupTime = Date.now() - startTime;
-      logger.info(`Server successfully started on port ${port}`, { 
+      logger.info(`Server successfully started on port ${port}`, {
         startupTime: `${totalStartupTime}ms`,
         environment: process.env.NODE_ENV,
         isReplit: isReplitEnvironment()

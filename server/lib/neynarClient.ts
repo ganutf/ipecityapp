@@ -47,5 +47,17 @@ export const neynar = {
   async lookupUserByCustodyAddress(...args: any[]) {
     const client = await initializeNeynarClient();
     return client.lookupUserByCustodyAddress(...args);
+  },
+  async lookupCastByHashOrWarpcastUrl(...args: any[]) {
+    const client = await initializeNeynarClient();
+    return client.lookupCastByHashOrWarpcastUrl(...args);
+  },
+  async publishReaction(...args: any[]) {
+    const client = await initializeNeynarClient();
+    return client.publishReaction(...args);
+  },
+  async publishCast(...args: any[]) {
+    const client = await initializeNeynarClient();
+    return client.publishCast(...args);
   }
 };

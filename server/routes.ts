@@ -767,7 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update pulse (admin only)
-  app.put("/api/pulses/:id", 
+  app.patch("/api/pulses/:id", 
     authenticateUser, 
     requireAdmin, 
     auditLogger("UPDATE_PULSE"),
@@ -1108,7 +1108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/members/status", async (req, res) => {
     try {
       const { farcasterFid, status } = req.body;
-      const member = await storage.updateMemberStatus(farcasterFid, status);
+      const member = await storage.updateMemberStatusByFarcasterFid(farcasterFid, status);
       res.json({ success: true, member });
     } catch (error) {
       console.error("Update member status error:", error);

@@ -590,12 +590,18 @@ function PostTool({
   // Record pulse execution
   const recordExecutionMutation = useMutation({
     mutationFn: async ({ actionType }: { actionType: "like" | "recast" }) => {
+      if (!viewerFid) {
+        throw new Error("User not authenticated");
+      }
+      
       const response = await fetch("/api/executions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-farcaster-fid": viewerFid.toString(),
+        },
         body: JSON.stringify({
           pulseId: pulse.id,
-          memberFarcasterFid: viewerFid,
           actionType,
         }),
       });

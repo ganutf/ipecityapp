@@ -305,14 +305,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/neynar/reaction", 
     authenticateUser,
     validateRequest(z.object({
-      body: z.object({
-        signer_uuid: z.string().uuid("Invalid signer UUID"),
-        reaction_type: z.enum(['like', 'recast'], { required_error: "Invalid reaction type" }),
-        target: z.string().min(1, "Target hash required").max(100, "Target hash too long")
-      })
+      signer_uuid: z.string().uuid("Invalid signer UUID"),
+      reaction_type: z.enum(['like', 'recast'], { required_error: "Invalid reaction type" }),
+      target: z.string().min(1, "Target hash required").max(100, "Target hash too long")
     })),
     async (req: AuthenticatedRequest, res) => {
       try {
+        logger.debug("Processing reaction request", { 
+          body: req.body, 
+          user: { id: req.user?.id, fid: req.user?.fid } 
+        });
+        
         const { signer_uuid, reaction_type, target } = req.body;
         
         // Sanitize inputs
@@ -338,14 +341,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/neynar/cast", 
     authenticateUser,
     validateRequest(z.object({
-      body: z.object({
-        signer_uuid: z.string().uuid("Invalid signer UUID"),
-        text: z.string().max(320, "Cast text too long").optional(),
-        embeds: z.array(z.any()).max(10, "Too many embeds").optional()
-      })
+      signer_uuid: z.string().uuid("Invalid signer UUID"),
+      text: z.string().max(320, "Cast text too long").optional(),
+      embeds: z.array(z.any()).max(10, "Too many embeds").optional()
     })),
     async (req: AuthenticatedRequest, res) => {
       try {
+        logger.debug("Processing cast request", { 
+          body: req.body, 
+          user: { id: req.user?.id, fid: req.user?.fid } 
+        });
+        
         const {
           signer_uuid,
           text = "",
@@ -824,18 +830,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Record pulse execution
-  app.post("/api/executions", async (req, res) => {
-    try {
-      const validatedData = insertPulseExecutionSchema.parse(req.body);
-      const execution = await storage.createPulseExecution(validatedData);
-      res.json({ success: true, execution });
-    } catch (err: any) {
-      console.error("Create execution error:", err);
-      res
-        .status(500)
-        .json({ error: err.message || "Failed to record execution" });
+  app.post("/api/executions", 
+    authenticateUser,
+    validateRequest(z.object({
+      pulseId: z.number().int().positive(),
+      actionType: z.string().min(1)
+    })),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        logger.debug("Processing execution request", { 
+          user: req.user, 
+          body: req.body 
+        });
+        
+        const { pulseId, actionType } = req.body;
+        
+        // Use the memberId from the authenticated user
+        const executionData = {
+          pulseId,
+          memberId: req.user!.id, // Get memberId from authenticated user
+          actionType
+        };
+        
+        const execution = await storage.createPulseExecution(executionData);
+        res.json({ success: true, execution });
+      } catch (err: any) {
+        console.error("Create execution error:", err);
+        res
+          .status(500)
+          .json({ error: err.message || "Failed to record execution" });
+      }
     }
-  });
+  );
 
   // Get pending members (admin only)
   app.get("/api/admin/pending-members", 
@@ -1175,6 +1201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Reserve subdomain via JustaName API
       const subdomain = member.ipeUsername;
+      const ensName = `${subdomain}.ipecity.eth`;
       const userWalletAddress = member.walletAddress;
 
       if (!userWalletAddress) {

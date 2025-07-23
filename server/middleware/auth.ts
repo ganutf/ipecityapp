@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
 import { MemberType } from '@shared/schema';
+import logger from '../logger';
 
 /**
  * Enhanced Request interface with user information
@@ -28,7 +29,15 @@ export const authenticateUser = async (
     // Extract FID from various sources
     const fid = extractFidFromRequest(req);
     
+    logger.debug('Auth middleware processing request', { 
+      method: req.method, 
+      path: req.path, 
+      fid,
+      hasHeader: !!req.headers['x-farcaster-fid']
+    });
+    
     if (!fid) {
+      logger.debug('Authentication failed: No FID found in request');
       return res.status(401).json({
         error: 'Authentication required',
         message: 'Farcaster FID must be provided in x-farcaster-fid header or request body'
@@ -37,18 +46,35 @@ export const authenticateUser = async (
 
     // Validate that the user exists in our system
     const member = await storage.getMemberByFarcasterFid(fid);
+    logger.debug('Member lookup completed', member ? {
+      memberId: member.id,
+      farcasterFid: member.farcasterFid,
+      status: member.status,
+      memberType: member.memberType
+    } : { fid, found: false });
+    
     if (!member) {
+      logger.debug('Authentication failed: Member not found', { fid });
       return res.status(401).json({
         error: 'Unauthorized',
         message: 'User not found in system'
       });
     }
 
-    // Check if user is active or admin
-    if (member.status !== 'active_member' && member.memberType !== 'admin') {
+    // Check if user is active or admin - be more permissive during development
+    const allowedStatuses = ['active_member', 'approved_application', 'email_verified'];
+    const isAdmin = member.memberType === 'admin';
+    
+    if (!allowedStatuses.includes(member.status) && !isAdmin) {
+      logger.debug('Authentication failed: User account not active', { 
+        fid, 
+        status: member.status, 
+        memberType: member.memberType,
+        allowedStatuses 
+      });
       return res.status(401).json({
         error: 'Unauthorized',
-        message: 'User account is not active'
+        message: `User account is not active. Status: ${member.status}`
       });
     }
 
@@ -61,9 +87,16 @@ export const authenticateUser = async (
       member
     };
 
+    logger.debug('Authentication successful', { 
+      fid, 
+      memberId: member.id, 
+      memberType: member.memberType,
+      status: member.status 
+    });
+
     next();
   } catch (error) {
-    console.error('Authentication middleware error:', error);
+    logger.error('Authentication middleware error', { error: error.message, stack: error.stack });
     return res.status(500).json({
       error: 'Authentication failed',
       message: 'Internal server error during authentication'

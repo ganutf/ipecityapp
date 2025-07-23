@@ -669,6 +669,7 @@ function PostTool({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-farcaster-fid": viewerFid.toString(),
           },
           body: JSON.stringify({
             signer_uuid: signer_uuid,
@@ -686,6 +687,7 @@ function PostTool({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-farcaster-fid": viewerFid.toString(),
           },
           body: JSON.stringify({
             signer_uuid: signer_uuid,

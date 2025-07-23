@@ -314,10 +314,13 @@ export const secureFarcasterUrlSchema = z.string()
 export const secureDateSchema = z.string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
   .refine(val => {
-    const date = new Date(val);
-    const now = new Date();
-    const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-    return date >= now && date <= oneYearFromNow;
+    const inputDate = new Date(val + 'T00:00:00.000Z'); // Parse as UTC midnight
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0); // Set to UTC midnight for fair comparison
+    const oneYearFromToday = new Date(today);
+    oneYearFromToday.setUTCFullYear(today.getUTCFullYear() + 1);
+    
+    return inputDate >= today && inputDate <= oneYearFromToday;
   }, "Date must be between today and one year from now");
 
 export const secureDescriptionSchema = z.string()

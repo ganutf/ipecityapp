@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { SignInButton } from "@farcaster/auth-kit";
 import type { Pulse, Member } from "@shared/schema";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { authenticatedGet } from "@/lib/api";
 
 // below your other imports / constants
 const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
@@ -27,6 +28,9 @@ export default function FarcasterEmbed() {
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${viewerFid}`],
     enabled: Boolean(isAuthenticated && hasValidFid && !authLoading),
+    retry: 2, // Limit retries
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   const {
@@ -64,17 +68,34 @@ export default function FarcasterEmbed() {
     enabled: Boolean(
       isAuthenticated && (memberCheck as any)?.isMember && !authLoading,
     ),
+    retry: 2, // Limit retries
+    staleTime: 2 * 60 * 1000, // 2 minutes for more dynamic data
+    refetchOnWindowFocus: false,
   });
 
   // Get user's executions
-  const { data: executionsData, isLoading: executionsLoading } = useQuery({
+  const { data: executionsData, isLoading: executionsLoading, error: executionsError } = useQuery({
     queryKey: [`/api/executions/by-fid/${viewerFid}`],
+    queryFn: () => authenticatedGet(`/api/executions/by-fid/${viewerFid}`, viewerFid),
     enabled: Boolean(
       isAuthenticated &&
         hasValidFid &&
         (memberCheck as any)?.isMember &&
         !authLoading,
     ),
+    retry: (failureCount, error) => {
+      // Don't retry on authentication errors (401) or forbidden (403)
+      if (error && typeof error === 'object' && 'message' in error) {
+        const errorMessage = (error as Error).message;
+        if (errorMessage.includes('401') || errorMessage.includes('403')) {
+          return false;
+        }
+      }
+      // Only retry up to 2 times for other errors
+      return failureCount < 2;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false, // Prevent excessive refetching
   });
 
   // Helper functions for date comparison
@@ -102,22 +123,34 @@ export default function FarcasterEmbed() {
 
   const getUserExecutionStatus = (pulseId: number) => {
     if (!(executionsData as any)?.executions)
-      return { liked: false, recasted: false };
+      return { liked: false, shared: false, abstained: false };
 
-    const executions = (executionsData as any).executions.filter(
+    // Find the single execution record for this pulse (new structure has one record per pulse/member)
+    const execution = (executionsData as any).executions.find(
       (exec: any) => exec.pulseId === pulseId,
     );
 
+    // If no execution found, return default values
+    if (!execution || !execution.actions) {
+      return { liked: false, shared: false, abstained: false };
+    }
+
+    // Extract actions from the JSON field
+    const actions = execution.actions;
     return {
-      liked: executions.some((exec: any) => exec.actionType === "like"),
-      recasted: executions.some((exec: any) => exec.actionType === "recast"),
+      liked: actions.liked || false,
+      shared: actions.shared || false,
+      abstained: actions.abstained || false,
     };
   };
 
   // Find today's active pulse
-  const activePulse = (pulsesData as any)?.pulses?.find((pulse: Pulse) =>
-    isToday(pulse.date),
-  );
+  const activePulse = (pulsesData as any)?.pulses?.find((pulse: Pulse) => {
+    const now = new Date();
+    const pulseStart = new Date((pulse as any).datetimeStart);
+    const pulseEnd = new Date(pulseStart.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
+    return now >= pulseStart && now <= pulseEnd;
+  });
 
   // Show loading while auth is initializing
   if (authLoading) {
@@ -214,6 +247,25 @@ export default function FarcasterEmbed() {
     );
   }
 
+  // Show authentication error if executions loading failed
+  if (executionsError && (executionsError as Error).message.includes('401')) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700 text-sm">
+            Authentication error occurred. Please refresh the page and sign in again.
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-4xl mx-auto">
       {/* Active Pulse Section */}
@@ -245,10 +297,15 @@ export default function FarcasterEmbed() {
           {(() => {
             const upcomingPulses = (pulsesData as any).pulses
               .filter(
-                (pulse: Pulse) =>
-                  !isToday(pulse.date) && !isPastDate(pulse.date),
+                (pulse: Pulse) => {
+                  const now = new Date();
+                  const pulseStart = new Date((pulse as any).datetimeStart);
+                  return pulseStart > now;
+                }
               )
-              .sort((a: Pulse, b: Pulse) => a.date.localeCompare(b.date)); // Ascending for upcoming
+              .sort((a: Pulse, b: Pulse) => 
+                new Date((a as any).datetimeStart).getTime() - new Date((b as any).datetimeStart).getTime()
+              ); // Ascending for upcoming
 
             return (
               upcomingPulses.length > 0 && (
@@ -291,9 +348,12 @@ export default function FarcasterEmbed() {
                                     past ? "text-gray-500" : "text-blue-700"
                                   }`}
                                 >
-                                  {new Date(
-                                    pulse.date + "T00:00:00",
-                                  ).toLocaleDateString("en-US", {
+                                  {new Date((pulse as any).datetimeStart).toLocaleDateString("en-US", {
+                                    weekday: "long",
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                  })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleDateString("en-US", {
                                     weekday: "long",
                                     year: "numeric",
                                     month: "long",
@@ -301,12 +361,12 @@ export default function FarcasterEmbed() {
                                   })}
                                 </p>
                                 <a
-                                  href={pulse.farcasterUrl}
+                                  href={(pulse as any).urlEmbed}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-xs text-blue-600 hover:text-blue-800 break-all"
                                 >
-                                  {pulse.farcasterUrl}
+                                  {(pulse as any).urlEmbed}
                                 </a>
                               </div>
                               <div className="flex items-center space-x-2">
@@ -360,12 +420,12 @@ export default function FarcasterEmbed() {
                                 <div className="flex items-center space-x-2">
                                   <div
                                     className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                      executionStatus.recasted
+                                      executionStatus.shared
                                         ? "bg-green-500"
                                         : "bg-gray-200 border-2 border-gray-300"
                                     }`}
                                   >
-                                    {executionStatus.recasted && (
+                                    {executionStatus.shared && (
                                       <span className="text-white text-xs font-bold">
                                         ✓
                                       </span>
@@ -373,14 +433,40 @@ export default function FarcasterEmbed() {
                                   </div>
                                   <span
                                     className={`font-medium ${
-                                      executionStatus.recasted
+                                      executionStatus.shared
                                         ? "text-green-600"
                                         : "text-gray-500"
                                     }`}
                                   >
-                                    {executionStatus.recasted
-                                      ? "Recasted"
-                                      : "Recast pending"}
+                                    {executionStatus.shared
+                                      ? "Shared"
+                                      : "Share pending"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <div
+                                    className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                      executionStatus.abstained
+                                        ? "bg-yellow-500"
+                                        : "bg-gray-200 border-2 border-gray-300"
+                                    }`}
+                                  >
+                                    {executionStatus.abstained && (
+                                      <span className="text-white text-xs font-bold">
+                                        ✓
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`font-medium ${
+                                      executionStatus.abstained
+                                        ? "text-yellow-600"
+                                        : "text-gray-500"
+                                    }`}
+                                  >
+                                    {executionStatus.abstained
+                                      ? "Abstained"
+                                      : "Abstain option"}
                                   </span>
                                 </div>
                                 {today && (
@@ -395,7 +481,7 @@ export default function FarcasterEmbed() {
                             <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mt-2">
                               This pulse will be available on{" "}
                               {new Date(
-                                pulse.date + "T00:00:00",
+                                (pulse as any).datetimeStart + "T00:00:00",
                               ).toLocaleDateString()}
                               .
                             </div>
@@ -414,9 +500,9 @@ export default function FarcasterEmbed() {
             const previousPulses = (pulsesData as any).pulses
               .filter(
                 (pulse: Pulse) =>
-                  !isToday(pulse.date) && isPastDate(pulse.date),
+                  !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart),
               )
-              .sort((a: Pulse, b: Pulse) => b.date.localeCompare(a.date)); // Descending for previous
+              .sort((a: Pulse, b: Pulse) => (b as any).datetimeStart.localeCompare((a as any).datetimeStart)); // Descending for previous
 
             return (
               previousPulses.length > 0 && (
@@ -449,9 +535,12 @@ export default function FarcasterEmbed() {
                                   {pulse.description}
                                 </h4>
                                 <p className="text-sm font-medium mb-2 text-gray-500">
-                                  {new Date(
-                                    pulse.date + "T00:00:00",
-                                  ).toLocaleDateString("en-US", {
+                                  {new Date((pulse as any).datetimeStart).toLocaleDateString("en-US", {
+                                    weekday: "long",
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                  })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleDateString("en-US", {
                                     weekday: "long",
                                     year: "numeric",
                                     month: "long",
@@ -459,12 +548,12 @@ export default function FarcasterEmbed() {
                                   })}
                                 </p>
                                 <a
-                                  href={pulse.farcasterUrl}
+                                  href={(pulse as any).urlEmbed}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-blue-600 hover:text-blue-800 text-sm break-all"
                                 >
-                                  {pulse.farcasterUrl}
+                                  {(pulse as any).urlEmbed}
                                 </a>
                               </div>
                             </div>
@@ -500,12 +589,12 @@ export default function FarcasterEmbed() {
                               <div className="flex items-center space-x-2">
                                 <div
                                   className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                    executionStatus.recasted
+                                    executionStatus.shared
                                       ? "bg-green-500"
                                       : "bg-gray-200 border-2 border-gray-300"
                                   }`}
                                 >
-                                  {executionStatus.recasted && (
+                                  {executionStatus.shared && (
                                     <span className="text-white text-xs font-bold">
                                       ✓
                                     </span>
@@ -513,14 +602,40 @@ export default function FarcasterEmbed() {
                                 </div>
                                 <span
                                   className={`font-medium ${
-                                    executionStatus.recasted
+                                    executionStatus.shared
                                       ? "text-green-600"
                                       : "text-gray-400"
                                   }`}
                                 >
-                                  {executionStatus.recasted
-                                    ? "Recasted"
-                                    : "Not recasted"}
+                                  {executionStatus.shared
+                                    ? "Shared"
+                                    : "Not shared"}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div
+                                  className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                    executionStatus.abstained
+                                      ? "bg-yellow-500"
+                                      : "bg-gray-200 border-2 border-gray-300"
+                                  }`}
+                                >
+                                  {executionStatus.abstained && (
+                                    <span className="text-white text-xs font-bold">
+                                      ✓
+                                    </span>
+                                  )}
+                                </div>
+                                <span
+                                  className={`font-medium ${
+                                    executionStatus.abstained
+                                      ? "text-yellow-600"
+                                      : "text-gray-400"
+                                  }`}
+                                >
+                                  {executionStatus.abstained
+                                    ? "Abstained"
+                                    : "Not abstained"}
                                 </span>
                               </div>
                             </div>
@@ -552,6 +667,75 @@ function PostTool({
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
 
+  // Get user's executions for this component
+  const { data: executionsData, error: componentExecutionsError } = useQuery({
+    queryKey: [`/api/executions/by-fid/${viewerFid}`],
+    queryFn: () => authenticatedGet(`/api/executions/by-fid/${viewerFid}`, viewerFid),
+    enabled: Boolean(viewerFid),
+    retry: (failureCount, error) => {
+      // Don't retry on authentication errors (401) or forbidden (403)
+      if (error && typeof error === 'object' && 'message' in error) {
+        const errorMessage = (error as Error).message;
+        if (errorMessage.includes('401') || errorMessage.includes('403')) {
+          return false;
+        }
+      }
+      // Only retry up to 2 times for other errors
+      return failureCount < 2;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false, // Prevent excessive refetching
+  });
+
+  // Show authentication error if present
+  if (componentExecutionsError && (componentExecutionsError as Error).message.includes('401')) {
+    return (
+      <div className="w-full max-w-lg bg-red-50 border border-red-200 rounded-xl p-4">
+        <p className="text-red-700 text-sm">
+          Authentication required. Please refresh the page and sign in again.
+        </p>
+      </div>
+    );
+  }
+
+  // Helper function to get execution status for this component
+  const getUserExecutionStatus = (pulseId: number) => {
+    if (!(executionsData as any)?.executions)
+      return { liked: false, shared: false, abstained: false };
+
+    // Find the single execution record for this pulse (new structure has one record per pulse/member)
+    const execution = (executionsData as any).executions.find(
+      (exec: any) => exec.pulseId === pulseId,
+    );
+
+    // If no execution found, return default values
+    if (!execution || !execution.actions) {
+      return { liked: false, shared: false, abstained: false };
+    }
+
+    // Extract actions from the JSON field
+    const actions = execution.actions;
+    return {
+      liked: actions.liked || false,
+      shared: actions.shared || false,
+      abstained: actions.abstained || false,
+    };
+  };
+
+  // Track execution status for pulse actions - initialize with current status
+  const currentExecutionStatus = getUserExecutionStatus(pulse.id);
+  const [executionStatus, setExecutionStatus] = useState<{
+    liked: boolean;
+    shared: boolean;
+    abstained: boolean;
+  }>(currentExecutionStatus);
+
+  // Update execution status when data changes
+  useEffect(() => {
+    const status = getUserExecutionStatus(pulse.id);
+    setExecutionStatus(status);
+  }, [executionsData, pulse.id]);
+
   const [url, setUrl] = useState("");
   const [checking, setChecking] = useState(false);
   const [stats, setStats] = useState<null | {
@@ -560,13 +744,126 @@ function PostTool({
     quotedRecast: boolean;
     regularRecast: boolean;
   }>(null);
+  
   const [castData, setCastData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<{
     like: boolean;
     recast: boolean;
-  }>({ like: false, recast: false });
+    abstain: boolean;
+  }>({ like: false, recast: false, abstain: false });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Circuit breaker state for preventing infinite loops
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastFailureTime, setLastFailureTime] = useState<number | null>(null);
+  const [isCircuitOpen, setIsCircuitOpen] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  
+  const MAX_RETRIES = 3;
+  const CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds
+  const EXPONENTIAL_BACKOFF_BASE = 1000; // 1 second
+
+  // Update countdown timer when circuit breaker is open
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isCircuitOpen && lastFailureTime) {
+      interval = setInterval(() => {
+        const timeLeft = Math.ceil((CIRCUIT_BREAKER_TIMEOUT - (Date.now() - lastFailureTime)) / 1000);
+        setCountdown(Math.max(0, timeLeft));
+        
+        if (timeLeft <= 0) {
+          setIsCircuitOpen(false);
+          setRetryCount(0);
+          setLastFailureTime(null);
+          setCountdown(0);
+        }
+      }, 1000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isCircuitOpen, lastFailureTime]);
+
+  // Record pulse execution mutation
+  const recordExecutionMutation = useMutation({
+    mutationFn: async ({ actions }: { actions: { liked: boolean; shared: boolean; abstained: boolean } }) => {
+      if (!viewerFid) {
+        throw new Error("User not authenticated");
+      }
+      
+      const response = await fetch("/api/executions", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-farcaster-fid": viewerFid.toString(),
+        },
+        body: JSON.stringify({
+          pulseId: pulse.id,
+          actions,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to record execution");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/executions/by-fid/${viewerFid}`] });
+    },
+  });
+
+  // Handle pulse-specific actions (separate from Farcaster interactions)
+  async function handlePulseAction(action: 'like' | 'share' | 'abstain') {
+    if (!pulse) return;
+    
+    setActionLoading(prev => ({ ...prev, [action === 'share' ? 'recast' : action]: true }));
+    
+    try {
+      // Update execution status based on action
+      let newActions = { ...executionStatus };
+      
+      if (action === 'abstain') {
+        // Toggle abstain - if already abstained, cancel it and reset to default state
+        if (executionStatus.abstained) {
+          newActions = { liked: false, shared: false, abstained: false };
+        } else {
+          // Abstain is exclusive - clear other actions
+          newActions = { liked: false, shared: false, abstained: true };
+        }
+      } else {
+        // Like or share - clear abstain and toggle the specific action
+        newActions = {
+          ...executionStatus,
+          abstained: false,
+          [action === 'share' ? 'shared' : 'liked']: !executionStatus[action === 'share' ? 'shared' : 'liked']
+        };
+      }
+      
+      // Record the execution in database
+      await recordExecutionMutation.mutateAsync({ actions: newActions });
+      
+      // Update local state
+      setExecutionStatus(newActions);
+      
+      const actionName = action === 'share' ? 'shared' : action === 'like' ? 'liked' : 'abstained';
+      setSuccessMessage(`Pulse ${actionName} successfully!`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+    } catch (error) {
+      console.error(`Error recording pulse ${action}:`, error);
+      setError(
+        `Failed to record pulse ${action}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      setActionLoading(prev => ({ ...prev, [action === 'share' ? 'recast' : action]: false }));
+    }
+  }
 
   async function checkQuoteRecast(
     castHash: string,
@@ -587,48 +884,44 @@ function PostTool({
     return false;
   }
 
-  // Record pulse execution
-  const recordExecutionMutation = useMutation({
-    mutationFn: async ({ actionType }: { actionType: "like" | "recast" }) => {
-      if (!viewerFid) {
-        throw new Error("User not authenticated");
-      }
-      
-      const response = await fetch("/api/executions", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-farcaster-fid": viewerFid.toString(),
-        },
-        body: JSON.stringify({
-          pulseId: pulse.id,
-          actionType,
-        }),
-      });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to record execution");
+  // Circuit breaker helper function
+  const checkCircuitBreaker = () => {
+    const now = Date.now();
+    
+    // If circuit is open, check if timeout has passed
+    if (isCircuitOpen && lastFailureTime) {
+      if (now - lastFailureTime > CIRCUIT_BREAKER_TIMEOUT) {
+        console.log("Circuit breaker timeout expired, resetting");
+        setIsCircuitOpen(false);
+        setRetryCount(0);
+        setLastFailureTime(null);
+        return false; // Circuit is now closed
       }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [`/api/executions/by-fid/${viewerFid}`],
-      });
-    },
-  });
+      return true; // Circuit is still open
+    }
+    
+    return false; // Circuit is closed
+  };
 
   async function handleCheck() {
-    if (!pulse.farcasterUrl || !viewerFid) return;
+    if (!(pulse as any).urlEmbed || !viewerFid) return;
+
+    // Check circuit breaker
+    if (checkCircuitBreaker()) {
+      console.log("Circuit breaker is open, skipping cast check");
+      setError(`Cast checking temporarily disabled due to repeated failures. Will retry in ${Math.ceil((CIRCUIT_BREAKER_TIMEOUT - (Date.now() - (lastFailureTime || 0))) / 1000)} seconds.`);
+      return;
+    }
 
     setChecking(true);
     setError(null);
 
     try {
+      console.log("Checking cast:", (pulse as any).urlEmbed, "for viewer:", viewerFid);
+      
       const res = await fetch(
-        `/api/neynar/cast/${encodeURIComponent(pulse.farcasterUrl)}/${viewerFid}?type=url`,
+        `/api/neynar/cast/${encodeURIComponent((pulse as any).urlEmbed)}/${viewerFid}?type=url`,
       );
 
       if (!res.ok) {
@@ -651,11 +944,32 @@ function PostTool({
         regularRecast: regularRecast,
         quotedRecast: quotedRecast,
       });
+
+      // Reset circuit breaker on success
+      setRetryCount(0);
+      setLastFailureTime(null);
+      setIsCircuitOpen(false);
+      
+      console.log("Cast check successful");
     } catch (error) {
       console.error("Error fetching cast:", error);
-      setError(
-        `Failed to fetch cast: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+      
+      const newRetryCount = retryCount + 1;
+      setRetryCount(newRetryCount);
+      setLastFailureTime(Date.now());
+      
+      // Open circuit breaker if max retries exceeded
+      if (newRetryCount >= MAX_RETRIES) {
+        console.warn(`Circuit breaker opening after ${MAX_RETRIES} failures`);
+        setIsCircuitOpen(true);
+        setError(
+          `Failed to load cast data after ${MAX_RETRIES} attempts. Please check your connection and try again later.`
+        );
+      } else {
+        setError(
+          `Failed to fetch cast (attempt ${newRetryCount}/${MAX_RETRIES}): ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
     } finally {
       setChecking(false);
     }
@@ -732,6 +1046,10 @@ function PostTool({
               }
             : null,
         );
+        // Record pulse action for like
+        if (pulse) {
+          await handlePulseAction('like');
+        }
       } else if (type === "recast") {
         setStats((prev) =>
           prev
@@ -743,14 +1061,21 @@ function PostTool({
               }
             : null,
         );
+        // Record pulse action for share
+        if (pulse) {
+          await handlePulseAction('share');
+        }
       }
-
-      // Record the execution in database
-      recordExecutionMutation.mutate({ actionType: type });
 
       setSuccessMessage(`Post ${type}d successfully!`);
       setTimeout(() => setSuccessMessage(null), 3000);
-      setTimeout(() => handleCheck(), 2000);
+      
+      // Only retry if circuit breaker is not open and we haven't had recent failures
+      if (!isCircuitOpen && retryCount === 0) {
+        setTimeout(() => handleCheck(), 2000);
+      } else {
+        console.log("Skipping automatic retry due to circuit breaker or recent failures");
+      }
     } catch (error) {
       console.error(`Error ${type}ing cast:`, error);
       setError(
@@ -761,13 +1086,20 @@ function PostTool({
     }
   }
 
+
   // Auto-load the current pulse
   useEffect(() => {
-    if (pulse.farcasterUrl && viewerFid) {
-      setUrl(pulse.farcasterUrl);
-      handleCheck();
+    if ((pulse as any).urlEmbed && viewerFid && !isCircuitOpen) {
+      setUrl((pulse as any).urlEmbed);
+      
+      // Add a delay to prevent rapid successive calls
+      const timeoutId = setTimeout(() => {
+        handleCheck();
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [pulse.farcasterUrl, viewerFid]);
+  }, [(pulse as any).urlEmbed, viewerFid]);
 
   return (
     <div className="w-full max-w-lg bg-green-50 border border-green-200 shadow rounded-xl">
@@ -792,7 +1124,27 @@ function PostTool({
 
         {error && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-700">{error}</p>
+            <div className="flex justify-between items-start">
+              <p className="text-sm text-red-700 flex-1">{error}</p>
+              {isCircuitOpen ? (
+                <div className="ml-2 text-xs text-red-500">
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <span>Retry in {countdown}s</span>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setError(null);
+                    handleCheck();
+                  }}
+                  className="ml-2 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -801,6 +1153,7 @@ function PostTool({
             <p className="text-sm text-green-700">{successMessage}</p>
           </div>
         )}
+
 
         {checking && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
@@ -853,7 +1206,7 @@ function PostTool({
               <div className="flex space-x-2">
                 <button
                   onClick={() => handleReaction("like")}
-                  disabled={actionLoading.like}
+                  disabled={actionLoading.like || executionStatus.abstained}
                   className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                     stats?.liked
                       ? "bg-red-100 text-red-700"
@@ -869,7 +1222,7 @@ function PostTool({
                 </button>
                 <button
                   onClick={() => handleReaction("recast")}
-                  disabled={actionLoading.recast}
+                  disabled={actionLoading.recast || executionStatus.abstained}
                   className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                     stats?.recasted
                       ? "bg-green-100 text-green-700"
@@ -880,13 +1233,30 @@ function PostTool({
                   {actionLoading.recast
                     ? "Recasting..."
                     : stats?.recasted
-                      ? "Recasted"
+                      ? "Shared"
                       : "Recast"}
+                </button>
+                <button
+                  onClick={() => handlePulseAction('abstain')}
+                  disabled={actionLoading.abstain || (executionStatus.liked || executionStatus.shared)}
+                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    executionStatus.abstained
+                      ? "bg-yellow-100 text-yellow-700"
+                      : "bg-gray-100 text-gray-700 hover:bg-yellow-50"
+                  }`}
+                >
+                  {actionLoading.abstain ? "⏳" : executionStatus.abstained ? "✖️" : "🚫"}{" "}
+                  {actionLoading.abstain
+                    ? "Recording..."
+                    : executionStatus.abstained
+                      ? "Cancel"
+                      : "Abstain"}
                 </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

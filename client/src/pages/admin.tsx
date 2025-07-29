@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Pulse, Member, MemberType } from "@shared/schema";
+import type { Pulse, PulseType, Member, MemberType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Button } from "@/components/ui/button";
@@ -26,16 +26,22 @@ export default function AdminPage() {
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
-    farcasterUrl: "",
-    date: "",
+    urlEmbed: "",
+    datetimeStart: "",
+    interval: 24,
     description: "",
+    points: 1,
+    pulseTypeId: 1, // Default to first pulse type
   });
 
   const [editingPulse, setEditingPulse] = useState<number | null>(null);
   const [editData, setEditData] = useState({
-    farcasterUrl: "",
-    date: "",
+    urlEmbed: "",
+    datetimeStart: "",
+    interval: 24,
     description: "",
+    points: 1,
+    pulseTypeId: 1,
   });
 
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -62,6 +68,13 @@ export default function AdminPage() {
     pending: { label: 'Pending', color: 'bg-gray-100 text-gray-800' }
   };
 
+  // Fetch pulse types
+  const { data: pulseTypesData, isLoading: pulseTypesLoading } = useQuery({
+    queryKey: ["/api/pulse-types"],
+    queryFn: () => authenticatedGet("/api/pulse-types", profile?.fid),
+    enabled: Boolean(isAuthenticated && isAdmin && profile?.fid),
+  });
+
   // Fetch all pulses - must be called before any returns
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
@@ -78,12 +91,12 @@ export default function AdminPage() {
 
   // All mutations must also be declared before returns
   const createPulseMutation = useMutation({
-    mutationFn: async (pulse: { farcasterUrl: string; date: string; description: string }) => {
+    mutationFn: async (pulse: { urlEmbed: string; datetimeStart: string; interval: number; description: string; points: number; pulseTypeId: number }) => {
       return authenticatedPost("/api/pulses", pulse, profile?.fid);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
-      setNewPulse({ farcasterUrl: "", date: "", description: "" });
+      setNewPulse({ urlEmbed: "", datetimeStart: "", interval: 24, description: "", points: 1, pulseTypeId: 1 });
       toast({ title: "Success", description: "Pulse created successfully" });
     },
     onError: (error: Error) => {
@@ -92,7 +105,7 @@ export default function AdminPage() {
   });
 
   const updatePulseMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: { farcasterUrl: string; date: string; description: string } }) => {
+    mutationFn: async ({ id, data }: { id: number; data: { urlEmbed: string; datetimeStart: string; interval: number; description: string; points: number; pulseTypeId: number } }) => {
       return authenticatedPatch(`/api/pulses/${id}`, data, profile?.fid);
     },
     onSuccess: () => {
@@ -185,15 +198,33 @@ export default function AdminPage() {
   const handleEditStart = (pulse: Pulse) => {
     setEditingPulse(pulse.id);
     setEditData({
-      farcasterUrl: pulse.farcasterUrl,
-      date: pulse.date,
+      urlEmbed: (pulse as any).urlEmbed,
+      datetimeStart: new Date((pulse as any).datetimeStart).toISOString().slice(0, 16), // Format for datetime-local input
+      interval: (pulse as any).interval || 24,
       description: pulse.description,
+      points: pulse.points || 1,
+      pulseTypeId: (pulse as any).pulseTypeId || 1,
     });
   };
 
   const isFuturePulse = (pulse: Pulse) => {
-    const today = new Date().toISOString().split('T')[0];
-    return pulse.date > today;
+    const now = new Date();
+    const pulseStart = new Date((pulse as any).datetimeStart);
+    return pulseStart > now;
+  };
+
+  const isPulseActive = (pulse: Pulse) => {
+    const now = new Date();
+    const pulseStart = new Date((pulse as any).datetimeStart);
+    const pulseEnd = new Date(pulseStart.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
+    return now >= pulseStart && now <= pulseEnd;
+  };
+
+  const isPulseEnded = (pulse: Pulse) => {
+    const now = new Date();
+    const pulseStart = new Date((pulse as any).datetimeStart);
+    const pulseEnd = new Date(pulseStart.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
+    return now > pulseEnd;
   };
 
   return (
@@ -253,23 +284,54 @@ export default function AdminPage() {
           }} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Farcaster URL
+                Pulse Type
+              </label>
+              <Select value={newPulse.pulseTypeId.toString()} onValueChange={(value) => setNewPulse({ ...newPulse, pulseTypeId: parseInt(value) })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select pulse type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(pulseTypesData as any)?.pulseTypes?.map((type: PulseType) => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                URL Embed
               </label>
               <Input
-                value={newPulse.farcasterUrl}
-                onChange={(e) => setNewPulse({ ...newPulse, farcasterUrl: e.target.value })}
+                value={newPulse.urlEmbed}
+                onChange={(e) => setNewPulse({ ...newPulse, urlEmbed: e.target.value })}
                 placeholder="https://warpcast.com/username/0x123..."
                 required
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date
+                Start Date & Time
               </label>
               <Input
-                type="date"
-                value={newPulse.date}
-                onChange={(e) => setNewPulse({ ...newPulse, date: e.target.value })}
+                type="datetime-local"
+                value={newPulse.datetimeStart}
+                onChange={(e) => setNewPulse({ ...newPulse, datetimeStart: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Duration (hours)
+              </label>
+              <Input
+                type="number"
+                min="1"
+                max="8760"
+                value={newPulse.interval}
+                onChange={(e) => setNewPulse({ ...newPulse, interval: parseInt(e.target.value) || 24 })}
+                placeholder="Duration in hours"
                 required
               />
             </div>
@@ -281,6 +343,20 @@ export default function AdminPage() {
                 value={newPulse.description}
                 onChange={(e) => setNewPulse({ ...newPulse, description: e.target.value })}
                 placeholder="Describe the pulse activity..."
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Points
+              </label>
+              <Input
+                type="number"
+                min="1"
+                max="1000"
+                value={newPulse.points}
+                onChange={(e) => setNewPulse({ ...newPulse, points: parseInt(e.target.value) || 1 })}
+                placeholder="Points awarded for completing this pulse"
                 required
               />
             </div>
@@ -311,34 +387,64 @@ export default function AdminPage() {
               {(pulsesData as any)?.pulses?.map((pulse: Pulse) => {
                 const isEditing = editingPulse === pulse.id;
                 const canEdit = isFuturePulse(pulse);
-                const today = new Date().toISOString().split('T')[0];
-                const isPast = pulse.date < today;
-                const isToday = pulse.date === today;
+                const isActive = isPulseActive(pulse);
+                const hasEnded = isPulseEnded(pulse);
+                const isFuture = isFuturePulse(pulse);
                 
                 return (
                   <div key={pulse.id} className={`border rounded-lg p-4 ${
-                    isToday
+                    isActive
                       ? "border-green-300 bg-green-50"
-                      : isPast
+                      : hasEnded
                         ? "border-gray-200 bg-gray-50"
-                        : "border-blue-200 bg-blue-50"
+                        : isFuture
+                          ? "border-blue-200 bg-blue-50"
+                          : "border-yellow-200 bg-yellow-50"
                   }`}>
                     {isEditing ? (
                       <div className="space-y-3">
+                        <Select value={editData.pulseTypeId.toString()} onValueChange={(value) => setEditData({ ...editData, pulseTypeId: parseInt(value) })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select pulse type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(pulseTypesData as any)?.pulseTypes?.map((type: PulseType) => (
+                              <SelectItem key={type.id} value={type.id.toString()}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Input
-                          value={editData.farcasterUrl}
-                          onChange={(e) => setEditData({ ...editData, farcasterUrl: e.target.value })}
-                          placeholder="Farcaster URL"
+                          value={editData.urlEmbed}
+                          onChange={(e) => setEditData({ ...editData, urlEmbed: e.target.value })}
+                          placeholder="URL Embed"
                         />
                         <Input
-                          type="date"
-                          value={editData.date}
-                          onChange={(e) => setEditData({ ...editData, date: e.target.value })}
+                          type="datetime-local"
+                          value={editData.datetimeStart}
+                          onChange={(e) => setEditData({ ...editData, datetimeStart: e.target.value })}
+                        />
+                        <Input
+                          type="number"
+                          min="1"
+                          max="8760"
+                          value={editData.interval}
+                          onChange={(e) => setEditData({ ...editData, interval: parseInt(e.target.value) || 24 })}
+                          placeholder="Duration (hours)"
                         />
                         <Textarea
                           value={editData.description}
                           onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                           placeholder="Description"
+                        />
+                        <Input
+                          type="number"
+                          min="1"
+                          max="1000"
+                          value={editData.points}
+                          onChange={(e) => setEditData({ ...editData, points: parseInt(e.target.value) || 1 })}
+                          placeholder="Points"
                         />
                         <div className="flex space-x-2">
                           <Button
@@ -364,9 +470,23 @@ export default function AdminPage() {
                     ) : (
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <h3 className="font-semibold">{pulse.date}</h3>
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold">
+                              {new Date((pulse as any).datetimeStart).toLocaleString()}
+                            </h3>
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              isActive ? 'bg-green-100 text-green-800' :
+                              hasEnded ? 'bg-gray-100 text-gray-800' :
+                              isFuture ? 'bg-blue-100 text-blue-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {isActive ? 'Active' : hasEnded ? 'Ended' : isFuture ? 'Scheduled' : 'Unknown'}
+                            </span>
+                          </div>
                           <p className="text-gray-600 mb-2">{pulse.description}</p>
-                          <p className="text-sm text-blue-600 break-all">{pulse.farcasterUrl}</p>
+                          <p className="text-sm text-green-600 mb-1">Points: {pulse.points || 1}</p>
+                          <p className="text-sm text-purple-600 mb-2">Duration: {(pulse as any).interval || 24} hours</p>
+                          <p className="text-sm text-blue-600 break-all">{(pulse as any).urlEmbed}</p>
                         </div>
                         <div className="ml-4">
                           {canEdit && (

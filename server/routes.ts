@@ -9,6 +9,7 @@ import { storage } from "./storage";
 import {
   insertPulseSchema,
   updatePulseSchema,
+  insertPulseTypeSchema,
   insertMemberSchema,
   insertPulseExecutionSchema,
   applicationSchema,
@@ -58,7 +59,6 @@ import {
   sanitizeRequestBody,
   securityHeaders,
   memberRegistrationSchema,
-  pulseCreationSchema,
   usernameClaimSchema,
   verificationCodeSchema
 } from "./middleware/validation";
@@ -708,14 +708,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { identifier, viewerFid } = req.params;
       const type = (req.query.type as CastParam) ?? "url";
 
-      const out = await neynar.lookupCastByHashOrWarpcastUrl({
-        identifier,
+      // Add detailed logging for debugging
+      logger.debug("Cast lookup request", { 
+        identifier, 
+        viewerFid, 
         type,
-        viewerFid: Number(viewerFid),
+        decodedIdentifier: decodeURIComponent(identifier)
+      });
+
+      // Validate inputs
+      if (!identifier || !viewerFid) {
+        logger.warn("Invalid cast lookup parameters", { identifier, viewerFid });
+        return res.status(400).json({ 
+          error: "Missing required parameters: identifier and viewerFid" 
+        });
+      }
+
+      // Validate viewerFid is numeric
+      const numericViewerFid = Number(viewerFid);
+      if (isNaN(numericViewerFid) || numericViewerFid <= 0) {
+        logger.warn("Invalid viewerFid format", { viewerFid });
+        return res.status(400).json({ 
+          error: "viewerFid must be a positive number" 
+        });
+      }
+
+      // Decode the identifier in case it's URL encoded
+      const decodedIdentifier = decodeURIComponent(identifier);
+
+      const out = await neynar.lookupCastByHashOrWarpcastUrl({
+        identifier: decodedIdentifier,
+        type,
+        viewerFid: numericViewerFid,
+      });
+
+      logger.debug("Cast lookup successful", { 
+        identifier: decodedIdentifier, 
+        viewerFid: numericViewerFid,
+        castHash: out.cast?.hash 
       });
 
       res.json(out);
     } catch (e) {
+      logger.error("Cast lookup error", { 
+        identifier: req.params.identifier,
+        viewerFid: req.params.viewerFid,
+        type: req.query.type,
+        error: (e as Error).message,
+        stack: (e as Error).stack,
+        neynarError: isApiErrorResponse(e) ? e.response.data : null
+      });
+
       const msg = isApiErrorResponse(e)
         ? e.response.data
         : (e as Error).message;
@@ -727,11 +770,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /* 6️⃣  PULSE MANAGEMENT                                      */
   /* --------------------------------------------------------- */
 
-  // Get current pulse (today's date)
+  // Get active pulses (currently running based on datetime + interval)
+  app.get("/api/pulses/active", async (req, res) => {
+    try {
+      const pulses = await storage.getActivePulses();
+      res.json({ pulses });
+    } catch (err: any) {
+      console.error("Active pulses error:", err);
+      res
+        .status(500)
+        .json({ error: err.message || "Failed to get active pulses" });
+    }
+  });
+
+  // Get current pulse (for backwards compatibility - returns first active pulse)
   app.get("/api/pulses/current", async (req, res) => {
     try {
-      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-      const pulse = await storage.getPulseByDate(today);
+      const activePulses = await storage.getActivePulses();
+      const pulse = activePulses.length > 0 ? activePulses[0] : null;
       res.json({ pulse });
     } catch (err: any) {
       console.error("Current pulse error:", err);
@@ -761,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const pulseData = {
         ...req.body,
-        createdBy: `admin-${req.user!.fid}`, // Admin FID identifier
+        createdBy: req.user!.id, // Use member ID instead of FID
       };
       const validatedData = insertPulseSchema.parse(pulseData);
       const pulse = await storage.createPulse(validatedData);
@@ -790,6 +846,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       console.error("Update pulse error:", err);
       res.status(500).json({ error: err.message || "Failed to update pulse" });
+    }
+  });
+
+  // Pulse Types API routes
+  
+  // Get all pulse types
+  app.get("/api/pulse-types", async (req, res) => {
+    try {
+      const pulseTypes = await storage.getAllPulseTypes();
+      res.json({ pulseTypes });
+    } catch (err: any) {
+      console.error("Get pulse types error:", err);
+      res.status(500).json({ error: err.message || "Failed to get pulse types" });
+    }
+  });
+
+  // Create new pulse type (admin only)
+  app.post("/api/pulse-types", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("CREATE_PULSE_TYPE"),
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const validatedData = insertPulseTypeSchema.parse(req.body);
+      const pulseType = await storage.createPulseType(validatedData);
+      res.json({ success: true, pulseType });
+    } catch (err: any) {
+      console.error("Create pulse type error:", err);
+      res.status(500).json({ error: err.message || "Failed to create pulse type" });
+    }
+  });
+
+  // Get attestation status for a pulse execution
+  app.get("/api/attestations/:pulseExecutionId", 
+    authenticateUser,
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const pulseExecutionId = parseInt(req.params.pulseExecutionId);
+      if (isNaN(pulseExecutionId)) {
+        return res.status(400).json({ error: "Invalid pulse execution ID" });
+      }
+
+      // First, verify that the pulse execution belongs to the authenticated user
+      const isOwner = await storage.verifyPulseExecutionOwnership(pulseExecutionId, req.user!.id);
+      
+      if (!isOwner) {
+        return res.status(403).json({ 
+          error: "Access denied. You can only view attestations for your own pulse executions." 
+        });
+      }
+
+      const attestation = await storage.getAttestation(pulseExecutionId);
+      
+      if (!attestation) {
+        return res.json({ 
+          exists: false, 
+          status: 'not_created',
+          message: 'No attestation found for this pulse execution'
+        });
+      }
+
+      res.json({
+        exists: true,
+        status: attestation.status,
+        attestationUid: attestation.attestationUid,
+        transactionHash: attestation.transactionHash,
+        createdAt: attestation.createdAt
+      });
+    } catch (err: any) {
+      console.error("Get attestation error:", err);
+      res.status(500).json({ error: err.message || "Failed to get attestation status" });
+    }
+  });
+
+  // Get all pending attestations (admin only)
+  app.get("/api/attestations", 
+    authenticateUser, 
+    requireAdmin,
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const pendingAttestations = await storage.getPendingAttestations();
+      res.json({ 
+        count: pendingAttestations.length,
+        attestations: pendingAttestations
+      });
+    } catch (err: any) {
+      console.error("Get pending attestations error:", err);
+      res.status(500).json({ error: err.message || "Failed to get pending attestations" });
     }
   });
 
@@ -834,7 +978,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     authenticateUser,
     validateRequest(z.object({
       pulseId: z.number().int().positive(),
-      actionType: z.string().min(1)
+      actions: z.object({
+        liked: z.boolean(),
+        shared: z.boolean(),
+        abstained: z.boolean(),
+      })
     })),
     async (req: AuthenticatedRequest, res) => {
       try {
@@ -843,19 +991,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           body: req.body 
         });
         
-        const { pulseId, actionType } = req.body;
+        const { pulseId, actions } = req.body;
         
-        // Use the memberId from the authenticated user
-        const executionData = {
-          pulseId,
-          memberId: req.user!.id, // Get memberId from authenticated user
-          actionType
-        };
+        // Check if execution already exists
+        const existingExecution = await storage.getPulseExecution(pulseId, req.user!.id);
         
-        const execution = await storage.createPulseExecution(executionData);
-        res.json({ success: true, execution });
+        if (existingExecution) {
+          // Check if all actions are false (canceling abstain)
+          if (!actions.liked && !actions.shared && !actions.abstained) {
+            // Delete the execution entirely when canceling abstain
+            await storage.deletePulseExecution(existingExecution.id);
+            res.json({ success: true, execution: null, deleted: true });
+          } else {
+            // Update existing execution
+            const execution = await storage.updatePulseExecution(existingExecution.id, actions);
+            res.json({ success: true, execution, updated: true });
+          }
+        } else {
+          // Create new execution - validate that at least one action is true for new executions
+          if (!actions.liked && !actions.shared && !actions.abstained) {
+            return res.status(400).json({ 
+              error: "Validation failed", 
+              message: "At least one action must be taken when creating a new execution" 
+            });
+          }
+          
+          const executionData = {
+            pulseId,
+            memberId: req.user!.id,
+            actions
+          };
+          
+          const execution = await storage.createPulseExecution(executionData);
+          res.json({ success: true, execution, updated: false });
+        }
       } catch (err: any) {
-        console.error("Create execution error:", err);
+        console.error("Create/update execution error:", err);
         res
           .status(500)
           .json({ error: err.message || "Failed to record execution" });

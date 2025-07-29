@@ -11,6 +11,7 @@ import { randomBytes } from 'crypto';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { config } from 'dotenv';
+import logger from '../logger';
 
 // Load environment variables from .env file
 config();
@@ -20,6 +21,7 @@ config();
  */
 const VARIABLES_TO_MIGRATE = {
   'farcaster_developer_mnemonic': 'FARCASTER_DEVELOPER_MNEMONIC',
+  'eas_attestation_mnemonic': 'EAS_ATTESTATION_MNEMONIC',
   'neynar_api_key': 'NEYNAR_API_KEY',
   'justaname_api_key': 'JUSTANAME_API_KEY',
   'resend_api_key': 'RESEND_API_KEY',
@@ -62,21 +64,25 @@ function loadMasterPassword(): string | null {
  */
 async function main() {
   console.log('🔐 Starting secure key migration for Ipê City Pulse...\n');
+  logger.info('Starting key migration process');
 
   try {
     // Check if master password exists, generate if not
     let masterPassword = loadMasterPassword();
     if (!masterPassword) {
       console.log('Generating new master password...');
+      logger.info('Generating new master password for key encryption');
       masterPassword = generateMasterPassword();
       storeMasterPassword(masterPassword);
     } else {
       console.log('Using existing master password...');
+      logger.info('Using existing master password');
     }
 
     // Initialize the key manager
     const keyManager = initializeKeyManager(masterPassword);
     console.log('✅ Key manager initialized successfully\n');
+    logger.info('Key manager initialized successfully');
 
     // Migrate environment variables to secure storage
     console.log('Migrating environment variables to secure storage...');
@@ -87,6 +93,7 @@ async function main() {
     });
     await migrateEnvironmentVariablesToSecureStorage(VARIABLES_TO_MIGRATE);
     console.log('✅ Environment variables migrated successfully\n');
+    logger.info('Environment variables migrated to secure storage');
 
     // List all stored keys for verification
     const storedKeys = await keyManager.listKeys();
@@ -112,6 +119,11 @@ async function main() {
     }
 
     console.log('\n🎉 Key migration completed successfully!');
+    logger.info('Key migration completed successfully', { 
+      migratedKeys: storedKeys.length,
+      keyNames: storedKeys 
+    });
+    
     console.log('\n📝 Next steps:');
     console.log('1. Update your application code to use getSecureEnvironmentVariable()');
     console.log('2. Remove sensitive variables from .env file');
@@ -119,6 +131,10 @@ async function main() {
     console.log('4. In production, use a proper key management service');
 
   } catch (error) {
+    logger.error('Key migration failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     console.error('❌ Key migration failed:', error);
     process.exit(1);
   }

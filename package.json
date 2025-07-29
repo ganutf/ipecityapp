@@ -14,10 +14,16 @@
     "admin:list": "tsx server/scripts/list-admins.ts",
     "keys:migrate": "tsx server/scripts/migrate-keys.ts",
     "member:delete": "tsx server/scripts/delete-member.ts",
+    "attestations:create": "tsx server/scripts/create-attestations.ts",
+    "wallet:attestation": "tsx server/scripts/get-attestation-wallet.ts",
+    "migrate:pulse-structure": "tsx server/scripts/migrate-pulse-structure.ts",
+    "rollback:pulse-structure": "tsx server/scripts/rollback-pulse-migration.ts",
+    "populate:pulse-types": "tsx server/scripts/populate-pulse-types.ts",
     "production:check": "bash scripts/production-check.sh",
     "production:deploy": "npm run production:check && npm run build && npm run start"
   },
   "dependencies": {
+    "@ethereum-attestation-service/eas-sdk": "^2.7.0",
     "@ethereumjs/util": "^10.0.0",
     "@farcaster/auth-kit": "^0.8.1",
     "@farcaster/hub-nodejs": "^0.15.0",

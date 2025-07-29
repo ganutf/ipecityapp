@@ -240,14 +240,8 @@ export const memberRegistrationSchema = z.object({
   profileTags: z.array(z.string().max(50)).max(10).optional()
 });
 
-// Pulse creation validation
-export const pulseCreationSchema = z.object({
-  farcasterUrl: urlSchema.refine(val => {
-    return val.includes('warpcast.com') || val.includes('farcaster.xyz');
-  }, "Must be a valid Farcaster URL"),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
-  description: z.string().min(1).max(500, "Description too long")
-});
+// Note: Pulse creation validation moved to shared/schema.ts
+// Using insertPulseSchema and insertPulseTypeSchema from shared schema
 
 // Username claim validation
 export const usernameClaimSchema = z.object({

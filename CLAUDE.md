@@ -21,6 +21,11 @@ npm run db:push  # Push schema changes to database
 npm run check    # Run TypeScript type checking
 ```
 
+### Wallet Management
+```bash
+npm run wallet:attestation  # Get EAS attestation wallet address for funding
+```
+
 ## Architecture Overview
 
 ### Tech Stack
@@ -88,6 +93,7 @@ Required for development:
 - `NEYNAR_API_KEY`: Neynar API key
 - `JUSTANAME_API_KEY`: JustaName API key
 - `FARCASTER_DEVELOPER_MNEMONIC`: Developer mnemonic for sponsored signers
+- `EAS_ATTESTATION_MNEMONIC`: Separate wallet mnemonic for EAS attestations
 - `SESSION_SECRET`: Session encryption secret
 
 ### Admin System
@@ -135,7 +141,20 @@ const userResponse = await neynar.fetchBulkUsers({ fids: [farcasterFid] });
 ## Important Notes
 
 - The system uses sponsored signers for Farcaster interactions
+- EAS attestations use a separate wallet from Farcaster operations for security isolation
 - ENS subdomain management is primarily client-side via JustaName SDK
 - Member status progression is strictly enforced through database constraints
 - All sensitive operations require proper authentication and authorization checks
 - The application supports both EOA and smart contract wallets for ENS verification
+
+## Wallet Separation
+
+The system uses two separate wallets for different purposes:
+
+1. **Farcaster Developer Wallet** (`FARCASTER_DEVELOPER_MNEMONIC`): Used for sponsoring Farcaster signers
+2. **EAS Attestation Wallet** (`EAS_ATTESTATION_MNEMONIC`): Used exclusively for creating EAS attestations
+
+To get the address for funding the attestation wallet:
+```bash
+npm run wallet:attestation
+```

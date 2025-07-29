@@ -1,7 +1,9 @@
 import { 
   members, 
   pulses, 
+  pulseTypes,
   pulseExecutions,
+  attestations,
   userSigners,
   emailVerifications,
   passportVerifications,
@@ -13,18 +15,23 @@ import {
   type InsertEmailVerification,
   type PassportVerification,
   type InsertPassportVerification,
+  type PulseType,
+  type InsertPulseType,
   type Pulse,
   type InsertPulse,
   type UpdatePulse,
   type PulseExecution,
   type InsertPulseExecution,
+  type PulseExecutionActions,
+  type Attestation,
+  type InsertAttestation,
   type UserSigner,
   type InsertUserSigner,
   type EmailVerificationRequest,
   type ApplicationByMemberId,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, or, desc, asc, isNull, isNotNull, inArray, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Members - Primary methods using memberId
@@ -77,21 +84,37 @@ export interface IStorage {
   getPassportVerification(token: string): Promise<PassportVerification | undefined>;
   markPassportVerified(token: string): Promise<PassportVerification | undefined>;
   
+  // Pulse Types
+  getPulseType(id: number): Promise<PulseType | undefined>;
+  getAllPulseTypes(): Promise<PulseType[]>;
+  createPulseType(pulseType: InsertPulseType): Promise<PulseType>;
+  
   // Pulses
   getPulse(id: number): Promise<Pulse | undefined>;
-  getPulseByDate(date: string): Promise<Pulse | undefined>;
+  getPulseByDatetimeStart(datetimeStart: Date): Promise<Pulse | undefined>;
+  getPulsesByDateRange(startDate: Date, endDate: Date): Promise<Pulse[]>;
+  getActivePulses(): Promise<Pulse[]>; // Pulses currently active based on datetime + interval
   getAllPulses(): Promise<Pulse[]>;
   createPulse(pulse: InsertPulse): Promise<Pulse>;
   updatePulse(id: number, pulse: UpdatePulse): Promise<Pulse>;
   
   // Pulse Executions
-  getPulseExecution(pulseId: number, memberId: number, actionType: string): Promise<PulseExecution | undefined>;
+  getPulseExecution(pulseId: number, memberId: number): Promise<PulseExecution | undefined>;
   getMemberExecutions(memberId: number): Promise<PulseExecution[]>;
   createPulseExecution(execution: InsertPulseExecution): Promise<PulseExecution>;
+  updatePulseExecution(id: number, actions: PulseExecutionActions): Promise<PulseExecution>;
+  deletePulseExecution(id: number): Promise<void>;
   
   // Legacy pulse execution methods
-  getPulseExecutionByFarcasterFid(pulseId: number, memberFarcasterFid: number, actionType: string): Promise<PulseExecution | undefined>;
+  getPulseExecutionByFarcasterFid(pulseId: number, memberFarcasterFid: number): Promise<PulseExecution | undefined>;
   getMemberExecutionsByFarcasterFid(memberFarcasterFid: number): Promise<PulseExecution[]>;
+  
+  // Attestations
+  createAttestation(attestation: InsertAttestation): Promise<Attestation>;
+  getAttestation(pulseExecutionId: number): Promise<Attestation | undefined>;
+  getPendingAttestations(): Promise<{ execution: PulseExecution; member: Member; pulse: Pulse }[]>;
+  updateAttestationStatus(id: number, status: string, attestationUid?: string, transactionHash?: string): Promise<Attestation>;
+  verifyPulseExecutionOwnership(executionId: number, memberId: number): Promise<boolean>;
   
   // User Signers
   getUserSigner(memberId: number): Promise<UserSigner | undefined>;
@@ -433,19 +456,59 @@ export class DatabaseStorage implements IStorage {
     return verification;
   }
 
+  // Pulse Types
+  async getPulseType(id: number): Promise<PulseType | undefined> {
+    const [pulseType] = await db.select().from(pulseTypes).where(eq(pulseTypes.id, id));
+    return pulseType;
+  }
+
+  async getAllPulseTypes(): Promise<PulseType[]> {
+    return await db.select().from(pulseTypes).orderBy(asc(pulseTypes.name));
+  }
+
+  async createPulseType(pulseTypeData: InsertPulseType): Promise<PulseType> {
+    const [pulseType] = await db.insert(pulseTypes).values(pulseTypeData).returning();
+    return pulseType;
+  }
+
   // Pulses
   async getPulse(id: number): Promise<Pulse | undefined> {
     const [pulse] = await db.select().from(pulses).where(eq(pulses.id, id));
     return pulse;
   }
 
-  async getPulseByDate(date: string): Promise<Pulse | undefined> {
-    const [pulse] = await db.select().from(pulses).where(eq(pulses.date, date));
+  async getPulseByDatetimeStart(datetimeStart: Date): Promise<Pulse | undefined> {
+    const [pulse] = await db.select().from(pulses).where(eq(pulses.datetimeStart, datetimeStart));
     return pulse;
   }
 
+  async getPulsesByDateRange(startDate: Date, endDate: Date): Promise<Pulse[]> {
+    return await db
+      .select()
+      .from(pulses)
+      .where(and(
+        sql`${pulses.datetimeStart} >= ${startDate}`,
+        sql`${pulses.datetimeStart} <= ${endDate}`
+      ))
+      .orderBy(desc(pulses.datetimeStart));
+  }
+
+  async getActivePulses(): Promise<Pulse[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(pulses)
+      .where(
+        and(
+          sql`${pulses.datetimeStart} <= ${now}`,
+          sql`${pulses.datetimeStart} + INTERVAL '1 hour' * ${pulses.interval} >= ${now}`
+        )
+      )
+      .orderBy(desc(pulses.datetimeStart));
+  }
+
   async getAllPulses(): Promise<Pulse[]> {
-    return await db.select().from(pulses).orderBy(desc(pulses.date));
+    return await db.select().from(pulses).orderBy(desc(pulses.datetimeStart));
   }
 
   async createPulse(pulseData: InsertPulse): Promise<Pulse> {
@@ -463,24 +526,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Pulse Executions
-  async getPulseExecution(pulseId: number, memberId: number, actionType: string): Promise<PulseExecution | undefined> {
+  async getPulseExecution(pulseId: number, memberId: number): Promise<PulseExecution | undefined> {
     const [execution] = await db
       .select()
       .from(pulseExecutions)
       .where(and(
         eq(pulseExecutions.pulseId, pulseId),
-        eq(pulseExecutions.memberId, memberId),
-        eq(pulseExecutions.actionType, actionType)
+        eq(pulseExecutions.memberId, memberId)
       ));
     return execution;
   }
   
-  async getPulseExecutionByFarcasterFid(pulseId: number, memberFarcasterFid: number, actionType: string): Promise<PulseExecution | undefined> {
+  async getPulseExecutionByFarcasterFid(pulseId: number, memberFarcasterFid: number): Promise<PulseExecution | undefined> {
     const memberId = await this.getMemberIdFromFarcasterFid(memberFarcasterFid);
     if (!memberId) {
       return undefined;
     }
-    return this.getPulseExecution(pulseId, memberId, actionType);
+    return this.getPulseExecution(pulseId, memberId);
   }
 
   async getMemberExecutions(memberId: number): Promise<PulseExecution[]> {
@@ -502,6 +564,19 @@ export class DatabaseStorage implements IStorage {
   async createPulseExecution(executionData: InsertPulseExecution): Promise<PulseExecution> {
     const [execution] = await db.insert(pulseExecutions).values(executionData).returning();
     return execution;
+  }
+
+  async updatePulseExecution(id: number, actions: PulseExecutionActions): Promise<PulseExecution> {
+    const [execution] = await db
+      .update(pulseExecutions)
+      .set({ actions })
+      .where(eq(pulseExecutions.id, id))
+      .returning();
+    return execution;
+  }
+
+  async deletePulseExecution(id: number): Promise<void> {
+    await db.delete(pulseExecutions).where(eq(pulseExecutions.id, id));
   }
 
   // User Signers
@@ -556,6 +631,79 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
     }
     return this.deleteUserSigner(memberId);
+  }
+
+  // Attestations
+  async createAttestation(attestationData: InsertAttestation): Promise<Attestation> {
+    const [attestation] = await db.insert(attestations).values(attestationData).returning();
+    return attestation;
+  }
+
+  async getAttestation(pulseExecutionId: number): Promise<Attestation | undefined> {
+    const [attestation] = await db.select().from(attestations).where(eq(attestations.pulseExecutionId, pulseExecutionId));
+    return attestation;
+  }
+
+  async getPendingAttestations(): Promise<{ execution: PulseExecution; member: Member; pulse: Pulse }[]> {
+    // Query pulse executions that need attestations (no record OR pending/failed status)
+    const results = await db
+      .select({
+        execution: pulseExecutions,
+        member: members,
+        pulse: pulses,
+      })
+      .from(pulseExecutions)
+      .leftJoin(attestations, eq(pulseExecutions.id, attestations.pulseExecutionId))
+      .innerJoin(members, eq(pulseExecutions.memberId, members.id))
+      .innerJoin(pulses, eq(pulseExecutions.pulseId, pulses.id))
+      .where(
+        and(
+          // No attestation exists OR attestation is pending/failed
+          or(
+            isNull(attestations.id), // No attestation record
+            inArray(attestations.status, ['pending', 'failed']) // Pending or failed attestations
+          ),
+          eq(members.status, 'active_member'), // Only active members
+          eq(members.passportVerified, true), // Only verified passport holders
+          isNotNull(members.ipePassport), // Must have verified passport
+          isNotNull(members.walletAddress), // Must have wallet address for recipient
+          // Only include pulses where interval window has closed
+          sql`${pulses.datetimeStart} + INTERVAL '1 hour' * ${pulses.interval} < NOW()` // Pulse window has closed
+        )
+      );
+
+    return results;
+  }
+
+  async updateAttestationStatus(
+    id: number, 
+    status: string, 
+    attestationUid?: string, 
+    transactionHash?: string
+  ): Promise<Attestation> {
+    const updateData: any = { status };
+    if (attestationUid) updateData.attestationUid = attestationUid;
+    if (transactionHash) updateData.transactionHash = transactionHash;
+
+    const [attestation] = await db
+      .update(attestations)
+      .set(updateData)
+      .where(eq(attestations.id, id))
+      .returning();
+    return attestation;
+  }
+
+  async verifyPulseExecutionOwnership(executionId: number, memberId: number): Promise<boolean> {
+    const [execution] = await db
+      .select()
+      .from(pulseExecutions)
+      .where(
+        and(
+          eq(pulseExecutions.id, executionId),
+          eq(pulseExecutions.memberId, memberId)
+        )
+      );
+    return !!execution;
   }
 }
 

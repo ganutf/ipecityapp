@@ -9,6 +9,7 @@ import {
   integer,
   date,
   boolean,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -74,23 +75,47 @@ export const members = pgTable("members", {
   updatedAt: timestamp("updated_at"),
 });
 
+// Pulse types table - defines different types of pulses
+export const pulseTypes = pgTable("pulse_types", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Pulses table - admin-created engagement tasks
 export const pulses = pgTable("pulses", {
   id: serial("id").primaryKey(),
-  farcasterUrl: text("farcaster_url").notNull(),
-  date: date("date").notNull(),
+  urlEmbed: text("url_embed").notNull(), // renamed from farcasterUrl
+  datetimeStart: timestamp("datetime_start").notNull(), // changed from date to datetime
+  interval: integer("interval").notNull(), // interval in hours
   description: text("description").notNull(),
-  createdBy: varchar("created_by").notNull(), // admin farcaster username
+  points: integer("points").notNull(), // points awarded for completing this pulse
+  pulseTypeId: integer("pulse_type_id").references(() => pulseTypes.id).notNull(),
+  createdBy: integer("created_by").references(() => members.id).notNull(), // changed to member ID
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Pulse executions - tracking member interactions
 export const pulseExecutions = pgTable("pulse_executions", {
   id: serial("id").primaryKey(),
-  pulseId: integer("pulse_id").notNull(),
+  pulseId: integer("pulse_id").references(() => pulses.id).notNull(),
   memberId: integer("member_id").references(() => members.id).notNull(),
-  actionType: varchar("action_type").notNull(), // 'like' | 'recast'
+  actions: jsonb("actions").notNull(), // JSON: {liked: boolean, shared: boolean, abstained: boolean}
   executedAt: timestamp("executed_at").defaultNow(),
+}, (table) => [
+  // Unique constraint: only one execution per member per pulse
+  unique("pulse_executions_unique_member_pulse").on(table.pulseId, table.memberId),
+]);
+
+// Attestations - EAS attestations for pulse completions
+export const attestations = pgTable("attestations", {
+  id: serial("id").primaryKey(),
+  pulseExecutionId: integer("pulse_execution_id").references(() => pulseExecutions.id).notNull().unique(), // Prevent duplicates
+  attestationUid: varchar("attestation_uid", { length: 255 }), // Nullable for pending status
+  transactionHash: varchar("transaction_hash", { length: 255 }), // Nullable for pending status
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending' | 'completed' | 'failed'
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // User signers - individual Farcaster signers per user
@@ -109,13 +134,27 @@ export const userSigners = pgTable("user_signers", {
 // Relations
 export const membersRelations = relations(members, ({ many }) => ({
   pulseExecutions: many(pulseExecutions),
+  createdPulses: many(pulses, { relationName: "PulseCreator" }),
 }));
 
-export const pulsesRelations = relations(pulses, ({ many }) => ({
+export const pulseTypesRelations = relations(pulseTypes, ({ many }) => ({
+  pulses: many(pulses),
+}));
+
+export const pulsesRelations = relations(pulses, ({ one, many }) => ({
   pulseExecutions: many(pulseExecutions),
+  pulseType: one(pulseTypes, {
+    fields: [pulses.pulseTypeId],
+    references: [pulseTypes.id],
+  }),
+  creator: one(members, {
+    fields: [pulses.createdBy],
+    references: [members.id],
+    relationName: "PulseCreator",
+  }),
 }));
 
-export const pulseExecutionsRelations = relations(pulseExecutions, ({ one }) => ({
+export const pulseExecutionsRelations = relations(pulseExecutions, ({ one, many }) => ({
   pulse: one(pulses, {
     fields: [pulseExecutions.pulseId],
     references: [pulses.id],
@@ -123,6 +162,14 @@ export const pulseExecutionsRelations = relations(pulseExecutions, ({ one }) => 
   member: one(members, {
     fields: [pulseExecutions.memberId],
     references: [members.id],
+  }),
+  attestations: many(attestations),
+}));
+
+export const attestationsRelations = relations(attestations, ({ one }) => ({
+  pulseExecution: one(pulseExecutions, {
+    fields: [attestations.pulseExecutionId],
+    references: [pulseExecutions.id],
   }),
 }));
 
@@ -297,31 +344,35 @@ export const emailVerificationRequestByMemberIdSchema = z.object({
   email: secureEmailSchema,
 });
 
-// Secure pulse URL validation
-export const secureFarcasterUrlSchema = z.string()
+// Secure URL validation for embeds
+export const secureUrlEmbedSchema = z.string()
   .url("Invalid URL format")
   .max(2048, "URL too long")
   .refine(val => {
     try {
       const url = new URL(val);
-      return ['warpcast.com', 'farcaster.xyz'].includes(url.hostname);
+      return ['warpcast.com', 'farcaster.xyz', 'x.com', 'twitter.com'].includes(url.hostname);
     } catch {
       return false;
     }
-  }, "Must be a valid Farcaster URL (warpcast.com or farcaster.xyz)")
+  }, "Must be a valid social media URL (warpcast.com, farcaster.xyz, x.com, or twitter.com)")
   .refine(val => !val.includes('<script'), "URL contains invalid content");
 
-export const secureDateSchema = z.string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+export const secureDatetimeSchema = z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Datetime must be in YYYY-MM-DDTHH:MM format")
+  .transform(val => new Date(val)) // Transform string to Date
   .refine(val => {
-    const inputDate = new Date(val + 'T00:00:00.000Z'); // Parse as UTC midnight
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0); // Set to UTC midnight for fair comparison
-    const oneYearFromToday = new Date(today);
-    oneYearFromToday.setUTCFullYear(today.getUTCFullYear() + 1);
+    const now = new Date();
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(now.getFullYear() + 1);
     
-    return inputDate >= today && inputDate <= oneYearFromToday;
-  }, "Date must be between today and one year from now");
+    return val >= now && val <= oneYearFromNow;
+  }, "Datetime must be between now and one year from now");
+
+export const secureIntervalSchema = z.number()
+  .int("Interval must be an integer")
+  .min(1, "Interval must be at least 1 hour")
+  .max(8760, "Interval cannot exceed 1 year (8760 hours)");
 
 export const secureDescriptionSchema = z.string()
   .min(1, "Description cannot be empty")
@@ -354,23 +405,39 @@ export const insertPassportVerificationSchema = createInsertSchema(passportVerif
   verificationToken: z.string().min(32, "Invalid verification token"),
 });
 
+// Pulse type schemas
+export const insertPulseTypeSchema = createInsertSchema(pulseTypes).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  name: z.string().min(1, "Name cannot be empty").max(100, "Name too long"),
+  description: secureDescriptionSchema,
+});
+
 export const insertPulseSchema = createInsertSchema(pulses).omit({
   id: true,
   createdAt: true,
 }).extend({
-  farcasterUrl: secureFarcasterUrlSchema,
-  date: secureDateSchema,
+  urlEmbed: secureUrlEmbedSchema,
+  datetimeStart: secureDatetimeSchema,
+  interval: secureIntervalSchema,
   description: secureDescriptionSchema,
-  createdBy: z.string().max(50, "Creator name too long"),
+  points: z.number().int().positive().max(1000, "Points must be between 1 and 1000"),
+  pulseTypeId: z.number().int().positive(),
+  createdBy: z.number().int().positive(),
 });
 
 export const updatePulseSchema = createInsertSchema(pulses).omit({
   id: true,
   createdAt: true,
+  createdBy: true, // Don't allow changing creator
 }).extend({
-  farcasterUrl: secureFarcasterUrlSchema.optional(),
-  date: secureDateSchema.optional(),
+  urlEmbed: secureUrlEmbedSchema.optional(),
+  datetimeStart: secureDatetimeSchema.optional(),
+  interval: secureIntervalSchema.optional(),
   description: secureDescriptionSchema.optional(),
+  points: z.number().int().positive().max(1000, "Points must be between 1 and 1000").optional(),
+  pulseTypeId: z.number().int().positive().optional(),
 }).partial();
 
 // Verification code validation
@@ -399,11 +466,20 @@ export const usernameClaimByMemberIdSchema = z.object({
   walletAddress: secureWalletAddressSchema
 });
 
+// Actions schema for pulse executions
+export const pulseExecutionActionsSchema = z.object({
+  liked: z.boolean(),
+  shared: z.boolean(),
+  abstained: z.boolean(),
+});
+
 export const insertPulseExecutionSchema = createInsertSchema(pulseExecutions).omit({
   id: true,
   executedAt: true,
 }).extend({
   memberId: z.number().int().positive(),
+  pulseId: z.number().int().positive(),
+  actions: pulseExecutionActionsSchema,
 });
 
 export const insertUserSignerSchema = createInsertSchema(userSigners).omit({
@@ -412,6 +488,25 @@ export const insertUserSignerSchema = createInsertSchema(userSigners).omit({
 }).extend({
   memberId: z.number().int().positive(),
   farcasterFid: secureFidSchema,
+});
+
+export const insertAttestationSchema = createInsertSchema(attestations).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  pulseExecutionId: z.number().int().positive(),
+  attestationUid: z.string().min(1, "Attestation UID required").max(255, "Attestation UID too long").optional(),
+  transactionHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash").optional(),
+  status: z.enum(['pending', 'completed', 'failed']),
+}).refine((data) => {
+  // For completed status, both attestationUid and transactionHash are required
+  if (data.status === 'completed') {
+    return data.attestationUid && data.transactionHash;
+  }
+  // For pending/failed status, they can be optional
+  return true;
+}, {
+  message: "Attestation UID and transaction hash are required for completed status",
 });
 
 // Types
@@ -423,13 +518,18 @@ export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type InsertEmailVerification = z.infer<typeof insertEmailVerificationSchema>;
 export type PassportVerification = typeof passportVerifications.$inferSelect;
 export type InsertPassportVerification = z.infer<typeof insertPassportVerificationSchema>;
+export type PulseType = typeof pulseTypes.$inferSelect;
+export type InsertPulseType = z.infer<typeof insertPulseTypeSchema>;
 export type Pulse = typeof pulses.$inferSelect;
 export type InsertPulse = z.infer<typeof insertPulseSchema>;
 export type UpdatePulse = z.infer<typeof updatePulseSchema>;
 export type PulseExecution = typeof pulseExecutions.$inferSelect;
 export type InsertPulseExecution = z.infer<typeof insertPulseExecutionSchema>;
+export type PulseExecutionActions = z.infer<typeof pulseExecutionActionsSchema>;
 export type UserSigner = typeof userSigners.$inferSelect;
 export type InsertUserSigner = z.infer<typeof insertUserSignerSchema>;
+export type Attestation = typeof attestations.$inferSelect;
+export type InsertAttestation = z.infer<typeof insertAttestationSchema>;
 
 // Request types
 export type EmailVerificationRequest = z.infer<typeof emailVerificationRequestSchema>;

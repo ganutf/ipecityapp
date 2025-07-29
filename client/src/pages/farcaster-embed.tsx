@@ -5,6 +5,7 @@ import { SignInButton } from "@farcaster/auth-kit";
 import type { Pulse, Member } from "@shared/schema";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { authenticatedGet } from "@/lib/api";
+import { getEasScanUrl } from "@/lib/easUtils";
 
 // below your other imports / constants
 const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
@@ -73,14 +74,14 @@ export default function FarcasterEmbed() {
     refetchOnWindowFocus: false,
   });
 
-  // Get user's executions
+  // Get user's executions with detailed information including attestations
   const { data: executionsData, isLoading: executionsLoading, error: executionsError } = useQuery({
-    queryKey: [`/api/executions/by-fid/${viewerFid}`],
-    queryFn: () => authenticatedGet(`/api/executions/by-fid/${viewerFid}`, viewerFid),
+    queryKey: [`/api/executions/${(memberCheck as any)?.member?.id}/details`],
+    queryFn: () => authenticatedGet(`/api/executions/${(memberCheck as any)?.member?.id}/details`, viewerFid),
     enabled: Boolean(
       isAuthenticated &&
         hasValidFid &&
-        (memberCheck as any)?.isMember &&
+        (memberCheck as any)?.member?.id &&
         !authLoading,
     ),
     retry: (failureCount, error) => {
@@ -122,21 +123,21 @@ export default function FarcasterEmbed() {
   };
 
   const getUserExecutionStatus = (pulseId: number) => {
-    if (!(executionsData as any)?.executions)
+    if (!(executionsData as any)?.executionDetails)
       return { liked: false, shared: false, abstained: false };
 
-    // Find the single execution record for this pulse (new structure has one record per pulse/member)
-    const execution = (executionsData as any).executions.find(
-      (exec: any) => exec.pulseId === pulseId,
+    // Find the execution record for this pulse (new structure has execution details)
+    const executionDetail = (executionsData as any).executionDetails.find(
+      (detail: any) => detail.pulse.id === pulseId,
     );
 
     // If no execution found, return default values
-    if (!execution || !execution.actions) {
+    if (!executionDetail || !executionDetail.execution?.actions) {
       return { liked: false, shared: false, abstained: false };
     }
 
-    // Extract actions from the JSON field
-    const actions = execution.actions;
+    // Extract actions from the execution
+    const actions = executionDetail.execution.actions;
     return {
       liked: actions.liked || false,
       shared: actions.shared || false,
@@ -341,8 +342,9 @@ export default function FarcasterEmbed() {
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex-1">
                                 <h4 className="font-semibold text-gray-900 mb-1">
-                                  {pulse.description}
+                                  PULSE #{pulse.id}
                                 </h4>
+                                <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
                                 <p
                                   className={`text-sm font-medium mb-2 ${
                                     past ? "text-gray-500" : "text-blue-700"
@@ -480,9 +482,7 @@ export default function FarcasterEmbed() {
                             {/* Future Pulse Info */}
                             <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mt-2">
                               This pulse will be available on{" "}
-                              {new Date(
-                                (pulse as any).datetimeStart + "T00:00:00",
-                              ).toLocaleDateString()}
+                              {new Date((pulse as any).datetimeStart).toLocaleDateString()}
                               .
                             </div>
                           </div>
@@ -514,6 +514,29 @@ export default function FarcasterEmbed() {
                     <p className="text-gray-600">
                       Past community engagement activities
                     </p>
+                    {/* Total Points Summary */}
+                    {(() => {
+                      const totalPoints = (executionsData as any)?.executionDetails?.reduce(
+                        (total: number, detail: any) => total + (detail.execution ? detail.pointsEarned : 0), 
+                        0
+                      ) || 0;
+                      
+                      if (totalPoints > 0) {
+                        return (
+                          <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                                <span className="text-white text-sm font-bold">Σ</span>
+                              </div>
+                              <span className="text-purple-700 font-semibold">
+                                Total Points Earned: {totalPoints}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                   <div className="p-6">
                     <div className="space-y-4">
@@ -532,8 +555,9 @@ export default function FarcasterEmbed() {
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex-1">
                                 <h4 className="font-semibold text-gray-900 mb-1">
-                                  {pulse.description}
+                                  PULSE #{pulse.id}
                                 </h4>
+                                <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
                                 <p className="text-sm font-medium mb-2 text-gray-500">
                                   {new Date((pulse as any).datetimeStart).toLocaleDateString("en-US", {
                                     weekday: "long",
@@ -639,6 +663,90 @@ export default function FarcasterEmbed() {
                                 </span>
                               </div>
                             </div>
+
+                            {/* Points and Attestation Status */}
+                            {(() => {
+                              // Get the execution detail for this pulse to show points and attestation status
+                              const executionDetail = (executionsData as any)?.executionDetails?.find(
+                                (detail: any) => detail.pulse.id === pulse.id,
+                              );
+                              
+                              const hasExecution = executionDetail && executionDetail.execution;
+                              const pointsEarned = hasExecution ? executionDetail.pointsEarned : 0;
+                              const attestation = executionDetail?.attestation;
+
+                              return (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-4">
+                                      {/* Points Display */}
+                                      <div className="flex items-center space-x-2">
+                                        <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
+                                          <span className="text-purple-600 text-xs font-bold">P</span>
+                                        </div>
+                                        <span className={`text-sm font-medium ${pointsEarned > 0 ? 'text-purple-600' : 'text-gray-400'}`}>
+                                          {pointsEarned > 0 ? `${pointsEarned} points earned` : '0 points'}
+                                        </span>
+                                      </div>
+
+                                      {/* Attestation Status */}
+                                      <div className="flex items-center space-x-2">
+                                        {attestation ? (
+                                          attestation.status === 'completed' ? (
+                                            <>
+                                              <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                                <span className="text-white text-xs font-bold">✓</span>
+                                              </div>
+                                              {attestation.attestationUid ? (
+                                                <a
+                                                  href={getEasScanUrl(attestation.attestationUid)}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="text-sm text-green-600 font-medium hover:text-green-800"
+                                                  title="View attestation on EAS scan"
+                                                >
+                                                  ✓ Attestation  View ↗
+                                                </a>
+                                              ) : (
+                                                <span className="text-sm text-green-600 font-medium">✓ Attestation</span>
+                                              )}
+                                            </>
+                                          ) : attestation.status === 'pending' ? (
+                                            <>
+                                              <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                                                <span className="text-white text-xs">⏳</span>
+                                              </div>
+                                              <span className="text-sm text-yellow-600 font-medium">Attestation Pending</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                                <span className="text-white text-xs">✗</span>
+                                              </div>
+                                              <span className="text-sm text-red-600 font-medium">Attestation Failed</span>
+                                            </>
+                                          )
+                                        ) : hasExecution ? (
+                                          <>
+                                            <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
+                                              <span className="text-gray-600 text-xs">⏸</span>
+                                            </div>
+                                            <span className="text-sm text-gray-500 font-medium">No Attestation</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center">
+                                              <span className="text-gray-400 text-xs">-</span>
+                                            </div>
+                                            <span className="text-sm text-gray-400 font-medium">Not Executed</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         );
                       })}
@@ -700,21 +808,21 @@ function PostTool({
 
   // Helper function to get execution status for this component
   const getUserExecutionStatus = (pulseId: number) => {
-    if (!(executionsData as any)?.executions)
+    if (!(executionsData as any)?.executionDetails)
       return { liked: false, shared: false, abstained: false };
 
-    // Find the single execution record for this pulse (new structure has one record per pulse/member)
-    const execution = (executionsData as any).executions.find(
-      (exec: any) => exec.pulseId === pulseId,
+    // Find the execution record for this pulse (new structure has execution details)
+    const executionDetail = (executionsData as any).executionDetails.find(
+      (detail: any) => detail.pulse.id === pulseId,
     );
 
     // If no execution found, return default values
-    if (!execution || !execution.actions) {
+    if (!executionDetail || !executionDetail.execution?.actions) {
       return { liked: false, shared: false, abstained: false };
     }
 
-    // Extract actions from the JSON field
-    const actions = execution.actions;
+    // Extract actions from the execution
+    const actions = executionDetail.execution.actions;
     return {
       liked: actions.liked || false,
       shared: actions.shared || false,
@@ -814,7 +922,7 @@ function PostTool({
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/executions/by-fid/${viewerFid}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/executions/${member?.id}/details`] });
     },
   });
 
@@ -1105,9 +1213,9 @@ function PostTool({
     <div className="w-full max-w-lg bg-green-50 border border-green-200 shadow rounded-xl">
       <div className="p-6 border-b border-green-200 bg-green-100 rounded-t-xl">
         <h2 className="text-xl font-bold text-green-800 mb-2 flex items-center">
-          🎯 Today's Active Pulse
+          🎯 PULSE #{pulse.id}
         </h2>
-        <p className="text-green-700 mb-2">{pulse.description}</p>
+        <p className="text-green-700 text-sm mb-2">{pulse.description}</p>
         <p className="text-sm text-green-600">
           Complete your engagement task for today!
         </p>

@@ -54,6 +54,7 @@ import {
   auditLogger,
   type AuthenticatedRequest 
 } from "./middleware/auth";
+import { attestationRateLimit, bulkAttestationRateLimit, withTimeout } from "./lib/rateLimiter";
 import {
   validateRequest,
   sanitizeRequestBody,
@@ -937,6 +938,316 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get pulse executions with attestation status for a specific pulse (admin only)
+  app.get("/api/admin/pulse/:pulseId/executions", 
+    authenticateUser, 
+    requireAdmin,
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const pulseId = parseInt(req.params.pulseId);
+      if (isNaN(pulseId)) {
+        return res.status(400).json({ error: "Invalid pulse ID" });
+      }
+
+      // Verify pulse exists
+      const pulse = await storage.getPulse(pulseId);
+      if (!pulse) {
+        return res.status(404).json({ error: "Pulse not found" });
+      }
+
+      const executionsWithAttestations = await storage.getPulseExecutionsWithAttestations(pulseId);
+      
+      res.json({ 
+        pulse,
+        executions: executionsWithAttestations.map(({ execution, member, attestation }) => ({
+          member: {
+            id: member.id,
+            farcasterFid: member.farcasterFid,
+            ipePassport: member.ipePassport,
+            ipeUsername: member.ipeUsername,
+            memberType: member.memberType
+          },
+          execution: execution ? {
+            id: execution.id,
+            actions: execution.actions,
+            executedAt: execution.executedAt,
+            points: pulse.points
+          } : null,
+          attestation: attestation ? {
+            id: attestation.id,
+            status: attestation.status,
+            attestationUid: attestation.attestationUid,
+            transactionHash: attestation.transactionHash,
+            createdAt: attestation.createdAt
+          } : null
+        }))
+      });
+    } catch (err: any) {
+      console.error("Get pulse executions error:", err);
+      res.status(500).json({ error: err.message || "Failed to get pulse executions" });
+    }
+  });
+
+  // Create attestations for all pending executions in a specific pulse (admin only)
+  app.post("/api/admin/pulse/:pulseId/attestations/create-all", 
+    authenticateUser, 
+    requireAdmin,
+    bulkAttestationRateLimit.middleware(),
+    auditLogger("CREATE_ALL_PULSE_ATTESTATIONS"),
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const pulseId = parseInt(req.params.pulseId);
+      if (isNaN(pulseId) || pulseId <= 0) {
+        return res.status(400).json({ error: "Invalid pulse ID: must be a positive integer" });
+      }
+
+      // Verify pulse exists and is in valid state for attestations
+      const pulse = await storage.getPulse(pulseId);
+      if (!pulse) {
+        return res.status(404).json({ error: "Pulse not found" });
+      }
+
+      // Validate pulse state - only allow attestations for pulses that have ended
+      const now = new Date();
+      const pulseEndTime = new Date(pulse.datetimeStart.getTime() + (pulse.interval * 60 * 60 * 1000));
+      if (pulseEndTime > now) {
+        return res.status(400).json({ 
+          error: "Cannot create attestations for active pulse", 
+          details: `Pulse ends at ${pulseEndTime.toISOString()}` 
+        });
+      }
+
+      // Get pending attestations for this pulse only
+      const pendingAttestations = await storage.getPendingAttestationsByPulse(pulseId);
+      
+      if (pendingAttestations.length === 0) {
+        return res.json({ 
+          message: "No pending attestations found for this pulse",
+          processed: 0,
+          successful: 0,
+          failed: 0
+        });
+      }
+
+      // Import the EAS service
+      const { easService } = await import('./lib/easService');
+      
+      // Prepare attestation data for batch processing
+      const attestationDataList = [];
+      
+      for (const { execution, member, pulse } of pendingAttestations) {
+        // Check if attestation already exists
+        const existingAttestation = await storage.getAttestation(execution.id);
+        if (!existingAttestation || existingAttestation.status !== 'completed') {
+          attestationDataList.push({
+            pulseExecutionId: execution.id,
+            status: 'pending' as const,
+            execution,
+            member,
+            pulse
+          });
+        }
+      }
+
+      // Create attestation records atomically
+      const attestationResults = await storage.createBulkAttestationsWithTransaction(
+        attestationDataList.map(data => ({
+          pulseExecutionId: data.pulseExecutionId,
+          status: data.status
+        }))
+      );
+
+      // Process EAS attestations for successfully created database records
+      let successful = 0;
+      let failed = attestationResults.failed.length;
+      const errors: string[] = attestationResults.failed.map(f => f.error);
+
+      for (const attestation of attestationResults.successful) {
+        const attestationData = attestationDataList.find(d => d.pulseExecutionId === attestation.pulseExecutionId);
+        if (!attestationData) continue;
+
+        try {
+          // Create the actual EAS attestation with timeout
+          const attestationResult = await withTimeout(
+            easService.createAttestation({
+              memberOnchainID: attestationData.member.ipePassport!,
+              memberWalletAddress: attestationData.member.walletAddress!,
+              pulseNumber: attestationData.pulse.id,
+              executedAt: attestationData.execution.executedAt ? Math.floor(new Date(attestationData.execution.executedAt).getTime() / 1000) : Math.floor(Date.now() / 1000),
+              actionsExecuted: JSON.stringify(attestationData.execution.actions)
+            }),
+            45000, // 45 second timeout for EAS operations
+            'EAS Attestation Creation'
+          );
+
+          // Update the attestation record
+          await storage.updateAttestationStatus(
+            attestation.id,
+            'completed',
+            attestationResult.attestationUID,
+            attestationResult.transactionHash
+          );
+
+          successful++;
+        } catch (error) {
+          failed++;
+          errors.push(`Member ${attestationData.member.ipePassport}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          
+          // Mark as failed
+          try {
+            await storage.updateAttestationStatus(attestation.id, 'failed');
+          } catch (updateError) {
+            console.error('Failed to update attestation status to failed:', updateError);
+          }
+        }
+      }
+
+      const totalProcessed = attestationDataList.length;
+      res.json({
+        message: `Processed ${totalProcessed} attestations for pulse ${pulseId}`,
+        processed: totalProcessed,
+        successful,
+        failed,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (err: any) {
+      console.error("Create all pulse attestations error:", err);
+      res.status(500).json({ error: err.message || "Failed to create pulse attestations" });
+    }
+  });
+
+  // Create attestation for a specific execution (admin only)
+  app.post("/api/admin/attestations/create/:executionId", 
+    authenticateUser, 
+    requireAdmin,
+    attestationRateLimit.middleware(),
+    auditLogger("CREATE_SINGLE_ATTESTATION"),
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const executionId = parseInt(req.params.executionId);
+      if (isNaN(executionId) || executionId <= 0) {
+        return res.status(400).json({ error: "Invalid execution ID: must be a positive integer" });
+      }
+
+      // Get execution details with member and pulse info using db import
+      const { db } = await import('./db');
+      const { pulseExecutions, members, pulses } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      const [executionData] = await db
+        .select({
+          execution: pulseExecutions,
+          member: members,
+          pulse: pulses,
+        })
+        .from(pulseExecutions)
+        .innerJoin(members, eq(pulseExecutions.memberId, members.id))
+        .innerJoin(pulses, eq(pulseExecutions.pulseId, pulses.id))
+        .where(eq(pulseExecutions.id, executionId));
+
+      if (!executionData) {
+        return res.status(404).json({ error: "Pulse execution not found" });
+      }
+
+      // Check if member is eligible for attestations
+      if (executionData.member.status !== 'active_member' || !executionData.member.passportVerified || !executionData.member.ipePassport || !executionData.member.walletAddress) {
+        return res.status(400).json({ error: "Member is not eligible for attestations" });
+      }
+
+      // Validate pulse state - only allow attestations for pulses that have ended
+      const now = new Date();
+      const pulseEndTime = new Date(executionData.pulse.datetimeStart.getTime() + (executionData.pulse.interval * 60 * 60 * 1000));
+      if (pulseEndTime > now) {
+        return res.status(400).json({ 
+          error: "Cannot create attestations for active pulse", 
+          details: `Pulse ends at ${pulseEndTime.toISOString()}` 
+        });
+      }
+
+      // Validate execution data integrity
+      if (!executionData.execution.actions || typeof executionData.execution.actions !== 'object') {
+        return res.status(400).json({ error: "Invalid execution data: missing or malformed actions" });
+      }
+
+      // Use atomic transaction to create/get attestation record
+      let pendingAttestation = await storage.getAttestation(executionId);
+      
+      if (!pendingAttestation) {
+        try {
+          pendingAttestation = await storage.createAttestationWithTransaction({
+            pulseExecutionId: executionId,
+            status: 'pending'
+          });
+        } catch (error) {
+          // If creation failed due to race condition, try to get existing one
+          pendingAttestation = await storage.getAttestation(executionId);
+          if (!pendingAttestation) {
+            throw error; // Re-throw if still no attestation found
+          }
+        }
+      }
+
+      if (pendingAttestation.status === 'completed') {
+        return res.json({
+          message: "Attestation already completed",
+          attestation: {
+            id: pendingAttestation.id,
+            status: pendingAttestation.status,
+            attestationUid: pendingAttestation.attestationUid,
+            transactionHash: pendingAttestation.transactionHash
+          }
+        });
+      }
+
+      // Create the actual EAS attestation
+      const { easService } = await import('./lib/easService');
+      
+      const attestationResult = await withTimeout(
+        easService.createAttestation({
+          memberOnchainID: executionData.member.ipePassport!,
+          memberWalletAddress: executionData.member.walletAddress!,
+          pulseNumber: executionData.pulse.id,
+          executedAt: executionData.execution.executedAt ? Math.floor(new Date(executionData.execution.executedAt).getTime() / 1000) : Math.floor(Date.now() / 1000),
+          actionsExecuted: JSON.stringify(executionData.execution.actions)
+        }),
+        45000, // 45 second timeout for EAS operations
+        'EAS Attestation Creation'
+      );
+
+      // Update the attestation record
+      const updatedAttestation = await storage.updateAttestationStatus(
+        pendingAttestation.id,
+        'completed',
+        attestationResult.attestationUID,
+        attestationResult.transactionHash
+      );
+
+      res.json({
+        message: "Attestation created successfully",
+        attestation: {
+          id: updatedAttestation.id,
+          status: updatedAttestation.status,
+          attestationUid: updatedAttestation.attestationUid,
+          transactionHash: updatedAttestation.transactionHash
+        }
+      });
+    } catch (err: any) {
+      console.error("Create single attestation error:", err);
+      
+      // Try to mark as failed
+      try {
+        const existingAttestation = await storage.getAttestation(parseInt(req.params.executionId));
+        if (existingAttestation) {
+          await storage.updateAttestationStatus(existingAttestation.id, 'failed');
+        }
+      } catch (updateError) {
+        console.error('Failed to update attestation status to failed:', updateError);
+      }
+      
+      res.status(500).json({ error: err.message || "Failed to create attestation" });
+    }
+  });
+
   // Get member executions for a specific user (new memberId endpoint)
   app.get("/api/executions/:memberId", 
     authenticateUser, 
@@ -952,6 +1263,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res
         .status(500)
         .json({ error: err.message || "Failed to get executions" });
+    }
+  });
+
+  // Get member executions with pulse and attestation details
+  app.get("/api/executions/:memberId/details", 
+    authenticateUser, 
+    requireOwnership('memberId'),
+    auditLogger("GET_MEMBER_EXECUTION_DETAILS"),
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const memberId = parseInt(req.params.memberId);
+      const executionDetails = await storage.getMemberExecutionsWithDetails(memberId);
+      
+      const executionsWithDetails = executionDetails.map(({ execution, pulse, attestation }) => ({
+        execution: {
+          id: execution.id,
+          actions: execution.actions,
+          executedAt: execution.executedAt
+        },
+        pulse: {
+          id: pulse.id,
+          description: pulse.description,
+          points: pulse.points,
+          datetimeStart: pulse.datetimeStart,
+          interval: pulse.interval,
+          urlEmbed: pulse.urlEmbed
+        },
+        attestation: attestation ? {
+          id: attestation.id,
+          status: attestation.status,
+          attestationUid: attestation.attestationUid,
+          transactionHash: attestation.transactionHash,
+          createdAt: attestation.createdAt
+        } : null,
+        pointsEarned: pulse.points // Add points earned for easy access
+      }));
+
+      res.json({ executionDetails: executionsWithDetails });
+    } catch (err: any) {
+      console.error("Get execution details error:", err);
+      res
+        .status(500)
+        .json({ error: err.message || "Failed to get execution details" });
     }
   });
   

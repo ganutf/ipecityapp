@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil, Save, X, Eye } from "lucide-react";
+import { Pencil, Save, X, Eye, BarChart3 } from "lucide-react";
 import { useAccount } from "wagmi";
+import { useLocation } from "wouter";
 // Removed useAddSubname hook - using direct API calls instead
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -20,6 +21,7 @@ export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   
   // Wallet connection for subdomain reservation
   const { address, isConnected } = useAccount();
@@ -471,8 +473,8 @@ export default function AdminPage() {
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">
-                              {new Date((pulse as any).datetimeStart).toLocaleString()}
+                            <h3 className="font-semibold text-lg">
+                              PULSE #{pulse.id}
                             </h3>
                             <span className={`px-2 py-1 text-xs rounded-full ${
                               isActive ? 'bg-green-100 text-green-800' :
@@ -483,12 +485,32 @@ export default function AdminPage() {
                               {isActive ? 'Active' : hasEnded ? 'Ended' : isFuture ? 'Scheduled' : 'Unknown'}
                             </span>
                           </div>
-                          <p className="text-gray-600 mb-2">{pulse.description}</p>
+                          <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
+                          <p className="text-xs text-gray-500 mb-2">
+                            {new Date((pulse as any).datetimeStart).toLocaleString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              timeZoneName: 'short'
+                            })}
+                          </p>
                           <p className="text-sm text-green-600 mb-1">Points: {pulse.points || 1}</p>
                           <p className="text-sm text-purple-600 mb-2">Duration: {(pulse as any).interval || 24} hours</p>
                           <p className="text-sm text-blue-600 break-all">{(pulse as any).urlEmbed}</p>
                         </div>
-                        <div className="ml-4">
+                        <div className="ml-4 flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setLocation(`/admin/pulse/${pulse.id}`)}
+                            className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                          >
+                            <BarChart3 className="w-4 h-4 mr-1" />
+                            View Details
+                          </Button>
                           {canEdit && (
                             <Button
                               size="sm"

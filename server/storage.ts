@@ -34,6 +34,13 @@ import { db } from "./db";
 import { eq, and, or, desc, asc, isNull, isNotNull, inArray, sql } from "drizzle-orm";
 
 export interface IStorage {
+  // Database Transactions
+  withTransaction<T>(callback: (tx: any) => Promise<T>): Promise<T>;
+  
+  // Attestation Transaction Methods
+  createAttestationWithTransaction(attestationData: InsertAttestation): Promise<Attestation>;
+  createBulkAttestationsWithTransaction(attestations: InsertAttestation[]): Promise<{ successful: Attestation[]; failed: { error: string; data: InsertAttestation }[] }>;
+  
   // Members - Primary methods using memberId
   getMember(memberId: number): Promise<Member | undefined>;
   getMemberByEmail(email: string): Promise<Member | undefined>;
@@ -101,6 +108,7 @@ export interface IStorage {
   // Pulse Executions
   getPulseExecution(pulseId: number, memberId: number): Promise<PulseExecution | undefined>;
   getMemberExecutions(memberId: number): Promise<PulseExecution[]>;
+  getMemberExecutionsWithDetails(memberId: number): Promise<{ execution: PulseExecution; pulse: Pulse; attestation: Attestation | null }[]>;
   createPulseExecution(execution: InsertPulseExecution): Promise<PulseExecution>;
   updatePulseExecution(id: number, actions: PulseExecutionActions): Promise<PulseExecution>;
   deletePulseExecution(id: number): Promise<void>;
@@ -113,6 +121,8 @@ export interface IStorage {
   createAttestation(attestation: InsertAttestation): Promise<Attestation>;
   getAttestation(pulseExecutionId: number): Promise<Attestation | undefined>;
   getPendingAttestations(): Promise<{ execution: PulseExecution; member: Member; pulse: Pulse }[]>;
+  getPendingAttestationsByPulse(pulseId: number): Promise<{ execution: PulseExecution; member: Member; pulse: Pulse }[]>;
+  getPulseExecutionsWithAttestations(pulseId: number): Promise<{ execution: PulseExecution | null; member: Member; attestation: Attestation | null }[]>;
   updateAttestationStatus(id: number, status: string, attestationUid?: string, transactionHash?: string): Promise<Attestation>;
   verifyPulseExecutionOwnership(executionId: number, memberId: number): Promise<boolean>;
   
@@ -129,6 +139,57 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Database Transactions
+  async withTransaction<T>(callback: (tx: any) => Promise<T>): Promise<T> {
+    return await db.transaction(callback);
+  }
+  
+  // Attestation Transaction Methods
+  async createAttestationWithTransaction(attestationData: InsertAttestation): Promise<Attestation> {
+    return await this.withTransaction(async (tx) => {
+      // Check if attestation already exists
+      const [existingAttestation] = await tx
+        .select()
+        .from(attestations)
+        .where(eq(attestations.pulseExecutionId, attestationData.pulseExecutionId));
+      
+      if (existingAttestation) {
+        throw new Error(`Attestation already exists for pulse execution ${attestationData.pulseExecutionId}`);
+      }
+      
+      // Create the attestation
+      const [attestation] = await tx.insert(attestations).values(attestationData).returning();
+      return attestation;
+    });
+  }
+  
+  async createBulkAttestationsWithTransaction(attestationDataList: InsertAttestation[]): Promise<{ successful: Attestation[]; failed: { error: string; data: InsertAttestation }[] }> {
+    const successful: Attestation[] = [];
+    const failed: { error: string; data: InsertAttestation }[] = [];
+    
+    // Process in batches of 10 to avoid overwhelming the database
+    const batchSize = 10;
+    for (let i = 0; i < attestationDataList.length; i += batchSize) {
+      const batch = attestationDataList.slice(i, i + batchSize);
+      
+      await Promise.allSettled(
+        batch.map(async (attestationData) => {
+          try {
+            const attestation = await this.createAttestationWithTransaction(attestationData);
+            successful.push(attestation);
+          } catch (error) {
+            failed.push({
+              error: error instanceof Error ? error.message : 'Unknown error',
+              data: attestationData
+            });
+          }
+        })
+      );
+    }
+    
+    return { successful, failed };
+  }
+  
   // Members - Primary methods using memberId
   async getMember(memberId: number): Promise<Member | undefined> {
     const [member] = await db.select().from(members).where(eq(members.id, memberId));
@@ -552,6 +613,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pulseExecutions.memberId, memberId))
       .orderBy(desc(pulseExecutions.executedAt));
   }
+
+  async getMemberExecutionsWithDetails(memberId: number): Promise<{ execution: PulseExecution; pulse: Pulse; attestation: Attestation | null }[]> {
+    const results = await db
+      .select({
+        execution: pulseExecutions,
+        pulse: pulses,
+        attestation: attestations,
+      })
+      .from(pulseExecutions)
+      .innerJoin(pulses, eq(pulseExecutions.pulseId, pulses.id))
+      .leftJoin(attestations, eq(pulseExecutions.id, attestations.pulseExecutionId))
+      .where(eq(pulseExecutions.memberId, memberId))
+      .orderBy(desc(pulseExecutions.executedAt));
+    
+    return results;
+  }
   
   async getMemberExecutionsByFarcasterFid(memberFarcasterFid: number): Promise<PulseExecution[]> {
     const memberId = await this.getMemberIdFromFarcasterFid(memberFarcasterFid);
@@ -672,6 +749,62 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    return results;
+  }
+
+  async getPendingAttestationsByPulse(pulseId: number): Promise<{ execution: PulseExecution; member: Member; pulse: Pulse }[]> {
+    // Same logic as getPendingAttestations but filtered by pulse ID
+    const results = await db
+      .select({
+        execution: pulseExecutions,
+        member: members,
+        pulse: pulses,
+      })
+      .from(pulseExecutions)
+      .leftJoin(attestations, eq(pulseExecutions.id, attestations.pulseExecutionId))
+      .innerJoin(members, eq(pulseExecutions.memberId, members.id))
+      .innerJoin(pulses, eq(pulseExecutions.pulseId, pulses.id))
+      .where(
+        and(
+          eq(pulses.id, pulseId), // Filter by specific pulse ID
+          // No attestation exists OR attestation is pending/failed
+          or(
+            isNull(attestations.id), // No attestation record
+            inArray(attestations.status, ['pending', 'failed']) // Pending or failed attestations
+          ),
+          eq(members.status, 'active_member'), // Only active members
+          eq(members.passportVerified, true), // Only verified passport holders
+          isNotNull(members.ipePassport), // Must have verified passport
+          isNotNull(members.walletAddress), // Must have wallet address for recipient
+          // Only include pulses where interval window has closed
+          sql`${pulses.datetimeStart} + INTERVAL '1 hour' * ${pulses.interval} < NOW()` // Pulse window has closed
+        )
+      );
+    return results;
+  }
+
+  async getPulseExecutionsWithAttestations(pulseId: number): Promise<{ execution: PulseExecution | null; member: Member; attestation: Attestation | null }[]> {
+    // Get all active members and their executions/attestations for a specific pulse
+    const results = await db
+      .select({
+        execution: pulseExecutions,
+        member: members,
+        attestation: attestations,
+      })
+      .from(members)
+      .leftJoin(pulseExecutions, and(
+        eq(pulseExecutions.memberId, members.id),
+        eq(pulseExecutions.pulseId, pulseId)
+      ))
+      .leftJoin(attestations, eq(attestations.pulseExecutionId, pulseExecutions.id))
+      .where(
+        and(
+          eq(members.status, 'active_member'), // Only active members
+          eq(members.passportVerified, true) // Only verified passport holders
+        )
+      )
+      .orderBy(asc(members.farcasterFid));
+    
     return results;
   }
 

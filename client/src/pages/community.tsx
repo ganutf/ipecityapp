@@ -204,6 +204,7 @@ export default function Community() {
                 ipePassport={member.ipePassport}
                 totalPoints={member.totalPoints}
                 pulseStreak={member.pulseStreak}
+                pfpUrl={member.pfpUrl}
               />
             ))}
           </div>

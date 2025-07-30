@@ -342,9 +342,23 @@ export default function Profile2() {
           <CardContent className="pt-4 md:pt-6">
             <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
               <div className="flex items-center space-x-3 md:space-x-4">
-                <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
-                </div>
+                {profile?.pfpUrl ? (
+                  <img 
+                    src={profile.pfpUrl} 
+                    alt={`${profile?.displayName || profile?.username || 'User'} profile picture`}
+                    className="h-12 w-12 md:h-16 md:w-16 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    {profile?.displayName || profile?.username ? (
+                      <span className="text-white text-lg md:text-2xl font-semibold">
+                        {(profile?.displayName || profile?.username || '?')[0].toUpperCase()}
+                      </span>
+                    ) : (
+                      <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
+                    )}
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900">
                     {profile?.displayName || profile?.username}

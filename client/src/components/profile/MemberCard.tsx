@@ -21,6 +21,7 @@ interface MemberCardProps {
   ipePassport?: string;
   totalPoints: number;
   pulseStreak: number;
+  pfpUrl?: string;
 }
 
 const memberTypeConfig = {
@@ -69,7 +70,8 @@ export function MemberCard({
   memberType = 'pending',
   ipePassport,
   totalPoints,
-  pulseStreak
+  pulseStreak,
+  pfpUrl
 }: MemberCardProps) {
   const memberTypeInfo = memberTypeConfig[memberType as keyof typeof memberTypeConfig];
 
@@ -79,9 +81,23 @@ export function MemberCard({
         <CardContent className="p-4">
           <div className="flex items-start space-x-3">
             {/* Profile Avatar */}
-            <div className="h-12 w-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <User className="h-6 w-6 text-white" />
-            </div>
+            {pfpUrl ? (
+              <img 
+                src={pfpUrl} 
+                alt={`${displayName || username || 'User'} profile picture`}
+                className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="h-12 w-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                {displayName || username ? (
+                  <span className="text-white text-lg font-semibold">
+                    {(displayName || username || '?')[0].toUpperCase()}
+                  </span>
+                ) : (
+                  <User className="h-6 w-6 text-white" />
+                )}
+              </div>
+            )}
             
             <div className="flex-1 min-w-0">
               {/* Name and Type */}

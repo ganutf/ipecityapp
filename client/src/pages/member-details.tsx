@@ -30,6 +30,7 @@ interface MemberDetailsData {
   totalPoints: number;
   pulseStreak: number;
   createdAt?: string;
+  pfpUrl?: string;
 }
 
 export default function MemberDetails() {
@@ -168,6 +169,7 @@ export default function MemberDetails() {
               passportVerified={member.passportVerified}
               walletAddress={member.walletAddress}
               showWalletActions={false}
+              pfpUrl={member.pfpUrl}
             />
           </CardContent>
         </Card>

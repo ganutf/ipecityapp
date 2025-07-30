@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { authenticatedPost } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
@@ -60,6 +61,33 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: 
   const queryClient = useQueryClient();
   const [creatingAll, setCreatingAll] = useState(false);
   const [creatingIndividual, setCreatingIndividual] = useState<number | null>(null);
+
+  // Calculate pulse timing - same logic as server
+  const getPulseEndTime = () => {
+    const startTime = new Date(pulse.datetimeStart);
+    return new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
+  };
+
+  const isPulseEnded = () => {
+    const now = new Date();
+    const endTime = getPulseEndTime();
+    return now >= endTime;
+  };
+
+  const getTimeUntilEnd = () => {
+    if (isPulseEnded()) return null;
+    const now = new Date();
+    const endTime = getPulseEndTime();
+    const diffMs = endTime.getTime() - now.getTime();
+    
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
 
   // Mutation for creating all attestations for this pulse
   const createAllAttestationsMutation = useMutation({
@@ -180,6 +208,16 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: 
   };
 
   const handleCreateIndividualAttestation = async (executionId: number) => {
+    // Validate executionId is a valid number
+    if (!executionId || isNaN(executionId) || executionId <= 0) {
+      toast({ 
+        title: "Error", 
+        description: "Invalid execution ID. Please refresh the page and try again.",
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     setCreatingIndividual(executionId);
     try {
       await createAttestationMutation.mutateAsync(executionId);
@@ -271,26 +309,50 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: 
       {/* Header with bulk action */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Pulse Executions & Attestations</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold">Pulse Executions & Attestations</h3>
+            <Badge 
+              variant={isPulseEnded() ? "default" : "secondary"}
+              className={isPulseEnded() ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}
+            >
+              {isPulseEnded() ? "Ended" : `Active • ${getTimeUntilEnd()} remaining`}
+            </Badge>
+          </div>
           <p className="text-sm text-gray-600">
             {executions.filter(e => e.execution).length} of {executions.length} members executed this pulse
           </p>
+          <p className="text-xs text-gray-500">
+            Pulse ends at {getPulseEndTime().toLocaleString()}
+          </p>
         </div>
         {eligibleExecutions.length > 0 && (
-          <Button
-            onClick={handleCreateAllAttestations}
-            disabled={creatingAll || createAllAttestationsMutation.isPending}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            {creatingAll || createAllAttestationsMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating Attestations...
-              </>
-            ) : (
-              `Create ${eligibleExecutions.length} Attestations`
-            )}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={handleCreateAllAttestations}
+                  disabled={creatingAll || createAllAttestationsMutation.isPending || !isPulseEnded()}
+                  className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400"
+                >
+                  {creatingAll || createAllAttestationsMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating Attestations...
+                    </>
+                  ) : (
+                    `Create ${eligibleExecutions.length} Attestations`
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isPulseEnded() ? (
+                  <p>Create attestations for all eligible executions</p>
+                ) : (
+                  <p>Pulse is still active. Attestations available in {getTimeUntilEnd()}</p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 
@@ -412,22 +474,35 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: 
                   
                   <td className="px-4 py-3 whitespace-nowrap">
                     {execution && (!attestation || attestation.status !== 'completed') ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCreateIndividualAttestation(execution.id)}
-                        disabled={creatingIndividual === execution.id || createAttestationMutation.isPending}
-                        className="text-xs"
-                      >
-                        {creatingIndividual === execution.id ? (
-                          <>
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            Creating...
-                          </>
-                        ) : (
-                          'Create Attestation'
-                        )}
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCreateIndividualAttestation(execution.id)}
+                              disabled={creatingIndividual === execution.id || createAttestationMutation.isPending || !isPulseEnded()}
+                              className="text-xs disabled:bg-gray-100"
+                            >
+                              {creatingIndividual === execution.id ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  Creating...
+                                </>
+                              ) : (
+                                'Create Attestation'
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isPulseEnded() ? (
+                              <p>Create attestation for this execution</p>
+                            ) : (
+                              <p>Pulse is still active. Attestations available in {getTimeUntilEnd()}</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>
                     )}

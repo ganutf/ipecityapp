@@ -1146,7 +1146,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(pulseExecutions.id, executionId));
 
       if (!executionData) {
-        return res.status(404).json({ error: "Pulse execution not found" });
+        return res.status(404).json({ 
+          error: "Pulse execution not found", 
+          details: `No pulse execution found with ID ${executionId}. Please verify the execution ID is correct.`,
+          executionId: executionId
+        });
       }
 
       // Check if member is eligible for attestations
@@ -1158,9 +1162,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = new Date();
       const pulseEndTime = new Date(executionData.pulse.datetimeStart.getTime() + (executionData.pulse.interval * 60 * 60 * 1000));
       if (pulseEndTime > now) {
+        const timeUntilEnd = Math.ceil((pulseEndTime.getTime() - now.getTime()) / (1000 * 60)); // minutes
+        const hours = Math.floor(timeUntilEnd / 60);
+        const minutes = timeUntilEnd % 60;
+        const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        
         return res.status(400).json({ 
           error: "Cannot create attestations for active pulse", 
-          details: `Pulse ends at ${pulseEndTime.toISOString()}` 
+          details: `Pulse is still active and ends at ${pulseEndTime.toISOString()}. Time remaining: ${timeString}`,
+          pulseEndTime: pulseEndTime.toISOString(),
+          timeRemaining: timeString
         });
       }
 

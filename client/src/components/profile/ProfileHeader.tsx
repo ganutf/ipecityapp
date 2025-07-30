@@ -1,0 +1,191 @@
+import { Badge } from "@/components/ui/badge";
+import { 
+  User, 
+  Wallet, 
+  Globe, 
+  CheckCircle,
+  AlertCircle,
+  Compass,
+  Shield,
+  Users,
+  Star
+} from "lucide-react";
+
+interface ProfileHeaderProps {
+  displayName?: string;
+  username?: string;
+  fid?: number;
+  memberType?: string;
+  ipePassport?: string;
+  passportVerified?: boolean;
+  walletAddress?: string;
+  isConnected?: boolean;
+  address?: string;
+  showWalletActions?: boolean;
+  onDisconnectWallet?: () => void;
+}
+
+const memberTypeConfig = {
+  architect: { 
+    label: 'Architect', 
+    icon: User, 
+    color: 'bg-purple-100 text-purple-600',
+    hoverColor: 'hover:bg-purple-200',
+    description: 'Building the future of communities'
+  },
+  explorer: { 
+    label: 'Explorer', 
+    icon: Compass, 
+    color: 'bg-blue-100 text-blue-600',
+    hoverColor: 'hover:bg-blue-200',
+    description: 'Discovering new possibilities'
+  },
+  admin: { 
+    label: 'Admin', 
+    icon: Shield, 
+    color: 'bg-green-100 text-green-600',
+    hoverColor: 'hover:bg-green-200',
+    description: 'Leading and managing the community'
+  },
+  org_team: { 
+    label: 'Org Team', 
+    icon: Users, 
+    color: 'bg-orange-100 text-orange-600',
+    hoverColor: 'hover:bg-orange-200',
+    description: 'Supporting organizational operations'
+  },
+  core_team: { 
+    label: 'Core Team', 
+    icon: Star, 
+    color: 'bg-red-100 text-red-600',
+    hoverColor: 'hover:bg-red-200',
+    description: 'Core development and leadership'
+  },
+  pending: { 
+    label: 'Pending', 
+    icon: AlertCircle, 
+    color: 'bg-gray-100 text-gray-600',
+    hoverColor: 'hover:bg-gray-200',
+    description: 'Awaiting approval'
+  }
+};
+
+export function ProfileHeader({ 
+  displayName, 
+  username, 
+  fid, 
+  memberType = 'pending',
+  ipePassport,
+  passportVerified,
+  walletAddress,
+  isConnected,
+  address,
+  showWalletActions = false,
+  onDisconnectWallet 
+}: ProfileHeaderProps) {
+  const memberTypeInfo = memberTypeConfig[memberType as keyof typeof memberTypeConfig];
+
+  return (
+    <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
+      <div className="flex items-center space-x-3 md:space-x-4">
+        <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+            {displayName || username}
+          </h1>
+          <p className="text-xs md:text-sm text-gray-500">
+            ID: {fid}
+          </p>
+          <div className="flex items-center space-x-2 mt-2">
+            {memberTypeInfo && (
+              <div className="group relative">
+                <div className={`h-9 w-9 rounded-full flex items-center justify-center cursor-pointer transition-colors ${memberTypeInfo.color} ${memberTypeInfo.hoverColor}`}>
+                  <memberTypeInfo.icon className="h-5 w-5" />
+                </div>
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <div className="font-medium">{memberTypeInfo.label}</div>
+                  <div className="text-xs text-gray-300 mt-1">{memberTypeInfo.description}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col space-y-2 lg:flex-shrink-0">
+        {/* Connected Wallet Info Box */}
+        {showWalletActions && (
+          <div
+            className={`flex flex-col px-2 md:px-3 py-1.5 rounded-lg border ${
+              isConnected
+                ? "bg-blue-50 border-blue-200"
+                : "bg-gray-50 border-gray-200"
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Wallet
+                className={`h-4 w-4 ${isConnected ? "text-blue-600" : "text-gray-400"}`}
+              />
+              <span className="text-xs text-gray-600 font-medium">
+                {isConnected ? "Connected Wallet" : "Wallet Not Connected"}
+              </span>
+            </div>
+            <div className="mt-1">
+              {isConnected ? (
+                <div className="flex items-center space-x-2">
+                  <button 
+                    onClick={onDisconnectWallet}
+                    className="text-xs md:text-sm font-mono hover:underline transition-colors text-blue-600"
+                  >
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </button>
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-100 text-green-800 text-xs"
+                  >
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Connected
+                  </Badge>
+                </div>
+              ) : (
+                <span className="text-xs md:text-sm text-gray-400">
+                  Not connected
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Passport Info Box */}
+        {ipePassport && passportVerified && (
+          <div className="inline-block px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Globe className="h-4 w-4 text-purple-600" />
+              <span className="text-xs text-gray-600 font-medium">Ipê Passport</span>
+              <Badge
+                variant="secondary"
+                className="bg-green-100 text-green-800 text-xs"
+              >
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Verified
+              </Badge>
+            </div>
+            <div className="mt-1">
+              <p className="text-purple-600 font-medium text-sm">
+                {ipePassport}
+              </p>
+              {walletAddress && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Passport wallet: {walletAddress?.slice(0, 6)}...
+                  {walletAddress?.slice(-4)}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

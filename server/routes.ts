@@ -1667,6 +1667,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Community endpoints
+  app.get("/api/community/members", 
+    authenticateUser,
+    auditLogger("GET_COMMUNITY_MEMBERS"),
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      console.log("=== GET_COMMUNITY_MEMBERS DEBUG START ===");
+      console.log("Authenticated user FID:", req.farcasterFid);
+      
+      const members = await storage.getActiveMembersWithStats();
+      console.log("Retrieved members count:", members.length);
+      console.log("Sample member data:", members[0] ? JSON.stringify(members[0], null, 2) : "No members found");
+      
+      // Fetch Farcaster profile data for all members
+      let membersWithProfiles = members;
+      if (members.length > 0) {
+        try {
+          console.log("Fetching Farcaster profiles for", members.length, "members");
+          const fids = members.map(m => m.farcasterFid);
+          const userResponse = await neynar.fetchBulkUsers({ fids });
+          
+          if (userResponse.users && userResponse.users.length > 0) {
+            // Create a map of FID to profile data
+            const profileMap = new Map();
+            userResponse.users.forEach(user => {
+              profileMap.set(user.fid, {
+                displayName: user.display_name,
+                username: user.username,
+                pfpUrl: user.pfp_url,
+                bio: user.profile?.bio?.text,
+              });
+            });
+            
+            // Merge profile data with member data
+            membersWithProfiles = members.map(member => {
+              const profile = profileMap.get(member.farcasterFid);
+              return {
+                ...member,
+                displayName: profile?.displayName,
+                username: profile?.username,
+                pfpUrl: profile?.pfpUrl,
+                farcasterBio: profile?.bio,
+              };
+            });
+            
+            console.log("Enhanced members with profile data, sample:", JSON.stringify(membersWithProfiles[0], null, 2));
+          }
+        } catch (profileError) {
+          console.warn("Failed to fetch Farcaster profiles:", profileError);
+          // Continue with members without profile data
+        }
+      }
+      
+      const response = { members: membersWithProfiles };
+      console.log("Sending response with", response.members.length, "members");
+      console.log("=== GET_COMMUNITY_MEMBERS DEBUG END ===");
+      
+      res.json(response);
+    } catch (err: any) {
+      console.error("Get community members error:", err);
+      console.error("Error stack:", err.stack);
+      res.status(500).json({ 
+        error: err.message || "Failed to get community members",
+        status: 500,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  app.get("/api/community/members/:fid", 
+    authenticateUser,
+    auditLogger("GET_COMMUNITY_MEMBER_DETAILS"),
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      console.log("=== GET_COMMUNITY_MEMBER_DETAILS DEBUG START ===");
+      const fid = parseInt(req.params.fid);
+      console.log("Requested FID:", fid, "from params:", req.params.fid);
+      
+      if (isNaN(fid)) {
+        console.log("Invalid FID provided");
+        return res.status(400).json({ error: "Invalid FID" });
+      }
+
+      const member = await storage.getMemberWithStats(fid);
+      console.log("Retrieved member from storage:", member ? JSON.stringify(member, null, 2) : "Member not found");
+      
+      if (!member) {
+        console.log("Member not found for FID:", fid);
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      // Fetch Farcaster profile data
+      let profileData = null;
+      try {
+        console.log("Fetching Farcaster profile for FID:", fid);
+        const userResponse = await neynar.fetchBulkUsers({ fids: [fid] });
+        if (userResponse.users && userResponse.users.length > 0) {
+          const user = userResponse.users[0];
+          profileData = {
+            displayName: user.display_name,
+            username: user.username,
+            pfpUrl: user.pfp_url,
+            bio: user.profile?.bio?.text,
+          };
+          console.log("Fetched profile data:", profileData);
+        }
+      } catch (profileError) {
+        console.warn("Failed to fetch Farcaster profile:", profileError);
+        // Continue without profile data
+      }
+
+      const memberWithProfile = {
+        ...member,
+        displayName: profileData?.displayName,
+        username: profileData?.username,
+        pfpUrl: profileData?.pfpUrl,
+        farcasterBio: profileData?.bio, // Keep separate from member bio
+      };
+
+      console.log("Final member response:", JSON.stringify(memberWithProfile, null, 2));
+      console.log("=== GET_COMMUNITY_MEMBER_DETAILS DEBUG END ===");
+      res.json(memberWithProfile);
+    } catch (error: any) {
+      console.error("Failed to get community member details:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ 
+        error: "Failed to get member details",
+        status: 500,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Submit application
   app.post("/api/application/submit", async (req, res) => {
     try {

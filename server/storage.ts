@@ -49,6 +49,9 @@ export interface IStorage {
   updateMember(memberId: number, member: UpdateMember): Promise<Member>;
   deleteMember(memberId: number): Promise<void>;
   getAllMembers(): Promise<Member[]>;
+  getActiveMembersWithStats(): Promise<Array<Member & { totalPoints: number; pulseStreak: number }>>;
+  getMemberWithStats(farcasterFid: number): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined>;
+  calculatePulseStreak(memberId: number): Promise<number>;
   
   // Compatibility methods for farcasterFid lookup
   getMemberByFarcasterFid(farcasterFid: number): Promise<Member | undefined>;
@@ -258,6 +261,102 @@ export class DatabaseStorage implements IStorage {
 
   async getAllMembers(): Promise<Member[]> {
     return await db.select().from(members).orderBy(desc(members.createdAt));
+  }
+
+  async getActiveMembersWithStats(): Promise<Array<Member & { totalPoints: number; pulseStreak: number }>> {
+    // Get all active members
+    const activeMembers = await db
+      .select()
+      .from(members)
+      .where(eq(members.status, 'active_member'))
+      .orderBy(desc(members.createdAt));
+
+    // Calculate stats for each member
+    const membersWithStats = await Promise.all(
+      activeMembers.map(async (member) => {
+        const totalPoints = await this.calculateTotalPoints(member.id);
+        const pulseStreak = await this.calculatePulseStreak(member.id);
+        return {
+          ...member,
+          totalPoints,
+          pulseStreak,
+        };
+      })
+    );
+
+    return membersWithStats;
+  }
+
+  async getMemberWithStats(farcasterFid: number): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined> {
+    const member = await this.getMemberByFarcasterFid(farcasterFid);
+    if (!member) return undefined;
+
+    const totalPoints = await this.calculateTotalPoints(member.id);
+    const pulseStreak = await this.calculatePulseStreak(member.id);
+
+    return {
+      ...member,
+      totalPoints,
+      pulseStreak,
+    };
+  }
+
+  async calculateTotalPoints(memberId: number): Promise<number> {
+    // Get all pulse executions for this member with their points
+    const result = await db
+      .select({
+        points: pulses.points,
+      })
+      .from(pulseExecutions)
+      .innerJoin(pulses, eq(pulseExecutions.pulseId, pulses.id))
+      .where(eq(pulseExecutions.memberId, memberId));
+
+    return result.reduce((total, execution) => total + execution.points, 0);
+  }
+
+  async calculatePulseStreak(memberId: number): Promise<number> {
+    // Get all pulse executions for this member, ordered by pulse start date (most recent first)
+    const executions = await db
+      .select({
+        pulseId: pulseExecutions.pulseId,
+        datetimeStart: pulses.datetimeStart,
+        executedAt: pulseExecutions.executedAt,
+      })
+      .from(pulseExecutions)
+      .innerJoin(pulses, eq(pulseExecutions.pulseId, pulses.id))
+      .where(eq(pulseExecutions.memberId, memberId))
+      .orderBy(desc(pulses.datetimeStart));
+
+    if (executions.length === 0) return 0;
+
+    // Calculate consecutive days from most recent execution
+    let streak = 1; // Start with 1 if there's at least one execution
+    const executionDates = executions.map(e => 
+      new Date(e.datetimeStart).toISOString().split('T')[0]
+    );
+
+    // Remove duplicates and sort by date (most recent first)
+    const uniqueDates = Array.from(new Set(executionDates)).sort().reverse();
+
+    if (uniqueDates.length <= 1) return streak;
+
+    // Check for consecutive dates
+    for (let i = 0; i < uniqueDates.length - 1; i++) {
+      const currentDate = new Date(uniqueDates[i]);
+      const nextDate = new Date(uniqueDates[i + 1]);
+      
+      // Calculate the difference in days
+      const timeDiff = currentDate.getTime() - nextDate.getTime();
+      const dayDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+      
+      if (dayDiff === 1) {
+        streak++;
+      } else {
+        break; // Streak is broken
+      }
+    }
+
+    return streak;
   }
 
   // Application Flow

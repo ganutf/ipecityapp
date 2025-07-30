@@ -16,6 +16,8 @@ import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import PulseDetailPage from "@/pages/admin/pulse-detail";
 import ProfilePage from "@/pages/profile";
+import CommunityPage from "@/pages/community";
+import MemberDetailsPage from "@/pages/member-details";
 import SignerApprovalPage from "@/pages/signer-approval";
 import VerifyPassportPage from "@/pages/verify-passport";
 
@@ -75,6 +77,8 @@ function Router() {
           <Route path="/admin" component={AdminPage} />
           <Route path="/admin/pulse/:id" component={PulseDetailPage} />
           <Route path="/profile" component={ProfilePage} />
+          <Route path="/community" component={CommunityPage} />
+          <Route path="/member/:fid" component={MemberDetailsPage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
 
           <Route path="/id-verification" component={IdVerificationPage} />

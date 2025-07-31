@@ -86,6 +86,7 @@ async function deleteMember() {
     console.log('==================================');
     console.log('This action will:');
     console.log('• Delete the member record permanently');
+    console.log('• Remove all attestations linked to member activities');
     console.log('• Remove all pulse executions (likes/recasts)');
     console.log('• Delete email verification records');
     console.log('• Remove passport verification tokens');

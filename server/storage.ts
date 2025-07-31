@@ -243,6 +243,19 @@ export class DatabaseStorage implements IStorage {
     // Delete all related data first (cascading deletion)
     // This ensures referential integrity and prevents orphaned records
     
+    // First, get all pulse execution IDs for this member
+    const memberExecutions = await db
+      .select({ id: pulseExecutions.id })
+      .from(pulseExecutions)
+      .where(eq(pulseExecutions.memberId, memberId));
+    
+    const executionIds = memberExecutions.map(exec => exec.id);
+    
+    // Delete attestations that reference this member's pulse executions
+    if (executionIds.length > 0) {
+      await db.delete(attestations).where(inArray(attestations.pulseExecutionId, executionIds));
+    }
+    
     // Delete pulse executions
     await db.delete(pulseExecutions).where(eq(pulseExecutions.memberId, memberId));
     

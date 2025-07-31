@@ -6,6 +6,70 @@ import type { Pulse, Member } from "@shared/schema";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { authenticatedGet } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, History, CheckCircle2, Users } from "lucide-react";
+
+// Helper functions for contextual timing information
+const formatTimeDifference = (diffMs: number): string => {
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+
+  if (days > 0) {
+    return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+  }
+  
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+  
+  return `${minutes}m`;
+};
+
+const getContextualTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) => {
+  const startTime = new Date((pulse as any).datetimeStart);
+  const endTime = new Date(startTime.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
+  
+  const isEnded = currentTime >= endTime;
+  const isActive = currentTime >= startTime && currentTime < endTime;
+  const isFuture = currentTime < startTime;
+  
+  if (isFuture) {
+    const timeUntilStart = formatTimeDifference(startTime.getTime() - currentTime.getTime());
+    const duration = (pulse as any).interval || 24;
+    return `⏰ Starts in ${timeUntilStart} • Duration: ${duration}h`;
+  }
+  
+  if (isActive) {
+    const timeStarted = formatTimeDifference(currentTime.getTime() - startTime.getTime());
+    const timeRemaining = formatTimeDifference(endTime.getTime() - currentTime.getTime());
+    return `🔥 Started ${timeStarted} ago • ${timeRemaining} remaining`;
+  }
+  
+  // Ended
+  const timeEnded = formatTimeDifference(currentTime.getTime() - endTime.getTime());
+  const duration = (pulse as any).interval || 24;
+  return `✅ Ended ${timeEnded} ago • Was active for ${duration}h`;
+};
+
+const getActivePulseTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) => {
+  const startTime = new Date((pulse as any).datetimeStart);
+  const endTime = new Date(startTime.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
+  const timeRemaining = formatTimeDifference(endTime.getTime() - currentTime.getTime());
+  
+  const startDateStr = startTime.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  
+  return `Started ${startDateStr} • ${timeRemaining} remaining`;
+};
 
 // below your other imports / constants
 const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
@@ -17,6 +81,9 @@ export default function FarcasterEmbed() {
     isLoading: authLoading,
   } = usePersistentAuth();
   // QR code state removed - handled by /signer-approval page
+
+  // Tab state for pulse organization
+  const [activeTab, setActiveTab] = useState("upcoming");
 
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
@@ -272,11 +339,13 @@ export default function FarcasterEmbed() {
       {/* Active Pulse Section */}
       {activePulse ? (
         <div className="mb-12 flex justify-center">
-          <PostTool
-            pulse={activePulse}
-            member={(memberCheck as any)?.member}
-            signerUuid={signerUuid}
-          />
+          <div className="w-full max-w-lg">
+            <PostTool
+              pulse={activePulse}
+              member={(memberCheck as any)?.member}
+              signerUuid={signerUuid}
+            />
+          </div>
         </div>
       ) : (
         <div className="mb-12 flex justify-center">
@@ -291,267 +360,170 @@ export default function FarcasterEmbed() {
         </div>
       )}
 
-      {/* Upcoming and Previous Pulses */}
+      {/* Pulse Tabs Section */}
       {(pulsesData as any)?.pulses?.length > 0 && (
-        <div className="space-y-8">
-          {/* Upcoming Pulses */}
-          {(() => {
-            const upcomingPulses = (pulsesData as any).pulses
-              .filter(
-                (pulse: Pulse) => {
-                  const now = new Date();
-                  const pulseStart = new Date((pulse as any).datetimeStart);
-                  return pulseStart > now;
-                }
-              )
-              .sort((a: Pulse, b: Pulse) => 
-                new Date((a as any).datetimeStart).getTime() - new Date((b as any).datetimeStart).getTime()
-              ); // Ascending for upcoming
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="h-5 w-5" />
+              <span>Community Pulses</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="upcoming" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Upcoming ({(() => {
+                    const upcomingPulses = (pulsesData as any).pulses.filter((pulse: Pulse) => {
+                      const now = new Date();
+                      const pulseStart = new Date((pulse as any).datetimeStart);
+                      return pulseStart > now;
+                    });
+                    return upcomingPulses.length;
+                  })()})
+                </TabsTrigger>
+                <TabsTrigger value="past" className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Past ({(() => {
+                    const pastPulses = (pulsesData as any).pulses.filter((pulse: Pulse) =>
+                      !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart)
+                    );
+                    return pastPulses.length;
+                  })()})
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  My Completed ({(() => {
+                    const completedPulses = (pulsesData as any).pulses.filter((pulse: Pulse) => {
+                      const isPast = !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart);
+                      const executionStatus = getUserExecutionStatus(pulse.id);
+                      return isPast && (executionStatus.liked || executionStatus.shared || executionStatus.abstained);
+                    });
+                    return completedPulses.length;
+                  })()})
+                </TabsTrigger>
+              </TabsList>
 
-            return (
-              upcomingPulses.length > 0 && (
-                <div className="bg-white rounded-lg shadow">
-                  <div className="p-6 border-b border-gray-200">
-                    <h3 className="text-xl font-semibold mb-1 text-blue-700">
-                      Upcoming Pulses
-                    </h3>
-                    <p className="text-gray-600">
-                      Future community engagement activities
-                    </p>
-                  </div>
-                  <div className="p-6">
+              <TabsContent value="upcoming" className="mt-6">
+                {(() => {
+                  const upcomingPulses = (pulsesData as any).pulses
+                    .filter((pulse: Pulse) => {
+                      const now = new Date();
+                      const pulseStart = new Date((pulse as any).datetimeStart);
+                      return pulseStart > now;
+                    })
+                    .sort((a: Pulse, b: Pulse) => 
+                      new Date((a as any).datetimeStart).getTime() - new Date((b as any).datetimeStart).getTime()
+                    );
+
+                  if (upcomingPulses.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-gray-500">
+                        <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p>No upcoming pulses scheduled</p>
+                      </div>
+                    );
+                  }
+
+                  return (
                     <div className="space-y-4">
-                      {upcomingPulses.map((pulse: Pulse) => {
-                        const executionStatus = getUserExecutionStatus(
-                          pulse.id,
-                        );
-                        const past = false;
-                        const today = false;
-
-                        return (
-                          <div
-                            key={pulse.id}
-                            className={`border rounded-lg p-4 ${
-                              today
-                                ? "border-green-300 bg-green-50"
-                                : past
-                                  ? "border-gray-200 bg-gray-50"
-                                  : "border-blue-200 bg-blue-50"
-                            }`}
-                          >
-                            <div className="flex justify-between items-start mb-3">
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 mb-1">
-                                  PULSE #{pulse.id}
-                                </h4>
-                                <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
-                                <p
-                                  className={`text-sm font-medium mb-2 ${
-                                    past ? "text-gray-500" : "text-blue-700"
-                                  }`}
-                                >
-                                  {new Date((pulse as any).datetimeStart).toLocaleDateString("en-US", {
-                                    weekday: "long",
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                  })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleDateString("en-US", {
-                                    weekday: "long",
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                  })}
-                                </p>
-                                <a
-                                  href={(pulse as any).urlEmbed}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 hover:text-blue-800 break-all"
-                                >
-                                  {(pulse as any).urlEmbed}
-                                </a>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <span
-                                  className={`px-3 py-1 text-sm rounded-full font-medium ${
-                                    today
-                                      ? "bg-green-100 text-green-800"
-                                      : past
-                                        ? "bg-gray-100 text-gray-800"
-                                        : "bg-blue-100 text-blue-800"
-                                  }`}
-                                >
-                                  {today
-                                    ? "Active Today"
-                                    : past
-                                      ? "Completed"
-                                      : "Upcoming"}
-                                </span>
-                              </div>
+                      {upcomingPulses.map((pulse: Pulse) => (
+                        <div key={pulse.id} className="border rounded-lg p-4 border-blue-200 bg-blue-50">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 mb-1">
+                                PULSE #{pulse.id}
+                              </h4>
+                              <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
+                              <p className="text-sm font-medium mb-2 text-blue-700">
+                                {new Date((pulse as any).datetimeStart).toLocaleString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                  year: "numeric",
+                                })}
+                              </p>
+                              <a
+                                href={(pulse as any).urlEmbed}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:text-blue-800 break-all"
+                              >
+                                {(pulse as any).urlEmbed}
+                              </a>
                             </div>
-
-                            {/* Execution Status */}
-                            {(past || today) && (
-                              <div className="flex items-center space-x-6 text-sm">
-                                <div className="flex items-center space-x-2">
-                                  <div
-                                    className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                      executionStatus.liked
-                                        ? "bg-red-500"
-                                        : "bg-gray-200 border-2 border-gray-300"
-                                    }`}
-                                  >
-                                    {executionStatus.liked && (
-                                      <span className="text-white text-xs font-bold">
-                                        ✓
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span
-                                    className={`font-medium ${
-                                      executionStatus.liked
-                                        ? "text-red-600"
-                                        : "text-gray-500"
-                                    }`}
-                                  >
-                                    {executionStatus.liked
-                                      ? "Liked"
-                                      : "Like pending"}
-                                  </span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <div
-                                    className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                      executionStatus.shared
-                                        ? "bg-green-500"
-                                        : "bg-gray-200 border-2 border-gray-300"
-                                    }`}
-                                  >
-                                    {executionStatus.shared && (
-                                      <span className="text-white text-xs font-bold">
-                                        ✓
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span
-                                    className={`font-medium ${
-                                      executionStatus.shared
-                                        ? "text-green-600"
-                                        : "text-gray-500"
-                                    }`}
-                                  >
-                                    {executionStatus.shared
-                                      ? "Shared"
-                                      : "Share pending"}
-                                  </span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <div
-                                    className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                      executionStatus.abstained
-                                        ? "bg-yellow-500"
-                                        : "bg-gray-200 border-2 border-gray-300"
-                                    }`}
-                                  >
-                                    {executionStatus.abstained && (
-                                      <span className="text-white text-xs font-bold">
-                                        ✓
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span
-                                    className={`font-medium ${
-                                      executionStatus.abstained
-                                        ? "text-yellow-600"
-                                        : "text-gray-500"
-                                    }`}
-                                  >
-                                    {executionStatus.abstained
-                                      ? "Abstained"
-                                      : "Abstain option"}
-                                  </span>
-                                </div>
-                                {today && (
-                                  <span className="text-green-600 font-medium text-xs">
-                                    → Use embedded post above to interact
-                                  </span>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Future Pulse Info */}
-                            <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mt-2">
-                              This pulse will be available on{" "}
-                              {new Date((pulse as any).datetimeStart).toLocaleDateString()}
-                              .
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )
-            );
-          })()}
-
-          {/* Previous Pulses */}
-          {(() => {
-            const previousPulses = (pulsesData as any).pulses
-              .filter(
-                (pulse: Pulse) =>
-                  !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart),
-              )
-              .sort((a: Pulse, b: Pulse) => (b as any).datetimeStart.localeCompare((a as any).datetimeStart)); // Descending for previous
-
-            return (
-              previousPulses.length > 0 && (
-                <div className="bg-white rounded-lg shadow">
-                  <div className="p-6 border-b border-gray-200">
-                    <h3 className="text-xl font-semibold mb-1 text-gray-700">
-                      Previous Pulses
-                    </h3>
-                    <p className="text-gray-600">
-                      Past community engagement activities
-                    </p>
-                    {/* Total Points Summary */}
-                    {(() => {
-                      const totalPoints = (executionsData as any)?.executionDetails?.reduce(
-                        (total: number, detail: any) => total + (detail.execution ? detail.pointsEarned : 0), 
-                        0
-                      ) || 0;
-                      
-                      if (totalPoints > 0) {
-                        return (
-                          <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
                             <div className="flex items-center space-x-2">
-                              <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                                <span className="text-white text-sm font-bold">Σ</span>
-                              </div>
-                              <span className="text-purple-700 font-semibold">
-                                Total Points Earned: {totalPoints}
+                              <span className="px-3 py-1 text-sm rounded-full font-medium bg-blue-100 text-blue-800">
+                                Upcoming
                               </span>
                             </div>
                           </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                  <div className="p-6">
+                          <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mt-2">
+                            {getContextualTimingInfo(pulse)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </TabsContent>
+
+              <TabsContent value="past" className="mt-6">
+                {(() => {
+                  const pastPulses = (pulsesData as any).pulses
+                    .filter((pulse: Pulse) =>
+                      !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart)
+                    )
+                    .sort((a: Pulse, b: Pulse) => (b as any).datetimeStart.localeCompare((a as any).datetimeStart));
+
+                  if (pastPulses.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-gray-500">
+                        <History className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p>No past pulses available</p>
+                      </div>
+                    );
+                  }
+
+                  const totalPoints = (executionsData as any)?.executionDetails?.reduce(
+                    (total: number, detail: any) => total + (detail.execution ? detail.pointsEarned : 0), 
+                    0
+                  ) || 0;
+
+                  return (
                     <div className="space-y-4">
-                      {previousPulses.map((pulse: Pulse) => {
-                        const executionStatus = getUserExecutionStatus(
-                          pulse.id,
+                      {totalPoints > 0 && (
+                        <div className="p-3 bg-purple-50 rounded-lg border border-purple-200 mb-4">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                              <span className="text-white text-sm font-bold">Σ</span>
+                            </div>
+                            <span className="text-purple-700 font-semibold">
+                              Total Points Earned: {totalPoints}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {pastPulses.map((pulse: Pulse) => {
+                        const executionStatus = getUserExecutionStatus(pulse.id);
+                        const executionDetail = (executionsData as any)?.executionDetails?.find(
+                          (detail: any) => detail.pulse.id === pulse.id,
                         );
-                        const past = true;
-                        const today = false;
+                        const hasExecution = executionDetail && executionDetail.execution;
+                        const pointsEarned = hasExecution ? executionDetail.pointsEarned : 0;
+                        const attestation = executionDetail?.attestation;
 
                         return (
-                          <div
-                            key={pulse.id}
-                            className="border rounded-lg p-4 border-gray-200 bg-gray-50"
-                          >
+                          <div key={pulse.id} className="border rounded-lg p-4 border-gray-200 bg-gray-50">
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex-1">
                                 <h4 className="font-semibold text-gray-900 mb-1">
@@ -559,16 +531,19 @@ export default function FarcasterEmbed() {
                                 </h4>
                                 <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
                                 <p className="text-sm font-medium mb-2 text-gray-500">
-                                  {new Date((pulse as any).datetimeStart).toLocaleDateString("en-US", {
-                                    weekday: "long",
-                                    year: "numeric",
-                                    month: "long",
+                                  {new Date((pulse as any).datetimeStart).toLocaleString("en-US", {
+                                    month: "short",
                                     day: "numeric",
-                                  })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleDateString("en-US", {
-                                    weekday: "long",
-                                    year: "numeric",
-                                    month: "long",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleString("en-US", {
+                                    month: "short",
                                     day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                    year: "numeric",
                                   })}
                                 </p>
                                 <a
@@ -582,181 +557,333 @@ export default function FarcasterEmbed() {
                               </div>
                             </div>
 
-                            {/* Execution Status for Past Pulses */}
-                            <div className="flex items-center space-x-6 text-sm">
+                            {/* Execution Status */}
+                            <div className="flex items-center space-x-6 text-sm mb-2">
                               <div className="flex items-center space-x-2">
-                                <div
-                                  className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                    executionStatus.liked
-                                      ? "bg-red-500"
-                                      : "bg-gray-200 border-2 border-gray-300"
-                                  }`}
-                                >
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                  executionStatus.liked ? "bg-red-500" : "bg-gray-200 border-2 border-gray-300"
+                                }`}>
                                   {executionStatus.liked && (
-                                    <span className="text-white text-xs font-bold">
-                                      ✓
-                                    </span>
+                                    <span className="text-white text-xs font-bold">✓</span>
                                   )}
                                 </div>
-                                <span
-                                  className={`font-medium ${
-                                    executionStatus.liked
-                                      ? "text-red-600"
-                                      : "text-gray-400"
-                                  }`}
-                                >
-                                  {executionStatus.liked
-                                    ? "Liked"
-                                    : "Not liked"}
+                                <span className={`font-medium ${
+                                  executionStatus.liked ? "text-red-600" : "text-gray-400"
+                                }`}>
+                                  {executionStatus.liked ? "Liked" : "Not liked"}
                                 </span>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <div
-                                  className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                    executionStatus.shared
-                                      ? "bg-green-500"
-                                      : "bg-gray-200 border-2 border-gray-300"
-                                  }`}
-                                >
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                  executionStatus.shared ? "bg-green-500" : "bg-gray-200 border-2 border-gray-300"
+                                }`}>
                                   {executionStatus.shared && (
-                                    <span className="text-white text-xs font-bold">
-                                      ✓
-                                    </span>
+                                    <span className="text-white text-xs font-bold">✓</span>
                                   )}
                                 </div>
-                                <span
-                                  className={`font-medium ${
-                                    executionStatus.shared
-                                      ? "text-green-600"
-                                      : "text-gray-400"
-                                  }`}
-                                >
-                                  {executionStatus.shared
-                                    ? "Shared"
-                                    : "Not shared"}
+                                <span className={`font-medium ${
+                                  executionStatus.shared ? "text-green-600" : "text-gray-400"
+                                }`}>
+                                  {executionStatus.shared ? "Shared" : "Not shared"}
                                 </span>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <div
-                                  className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                    executionStatus.abstained
-                                      ? "bg-yellow-500"
-                                      : "bg-gray-200 border-2 border-gray-300"
-                                  }`}
-                                >
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                  executionStatus.abstained ? "bg-yellow-500" : "bg-gray-200 border-2 border-gray-300"
+                                }`}>
                                   {executionStatus.abstained && (
-                                    <span className="text-white text-xs font-bold">
-                                      ✓
-                                    </span>
+                                    <span className="text-white text-xs font-bold">✓</span>
                                   )}
                                 </div>
-                                <span
-                                  className={`font-medium ${
-                                    executionStatus.abstained
-                                      ? "text-yellow-600"
-                                      : "text-gray-400"
-                                  }`}
-                                >
-                                  {executionStatus.abstained
-                                    ? "Abstained"
-                                    : "Not abstained"}
+                                <span className={`font-medium ${
+                                  executionStatus.abstained ? "text-yellow-600" : "text-gray-400"
+                                }`}>
+                                  {executionStatus.abstained ? "Abstained" : "Not abstained"}
                                 </span>
                               </div>
                             </div>
 
                             {/* Points and Attestation Status */}
-                            {(() => {
-                              // Get the execution detail for this pulse to show points and attestation status
-                              const executionDetail = (executionsData as any)?.executionDetails?.find(
-                                (detail: any) => detail.pulse.id === pulse.id,
-                              );
-                              
-                              const hasExecution = executionDetail && executionDetail.execution;
-                              const pointsEarned = hasExecution ? executionDetail.pointsEarned : 0;
-                              const attestation = executionDetail?.attestation;
-
-                              return (
-                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-4">
-                                      {/* Points Display */}
-                                      <div className="flex items-center space-x-2">
-                                        <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
-                                          <span className="text-purple-600 text-xs font-bold">P</span>
-                                        </div>
-                                        <span className={`text-sm font-medium ${pointsEarned > 0 ? 'text-purple-600' : 'text-gray-400'}`}>
-                                          {pointsEarned > 0 ? `${pointsEarned} points earned` : '0 points'}
-                                        </span>
-                                      </div>
-
-                                      {/* Attestation Status */}
-                                      <div className="flex items-center space-x-2">
-                                        {attestation ? (
-                                          attestation.status === 'completed' ? (
-                                            <>
-                                              <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                                                <span className="text-white text-xs font-bold">✓</span>
-                                              </div>
-                                              {attestation.attestationUid ? (
-                                                <a
-                                                  href={getEasScanUrl(attestation.attestationUid)}
-                                                  target="_blank"
-                                                  rel="noopener noreferrer"
-                                                  className="text-sm text-green-600 font-medium hover:text-green-800"
-                                                  title="View attestation on EAS scan"
-                                                >
-                                                  ✓ Attestation  View ↗
-                                                </a>
-                                              ) : (
-                                                <span className="text-sm text-green-600 font-medium">✓ Attestation</span>
-                                              )}
-                                            </>
-                                          ) : attestation.status === 'pending' ? (
-                                            <>
-                                              <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
-                                                <span className="text-white text-xs">⏳</span>
-                                              </div>
-                                              <span className="text-sm text-yellow-600 font-medium">Attestation Pending</span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                                                <span className="text-white text-xs">✗</span>
-                                              </div>
-                                              <span className="text-sm text-red-600 font-medium">Attestation Failed</span>
-                                            </>
-                                          )
-                                        ) : hasExecution ? (
-                                          <>
-                                            <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
-                                              <span className="text-gray-600 text-xs">⏸</span>
-                                            </div>
-                                            <span className="text-sm text-gray-500 font-medium">No Attestation</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center">
-                                              <span className="text-gray-400 text-xs">-</span>
-                                            </div>
-                                            <span className="text-sm text-gray-400 font-medium">Not Executed</span>
-                                          </>
-                                        )}
-                                      </div>
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
+                                      <span className="text-purple-600 text-xs font-bold">P</span>
                                     </div>
+                                    <span className={`text-sm font-medium ${pointsEarned > 0 ? 'text-purple-600' : 'text-gray-400'}`}>
+                                      {pointsEarned > 0 ? `${pointsEarned} points earned` : '0 points'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    {attestation ? (
+                                      attestation.status === 'completed' ? (
+                                        <>
+                                          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-xs font-bold">✓</span>
+                                          </div>
+                                          {attestation.attestationUid ? (
+                                            <a
+                                              href={getEasScanUrl(attestation.attestationUid)}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-sm text-green-600 font-medium hover:text-green-800"
+                                              title="View attestation on EAS scan"
+                                            >
+                                              ✓ Attestation View ↗
+                                            </a>
+                                          ) : (
+                                            <span className="text-sm text-green-600 font-medium">✓ Attestation</span>
+                                          )}
+                                        </>
+                                      ) : attestation.status === 'pending' ? (
+                                        <>
+                                          <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-xs">⏳</span>
+                                          </div>
+                                          <span className="text-sm text-yellow-600 font-medium">Attestation Pending</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-xs">✗</span>
+                                          </div>
+                                          <span className="text-sm text-red-600 font-medium">Attestation Failed</span>
+                                        </>
+                                      )
+                                    ) : hasExecution ? (
+                                      <>
+                                        <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
+                                          <span className="text-gray-600 text-xs">⏸</span>
+                                        </div>
+                                        <span className="text-sm text-gray-500 font-medium">No Attestation</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center">
+                                          <span className="text-gray-400 text-xs">-</span>
+                                        </div>
+                                        <span className="text-sm text-gray-400 font-medium">Not Executed</span>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
-                              );
-                            })()}
+                              </div>
+                            </div>
+
+                            <div className="text-sm text-gray-600 bg-gray-100 rounded p-2 mt-2">
+                              {getContextualTimingInfo(pulse)}
+                            </div>
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                </div>
-              )
-            );
-          })()}
-        </div>
+                  );
+                })()}
+              </TabsContent>
+
+              <TabsContent value="completed" className="mt-6">
+                {(() => {
+                  const completedPulses = (pulsesData as any).pulses
+                    .filter((pulse: Pulse) => {
+                      const isPast = !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart);
+                      const executionStatus = getUserExecutionStatus(pulse.id);
+                      return isPast && (executionStatus.liked || executionStatus.shared || executionStatus.abstained);
+                    })
+                    .sort((a: Pulse, b: Pulse) => (b as any).datetimeStart.localeCompare((a as any).datetimeStart));
+
+                  if (completedPulses.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-gray-500">
+                        <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p>No completed pulses yet</p>
+                        <p className="text-sm mt-1">Start participating in pulses to see your activity here!</p>
+                      </div>
+                    );
+                  }
+
+                  const totalPoints = completedPulses.reduce((total: number, pulse: Pulse) => {
+                    const executionDetail = (executionsData as any)?.executionDetails?.find(
+                      (detail: any) => detail.pulse.id === pulse.id,
+                    );
+                    return total + (executionDetail?.execution ? executionDetail.pointsEarned : 0);
+                  }, 0);
+
+                  return (
+                    <div className="space-y-4">
+                      {totalPoints > 0 && (
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200 mb-4">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
+                              <span className="text-white text-sm font-bold">Σ</span>
+                            </div>
+                            <span className="text-green-700 font-semibold">
+                              Your Points from Completed Pulses: {totalPoints}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {completedPulses.map((pulse: Pulse) => {
+                        const executionStatus = getUserExecutionStatus(pulse.id);
+                        const executionDetail = (executionsData as any)?.executionDetails?.find(
+                          (detail: any) => detail.pulse.id === pulse.id,
+                        );
+                        const hasExecution = executionDetail && executionDetail.execution;
+                        const pointsEarned = hasExecution ? executionDetail.pointsEarned : 0;
+                        const attestation = executionDetail?.attestation;
+
+                        return (
+                          <div key={pulse.id} className="border rounded-lg p-4 border-green-200 bg-green-50">
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 mb-1">
+                                  PULSE #{pulse.id}
+                                </h4>
+                                <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
+                                <p className="text-sm font-medium mb-2 text-green-700">
+                                  {new Date((pulse as any).datetimeStart).toLocaleString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleString("en-US", {
+                                    month: "short",
+                                    day: "numeric", 
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                    year: "numeric",
+                                  })}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="px-3 py-1 text-sm rounded-full font-medium bg-green-100 text-green-800">
+                                  Completed
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Your Execution Status */}
+                            <div className="flex items-center space-x-6 text-sm mb-2">
+                              <div className="flex items-center space-x-2">
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                  executionStatus.liked ? "bg-red-500" : "bg-gray-200 border-2 border-gray-300"
+                                }`}>
+                                  {executionStatus.liked && (
+                                    <span className="text-white text-xs font-bold">✓</span>
+                                  )}
+                                </div>
+                                <span className={`font-medium ${
+                                  executionStatus.liked ? "text-red-600" : "text-gray-400"
+                                }`}>
+                                  {executionStatus.liked ? "You Liked" : "Not liked"}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                  executionStatus.shared ? "bg-green-500" : "bg-gray-200 border-2 border-gray-300"
+                                }`}>
+                                  {executionStatus.shared && (
+                                    <span className="text-white text-xs font-bold">✓</span>
+                                  )}
+                                </div>
+                                <span className={`font-medium ${
+                                  executionStatus.shared ? "text-green-600" : "text-gray-400"
+                                }`}>
+                                  {executionStatus.shared ? "You Shared" : "Not shared"}
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                                  executionStatus.abstained ? "bg-yellow-500" : "bg-gray-200 border-2 border-gray-300"
+                                }`}>
+                                  {executionStatus.abstained && (
+                                    <span className="text-white text-xs font-bold">✓</span>
+                                  )}
+                                </div>
+                                <span className={`font-medium ${
+                                  executionStatus.abstained ? "text-yellow-600" : "text-gray-400"
+                                }`}>
+                                  {executionStatus.abstained ? "You Abstained" : "Not abstained"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Your Points and Attestation */}
+                            <div className="mt-4 pt-4 border-t border-green-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+                                      <span className="text-green-600 text-xs font-bold">P</span>
+                                    </div>
+                                    <span className={`text-sm font-medium ${pointsEarned > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                      {pointsEarned > 0 ? `You earned ${pointsEarned} points` : 'No points earned'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    {attestation ? (
+                                      attestation.status === 'completed' ? (
+                                        <>
+                                          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-xs font-bold">✓</span>
+                                          </div>
+                                          {attestation.attestationUid ? (
+                                            <a
+                                              href={getEasScanUrl(attestation.attestationUid)}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-sm text-green-600 font-medium hover:text-green-800"
+                                              title="View your attestation on EAS scan"
+                                            >
+                                              ✓ Your Attestation View ↗
+                                            </a>
+                                          ) : (
+                                            <span className="text-sm text-green-600 font-medium">✓ Attestation</span>
+                                          )}
+                                        </>
+                                      ) : attestation.status === 'pending' ? (
+                                        <>
+                                          <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-xs">⏳</span>
+                                          </div>
+                                          <span className="text-sm text-yellow-600 font-medium">Attestation Pending</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-xs">✗</span>
+                                          </div>
+                                          <span className="text-sm text-red-600 font-medium">Attestation Failed</span>
+                                        </>
+                                      )
+                                    ) : hasExecution ? (
+                                      <>
+                                        <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
+                                          <span className="text-gray-600 text-xs">⏸</span>
+                                        </div>
+                                        <span className="text-sm text-gray-500 font-medium">No Attestation</span>
+                                      </>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-sm text-green-700 bg-green-100 rounded p-2 mt-2">
+                              {getContextualTimingInfo(pulse)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
@@ -1213,9 +1340,12 @@ function PostTool({
     <div className="w-full max-w-lg bg-green-50 border border-green-200 shadow rounded-xl">
       <div className="p-6 border-b border-green-200 bg-green-100 rounded-t-xl">
         <h2 className="text-xl font-bold text-green-800 mb-2 flex items-center">
-          🎯 PULSE #{pulse.id}
+          🎯 PULSE #{pulse.id} - Active Now
         </h2>
         <p className="text-green-700 text-sm mb-2">{pulse.description}</p>
+        <p className="text-sm font-medium text-green-600 mb-2">
+          {getActivePulseTimingInfo(pulse)}
+        </p>
         <p className="text-sm text-green-600">
           Complete your engagement task for today!
         </p>

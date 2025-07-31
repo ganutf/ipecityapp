@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { authenticatedPost } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
 import { CheckCircle, XCircle, Clock, ExternalLink, Loader2 } from "lucide-react";
+import { usePulseTimings } from "@/hooks/usePulseTimings";
 
 interface Member {
   id: number;
@@ -62,32 +63,13 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: 
   const [creatingAll, setCreatingAll] = useState(false);
   const [creatingIndividual, setCreatingIndividual] = useState<number | null>(null);
 
-  // Calculate pulse timing - same logic as server
-  const getPulseEndTime = () => {
-    const startTime = new Date(pulse.datetimeStart);
-    return new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
-  };
-
-  const isPulseEnded = () => {
-    const now = new Date();
-    const endTime = getPulseEndTime();
-    return now >= endTime;
-  };
-
-  const getTimeUntilEnd = () => {
-    if (isPulseEnded()) return null;
-    const now = new Date();
-    const endTime = getPulseEndTime();
-    const diffMs = endTime.getTime() - now.getTime();
-    
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
-  };
+  // Use the reusable pulse timing hook
+  const { pulseTimings } = usePulseTimings([pulse], true);
+  const pulseTimingInfo = pulseTimings[0];
+  
+  const isPulseEnded = () => pulseTimingInfo?.isEnded ?? false;
+  const getTimeUntilEnd = () => pulseTimingInfo?.timeUntilEnd;
+  const getPulseEndTime = () => pulseTimingInfo?.endTime;
 
   // Mutation for creating all attestations for this pulse
   const createAllAttestationsMutation = useMutation({
@@ -322,7 +304,7 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: 
             {executions.filter(e => e.execution).length} of {executions.length} members executed this pulse
           </p>
           <p className="text-xs text-gray-500">
-            Pulse ends at {getPulseEndTime().toLocaleString()}
+            Pulse ends at {getPulseEndTime()?.toLocaleString()}
           </p>
         </div>
         {eligibleExecutions.length > 0 && (

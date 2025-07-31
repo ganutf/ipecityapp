@@ -770,6 +770,7 @@ export default function Profile2() {
             )}
           </CardContent>
         </Card>
+
       </div>
     </div>
   );

@@ -144,7 +144,14 @@ export default function MemberDetails() {
   }
 
   const member: MemberDetailsData = memberData;
-  const joinDate = member.createdAt ? new Date(member.createdAt).toLocaleDateString() : 'Unknown';
+  const joinDate = member.createdAt ? new Date(member.createdAt).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    year: "numeric"
+  }) : 'Unknown';
 
   return (
     <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
@@ -264,6 +271,7 @@ export default function MemberDetails() {
             </div>
           </CardContent>
         </Card>
+
       </div>
     </div>
   );

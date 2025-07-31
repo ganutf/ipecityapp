@@ -799,7 +799,14 @@ export default function AdminPage() {
                   <label className="text-sm font-medium text-gray-500">Registration Date</label>
                   <p className="text-sm">
                     {(selectedMember as any).createdAt ? 
-                      new Date((selectedMember as any).createdAt).toLocaleDateString() : 
+                      new Date((selectedMember as any).createdAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                        year: "numeric"
+                      }) : 
                       'Unknown'}
                   </p>
                 </div>

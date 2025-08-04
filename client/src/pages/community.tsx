@@ -196,7 +196,7 @@ export default function Community() {
         <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900 mx-auto mb-4"></div>
               <p className="text-gray-600 font-medium">Loading...</p>
             </div>
           </div>
@@ -212,8 +212,8 @@ export default function Community() {
         <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="text-center py-16 px-8">
-              <div className="h-16 w-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Users className="h-8 w-8 text-purple-600" />
+              <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Users className="h-8 w-8 text-slate-700" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-3">
                 Authentication Required
@@ -264,7 +264,7 @@ export default function Community() {
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
-          <div className="bg-gradient-to-r from-purple-500 to-blue-600 rounded-t-xl px-8 py-6">
+          <div className="bg-gradient-to-r from-slate-800 to-sky-600 rounded-t-xl px-8 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="h-12 w-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
@@ -272,7 +272,7 @@ export default function Community() {
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold text-white">Community</h1>
-                  <p className="text-purple-100 mt-1">
+                  <p className="text-slate-200 mt-1">
                     Meet the active members of Ipê City
                   </p>
                 </div>
@@ -280,11 +280,11 @@ export default function Community() {
               <div className="hidden sm:flex items-center space-x-6 text-white/90">
                 <div className="text-center">
                   <div className="text-2xl font-bold">{totalMembers}</div>
-                  <div className="text-sm text-purple-100">Members</div>
+                  <div className="text-sm text-slate-200">Members</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold">{filteredCount}</div>
-                  <div className="text-sm text-purple-100">Showing</div>
+                  <div className="text-sm text-slate-200">Showing</div>
                 </div>
               </div>
             </div>
@@ -298,7 +298,7 @@ export default function Community() {
                 placeholder="Search by name, passport, or role..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-11 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                className="pl-10 h-11 border-gray-200 focus:border-lime-500 focus:ring-lime-500"
               />
             </div>
 
@@ -352,7 +352,7 @@ export default function Community() {
         {membersLoading ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900 mx-auto mb-4"></div>
               <p className="text-gray-600 font-medium">Loading community members...</p>
             </div>
           </div>
@@ -363,7 +363,7 @@ export default function Community() {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="bg-gradient-to-r from-yellow-50 to-orange-50 px-8 py-6 border-b border-gray-100">
                   <div className="flex items-center space-x-3">
-                    <div className="h-10 w-10 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center">
+                    <div className="h-10 w-10 bg-gradient-to-r from-lime-400 to-lime-600 rounded-full flex items-center justify-center">
                       <Trophy className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -382,21 +382,21 @@ export default function Community() {
                       <div key={member.farcasterFid} className="relative">
                         {index === 0 && (
                           <div className="absolute -top-3 -right-3 z-10">
-                            <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold px-3 py-1 text-sm">
+                            <Badge className="bg-gradient-to-r from-lime-400 to-lime-600 text-slate-900 font-bold px-3 py-1 text-sm">
                               👑 #1
                             </Badge>
                           </div>
                         )}
                         {index === 1 && (
                           <div className="absolute -top-3 -right-3 z-10">
-                            <Badge className="bg-gradient-to-r from-gray-300 to-gray-500 text-black font-bold px-3 py-1 text-sm">
+                            <Badge className="bg-gradient-to-r from-slate-300 to-slate-500 text-white font-bold px-3 py-1 text-sm">
                               🥈 #2
                             </Badge>
                           </div>
                         )}
                         {index === 2 && (
                           <div className="absolute -top-3 -right-3 z-10">
-                            <Badge className="bg-gradient-to-r from-amber-500 to-amber-700 text-white font-bold px-3 py-1 text-sm">
+                            <Badge className="bg-gradient-to-r from-amber-400 to-amber-600 text-slate-900 font-bold px-3 py-1 text-sm">
                               🥉 #3
                             </Badge>
                           </div>

@@ -72,12 +72,12 @@ function Router() {
         <Switch>
           <Route
             path="/"
-            component={FarcasterEmbed}
+            component={CommunityPage}
           />
+          <Route path="/pulses" component={FarcasterEmbed} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/pulse/:id" component={PulseDetailPage} />
           <Route path="/profile" component={ProfilePage} />
-          <Route path="/community" component={CommunityPage} />
           <Route path="/member/:fid" component={MemberDetailsPage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
 

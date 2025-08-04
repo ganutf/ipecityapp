@@ -8,7 +8,7 @@ import { authenticatedGet } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, History, CheckCircle2, Users } from "lucide-react";
+import { Calendar, History, CheckCircle2, Users, Trophy } from "lucide-react";
 import { PulseCard } from "@/components/PulseCard";
 
 // Helper functions for contextual timing information
@@ -193,6 +193,12 @@ export default function FarcasterEmbed() {
     return pulseDateStr < todayStr;
   };
 
+  // Calculate total points earned from all executions
+  const totalPoints = (executionsData as any)?.executionDetails?.reduce(
+    (total: number, detail: any) => total + (detail.execution ? detail.pointsEarned : 0),
+    0
+  ) || 0;
+
   const getUserExecutionStatus = (pulseId: number) => {
     if (!(executionsData as any)?.executionDetails)
       return { liked: false, shared: false, abstained: false };
@@ -368,10 +374,20 @@ export default function FarcasterEmbed() {
       {(pulsesData as any)?.pulses?.length > 0 && (
         <Card className="w-full">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Users className="h-5 w-5" />
-              <span>Community Pulses</span>
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center space-x-2">
+                <Users className="h-5 w-5" />
+                <span>Community Pulses</span>
+              </CardTitle>
+              {totalPoints > 0 && (
+                <div className="flex items-center space-x-2 px-3 py-1 bg-lime-50 border border-lime-200 rounded-full">
+                  <Trophy className="h-4 w-4 text-lime-600" />
+                  <span className="text-lime-700 font-semibold text-sm">
+                    {totalPoints} Points
+                  </span>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -463,25 +479,8 @@ export default function FarcasterEmbed() {
                     );
                   }
 
-                  const totalPoints = (executionsData as any)?.executionDetails?.reduce(
-                    (total: number, detail: any) => total + (detail.execution ? detail.pointsEarned : 0),
-                    0
-                  ) || 0;
-
                   return (
                     <div className="space-y-4">
-                      {totalPoints > 0 && (
-                        <div className="p-3 bg-purple-50 rounded-lg border border-purple-200 mb-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                              <span className="text-white text-sm font-bold">Σ</span>
-                            </div>
-                            <span className="text-purple-700 font-semibold">
-                              Total Points Earned: {totalPoints}
-                            </span>
-                          </div>
-                        </div>
-                      )}
                       {pastPulses.map((pulse: Pulse) => {
                         const executionStatus = getUserExecutionStatus(pulse.id);
                         const executionDetail = (executionsData as any)?.executionDetails?.find(
@@ -500,7 +499,6 @@ export default function FarcasterEmbed() {
                             showExecutionStatus={true}
                             clickable={true}
                             isAdmin={isAdmin}
-                            className="border-gray-200 bg-gray-50"
                           />
                         );
                       })}
@@ -529,27 +527,8 @@ export default function FarcasterEmbed() {
                     );
                   }
 
-                  const totalPoints = completedPulses.reduce((total: number, pulse: Pulse) => {
-                    const executionDetail = (executionsData as any)?.executionDetails?.find(
-                      (detail: any) => detail.pulse.id === pulse.id,
-                    );
-                    return total + (executionDetail?.execution ? executionDetail.pointsEarned : 0);
-                  }, 0);
-
                   return (
                     <div className="space-y-4">
-                      {totalPoints > 0 && (
-                        <div className="p-3 bg-green-50 rounded-lg border border-green-200 mb-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                              <span className="text-white text-sm font-bold">Σ</span>
-                            </div>
-                            <span className="text-green-700 font-semibold">
-                              Your Points from Completed Pulses: {totalPoints}
-                            </span>
-                          </div>
-                        </div>
-                      )}
                       {completedPulses.map((pulse: Pulse) => {
                         const executionStatus = getUserExecutionStatus(pulse.id);
                         const executionDetail = (executionsData as any)?.executionDetails?.find(
@@ -568,7 +547,6 @@ export default function FarcasterEmbed() {
                             showExecutionStatus={true}
                             clickable={true}
                             isAdmin={isAdmin}
-                            className="border-green-200 bg-green-50"
                           />
                         );
                       })}

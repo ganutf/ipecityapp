@@ -40,8 +40,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const navItems = [
-    { path: "/", label: "Pulses", showWhen: "member" },
-    { path: "/community", label: "Community", showWhen: "member" },
+    { path: "/", label: "Community", showWhen: "member" },
+    { path: "/pulses", label: "Pulses", showWhen: "member" },
     { path: "/admin", label: "Admin", showWhen: "admin" },
   ];
 

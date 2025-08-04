@@ -103,7 +103,7 @@ export default function PulseDetailPage() {
               Try Again
             </Button>
             <Button
-              onClick={() => setLocation(isAdmin ? '/admin' : '/')}
+              onClick={() => setLocation(isAdmin ? '/admin' : '/pulses')}
               className="mt-4"
               variant="outline"
             >
@@ -181,7 +181,7 @@ export default function PulseDetailPage() {
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button
-            onClick={() => setLocation(isAdmin ? '/admin' : '/')}
+            onClick={() => setLocation(isAdmin ? '/admin' : '/pulses')}
             variant="outline"
             size="sm"
             className="flex items-center"

@@ -112,15 +112,15 @@ export default function Profile2() {
     architect: { 
       label: 'Architect', 
       icon: User, 
-      color: 'bg-purple-100 text-purple-600',
-      hoverColor: 'hover:bg-purple-200',
+      color: 'bg-slate-100 text-slate-700',
+      hoverColor: 'hover:bg-slate-200',
       description: 'Building the future of communities'
     },
     explorer: { 
       label: 'Explorer', 
       icon: Compass, 
-      color: 'bg-blue-100 text-blue-600',
-      hoverColor: 'hover:bg-blue-200',
+      color: 'bg-sky-100 text-sky-700',
+      hoverColor: 'hover:bg-sky-200',
       description: 'Discovering new possibilities'
     },
     admin: { 
@@ -306,7 +306,7 @@ export default function Profile2() {
       <div className="container mx-auto max-w-2xl py-8">
         <Card>
           <CardContent className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading authentication...</p>
           </CardContent>
         </Card>
@@ -335,67 +335,68 @@ export default function Profile2() {
     ensName && (ensName.endsWith(".ipecity.eth") || ensName === "ipecity.eth");
 
   return (
-    <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
-      <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Header with Profile Info */}
-        <Card>
-          <CardContent className="pt-4 md:pt-6">
-            <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
-              <div className="flex items-center space-x-3 md:space-x-4">
+        <Card className="border-l-4 border-l-slate-700 bg-white shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-col space-y-6 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:space-x-8">
+              <div className="flex items-center space-x-4">
                 {profile?.pfpUrl ? (
                   <img 
                     src={profile.pfpUrl} 
                     alt={`${profile?.displayName || profile?.username || 'User'} profile picture`}
-                    className="h-12 w-12 md:h-16 md:w-16 rounded-full object-cover flex-shrink-0"
+                    className="h-16 w-16 rounded-full object-cover flex-shrink-0"
                   />
                 ) : (
-                  <div className="h-12 w-12 md:h-16 md:w-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="h-16 w-16 bg-gradient-to-br from-slate-700 to-sky-600 rounded-full flex items-center justify-center flex-shrink-0">
                     {profile?.displayName || profile?.username ? (
-                      <span className="text-white text-lg md:text-2xl font-semibold">
+                      <span className="text-white text-2xl font-semibold">
                         {(profile?.displayName || profile?.username || '?')[0].toUpperCase()}
                       </span>
                     ) : (
-                      <User className="h-6 w-6 md:h-8 md:w-8 text-white" />
+                      <User className="h-8 w-8 text-white" />
                     )}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-                    {profile?.displayName || profile?.username}
-                  </h1>
-                  <p className="text-xs md:text-sm text-gray-500">
-                    ID: {profile?.fid}
-                  </p>
-                  <div className="flex items-center space-x-2 mt-2">
+                  <div className="flex items-center space-x-3">
+                    <h1 className="text-2xl font-bold text-gray-900">
+                      {profile?.displayName || profile?.username}
+                    </h1>
                     {memberTypeInfo && (
                       <div className="group relative">
-                        <div className={`h-9 w-9 rounded-full flex items-center justify-center cursor-pointer transition-colors ${memberTypeInfo.color} ${memberTypeInfo.hoverColor}`}>
-                          <memberTypeInfo.icon className="h-5 w-5" />
+                        <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium transition-colors ${memberTypeInfo.color} ${memberTypeInfo.hoverColor} cursor-pointer`}>
+                          <memberTypeInfo.icon className="h-4 w-4" />
+                          <span className="hidden sm:inline">{memberTypeInfo.label}</span>
                         </div>
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                           <div className="font-medium">{memberTypeInfo.label}</div>
                           <div className="text-xs text-gray-300 mt-1">{memberTypeInfo.description}</div>
                         </div>
                       </div>
                     )}
                   </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    ID: {profile?.fid}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex flex-col space-y-2 lg:flex-shrink-0">
+              <div className="flex flex-col space-y-4 lg:flex-shrink-0">
                 {/* Connected Wallet Info Box */}
                 <div
-                  className={`flex flex-col px-2 md:px-3 py-1.5 rounded-lg border ${
+                  className={`flex flex-col px-3 py-3 rounded-lg border-l-4 border ${
                     isConnected
-                      ? "bg-blue-50 border-blue-200"
-                      : "bg-gray-50 border-gray-200"
+                      ? "bg-sky-50 border-sky-200 border-l-sky-500"
+                      : "bg-gray-50 border-gray-200 border-l-gray-400"
                   }`}
                 >
                   <div className="flex items-center space-x-2">
                     <Wallet
-                      className={`h-4 w-4 ${isConnected ? "text-blue-600" : "text-gray-400"}`}
+                      className={`h-4 w-4 ${isConnected ? "text-sky-600" : "text-gray-400"}`}
                     />
-                    <span className="text-xs text-gray-600 font-medium">
+                    <span className="text-sm font-medium text-gray-700">
                       {isConnected ? "Connected Wallet" : "Wallet Not Connected"}
                     </span>
                   </div>
@@ -404,7 +405,7 @@ export default function Profile2() {
                       <div className="flex items-center space-x-2">
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <button className="text-xs md:text-sm font-mono hover:underline transition-colors text-blue-600">
+                            <button className="text-sm font-mono hover:underline transition-colors text-sky-600 font-medium">
                               {address?.slice(0, 6)}...{address?.slice(-4)}
                             </button>
                           </AlertDialogTrigger>
@@ -436,7 +437,7 @@ export default function Profile2() {
                         {({ openConnectModal }) => (
                           <button
                             onClick={openConnectModal}
-                            className="text-xs md:text-sm text-gray-400 hover:underline transition-colors"
+                            className="text-sm text-gray-500 hover:underline transition-colors font-medium"
                           >
                             Connect
                           </button>
@@ -448,10 +449,10 @@ export default function Profile2() {
 
                 {/* Passport Info Box */}
                 {memberData?.member?.ipePassport && memberData?.member?.passportVerified && (
-                  <div className="inline-block px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg">
+                  <div className="inline-block px-3 py-3 bg-lime-50 border border-lime-200 border-l-4 border-l-lime-500 rounded-lg">
                     <div className="flex items-center space-x-2">
-                      <Globe className="h-4 w-4 text-purple-600" />
-                      <span className="text-xs text-gray-600 font-medium">Ipê Passport</span>
+                      <Globe className="h-4 w-4 text-lime-600" />
+                      <span className="text-sm font-medium text-gray-700">Ipê Passport</span>
                       <Badge
                         variant="secondary"
                         className="bg-green-100 text-green-800 text-xs"
@@ -461,7 +462,7 @@ export default function Profile2() {
                       </Badge>
                     </div>
                     <div className="mt-1">
-                      <p className="text-purple-600 font-medium text-sm">
+                      <p className="text-lime-600 font-semibold text-base">
                         {memberData.member.ipePassport}
                       </p>
                       {memberData.member.walletAddress && (
@@ -479,10 +480,10 @@ export default function Profile2() {
         </Card>
 
         {/* Bio Section */}
-        <Card>
+        <Card className="bg-white shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg">About</CardTitle>
+              <CardTitle className="text-lg font-semibold text-gray-900">About</CardTitle>
               {!editingBio && (
                 <Button
                   variant="ghost"
@@ -496,14 +497,14 @@ export default function Profile2() {
           </CardHeader>
           <CardContent>
             {editingBio ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <Textarea
                   value={bioValue}
                   onChange={(e) => setBioValue(e.target.value)}
                   placeholder="Tell us about yourself..."
                   className="min-h-[100px]"
                 />
-                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2 pt-2">
                   <Button
                     size="sm"
                     onClick={handleBioSave}
@@ -534,10 +535,10 @@ export default function Profile2() {
         </Card>
 
         {/* Social Links */}
-        <Card>
+        <Card className="bg-white shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg">
+              <CardTitle className="text-lg font-semibold text-gray-900">
                 Social Links
               </CardTitle>
               {!editingSocial && (
@@ -553,7 +554,7 @@ export default function Profile2() {
           </CardHeader>
           <CardContent>
             {editingSocial ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {/* Email Section with Verification */}
                 <div>
                   <EmailVerificationSection
@@ -620,7 +621,7 @@ export default function Profile2() {
                   </div>
                 </div>
 
-                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2 pt-2">
                   <Button
                     size="sm"
                     onClick={handleSocialSave}
@@ -642,7 +643,7 @@ export default function Profile2() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {/* Email Display */}
                 <div className="flex items-center space-x-2">
                   <Mail className="h-4 w-4 text-gray-500" />
@@ -697,10 +698,10 @@ export default function Profile2() {
         </Card>
 
         {/* Profile Tags */}
-        <Card>
+        <Card className="bg-white shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg">
+              <CardTitle className="text-lg font-semibold text-gray-900">
                 Profile Tags
               </CardTitle>
               {!editingTags && (
@@ -716,8 +717,8 @@ export default function Profile2() {
           </CardHeader>
           <CardContent>
             {editingTags ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {PROFILE_TAGS.map((tag) => (
                     <div key={tag} className="flex items-center space-x-2">
                       <Checkbox
@@ -731,7 +732,7 @@ export default function Profile2() {
                     </div>
                   ))}
                 </div>
-                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2 pt-2">
                   <Button
                     size="sm"
                     onClick={handleTagsSave}

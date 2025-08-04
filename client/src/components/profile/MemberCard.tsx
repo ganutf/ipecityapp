@@ -22,6 +22,8 @@ interface MemberCardProps {
   totalPoints: number;
   pulseStreak: number;
   pfpUrl?: string;
+  rank?: number;
+  showRank?: boolean;
 }
 
 const memberTypeConfig = {
@@ -71,13 +73,29 @@ export function MemberCard({
   ipePassport,
   totalPoints,
   pulseStreak,
-  pfpUrl
+  pfpUrl,
+  rank,
+  showRank = false
 }: MemberCardProps) {
   const memberTypeInfo = memberTypeConfig[memberType as keyof typeof memberTypeConfig];
 
   return (
     <Link href={`/member/${farcasterFid}`}>
-      <Card className="hover:shadow-md transition-shadow cursor-pointer group">
+      <Card className="hover:shadow-md transition-shadow cursor-pointer group relative">
+        {showRank && rank && (
+          <div className="absolute -top-2 -left-2 z-10">
+            <Badge 
+              className={`
+                ${rank === 1 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black' : ''}
+                ${rank === 2 ? 'bg-gradient-to-r from-gray-300 to-gray-500 text-black' : ''}
+                ${rank === 3 ? 'bg-gradient-to-r from-amber-500 to-amber-700 text-white' : ''}
+                ${rank > 3 ? 'bg-purple-600 text-white' : ''}
+              `}
+            >
+              #{rank}
+            </Badge>
+          </div>
+        )}
         <CardContent className="p-4">
           <div className="flex items-start space-x-3">
             {/* Profile Avatar */}

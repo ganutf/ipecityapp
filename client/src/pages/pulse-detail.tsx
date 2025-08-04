@@ -3,8 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { authenticatedGet } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Clock, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Calendar, Clock, Target } from "lucide-react";
 import { PulseExecutionsTable } from "@/components/PulseExecutionsTable";
+import { FarcasterPostEmbed } from "@/components/FarcasterPostEmbed";
+import { formatPulseDate, getPulseDurationText } from "@/lib/dateUtils";
+import { cn } from "@/lib/utils";
 
 export default function PulseDetailPage() {
   const params = useParams();
@@ -128,138 +133,133 @@ export default function PulseDetailPage() {
   const pulse = pulseData.pulse;
   const executions = pulseData.executions;
 
-  const formatDateTime = (dateTimeStr: string) => {
-    return new Date(dateTimeStr).toLocaleString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'short'
-    });
-  };
-
-  const getEndDateTime = (startDateTime: string, intervalHours: number) => {
-    const start = new Date(startDateTime);
-    const end = new Date(start.getTime() + intervalHours * 60 * 60 * 1000);
-    return end;
-  };
-
-  const isPulseActive = () => {
+  const getStatusBadge = () => {
     const now = new Date();
-    const start = new Date(pulse.datetimeStart);
-    const end = getEndDateTime(pulse.datetimeStart, pulse.interval);
-    return now >= start && now <= end;
-  };
-
-  const isPulseEnded = () => {
-    const now = new Date();
-    const end = getEndDateTime(pulse.datetimeStart, pulse.interval);
-    return now > end;
-  };
-
-  const getPulseStatus = () => {
-    if (isPulseActive()) {
-      return { status: 'Active', className: 'bg-green-100 text-green-800' };
-    } else if (isPulseEnded()) {
-      return { status: 'Ended', className: 'bg-gray-100 text-gray-800' };
+    const startTime = new Date(pulse.datetimeStart);
+    const endTime = new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
+    
+    const baseClasses = "px-3 py-1.5 text-sm font-semibold rounded-full";
+    
+    if (now >= startTime && now <= endTime) {
+      return (
+        <Badge className={cn(baseClasses, "bg-orange-500 text-white")}>
+          Active
+        </Badge>
+      );
+    } else if (now > endTime) {
+      return (
+        <Badge className={cn(baseClasses, "bg-gray-500 text-white")}>
+          Ended
+        </Badge>
+      );
     } else {
-      return { status: 'Scheduled', className: 'bg-blue-100 text-blue-800' };
+      return (
+        <Badge className={cn(baseClasses, "bg-blue-500 text-white")}>
+          Scheduled
+        </Badge>
+      );
     }
   };
 
-  const pulseStatus = getPulseStatus();
+  const getCardAccentColor = () => {
+    const now = new Date();
+    const startTime = new Date(pulse.datetimeStart);
+    const endTime = new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
+    
+    if (now >= startTime && now <= endTime) {
+      return "border-l-orange-500";
+    } else if (now > endTime) {
+      return "border-l-gray-400";
+    } else {
+      return "border-l-blue-500";
+    }
+  };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Header */}
         <div className="flex items-center gap-4">
           <Button
             onClick={() => setLocation(isAdmin ? '/admin' : '/')}
             variant="outline"
             size="sm"
+            className="flex items-center"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             {isAdmin ? 'Back to Admin' : 'Back to Pulses'}
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Pulse Detail</h1>
-            <p className="text-gray-600">
+            <h1 className="text-2xl font-bold text-gray-900">PULSE #{pulse.id}</h1>
+            <p className="text-gray-600 text-sm">
               {isAdmin ? 'Manage executions and attestations' : 'View pulse information and execution status'}
             </p>
           </div>
         </div>
-      </div>
 
-      {/* Pulse Information */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h2 className="text-xl font-semibold">PULSE #{pulse.id}</h2>
-              <span className={`px-3 py-1 text-sm rounded-full font-medium ${pulseStatus.className}`}>
-                {pulseStatus.status}
-              </span>
+        {/* Pulse Information Card */}
+        <Card className={cn(
+          "border-l-4 bg-white shadow-sm",
+          getCardAccentColor()
+        )}>
+          <CardContent className="p-6">
+            {/* Header with Status */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <h2 className="text-xl font-bold text-gray-900">
+                  PULSE #{pulse.id}
+                </h2>
+                {getStatusBadge()}
+              </div>
             </div>
-            <p className="text-gray-600 text-sm mb-4">{pulse.description}</p>
-          </div>
-        </div>
+            
+            {/* Description */}
+            <p className="text-gray-700 text-base mb-6 leading-relaxed">
+              {pulse.description}
+            </p>
+            
+            {/* Key Information */}
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center text-sm text-gray-600">
+                <Calendar className="h-4 w-4 mr-3 text-gray-400" />
+                <span className="font-medium">{formatPulseDate(new Date(pulse.datetimeStart))}</span>
+              </div>
+              
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center text-gray-600">
+                  <Clock className="h-4 w-4 mr-3 text-gray-400" />
+                  <span>Duration: <span className="font-medium">{getPulseDurationText(pulse.interval)}</span></span>
+                </div>
+                <div className="flex items-center text-purple-600">
+                  <Target className="h-4 w-4 mr-2" />
+                  <span className="font-semibold">{pulse.points} points</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flex items-center gap-3">
-            <Calendar className="h-5 w-5 text-gray-400" />
-            <div>
-              <div className="text-sm text-gray-500">Start Time</div>
-              <div className="font-medium">{formatDateTime(pulse.datetimeStart)}</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Clock className="h-5 w-5 text-gray-400" />
-            <div>
-              <div className="text-sm text-gray-500">Duration</div>
-              <div className="font-medium">{pulse.interval} hours</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="h-5 w-5 flex items-center justify-center bg-purple-100 rounded text-purple-600 text-xs font-bold">
-              P
-            </div>
-            <div>
-              <div className="text-sm text-gray-500">Points Reward</div>
-              <div className="font-medium">{pulse.points} points</div>
-            </div>
-          </div>
-        </div>
-
+        {/* Farcaster Post Embed */}
         {pulse.urlEmbed && (
-          <div className="mt-6 pt-6 border-t">
-            <div className="text-sm text-gray-500 mb-2">Source Post</div>
-            <a
-              href={pulse.urlEmbed}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 break-all flex items-center gap-2"
-            >
-              {pulse.urlEmbed}
-              <ExternalLink className="h-4 w-4" />
-            </a>
-          </div>
+          <FarcasterPostEmbed
+            castUrl={pulse.urlEmbed}
+            viewerFid={profile?.fid}
+            className="shadow-sm"
+          />
         )}
-      </div>
 
-      {/* Pulse Executions Table */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <PulseExecutionsTable
-          pulse={pulse}
-          executions={executions}
-          profile={profile}
-          onRefresh={() => refetch()}
-          isAdmin={isAdmin}
-        />
+        {/* Pulse Executions Table */}
+        <Card className="bg-white shadow-sm">
+          <CardContent className="p-6">
+            <PulseExecutionsTable
+              pulse={pulse}
+              executions={executions}
+              profile={profile}
+              onRefresh={() => refetch()}
+              isAdmin={isAdmin}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

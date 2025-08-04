@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Pencil, Save, X, Eye, BarChart3 } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useLocation } from "wouter";
+import { PulseCard } from "@/components/PulseCard";
 // Removed useAddSubname hook - using direct API calls instead
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -389,21 +390,10 @@ export default function AdminPage() {
               {(pulsesData as any)?.pulses?.map((pulse: Pulse) => {
                 const isEditing = editingPulse === pulse.id;
                 const canEdit = isFuturePulse(pulse);
-                const isActive = isPulseActive(pulse);
-                const hasEnded = isPulseEnded(pulse);
-                const isFuture = isFuturePulse(pulse);
-                
-                return (
-                  <div key={pulse.id} className={`border rounded-lg p-4 ${
-                    isActive
-                      ? "border-green-300 bg-green-50"
-                      : hasEnded
-                        ? "border-gray-200 bg-gray-50"
-                        : isFuture
-                          ? "border-blue-200 bg-blue-50"
-                          : "border-yellow-200 bg-yellow-50"
-                  }`}>
-                    {isEditing ? (
+
+                if (isEditing) {
+                  return (
+                    <div key={pulse.id} className="border rounded-lg p-4 bg-blue-50 border-blue-200">
                       <div className="space-y-3">
                         <Select value={editData.pulseTypeId.toString()} onValueChange={(value) => setEditData({ ...editData, pulseTypeId: parseInt(value) })}>
                           <SelectTrigger>
@@ -469,62 +459,19 @@ export default function AdminPage() {
                           </Button>
                         </div>
                       </div>
-                    ) : (
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold text-lg">
-                              PULSE #{pulse.id}
-                            </h3>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              isActive ? 'bg-green-100 text-green-800' :
-                              hasEnded ? 'bg-gray-100 text-gray-800' :
-                              isFuture ? 'bg-blue-100 text-blue-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {isActive ? 'Active' : hasEnded ? 'Ended' : isFuture ? 'Scheduled' : 'Unknown'}
-                            </span>
-                          </div>
-                          <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
-                          <p className="text-xs text-gray-500 mb-2">
-                            {new Date((pulse as any).datetimeStart).toLocaleString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              timeZoneName: 'short'
-                            })}
-                          </p>
-                          <p className="text-sm text-green-600 mb-1">Points: {pulse.points || 1}</p>
-                          <p className="text-sm text-purple-600 mb-2">Duration: {(pulse as any).interval || 24} hours</p>
-                          <p className="text-sm text-blue-600 break-all">{(pulse as any).urlEmbed}</p>
-                        </div>
-                        <div className="ml-4 flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setLocation(`/admin/pulse/${pulse.id}`)}
-                            className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
-                          >
-                            <BarChart3 className="w-4 h-4 mr-1" />
-                            View Details
-                          </Button>
-                          {canEdit && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEditStart(pulse)}
-                            >
-                              <Pencil className="w-4 h-4 mr-1" />
-                              Edit
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <PulseCard
+                    key={pulse.id}
+                    pulse={pulse}
+                    showAdminActions={canEdit}
+                    clickable={true}
+                    isAdmin={true}
+                    onEdit={canEdit ? () => handleEditStart(pulse) : undefined}
+                  />
                 );
               })}
             </div>

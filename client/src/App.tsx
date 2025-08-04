@@ -14,7 +14,7 @@ import {
 } from "@/components/AuthGuard";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
-import PulseDetailPage from "@/pages/admin/pulse-detail";
+import PulseDetailPage from "@/pages/pulse-detail";
 import ProfilePage from "@/pages/profile";
 import CommunityPage from "@/pages/community";
 import MemberDetailsPage from "@/pages/member-details";
@@ -75,7 +75,7 @@ function Router() {
             component={FarcasterEmbed}
           />
           <Route path="/admin" component={AdminPage} />
-          <Route path="/admin/pulse/:id" component={PulseDetailPage} />
+          <Route path="/pulse/:id" component={PulseDetailPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/community" component={CommunityPage} />
           <Route path="/member/:fid" component={MemberDetailsPage} />

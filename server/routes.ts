@@ -938,7 +938,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get pulse executions with attestation status for a specific pulse (admin only)
+  // Get pulse executions with attestation status for a specific pulse (accessible to all authenticated users)
+  app.get("/api/pulse/:pulseId/executions", 
+    authenticateUser, 
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const pulseId = parseInt(req.params.pulseId);
+      console.log('=== PULSE EXECUTIONS DEBUG ===', {
+        rawPulseId: req.params.pulseId,
+        parsedPulseId: pulseId,
+        isNaN: isNaN(pulseId),
+        userId: req.user?.id,
+        userFid: req.user?.farcasterFid,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (isNaN(pulseId)) {
+        console.log('ERROR: Invalid pulse ID provided');
+        return res.status(400).json({ error: "Invalid pulse ID" });
+      }
+
+      // Verify pulse exists
+      const pulse = await storage.getPulse(pulseId);
+      console.log('Pulse lookup result:', { pulseId, found: !!pulse, pulse: pulse ? { id: pulse.id, description: pulse.description } : null });
+      
+      if (!pulse) {
+        console.log('ERROR: Pulse not found in database');
+        return res.status(404).json({ error: "Pulse not found" });
+      }
+
+      const executionsWithAttestations = await storage.getPulseExecutionsWithAttestations(pulseId);
+      
+      res.json({ 
+        pulse,
+        executions: executionsWithAttestations.map(({ execution, member, attestation }) => ({
+          member: {
+            id: member.id,
+            farcasterFid: member.farcasterFid,
+            ipePassport: member.ipePassport,
+            ipeUsername: member.ipeUsername,
+            memberType: member.memberType
+          },
+          execution: execution ? {
+            id: execution.id,
+            actions: execution.actions,
+            executedAt: execution.executedAt,
+            points: pulse.points
+          } : null,
+          attestation: attestation ? {
+            id: attestation.id,
+            status: attestation.status,
+            attestationUid: attestation.attestationUid,
+            transactionHash: attestation.transactionHash,
+            createdAt: attestation.createdAt
+          } : null
+        }))
+      });
+    } catch (err: any) {
+      console.error("Get pulse executions error:", err);
+      res.status(500).json({ error: err.message || "Failed to get pulse executions" });
+    }
+  });
+
+  // Legacy admin endpoint - redirect to new universal endpoint
   app.get("/api/admin/pulse/:pulseId/executions", 
     authenticateUser, 
     requireAdmin,

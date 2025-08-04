@@ -9,6 +9,7 @@ import { getEasScanUrl } from "@/lib/easUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, History, CheckCircle2, Users } from "lucide-react";
+import { PulseCard } from "@/components/PulseCard";
 
 // Helper functions for contextual timing information
 const formatTimeDifference = (diffMs: number): string => {
@@ -21,34 +22,34 @@ const formatTimeDifference = (diffMs: number): string => {
   if (days > 0) {
     return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
   }
-  
+
   if (hours > 0) {
     return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   }
-  
+
   return `${minutes}m`;
 };
 
 const getContextualTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) => {
   const startTime = new Date((pulse as any).datetimeStart);
   const endTime = new Date(startTime.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
-  
+
   const isEnded = currentTime >= endTime;
   const isActive = currentTime >= startTime && currentTime < endTime;
   const isFuture = currentTime < startTime;
-  
+
   if (isFuture) {
     const timeUntilStart = formatTimeDifference(startTime.getTime() - currentTime.getTime());
     const duration = (pulse as any).interval || 24;
     return `⏰ Starts in ${timeUntilStart} • Duration: ${duration}h`;
   }
-  
+
   if (isActive) {
     const timeStarted = formatTimeDifference(currentTime.getTime() - startTime.getTime());
     const timeRemaining = formatTimeDifference(endTime.getTime() - currentTime.getTime());
     return `🔥 Started ${timeStarted} ago • ${timeRemaining} remaining`;
   }
-  
+
   // Ended
   const timeEnded = formatTimeDifference(currentTime.getTime() - endTime.getTime());
   const duration = (pulse as any).interval || 24;
@@ -59,7 +60,7 @@ const getActivePulseTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) 
   const startTime = new Date((pulse as any).datetimeStart);
   const endTime = new Date(startTime.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
   const timeRemaining = formatTimeDifference(endTime.getTime() - currentTime.getTime());
-  
+
   const startDateStr = startTime.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
@@ -67,7 +68,7 @@ const getActivePulseTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) 
     minute: "2-digit",
     hour12: true,
   });
-  
+
   return `Started ${startDateStr} • ${timeRemaining} remaining`;
 };
 
@@ -101,6 +102,9 @@ export default function FarcasterEmbed() {
     refetchOnWindowFocus: false,
   });
 
+  // Check if user is admin based on memberType
+  const isAdmin = (memberCheck as any)?.member?.memberType === 'admin';
+
   const {
     data: signerData,
     isLoading: signerLoading,
@@ -109,9 +113,9 @@ export default function FarcasterEmbed() {
     queryKey: [`/api/neynar/signer/${viewerFid}`],
     enabled: Boolean(
       isAuthenticated &&
-        !!viewerFid &&
-        (memberCheck as any)?.isMember &&
-        !authLoading,
+      !!viewerFid &&
+      (memberCheck as any)?.isMember &&
+      !authLoading,
     ),
     staleTime: 1000, // Keep data fresh
     refetchInterval: (data) => {
@@ -147,9 +151,9 @@ export default function FarcasterEmbed() {
     queryFn: () => authenticatedGet(`/api/executions/${(memberCheck as any)?.member?.id}/details`, viewerFid),
     enabled: Boolean(
       isAuthenticated &&
-        hasValidFid &&
-        (memberCheck as any)?.member?.id &&
-        !authLoading,
+      hasValidFid &&
+      (memberCheck as any)?.member?.id &&
+      !authLoading,
     ),
     retry: (failureCount, error) => {
       // Don't retry on authentication errors (401) or forbidden (403)
@@ -323,8 +327,8 @@ export default function FarcasterEmbed() {
           <p className="text-red-700 text-sm">
             Authentication error occurred. Please refresh the page and sign in again.
           </p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
           >
             Refresh Page
@@ -413,7 +417,7 @@ export default function FarcasterEmbed() {
                       const pulseStart = new Date((pulse as any).datetimeStart);
                       return pulseStart > now;
                     })
-                    .sort((a: Pulse, b: Pulse) => 
+                    .sort((a: Pulse, b: Pulse) =>
                       new Date((a as any).datetimeStart).getTime() - new Date((b as any).datetimeStart).getTime()
                     );
 
@@ -429,48 +433,13 @@ export default function FarcasterEmbed() {
                   return (
                     <div className="space-y-4">
                       {upcomingPulses.map((pulse: Pulse) => (
-                        <div key={pulse.id} className="border rounded-lg p-4 border-blue-200 bg-blue-50">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-gray-900 mb-1">
-                                PULSE #{pulse.id}
-                              </h4>
-                              <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
-                              <p className="text-sm font-medium mb-2 text-blue-700">
-                                {new Date((pulse as any).datetimeStart).toLocaleString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                  year: "numeric",
-                                })}
-                              </p>
-                              <a
-                                href={(pulse as any).urlEmbed}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-600 hover:text-blue-800 break-all"
-                              >
-                                {(pulse as any).urlEmbed}
-                              </a>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <span className="px-3 py-1 text-sm rounded-full font-medium bg-blue-100 text-blue-800">
-                                Upcoming
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-sm text-blue-700 bg-blue-100 rounded p-2 mt-2">
-                            {getContextualTimingInfo(pulse)}
-                          </div>
-                        </div>
+                        <PulseCard
+                          key={pulse.id}
+                          pulse={pulse}
+                          clickable={true}
+                          isAdmin={isAdmin}
+                          className="border-blue-200 bg-blue-50"
+                        />
                       ))}
                     </div>
                   );
@@ -495,7 +464,7 @@ export default function FarcasterEmbed() {
                   }
 
                   const totalPoints = (executionsData as any)?.executionDetails?.reduce(
-                    (total: number, detail: any) => total + (detail.execution ? detail.pointsEarned : 0), 
+                    (total: number, detail: any) => total + (detail.execution ? detail.pointsEarned : 0),
                     0
                   ) || 0;
 
@@ -519,162 +488,20 @@ export default function FarcasterEmbed() {
                           (detail: any) => detail.pulse.id === pulse.id,
                         );
                         const hasExecution = executionDetail && executionDetail.execution;
-                        const pointsEarned = hasExecution ? executionDetail.pointsEarned : 0;
-                        const attestation = executionDetail?.attestation;
 
                         return (
-                          <div key={pulse.id} className="border rounded-lg p-4 border-gray-200 bg-gray-50">
-                            <div className="flex justify-between items-start mb-3">
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 mb-1">
-                                  PULSE #{pulse.id}
-                                </h4>
-                                <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
-                                <p className="text-sm font-medium mb-2 text-gray-500">
-                                  {new Date((pulse as any).datetimeStart).toLocaleString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "numeric",
-                                    minute: "2-digit",
-                                    hour12: true,
-                                  })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "numeric",
-                                    minute: "2-digit",
-                                    hour12: true,
-                                    year: "numeric",
-                                  })}
-                                </p>
-                                <a
-                                  href={(pulse as any).urlEmbed}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 text-sm break-all"
-                                >
-                                  {(pulse as any).urlEmbed}
-                                </a>
-                              </div>
-                            </div>
-
-                            {/* Execution Status */}
-                            <div className="flex items-center space-x-6 text-sm mb-2">
-                              <div className="flex items-center space-x-2">
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                  executionStatus.liked ? "bg-red-500" : "bg-gray-200 border-2 border-gray-300"
-                                }`}>
-                                  {executionStatus.liked && (
-                                    <span className="text-white text-xs font-bold">✓</span>
-                                  )}
-                                </div>
-                                <span className={`font-medium ${
-                                  executionStatus.liked ? "text-red-600" : "text-gray-400"
-                                }`}>
-                                  {executionStatus.liked ? "Liked" : "Not liked"}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                  executionStatus.shared ? "bg-green-500" : "bg-gray-200 border-2 border-gray-300"
-                                }`}>
-                                  {executionStatus.shared && (
-                                    <span className="text-white text-xs font-bold">✓</span>
-                                  )}
-                                </div>
-                                <span className={`font-medium ${
-                                  executionStatus.shared ? "text-green-600" : "text-gray-400"
-                                }`}>
-                                  {executionStatus.shared ? "Shared" : "Not shared"}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                  executionStatus.abstained ? "bg-yellow-500" : "bg-gray-200 border-2 border-gray-300"
-                                }`}>
-                                  {executionStatus.abstained && (
-                                    <span className="text-white text-xs font-bold">✓</span>
-                                  )}
-                                </div>
-                                <span className={`font-medium ${
-                                  executionStatus.abstained ? "text-yellow-600" : "text-gray-400"
-                                }`}>
-                                  {executionStatus.abstained ? "Abstained" : "Not abstained"}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Points and Attestation Status */}
-                            <div className="mt-4 pt-4 border-t border-gray-200">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                  <div className="flex items-center space-x-2">
-                                    <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
-                                      <span className="text-purple-600 text-xs font-bold">P</span>
-                                    </div>
-                                    <span className={`text-sm font-medium ${pointsEarned > 0 ? 'text-purple-600' : 'text-gray-400'}`}>
-                                      {pointsEarned > 0 ? `${pointsEarned} points earned` : '0 points'}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    {attestation ? (
-                                      attestation.status === 'completed' ? (
-                                        <>
-                                          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white text-xs font-bold">✓</span>
-                                          </div>
-                                          {attestation.attestationUid ? (
-                                            <a
-                                              href={getEasScanUrl(attestation.attestationUid)}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-sm text-green-600 font-medium hover:text-green-800"
-                                              title="View attestation on EAS scan"
-                                            >
-                                              ✓ Attestation View ↗
-                                            </a>
-                                          ) : (
-                                            <span className="text-sm text-green-600 font-medium">✓ Attestation</span>
-                                          )}
-                                        </>
-                                      ) : attestation.status === 'pending' ? (
-                                        <>
-                                          <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white text-xs">⏳</span>
-                                          </div>
-                                          <span className="text-sm text-yellow-600 font-medium">Attestation Pending</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white text-xs">✗</span>
-                                          </div>
-                                          <span className="text-sm text-red-600 font-medium">Attestation Failed</span>
-                                        </>
-                                      )
-                                    ) : hasExecution ? (
-                                      <>
-                                        <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
-                                          <span className="text-gray-600 text-xs">⏸</span>
-                                        </div>
-                                        <span className="text-sm text-gray-500 font-medium">No Attestation</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center">
-                                          <span className="text-gray-400 text-xs">-</span>
-                                        </div>
-                                        <span className="text-sm text-gray-400 font-medium">Not Executed</span>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="text-sm text-gray-600 bg-gray-100 rounded p-2 mt-2">
-                              {getContextualTimingInfo(pulse)}
-                            </div>
-                          </div>
+                          <PulseCard
+                            key={pulse.id}
+                            pulse={pulse}
+                            executionStatus={{
+                              ...executionStatus,
+                              hasExecution
+                            }}
+                            showExecutionStatus={true}
+                            clickable={true}
+                            isAdmin={isAdmin}
+                            className="border-gray-200 bg-gray-50"
+                          />
                         );
                       })}
                     </div>
@@ -729,152 +556,20 @@ export default function FarcasterEmbed() {
                           (detail: any) => detail.pulse.id === pulse.id,
                         );
                         const hasExecution = executionDetail && executionDetail.execution;
-                        const pointsEarned = hasExecution ? executionDetail.pointsEarned : 0;
-                        const attestation = executionDetail?.attestation;
 
                         return (
-                          <div key={pulse.id} className="border rounded-lg p-4 border-green-200 bg-green-50">
-                            <div className="flex justify-between items-start mb-3">
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 mb-1">
-                                  PULSE #{pulse.id}
-                                </h4>
-                                <p className="text-gray-600 text-sm mb-2">{pulse.description}</p>
-                                <p className="text-sm font-medium mb-2 text-green-700">
-                                  {new Date((pulse as any).datetimeStart).toLocaleString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "numeric",
-                                    minute: "2-digit",
-                                    hour12: true,
-                                  })} - {new Date(new Date((pulse as any).datetimeStart).getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000).toLocaleString("en-US", {
-                                    month: "short",
-                                    day: "numeric", 
-                                    hour: "numeric",
-                                    minute: "2-digit",
-                                    hour12: true,
-                                    year: "numeric",
-                                  })}
-                                </p>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <span className="px-3 py-1 text-sm rounded-full font-medium bg-green-100 text-green-800">
-                                  Completed
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Your Execution Status */}
-                            <div className="flex items-center space-x-6 text-sm mb-2">
-                              <div className="flex items-center space-x-2">
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                  executionStatus.liked ? "bg-red-500" : "bg-gray-200 border-2 border-gray-300"
-                                }`}>
-                                  {executionStatus.liked && (
-                                    <span className="text-white text-xs font-bold">✓</span>
-                                  )}
-                                </div>
-                                <span className={`font-medium ${
-                                  executionStatus.liked ? "text-red-600" : "text-gray-400"
-                                }`}>
-                                  {executionStatus.liked ? "You Liked" : "Not liked"}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                  executionStatus.shared ? "bg-green-500" : "bg-gray-200 border-2 border-gray-300"
-                                }`}>
-                                  {executionStatus.shared && (
-                                    <span className="text-white text-xs font-bold">✓</span>
-                                  )}
-                                </div>
-                                <span className={`font-medium ${
-                                  executionStatus.shared ? "text-green-600" : "text-gray-400"
-                                }`}>
-                                  {executionStatus.shared ? "You Shared" : "Not shared"}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                  executionStatus.abstained ? "bg-yellow-500" : "bg-gray-200 border-2 border-gray-300"
-                                }`}>
-                                  {executionStatus.abstained && (
-                                    <span className="text-white text-xs font-bold">✓</span>
-                                  )}
-                                </div>
-                                <span className={`font-medium ${
-                                  executionStatus.abstained ? "text-yellow-600" : "text-gray-400"
-                                }`}>
-                                  {executionStatus.abstained ? "You Abstained" : "Not abstained"}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Your Points and Attestation */}
-                            <div className="mt-4 pt-4 border-t border-green-200">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                  <div className="flex items-center space-x-2">
-                                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                                      <span className="text-green-600 text-xs font-bold">P</span>
-                                    </div>
-                                    <span className={`text-sm font-medium ${pointsEarned > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                                      {pointsEarned > 0 ? `You earned ${pointsEarned} points` : 'No points earned'}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    {attestation ? (
-                                      attestation.status === 'completed' ? (
-                                        <>
-                                          <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white text-xs font-bold">✓</span>
-                                          </div>
-                                          {attestation.attestationUid ? (
-                                            <a
-                                              href={getEasScanUrl(attestation.attestationUid)}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-sm text-green-600 font-medium hover:text-green-800"
-                                              title="View your attestation on EAS scan"
-                                            >
-                                              ✓ Your Attestation View ↗
-                                            </a>
-                                          ) : (
-                                            <span className="text-sm text-green-600 font-medium">✓ Attestation</span>
-                                          )}
-                                        </>
-                                      ) : attestation.status === 'pending' ? (
-                                        <>
-                                          <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white text-xs">⏳</span>
-                                          </div>
-                                          <span className="text-sm text-yellow-600 font-medium">Attestation Pending</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white text-xs">✗</span>
-                                          </div>
-                                          <span className="text-sm text-red-600 font-medium">Attestation Failed</span>
-                                        </>
-                                      )
-                                    ) : hasExecution ? (
-                                      <>
-                                        <div className="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center">
-                                          <span className="text-gray-600 text-xs">⏸</span>
-                                        </div>
-                                        <span className="text-sm text-gray-500 font-medium">No Attestation</span>
-                                      </>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="text-sm text-green-700 bg-green-100 rounded p-2 mt-2">
-                              {getContextualTimingInfo(pulse)}
-                            </div>
-                          </div>
+                          <PulseCard
+                            key={pulse.id}
+                            pulse={pulse}
+                            executionStatus={{
+                              ...executionStatus,
+                              hasExecution
+                            }}
+                            showExecutionStatus={true}
+                            clickable={true}
+                            isAdmin={isAdmin}
+                            className="border-green-200 bg-green-50"
+                          />
                         );
                       })}
                     </div>
@@ -979,7 +674,7 @@ function PostTool({
     quotedRecast: boolean;
     regularRecast: boolean;
   }>(null);
-  
+
   const [castData, setCastData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<{
@@ -994,20 +689,19 @@ function PostTool({
   const [lastFailureTime, setLastFailureTime] = useState<number | null>(null);
   const [isCircuitOpen, setIsCircuitOpen] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  
+
   const MAX_RETRIES = 3;
   const CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds
-  const EXPONENTIAL_BACKOFF_BASE = 1000; // 1 second
 
   // Update countdown timer when circuit breaker is open
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (isCircuitOpen && lastFailureTime) {
       interval = setInterval(() => {
         const timeLeft = Math.ceil((CIRCUIT_BREAKER_TIMEOUT - (Date.now() - lastFailureTime)) / 1000);
         setCountdown(Math.max(0, timeLeft));
-        
+
         if (timeLeft <= 0) {
           setIsCircuitOpen(false);
           setRetryCount(0);
@@ -1016,7 +710,7 @@ function PostTool({
         }
       }, 1000);
     }
-    
+
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -1028,10 +722,10 @@ function PostTool({
       if (!viewerFid) {
         throw new Error("User not authenticated");
       }
-      
+
       const response = await fetch("/api/executions", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "x-farcaster-fid": viewerFid.toString(),
         },
@@ -1056,13 +750,13 @@ function PostTool({
   // Handle pulse-specific actions (separate from Farcaster interactions)
   async function handlePulseAction(action: 'like' | 'share' | 'abstain') {
     if (!pulse) return;
-    
+
     setActionLoading(prev => ({ ...prev, [action === 'share' ? 'recast' : action]: true }));
-    
+
     try {
       // Update execution status based on action
       let newActions = { ...executionStatus };
-      
+
       if (action === 'abstain') {
         // Toggle abstain - if already abstained, cancel it and reset to default state
         if (executionStatus.abstained) {
@@ -1079,17 +773,17 @@ function PostTool({
           [action === 'share' ? 'shared' : 'liked']: !executionStatus[action === 'share' ? 'shared' : 'liked']
         };
       }
-      
+
       // Record the execution in database
       await recordExecutionMutation.mutateAsync({ actions: newActions });
-      
+
       // Update local state
       setExecutionStatus(newActions);
-      
+
       const actionName = action === 'share' ? 'shared' : action === 'like' ? 'liked' : 'abstained';
       setSuccessMessage(`Pulse ${actionName} successfully!`);
       setTimeout(() => setSuccessMessage(null), 3000);
-      
+
     } catch (error) {
       console.error(`Error recording pulse ${action}:`, error);
       setError(
@@ -1123,7 +817,7 @@ function PostTool({
   // Circuit breaker helper function
   const checkCircuitBreaker = () => {
     const now = Date.now();
-    
+
     // If circuit is open, check if timeout has passed
     if (isCircuitOpen && lastFailureTime) {
       if (now - lastFailureTime > CIRCUIT_BREAKER_TIMEOUT) {
@@ -1135,7 +829,7 @@ function PostTool({
       }
       return true; // Circuit is still open
     }
-    
+
     return false; // Circuit is closed
   };
 
@@ -1154,7 +848,7 @@ function PostTool({
 
     try {
       console.log("Checking cast:", (pulse as any).urlEmbed, "for viewer:", viewerFid);
-      
+
       const res = await fetch(
         `/api/neynar/cast/${encodeURIComponent((pulse as any).urlEmbed)}/${viewerFid}?type=url`,
       );
@@ -1184,15 +878,15 @@ function PostTool({
       setRetryCount(0);
       setLastFailureTime(null);
       setIsCircuitOpen(false);
-      
+
       console.log("Cast check successful");
     } catch (error) {
       console.error("Error fetching cast:", error);
-      
+
       const newRetryCount = retryCount + 1;
       setRetryCount(newRetryCount);
       setLastFailureTime(Date.now());
-      
+
       // Open circuit breaker if max retries exceeded
       if (newRetryCount >= MAX_RETRIES) {
         console.warn(`Circuit breaker opening after ${MAX_RETRIES} failures`);
@@ -1276,9 +970,9 @@ function PostTool({
         setStats((prev) =>
           prev
             ? {
-                ...prev,
-                liked: !prev.liked,
-              }
+              ...prev,
+              liked: !prev.liked,
+            }
             : null,
         );
         // Record pulse action for like
@@ -1289,11 +983,11 @@ function PostTool({
         setStats((prev) =>
           prev
             ? {
-                ...prev,
-                recasted: true,
-                regularRecast: true,
-                quotedRecast: prev.quotedRecast,
-              }
+              ...prev,
+              recasted: true,
+              regularRecast: true,
+              quotedRecast: prev.quotedRecast,
+            }
             : null,
         );
         // Record pulse action for share
@@ -1304,7 +998,7 @@ function PostTool({
 
       setSuccessMessage(`Post ${type}d successfully!`);
       setTimeout(() => setSuccessMessage(null), 3000);
-      
+
       // Only retry if circuit breaker is not open and we haven't had recent failures
       if (!isCircuitOpen && retryCount === 0) {
         setTimeout(() => handleCheck(), 2000);
@@ -1326,12 +1020,12 @@ function PostTool({
   useEffect(() => {
     if ((pulse as any).urlEmbed && viewerFid && !isCircuitOpen) {
       setUrl((pulse as any).urlEmbed);
-      
+
       // Add a delay to prevent rapid successive calls
       const timeoutId = setTimeout(() => {
         handleCheck();
       }, 500);
-      
+
       return () => clearTimeout(timeoutId);
     }
   }, [(pulse as any).urlEmbed, viewerFid]);
@@ -1345,9 +1039,6 @@ function PostTool({
         <p className="text-green-700 text-sm mb-2">{pulse.description}</p>
         <p className="text-sm font-medium text-green-600 mb-2">
           {getActivePulseTimingInfo(pulse)}
-        </p>
-        <p className="text-sm text-green-600">
-          Complete your engagement task for today!
         </p>
       </div>
 
@@ -1445,11 +1136,10 @@ function PostTool({
                 <button
                   onClick={() => handleReaction("like")}
                   disabled={actionLoading.like || executionStatus.abstained}
-                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    stats?.liked
+                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${stats?.liked
                       ? "bg-red-100 text-red-700"
                       : "bg-gray-100 text-gray-700 hover:bg-red-50"
-                  }`}
+                    }`}
                 >
                   {actionLoading.like ? "⏳" : "❤️"}{" "}
                   {actionLoading.like
@@ -1461,11 +1151,10 @@ function PostTool({
                 <button
                   onClick={() => handleReaction("recast")}
                   disabled={actionLoading.recast || executionStatus.abstained}
-                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    stats?.recasted
+                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${stats?.recasted
                       ? "bg-green-100 text-green-700"
                       : "bg-gray-100 text-gray-700 hover:bg-green-50"
-                  }`}
+                    }`}
                 >
                   {actionLoading.recast ? "⏳" : "🔄"}{" "}
                   {actionLoading.recast
@@ -1477,11 +1166,10 @@ function PostTool({
                 <button
                   onClick={() => handlePulseAction('abstain')}
                   disabled={actionLoading.abstain || (executionStatus.liked || executionStatus.shared)}
-                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    executionStatus.abstained
+                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${executionStatus.abstained
                       ? "bg-yellow-100 text-yellow-700"
                       : "bg-gray-100 text-gray-700 hover:bg-yellow-50"
-                  }`}
+                    }`}
                 >
                   {actionLoading.abstain ? "⏳" : executionStatus.abstained ? "✖️" : "🚫"}{" "}
                   {actionLoading.abstain

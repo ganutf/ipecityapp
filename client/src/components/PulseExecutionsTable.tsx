@@ -55,9 +55,10 @@ interface PulseExecutionsTableProps {
   executions: PulseExecution[];
   profile: any;
   onRefresh: () => void;
+  isAdmin?: boolean;
 }
 
-export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: PulseExecutionsTableProps) {
+export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, isAdmin = false }: PulseExecutionsTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [creatingAll, setCreatingAll] = useState(false);
@@ -307,7 +308,7 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: 
             Pulse ends at {getPulseEndTime()?.toLocaleString()}
           </p>
         </div>
-        {eligibleExecutions.length > 0 && (
+        {isAdmin && eligibleExecutions.length > 0 && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -393,9 +394,11 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: 
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Attestation Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Action
-                </th>
+                {isAdmin && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -454,41 +457,43 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh }: 
                     {getAttestationStatusBadge(attestation)}
                   </td>
                   
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {execution && (!attestation || attestation.status !== 'completed') ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCreateIndividualAttestation(execution.id)}
-                              disabled={creatingIndividual === execution.id || createAttestationMutation.isPending || !isPulseEnded()}
-                              className="text-xs disabled:bg-gray-100"
-                            >
-                              {creatingIndividual === execution.id ? (
-                                <>
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                  Creating...
-                                </>
+                  {isAdmin && (
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {execution && (!attestation || attestation.status !== 'completed') ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCreateIndividualAttestation(execution.id)}
+                                disabled={creatingIndividual === execution.id || createAttestationMutation.isPending || !isPulseEnded()}
+                                className="text-xs disabled:bg-gray-100"
+                              >
+                                {creatingIndividual === execution.id ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    Creating...
+                                  </>
+                                ) : (
+                                  'Create Attestation'
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {isPulseEnded() ? (
+                                <p>Create attestation for this execution</p>
                               ) : (
-                                'Create Attestation'
+                                <p>Pulse is still active. Attestations available in {getTimeUntilEnd()}</p>
                               )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {isPulseEnded() ? (
-                              <p>Create attestation for this execution</p>
-                            ) : (
-                              <p>Pulse is still active. Attestations available in {getTimeUntilEnd()}</p>
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
-                      <span className="text-sm text-gray-400">-</span>
-                    )}
-                  </td>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

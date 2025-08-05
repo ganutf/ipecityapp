@@ -12,6 +12,7 @@ import { JustaNameProvider } from "@justaname.id/react";
 import {
   AuthGuard
 } from "@/components/AuthGuard";
+import HomePage from "@/pages/home";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
 import PulseDetailPage from "@/pages/pulse-detail";
@@ -72,9 +73,10 @@ function Router() {
         <Switch>
           <Route
             path="/"
-            component={CommunityPage}
+            component={HomePage}
           />
           <Route path="/pulses" component={FarcasterEmbed} />
+          <Route path="/community" component={CommunityPage} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/pulse/:id" component={PulseDetailPage} />
           <Route path="/profile" component={ProfilePage} />

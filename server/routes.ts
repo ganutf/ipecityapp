@@ -933,7 +933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parsedPulseId: pulseId,
         isNaN: isNaN(pulseId),
         userId: req.user?.id,
-        userFid: req.user?.farcasterFid,
+        userFid: req.user?.fid,
         timestamp: new Date().toISOString()
       });
       
@@ -1731,7 +1731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: AuthenticatedRequest, res) => {
     try {
       console.log("=== GET_COMMUNITY_MEMBERS DEBUG START ===");
-      console.log("Authenticated user FID:", req.farcasterFid);
+      console.log("Authenticated user FID:", req.user?.fid);
       
       const members = await storage.getActiveMembersWithStats();
       console.log("Retrieved members count:", members.length);

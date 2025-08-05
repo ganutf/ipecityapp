@@ -153,8 +153,8 @@ export function PassportVerificationSection({
   });
 
   // Accept subdomain mutation (for pending acceptances)
-  const acceptSubdomainMutation = useMutation({
-    mutationFn: async () => {
+  const acceptSubdomainMutation = useMutation<{ success: boolean; alreadyAccepted?: boolean } | any>({
+    mutationFn: async (): Promise<{ success: boolean; alreadyAccepted?: boolean } | any> => {
       if (!memberData?.member?.ipeUsername) {
         throw new Error("No subdomain to accept");
       }

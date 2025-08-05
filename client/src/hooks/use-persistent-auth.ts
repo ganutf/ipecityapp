@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useProfile } from '@farcaster/auth-kit';
 
+// Extend the Farcaster Profile type to include custodyAddress
+declare module '@farcaster/auth-kit' {
+  interface Profile {
+    custodyAddress?: string;
+  }
+}
+
 interface StoredAuthData {
   fid: number;
   username?: string;
@@ -59,7 +66,7 @@ export function usePersistentAuth() {
         username: kitProfile.username,
         displayName: kitProfile.displayName,
         pfpUrl: kitProfile.pfpUrl,
-        custodyAddress: kitProfile.custodyAddress,
+        custodyAddress: (kitProfile as any).custodyAddress,
         timestamp: Date.now()
       };
       

@@ -86,10 +86,11 @@ export function MemberCard({
           <div className="absolute -top-2 -left-2 z-10">
             <Badge 
               className={`
-                ${rank === 1 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black' : ''}
-                ${rank === 2 ? 'bg-gradient-to-r from-gray-300 to-gray-500 text-black' : ''}
-                ${rank === 3 ? 'bg-gradient-to-r from-amber-500 to-amber-700 text-white' : ''}
-                ${rank > 3 ? 'bg-purple-600 text-white' : ''}
+                border-0
+                ${rank === 1 ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-900' : ''}
+                ${rank === 2 ? 'bg-gradient-to-r from-slate-400 to-slate-600 text-white' : ''}
+                ${rank === 3 ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-900' : ''}
+                ${rank > 3 ? 'bg-slate-900 text-white' : ''}
               `}
             >
               #{rank}

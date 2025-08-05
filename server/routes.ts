@@ -139,22 +139,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Update member status
-  app.post("/api/members/update-status", async (req, res) => {
-    try {
-      const { farcasterFid, status } = req.body;
-
-      if (!farcasterFid || !status) {
-        return res.status(400).json({ error: "FID and status are required" });
-      }
-
-      const member = await storage.updateMemberByFarcasterFid(farcasterFid, { status });
-      res.json({ success: true, member });
-    } catch (error) {
-      logger.error('Error updating member status', { error: error.message });
-      res.status(500).json({ error: "Failed to update member status" });
-    }
-  });
 
   // Claim username (update ipe_username field)
   app.post("/api/username/claim", 

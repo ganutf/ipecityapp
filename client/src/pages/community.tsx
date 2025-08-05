@@ -282,10 +282,6 @@ export default function Community() {
                   <div className="text-2xl font-bold">{totalMembers}</div>
                   <div className="text-sm text-slate-200">Members</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{filteredCount}</div>
-                  <div className="text-sm text-slate-200">Showing</div>
-                </div>
               </div>
             </div>
           </div>
@@ -357,88 +353,23 @@ export default function Community() {
             </div>
           </div>
         ) : sortedAndFilteredMembers.length > 0 ? (
-          <div className="space-y-8">
-            {/* Top 3 Podium (if sorting by points or streak) */}
-            {(sortBy === 'points' || sortBy === 'streak') && sortDirection === 'desc' && sortedAndFilteredMembers.length >= 3 && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 px-8 py-6 border-b border-gray-100">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-10 w-10 bg-gradient-to-r from-lime-400 to-lime-600 rounded-full flex items-center justify-center">
-                      <Trophy className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900">
-                        🏆 Top Performers
-                      </h2>
-                      <p className="text-gray-600 text-sm">
-                        Leading by {sortBy === 'points' ? 'total points earned' : 'pulse streak length'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-8">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {sortedAndFilteredMembers.slice(0, 3).map((member: CommunityMember & any, index) => (
-                      <div key={member.farcasterFid} className="relative">
-                        {index === 0 && (
-                          <div className="absolute -top-3 -right-3 z-10">
-                            <Badge className="bg-gradient-to-r from-lime-400 to-lime-600 text-slate-900 font-bold px-3 py-1 text-sm">
-                              👑 #1
-                            </Badge>
-                          </div>
-                        )}
-                        {index === 1 && (
-                          <div className="absolute -top-3 -right-3 z-10">
-                            <Badge className="bg-gradient-to-r from-slate-300 to-slate-500 text-white font-bold px-3 py-1 text-sm">
-                              🥈 #2
-                            </Badge>
-                          </div>
-                        )}
-                        {index === 2 && (
-                          <div className="absolute -top-3 -right-3 z-10">
-                            <Badge className="bg-gradient-to-r from-amber-400 to-amber-600 text-slate-900 font-bold px-3 py-1 text-sm">
-                              🥉 #3
-                            </Badge>
-                          </div>
-                        )}
-                        <MemberCard
-                          farcasterFid={member.farcasterFid}
-                          displayName={member.displayName}
-                          username={member.username}
-                          memberType={member.memberType}
-                          ipePassport={member.ipePassport}
-                          totalPoints={member.totalPoints}
-                          pulseStreak={member.pulseStreak}
-                          pfpUrl={member.pfpUrl}
-                          rank={member.rank}
-                          showRank={true}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Members Grid */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {sortedAndFilteredMembers.map((member: CommunityMember & any) => (
-                  <MemberCard
-                    key={member.farcasterFid}
-                    farcasterFid={member.farcasterFid}
-                    displayName={member.displayName}
-                    username={member.username}
-                    memberType={member.memberType}
-                    ipePassport={member.ipePassport}
-                    totalPoints={member.totalPoints}
-                    pulseStreak={member.pulseStreak}
-                    pfpUrl={member.pfpUrl}
-                    rank={member.rank}
-                    showRank={sortBy === 'points' || sortBy === 'streak'}
-                  />
-                ))}
-              </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {sortedAndFilteredMembers.map((member: CommunityMember & any) => (
+                <MemberCard
+                  key={member.farcasterFid}
+                  farcasterFid={member.farcasterFid}
+                  displayName={member.displayName}
+                  username={member.username}
+                  memberType={member.memberType}
+                  ipePassport={member.ipePassport}
+                  totalPoints={member.totalPoints}
+                  pulseStreak={member.pulseStreak}
+                  pfpUrl={member.pfpUrl}
+                  rank={member.rank}
+                  showRank={sortBy === 'points' || sortBy === 'streak'}
+                />
+              ))}
             </div>
           </div>
         ) : (

@@ -30,34 +30,34 @@ export { initializeNeynarClient };
 export const neynar = {
   async createSigner(...args: any[]) {
     const client = await initializeNeynarClient();
-    return client.createSigner(...args);
+    return (client.createSigner as any)(...args);
   },
   async registerSignedKey(...args: any[]) {
     const client = await initializeNeynarClient();
-    return client.registerSignedKey(...args);
+    return (client.registerSignedKey as any)(...args);
   },
   async lookupSigner(...args: any[]) {
     const client = await initializeNeynarClient();
-    return client.lookupSigner(...args);
+    return (client.lookupSigner as any)(...args);
   },
   async fetchBulkUsers(...args: any[]) {
     const client = await initializeNeynarClient();
-    return client.fetchBulkUsers(...args);
+    return (client.fetchBulkUsers as any)(...args);
   },
   async lookupUserByCustodyAddress(...args: any[]) {
     const client = await initializeNeynarClient();
-    return client.lookupUserByCustodyAddress(...args);
+    return (client.lookupUserByCustodyAddress as any)(...args);
   },
   async lookupCastByHashOrWarpcastUrl(...args: any[]) {
     const client = await initializeNeynarClient();
-    return client.lookupCastByHashOrWarpcastUrl(...args);
+    return (client.lookupCastByHashOrWarpcastUrl as any)(...args);
   },
   async publishReaction(...args: any[]) {
     const client = await initializeNeynarClient();
-    return client.publishReaction(...args);
+    return (client.publishReaction as any)(...args);
   },
   async publishCast(...args: any[]) {
     const client = await initializeNeynarClient();
-    return client.publishCast(...args);
+    return (client.publishCast as any)(...args);
   }
 };

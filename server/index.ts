@@ -107,7 +107,7 @@ async function initializeSecureKeys() {
     initializeKeyManager(masterPassword);
     logger.info('Secure key management initialized');
   } catch (error) {
-    logger.error('Key management initialization failed', { error: error.message });
+    logger.error('Key management initialization failed', { error: (error as Error)?.message || 'Unknown error' });
     process.exit(1);
   }
 }
@@ -118,7 +118,7 @@ async function testDatabaseConnection() {
     await db.execute('SELECT 1 as test');
     enhancedLog('Database connection successful');
   } catch (error) {
-    enhancedLog(`Database connection failed: ${error.message}`, 'error');
+    enhancedLog(`Database connection failed: ${(error as Error)?.message || 'Unknown error'}`, 'error');
     process.exit(1);
   }
 }
@@ -246,7 +246,7 @@ app.use((req, res, next) => {
         await testDatabaseConnection();
         logger.info(`Database connection test completed in ${Date.now() - startTime}ms`);
       } catch (error) {
-        logger.error('Database connection test failed', { error: error.message });
+        logger.error('Database connection test failed', { error: (error as Error)?.message || 'Unknown error' });
       }
     });
 
@@ -328,7 +328,7 @@ app.use((req, res, next) => {
     });
 
   } catch (error) {
-    enhancedLog(`Failed to start server: ${error.message}`, 'error');
+    enhancedLog(`Failed to start server: ${(error as Error)?.message || 'Unknown error'}`, 'error');
     process.exit(1);
   }
 })();

@@ -52,8 +52,8 @@ class EASService {
 
     // Configure network with explicit chain ID
     const network = isDevelopment
-      ? { name: 'base-sepolia', chainId: 84532, ensAddress: null }
-      : { name: 'base', chainId: 8453, ensAddress: null };
+      ? { name: 'base-sepolia', chainId: 84532, ensAddress: undefined }
+      : { name: 'base', chainId: 8453, ensAddress: undefined };
     const mnemonic = await getSecureEnvironmentVariable('eas_attestation_mnemonic', 'EAS_ATTESTATION_MNEMONIC');
 
     if (!mnemonic) {

@@ -96,7 +96,10 @@ export const authenticateUser = async (
 
     next();
   } catch (error) {
-    logger.error('Authentication middleware error', { error: error.message, stack: error.stack });
+    logger.error('Authentication middleware error', { 
+      error: (error as Error)?.message || 'Unknown error', 
+      stack: (error as Error)?.stack 
+    });
     return res.status(500).json({
       error: 'Authentication failed',
       message: 'Internal server error during authentication'

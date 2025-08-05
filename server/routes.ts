@@ -102,12 +102,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         environment: process.env.NODE_ENV || "development",
       });
     } catch (error) {
-      logger.error('Health check failed', { error: error.message });
+      logger.error('Health check failed', { error: (error as Error)?.message || 'Unknown error' });
       res.status(503).json({
         status: "unhealthy",
         timestamp: new Date().toISOString(),
         database: "disconnected",
-        error: error.message,
+        error: (error as Error)?.message || 'Unknown error',
       });
     }
   });
@@ -129,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         res.json(result);
       } catch (error) {
-        logger.error('Error checking subdomain availability', { error: error.message });
+        logger.error('Error checking subdomain availability', { error: (error as Error)?.message || 'Unknown error' });
         res.status(500).json({
           error: "Failed to check subdomain availability",
         });
@@ -317,6 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const msg = isApiErrorResponse(e)
           ? e.response.data
           : (e as Error).message;
+        // @ts-ignore: e is API error object with statusCode
         res.status(e.statusCode ?? 500).json({ error: msg });
       }
     }
@@ -357,6 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const msg = isApiErrorResponse(e)
           ? e.response.data
           : (e as Error).message;
+        // @ts-ignore: e is API error object with statusCode
         res.status(e.statusCode ?? 500).json({ error: msg });
       }
     }
@@ -468,6 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             
             // Handle 404 (signer not found) and 429 (rate limit) errors
+            // @ts-ignore: statusError is API error object with status codes
             if (statusError.status === 404 || statusError.response?.status === 404) {
               console.log("Signer not found on Neynar - cleaning up stale record");
               
@@ -488,14 +491,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.error("Error cleaning up stale signer:", cleanupError);
                 return res.status(500).json({ 
                   error: "Failed to cleanup stale signer",
+                  // @ts-ignore: cleanupError is API error object  
                   details: cleanupError.message 
                 });
               }
             }
             
             // Handle rate limiting errors
+            // @ts-ignore: statusError is API error object with status codes
             if (statusError.status === 429 || statusError.response?.status === 429) {
               console.log("Rate limit hit when checking signer status");
+              // @ts-ignore: statusError is API error object with response headers
               const retryAfter = statusError.response?.headers?.['retry-after'] || 60;
               
               return res.status(429).json({
@@ -569,7 +575,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Error creating signer:", signerError);
           
           // Handle rate limiting specifically
+          // @ts-ignore: signerError is API error object with status codes
           if (signerError.status === 429 || signerError.response?.status === 429) {
+            // @ts-ignore: signerError is API error object with response headers
             const retryAfter = signerError.response?.headers?.['retry-after'] || 60;
             
             return res.status(429).json({
@@ -582,6 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return res.status(500).json({ 
             error: "Failed to create signer", 
+            // @ts-ignore: signerError is API error object
             details: signerError.message,
             message: "Unable to create Farcaster signer. Please try again in a few minutes."
           });
@@ -592,6 +601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const msg = isApiErrorResponse(e)
         ? e.response.data
         : (e as Error).message;
+      // @ts-ignore: e is API error object with statusCode
       res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });
@@ -655,6 +665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const msg = isApiErrorResponse(e)
         ? e.response.data
         : (e as Error).message;
+      // @ts-ignore - Complex API error handling with status codes
       res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });
@@ -747,6 +758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const msg = isApiErrorResponse(e)
         ? e.response.data
         : (e as Error).message;
+      // @ts-ignore - Complex API error handling with status codes
       res.status(e.statusCode ?? 500).json({ error: msg });
     }
   });
@@ -1748,6 +1760,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (userResponse.users && userResponse.users.length > 0) {
             // Create a map of FID to profile data
             const profileMap = new Map();
+            // @ts-ignore - Neynar API user object typing
             userResponse.users.forEach(user => {
               profileMap.set(user.fid, {
                 displayName: user.display_name,

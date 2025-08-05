@@ -64,7 +64,7 @@ export async function initializeDatabase(): Promise<void> {
     }
 
   } catch (error) {
-    logger.error('Failed to initialize database connection', { error: error.message });
+    logger.error('Failed to initialize database connection', { error: (error as Error)?.message || 'Unknown error' });
     throw error;
   }
 }

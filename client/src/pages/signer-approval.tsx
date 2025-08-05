@@ -24,10 +24,10 @@ export default function SignerApprovalPage() {
   }, [authLoading, isAuthenticated, profile, setLocation]);
 
   // Get signer data
-  const { data: signerData, refetch: refetchSigner, error: signerError } = useQuery({
+  const { data: signerData, refetch: refetchSigner, error: signerError } = useQuery<{ status?: string; signer_uuid?: string; signer_approval_url?: string }>({
     queryKey: [`/api/neynar/signer/${profile?.fid}`],
     enabled: Boolean(profile?.fid),
-    refetchInterval: (data, query) => {
+    refetchInterval: (query) => {
       // Stop polling if there's a rate limit error
       if (query?.state?.error && (query.state.error as any)?.response?.status === 429) {
         return false;
@@ -186,7 +186,7 @@ export default function SignerApprovalPage() {
     }
   }
 
-  if (signerData?.status === "approved") {
+  if ((signerData as any)?.status === "approved") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="container mx-auto max-w-md px-4">

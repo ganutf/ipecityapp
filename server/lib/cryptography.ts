@@ -252,7 +252,7 @@ export async function verifyWalletSignature(
           verificationMethod: 'eip191',
           details: {
             signatureLength: signature.length,
-            messageHash: verificationResult.data?.message || undefined
+            messageHash: (verificationResult.data as any)?.message || undefined
           }
         };
       } catch (error) {

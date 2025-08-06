@@ -1,4 +1,16 @@
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { 
   User, 
   Wallet, 
@@ -117,10 +129,11 @@ export function ProfileHeader({
           <div className="flex items-center space-x-2 mt-2">
             {memberTypeInfo && (
               <div className="group relative">
-                <div className={`h-9 w-9 rounded-full flex items-center justify-center cursor-pointer transition-colors ${memberTypeInfo.color} ${memberTypeInfo.hoverColor}`}>
-                  <memberTypeInfo.icon className="h-5 w-5" />
+                <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium transition-colors ${memberTypeInfo.color} ${memberTypeInfo.hoverColor} cursor-pointer`}>
+                  <memberTypeInfo.icon className="h-4 w-4" />
+                  <span>{memberTypeInfo.label}</span>
                 </div>
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                   <div className="font-medium">{memberTypeInfo.label}</div>
                   <div className="text-xs text-gray-300 mt-1">{memberTypeInfo.description}</div>
                 </div>
@@ -134,15 +147,15 @@ export function ProfileHeader({
         {/* Connected Wallet Info Box */}
         {showWalletActions && (
           <div
-            className={`flex flex-col px-2 md:px-3 py-1.5 rounded-lg border ${
+            className={`flex flex-col px-3 py-3 rounded-lg border-l-4 border ${
               isConnected
-                ? "bg-blue-50 border-blue-200"
-                : "bg-gray-50 border-gray-200"
+                ? "bg-sky-50 border-sky-200 border-l-sky-500"
+                : "bg-gray-50 border-gray-200 border-l-gray-400"
             }`}
           >
             <div className="flex items-center space-x-2">
               <Wallet
-                className={`h-4 w-4 ${isConnected ? "text-blue-600" : "text-gray-400"}`}
+                className={`h-4 w-4 ${isConnected ? "text-sky-600" : "text-gray-400"}`}
               />
               <span className="text-xs text-gray-600 font-medium">
                 {isConnected ? "Connected Wallet" : "Wallet Not Connected"}
@@ -151,12 +164,27 @@ export function ProfileHeader({
             <div className="mt-1">
               {isConnected ? (
                 <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={onDisconnectWallet}
-                    className="text-xs md:text-sm font-mono hover:underline transition-colors text-blue-600"
-                  >
-                    {address?.slice(0, 6)}...{address?.slice(-4)}
-                  </button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button className="text-xs md:text-sm font-mono hover:underline transition-colors text-sky-600 font-medium">
+                        {address?.slice(0, 6)}...{address?.slice(-4)}
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Disconnect Wallet</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to disconnect your wallet? You'll need to reconnect to perform transactions.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={onDisconnectWallet}>
+                          Disconnect
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <Badge
                     variant="secondary"
                     className="bg-green-100 text-green-800 text-xs"
@@ -166,9 +194,16 @@ export function ProfileHeader({
                   </Badge>
                 </div>
               ) : (
-                <span className="text-xs md:text-sm text-gray-400">
-                  Not connected
-                </span>
+                <ConnectButton.Custom>
+                  {({ openConnectModal }) => (
+                    <button
+                      onClick={openConnectModal}
+                      className="text-xs md:text-sm text-gray-500 hover:underline transition-colors font-medium"
+                    >
+                      Connect
+                    </button>
+                  )}
+                </ConnectButton.Custom>
               )}
             </div>
           </div>
@@ -176,10 +211,10 @@ export function ProfileHeader({
 
         {/* Passport Info Box */}
         {ipePassport && passportVerified && (
-          <div className="inline-block px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg">
+          <div className="inline-block px-3 py-3 bg-lime-50 border border-lime-200 border-l-4 border-l-lime-500 rounded-lg">
             <div className="flex items-center space-x-2">
-              <Globe className="h-4 w-4 text-purple-600" />
-              <span className="text-xs text-gray-600 font-medium">Ipê Passport</span>
+              <Globe className="h-4 w-4 text-lime-600" />
+              <span className="text-sm font-medium text-gray-700">Ipê Passport</span>
               <Badge
                 variant="secondary"
                 className="bg-green-100 text-green-800 text-xs"
@@ -189,7 +224,7 @@ export function ProfileHeader({
               </Badge>
             </div>
             <div className="mt-1">
-              <p className="text-purple-600 font-medium text-sm">
+              <p className="text-lime-600 font-semibold text-base">
                 {ipePassport}
               </p>
               {walletAddress && (

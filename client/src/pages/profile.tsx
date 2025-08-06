@@ -19,41 +19,27 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
+import { ProfileHeader } from "@/components/profile/ProfileHeader";
+import { ProfileCard } from "@/components/profile/ProfileCard";
+import { StatsCards } from "@/components/profile/StatsCards";
 import { useAccount, useDisconnect } from "wagmi";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import {
-  Wallet,
   Mail,
-  Globe,
-  User,
   CheckCircle,
   AlertCircle,
   Edit3,
   Save,
   X,
-  Shield,
-  Compass,
   Twitter,
   Linkedin,
   Instagram,
-  Users,
-  Star,
+  Briefcase,
+  Link as LinkIcon,
 } from "lucide-react";
 import { PROFILE_TAGS } from "@/constants/profileTags";
 
@@ -76,6 +62,9 @@ interface MemberData {
     memberType?: string;
     profileCompleted?: boolean;
     walletAddress?: string;
+    totalPoints?: number;
+    pulseStreak?: number;
+    createdAt?: string;
   };
 }
 
@@ -107,52 +96,6 @@ export default function Profile2() {
   const { disconnect } = useDisconnect();
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
 
-  // Member type configuration
-  const memberTypeConfig = {
-    architect: { 
-      label: 'Architect', 
-      icon: User, 
-      color: 'bg-slate-100 text-slate-700',
-      hoverColor: 'hover:bg-slate-200',
-      description: 'Building the future of communities'
-    },
-    explorer: { 
-      label: 'Explorer', 
-      icon: Compass, 
-      color: 'bg-sky-100 text-sky-700',
-      hoverColor: 'hover:bg-sky-200',
-      description: 'Discovering new possibilities'
-    },
-    admin: { 
-      label: 'Admin', 
-      icon: Shield, 
-      color: 'bg-green-100 text-green-600',
-      hoverColor: 'hover:bg-green-200',
-      description: 'Leading and managing the community'
-    },
-    org_team: { 
-      label: 'Org Team', 
-      icon: Users, 
-      color: 'bg-orange-100 text-orange-600',
-      hoverColor: 'hover:bg-orange-200',
-      description: 'Supporting organizational operations'
-    },
-    core_team: { 
-      label: 'Core Team', 
-      icon: Star, 
-      color: 'bg-red-100 text-red-600',
-      hoverColor: 'hover:bg-red-200',
-      description: 'Core development and leadership'
-    },
-    pending: { 
-      label: 'Pending', 
-      icon: AlertCircle, 
-      color: 'bg-gray-100 text-gray-600',
-      hoverColor: 'hover:bg-gray-200',
-      description: 'Awaiting approval'
-    }
-  };
-
   // Edit states
   const [editingBio, setEditingBio] = useState(false);
   const [editingSocial, setEditingSocial] = useState(false);
@@ -179,9 +122,6 @@ export default function Profile2() {
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: !!profile?.fid,
   });
-
-  const currentMemberType = memberData?.member?.memberType || 'pending';
-  const memberTypeInfo = memberTypeConfig[currentMemberType as keyof typeof memberTypeConfig];
 
   // Verification status check - redirect incomplete users to id-verification
   useEffect(() => {
@@ -335,149 +275,34 @@ export default function Profile2() {
     ensName && (ensName.endsWith(".ipecity.eth") || ensName === "ipecity.eth");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
+      <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
         {/* Header with Profile Info */}
-        <Card className="border-l-4 border-l-slate-700 bg-white shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex flex-col space-y-6 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:space-x-8">
-              <div className="flex items-center space-x-4">
-                {profile?.pfpUrl ? (
-                  <img 
-                    src={profile.pfpUrl} 
-                    alt={`${profile?.displayName || profile?.username || 'User'} profile picture`}
-                    className="h-16 w-16 rounded-full object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="h-16 w-16 bg-gradient-to-br from-slate-700 to-sky-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    {profile?.displayName || profile?.username ? (
-                      <span className="text-white text-2xl font-semibold">
-                        {(profile?.displayName || profile?.username || '?')[0].toUpperCase()}
-                      </span>
-                    ) : (
-                      <User className="h-8 w-8 text-white" />
-                    )}
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center space-x-3">
-                    <h1 className="text-2xl font-bold text-gray-900">
-                      {profile?.displayName || profile?.username}
-                    </h1>
-                    {memberTypeInfo && (
-                      <div className="group relative">
-                        <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium transition-colors ${memberTypeInfo.color} ${memberTypeInfo.hoverColor} cursor-pointer`}>
-                          <memberTypeInfo.icon className="h-4 w-4" />
-                          <span className="hidden sm:inline">{memberTypeInfo.label}</span>
-                        </div>
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                          <div className="font-medium">{memberTypeInfo.label}</div>
-                          <div className="text-xs text-gray-300 mt-1">{memberTypeInfo.description}</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    ID: {profile?.fid}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col space-y-4 lg:flex-shrink-0">
-                {/* Connected Wallet Info Box */}
-                <div
-                  className={`flex flex-col px-3 py-3 rounded-lg border-l-4 border ${
-                    isConnected
-                      ? "bg-sky-50 border-sky-200 border-l-sky-500"
-                      : "bg-gray-50 border-gray-200 border-l-gray-400"
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Wallet
-                      className={`h-4 w-4 ${isConnected ? "text-sky-600" : "text-gray-400"}`}
-                    />
-                    <span className="text-sm font-medium text-gray-700">
-                      {isConnected ? "Connected Wallet" : "Wallet Not Connected"}
-                    </span>
-                  </div>
-                  <div className="mt-1">
-                    {isConnected ? (
-                      <div className="flex items-center space-x-2">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <button className="text-sm font-mono hover:underline transition-colors text-sky-600 font-medium">
-                              {address?.slice(0, 6)}...{address?.slice(-4)}
-                            </button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Disconnect Wallet</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to disconnect your wallet? You'll need to reconnect to perform transactions.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDisconnectConfirm}>
-                                Disconnect
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                        <Badge
-                          variant="secondary"
-                          className="bg-green-100 text-green-800 text-xs"
-                        >
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Connected
-                        </Badge>
-                      </div>
-                    ) : (
-                      <ConnectButton.Custom>
-                        {({ openConnectModal }) => (
-                          <button
-                            onClick={openConnectModal}
-                            className="text-sm text-gray-500 hover:underline transition-colors font-medium"
-                          >
-                            Connect
-                          </button>
-                        )}
-                      </ConnectButton.Custom>
-                    )}
-                  </div>
-                </div>
-
-                {/* Passport Info Box */}
-                {memberData?.member?.ipePassport && memberData?.member?.passportVerified && (
-                  <div className="inline-block px-3 py-3 bg-lime-50 border border-lime-200 border-l-4 border-l-lime-500 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Globe className="h-4 w-4 text-lime-600" />
-                      <span className="text-sm font-medium text-gray-700">Ipê Passport</span>
-                      <Badge
-                        variant="secondary"
-                        className="bg-green-100 text-green-800 text-xs"
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Verified
-                      </Badge>
-                    </div>
-                    <div className="mt-1">
-                      <p className="text-lime-600 font-semibold text-base">
-                        {memberData.member.ipePassport}
-                      </p>
-                      {memberData.member.walletAddress && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Passport wallet: {memberData.member.walletAddress?.slice(0, 6)}...
-                          {memberData.member.walletAddress?.slice(-4)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+        <ProfileCard>
+          <CardContent className="pt-4 md:pt-6">
+            <ProfileHeader
+              displayName={profile?.displayName}
+              username={profile?.username}
+              fid={profile?.fid}
+              memberType={memberData?.member?.memberType}
+              ipePassport={memberData?.member?.ipePassport}
+              passportVerified={memberData?.member?.passportVerified}
+              walletAddress={memberData?.member?.walletAddress}
+              isConnected={isConnected}
+              address={address}
+              showWalletActions={true}
+              onDisconnectWallet={handleDisconnectConfirm}
+              pfpUrl={profile?.pfpUrl}
+            />
           </CardContent>
-        </Card>
+        </ProfileCard>
+
+        {/* Stats Cards */}
+        <StatsCards
+          totalPoints={memberData?.member?.totalPoints}
+          pulseStreak={memberData?.member?.pulseStreak}
+          createdAt={memberData?.member?.createdAt}
+        />
 
         {/* Bio Section */}
         <Card className="bg-white shadow-sm">
@@ -769,6 +594,29 @@ export default function Profile2() {
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Projects Section */}
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+              <Briefcase className="h-5 w-5" />
+              <span>Projects</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <div className="bg-gray-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
+                <LinkIcon className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Projects Coming Soon
+              </h3>
+              <p className="text-gray-600 max-w-md mx-auto">
+                Project showcases and portfolio integration will be available in a future update.
+              </p>
+            </div>
           </CardContent>
         </Card>
 

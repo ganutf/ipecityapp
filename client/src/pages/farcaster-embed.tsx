@@ -7,7 +7,7 @@ import { authenticatedGet } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, History, CheckCircle2, Users, Trophy } from "lucide-react";
+import { Calendar, History, CheckCircle2, Users, Trophy, Heart, Repeat, Ban, X } from "lucide-react";
 import { PulseCard } from "@/components/PulseCard";
 
 // Helper functions for contextual timing information
@@ -1070,42 +1070,52 @@ function PostTool({
                       : "bg-gray-100 text-gray-700 hover:bg-red-50"
                     }`}
                 >
-                  {actionLoading.like ? "⏳" : "❤️"}{" "}
-                  {actionLoading.like
-                    ? "Liking..."
-                    : stats?.liked
-                      ? "Liked"
-                      : "Like"}
+                  {actionLoading.like ? (
+                    "⏳ Liking..."
+                  ) : (
+                    <span className="flex items-center">
+                      <Heart className={`h-4 w-4 mr-1 ${stats?.liked ? "text-red-600" : "text-gray-500"}`} />
+                      {stats?.liked ? "Liked" : "Like"}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => handleReaction("recast")}
                   disabled={actionLoading.recast || executionStatus.abstained}
                   className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${stats?.recasted
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-700 hover:bg-green-50"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-gray-100 text-gray-700 hover:bg-blue-50"
                     }`}
                 >
-                  {actionLoading.recast ? "⏳" : "🔄"}{" "}
-                  {actionLoading.recast
-                    ? "Recasting..."
-                    : stats?.recasted
-                      ? "Shared"
-                      : "Recast"}
+                  {actionLoading.recast ? (
+                    "⏳ Recasting..."
+                  ) : (
+                    <span className="flex items-center">
+                      <Repeat className={`h-4 w-4 mr-1 ${stats?.recasted ? "text-blue-600" : "text-gray-500"}`} />
+                      {stats?.recasted ? "Shared" : "Share"}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => handlePulseAction('abstain')}
-                  disabled={actionLoading.abstain || (executionStatus.liked || executionStatus.shared)}
+                  disabled={actionLoading.abstain || (stats?.liked || stats?.recasted)}
                   className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${executionStatus.abstained
                       ? "bg-yellow-100 text-yellow-700"
                       : "bg-gray-100 text-gray-700 hover:bg-yellow-50"
                     }`}
                 >
-                  {actionLoading.abstain ? "⏳" : executionStatus.abstained ? "✖️" : "🚫"}{" "}
-                  {actionLoading.abstain
-                    ? "Recording..."
-                    : executionStatus.abstained
-                      ? "Cancel"
-                      : "Abstain"}
+                  {actionLoading.abstain ? (
+                    "⏳ Recording..."
+                  ) : (
+                    <span className="flex items-center">
+                      {executionStatus.abstained ? (
+                        <X className="h-4 w-4 mr-1 text-yellow-600" />
+                      ) : (
+                        <Ban className="h-4 w-4 mr-1 text-gray-500" />
+                      )}
+                      {executionStatus.abstained ? "Cancel" : "Abstain"}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

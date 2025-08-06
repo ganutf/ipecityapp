@@ -340,7 +340,7 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
         <div className="bg-blue-50 p-4 rounded-lg">
           <div className="text-2xl font-bold text-blue-700">
             {executions.filter(e => e.execution).length}
@@ -358,18 +358,6 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
             {executions.filter(e => e.attestation?.status === 'completed').length}
           </div>
           <div className="text-sm text-green-600">Completed Attestations</div>
-        </div>
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <div className="text-2xl font-bold text-yellow-700">
-            {executions.filter(e => e.attestation?.status === 'pending').length}
-          </div>
-          <div className="text-sm text-yellow-600">Pending Attestations</div>
-        </div>
-        <div className="bg-red-50 p-4 rounded-lg">
-          <div className="text-2xl font-bold text-red-700">
-            {executions.filter(e => e.attestation?.status === 'failed').length}
-          </div>
-          <div className="text-sm text-red-600">Failed Attestations</div>
         </div>
       </div>
 

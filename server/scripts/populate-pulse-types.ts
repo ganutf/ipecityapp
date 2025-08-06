@@ -24,22 +24,6 @@ async function populatePulseTypes() {
         name: "Farcaster Post Engagement",
         description: "Liking or sharing a post",
       },
-      {
-        name: "Community Discussion",
-        description: "Participating in community discussions",
-      },
-      {
-        name: "Content Creation",
-        description: "Creating original content for the community",
-      },
-      {
-        name: "Event Participation",
-        description: "Participating in community events",
-      },
-      {
-        name: "Weekly Challenge",
-        description: "Completing weekly community challenges",
-      }
     ];
 
     // Create pulse types
@@ -57,7 +41,7 @@ async function populatePulseTypes() {
     }
 
     console.log("✅ Pulse types population completed!");
-    
+
   } catch (error) {
     console.error("❌ Failed to populate pulse types:", error);
     throw error;

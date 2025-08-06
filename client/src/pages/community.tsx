@@ -25,7 +25,7 @@ export default function Community() {
   const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>('points');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   // Fetch community members
   const { data: membersData, isLoading: membersLoading, error } = useQuery<{ members: Array<CommunityMember & any> }>({

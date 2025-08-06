@@ -120,7 +120,7 @@ export function MemberCard({
             
             <div className="flex-1 min-w-0">
               {/* Name and Type */}
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
                     {displayName || username}

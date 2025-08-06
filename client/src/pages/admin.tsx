@@ -95,7 +95,16 @@ export default function AdminPage() {
   // All mutations must also be declared before returns
   const createPulseMutation = useMutation({
     mutationFn: async (pulse: { urlEmbed: string; datetimeStart: string; interval: number; description: string; points: number; pulseTypeId: number }) => {
-      return authenticatedPost("/api/pulses", pulse, profile?.fid);
+      // Convert local datetime to UTC for consistent timezone handling
+      const localDate = new Date(pulse.datetimeStart);
+      const utcDateString = localDate.toISOString().slice(0, 16).replace('T', 'T');
+      
+      const pulseWithUTC = {
+        ...pulse,
+        datetimeStart: utcDateString
+      };
+      
+      return authenticatedPost("/api/pulses", pulseWithUTC, profile?.fid);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
@@ -109,7 +118,16 @@ export default function AdminPage() {
 
   const updatePulseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: { urlEmbed: string; datetimeStart: string; interval: number; description: string; points: number; pulseTypeId: number } }) => {
-      return authenticatedPatch(`/api/pulses/${id}`, data, profile?.fid);
+      // Convert local datetime to UTC for consistent timezone handling
+      const localDate = new Date(data.datetimeStart);
+      const utcDateString = localDate.toISOString().slice(0, 16).replace('T', 'T');
+      
+      const dataWithUTC = {
+        ...data,
+        datetimeStart: utcDateString
+      };
+      
+      return authenticatedPatch(`/api/pulses/${id}`, dataWithUTC, profile?.fid);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });

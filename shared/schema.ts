@@ -360,7 +360,11 @@ export const secureUrlEmbedSchema = z.string()
 
 export const secureDatetimeSchema = z.string()
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Datetime must be in YYYY-MM-DDTHH:MM format")
-  .transform(val => new Date(val)) // Transform string to Date
+  .transform(val => {
+    // Parse as UTC to avoid timezone inconsistencies between environments
+    const utcDate = new Date(val + 'Z'); // Append 'Z' to treat as UTC
+    return utcDate;
+  })
   .refine(val => {
     const now = new Date();
     const oneYearFromNow = new Date();

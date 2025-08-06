@@ -6,12 +6,18 @@
  * This script populates the pulse_types table with initial data
  */
 
+import 'dotenv/config';
 import { storage } from "../storage";
+import { initializeDatabase } from '../db';
+import { initializeKeyManager } from '../lib/keyManagement';
 
 async function populatePulseTypes() {
   console.log("🚀 Populating pulse types...");
 
   try {
+    // Initialize key manager and database
+    await initializeKeyManager();
+    await initializeDatabase();
     // Define initial pulse types
     const initialPulseTypes = [
       {

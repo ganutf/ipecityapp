@@ -1076,11 +1076,6 @@ function PostTool({
         </p>
       </div>
 
-      {/* Execution Status Display */}
-      <div className="px-6">
-        {getExecutionDisplay()}
-      </div>
-
       <div className="p-6">
         {error && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -1223,6 +1218,9 @@ function PostTool({
             </div>
           </div>
         )}
+
+        {/* Execution Status Display - moved below embedded post */}
+        {getExecutionDisplay()}
 
       </div>
     </div>

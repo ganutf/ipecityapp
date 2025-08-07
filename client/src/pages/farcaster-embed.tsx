@@ -31,20 +31,19 @@ const formatTimeDifference = (diffMs: number): string => {
 };
 
 const getContextualTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) => {
+  // Use shared timing logic
+  const timingInfo = getPulseTimingInfo((pulse as any).datetimeStart, (pulse as any).interval || 24, currentTime);
+  
   const startTime = new Date((pulse as any).datetimeStart);
   const endTime = new Date(startTime.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
+  const duration = (pulse as any).interval || 24;
 
-  const isEnded = currentTime >= endTime;
-  const isActive = currentTime >= startTime && currentTime < endTime;
-  const isFuture = currentTime < startTime;
-
-  if (isFuture) {
+  if (timingInfo.isFuture) {
     const timeUntilStart = formatTimeDifference(startTime.getTime() - currentTime.getTime());
-    const duration = (pulse as any).interval || 24;
     return `⏰ Starts in ${timeUntilStart} • Duration: ${duration}h`;
   }
 
-  if (isActive) {
+  if (timingInfo.isActive) {
     const timeStarted = formatTimeDifference(currentTime.getTime() - startTime.getTime());
     const timeRemaining = formatTimeDifference(endTime.getTime() - currentTime.getTime());
     return `🔥 Started ${timeStarted} ago • ${timeRemaining} remaining`;
@@ -52,7 +51,6 @@ const getContextualTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) =
 
   // Ended
   const timeEnded = formatTimeDifference(currentTime.getTime() - endTime.getTime());
-  const duration = (pulse as any).interval || 24;
   return `✅ Ended ${timeEnded} ago • Was active for ${duration}h`;
 };
 

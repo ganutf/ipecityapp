@@ -58,6 +58,65 @@ interface PulseExecutionsTableProps {
   isAdmin?: boolean;
 }
 
+// Reusable error handling for attestation operations
+const useAttestationErrorHandler = (retryCallback: () => void) => {
+  const { toast } = useToast();
+  
+  const handleError = (error: Error, context?: string) => {
+    let description = error.message;
+    let retryable = true;
+    
+    // Parse specific error types
+    if (error.message.includes('timed out')) {
+      description = `${context || 'Operation'} timed out. This may indicate network issues or high blockchain congestion.`;
+    } else if (error.message.includes('Too many requests')) {
+      description = "Rate limit exceeded. Please wait a moment before trying again.";
+    } else if (error.message.includes('Cannot create attestations for active pulse')) {
+      description = "Cannot create attestations for an active pulse. Wait for the pulse to end.";
+      retryable = false;
+    } else if (error.message.includes('Member is not eligible')) {
+      description = "Member is not eligible for attestations. Check member status and passport verification.";
+      retryable = false;
+    } else if (error.message.includes('already completed')) {
+      description = "Attestation has already been completed for this execution.";
+      retryable = false;
+    }
+    
+    toast({ 
+      title: "Error", 
+      description,
+      variant: "destructive",
+      action: retryable ? (
+        <button 
+          onClick={retryCallback}
+          className="text-sm font-medium text-red-600 hover:text-red-800"
+        >
+          Retry
+        </button>
+      ) : undefined
+    });
+  };
+  
+  const shouldRetry = (failureCount: number, error: Error) => {
+    // Don't retry for validation errors, rate limits, or completed operations
+    const nonRetryableErrors = [
+      'Cannot create attestations',
+      'Too many requests',
+      'Invalid pulse ID',
+      'Invalid execution ID',
+      'Member is not eligible',
+      'already completed'
+    ];
+    
+    if (nonRetryableErrors.some(pattern => error.message.includes(pattern))) {
+      return false;
+    }
+    return failureCount < 2; // Retry up to 2 times for other errors
+  };
+  
+  return { handleError, shouldRetry };
+};
+
 export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, isAdmin = false }: PulseExecutionsTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -72,6 +131,9 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
   const getTimeUntilEnd = () => pulseTimingInfo?.timeUntilEnd;
   const getPulseEndTime = () => pulseTimingInfo?.endTime;
 
+  // Error handlers
+  const bulkErrorHandler = useAttestationErrorHandler(() => createAllAttestationsMutation.mutate());
+
   // Mutation for creating all attestations for this pulse
   const createAllAttestationsMutation = useMutation({
     mutationFn: async () => {
@@ -84,43 +146,8 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
       });
       onRefresh();
     },
-    onError: (error: Error) => {
-      let description = error.message;
-      let retryable = true;
-      
-      // Parse specific error types
-      if (error.message.includes('timed out')) {
-        description = "Operation timed out. This may indicate network issues or high blockchain congestion.";
-      } else if (error.message.includes('Too many requests')) {
-        description = "Rate limit exceeded. Please wait a moment before trying again.";
-      } else if (error.message.includes('Cannot create attestations for active pulse')) {
-        description = "Cannot create attestations for an active pulse. Wait for the pulse to end.";
-        retryable = false;
-      }
-      
-      toast({ 
-        title: "Error", 
-        description: description,
-        variant: "destructive",
-        action: retryable ? (
-          <button 
-            onClick={() => createAllAttestationsMutation.mutate()}
-            className="text-sm font-medium text-red-600 hover:text-red-800"
-          >
-            Retry
-          </button>
-        ) : undefined
-      });
-    },
-    retry: (failureCount, error) => {
-      // Don't retry for validation errors or rate limits
-      if (error.message.includes('Cannot create attestations') || 
-          error.message.includes('Too many requests') ||
-          error.message.includes('Invalid pulse ID')) {
-        return false;
-      }
-      return failureCount < 2; // Retry up to 2 times for other errors
-    },
+    onError: (error: Error) => bulkErrorHandler.handleError(error, "Bulk attestation creation"),
+    retry: bulkErrorHandler.shouldRetry,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
   });
 
@@ -134,49 +161,12 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
       onRefresh();
     },
     onError: (error: Error, executionId) => {
-      let description = error.message;
-      let retryable = true;
-      
-      // Parse specific error types
-      if (error.message.includes('timed out')) {
-        description = "Attestation creation timed out. This may indicate network issues or high blockchain congestion.";
-      } else if (error.message.includes('Too many requests')) {
-        description = "Rate limit exceeded. Please wait a moment before trying again.";
-      } else if (error.message.includes('Cannot create attestations for active pulse')) {
-        description = "Cannot create attestations for an active pulse. Wait for the pulse to end.";
-        retryable = false;
-      } else if (error.message.includes('Member is not eligible')) {
-        description = "Member is not eligible for attestations. Check member status and passport verification.";
-        retryable = false;
-      } else if (error.message.includes('already completed')) {
-        description = "Attestation has already been completed for this execution.";
-        retryable = false;
-      }
-      
-      toast({ 
-        title: "Error", 
-        description: description,
-        variant: "destructive",
-        action: retryable ? (
-          <button 
-            onClick={() => createAttestationMutation.mutate(executionId)}
-            className="text-sm font-medium text-red-600 hover:text-red-800"
-          >
-            Retry
-          </button>
-        ) : undefined
-      });
+      const individualErrorHandler = useAttestationErrorHandler(() => createAttestationMutation.mutate(executionId));
+      individualErrorHandler.handleError(error, "Individual attestation creation");
     },
     retry: (failureCount, error) => {
-      // Don't retry for validation errors, rate limits, or completed attestations
-      if (error.message.includes('Cannot create attestations') || 
-          error.message.includes('Too many requests') ||
-          error.message.includes('Invalid execution ID') ||
-          error.message.includes('Member is not eligible') ||
-          error.message.includes('already completed')) {
-        return false;
-      }
-      return failureCount < 2; // Retry up to 2 times for other errors
+      // Use the same retry logic as the bulk handler
+      return bulkErrorHandler.shouldRetry(failureCount, error);
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Exponential backoff
   });

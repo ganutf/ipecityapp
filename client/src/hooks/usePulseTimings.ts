@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getPulseTimingInfo } from "../lib/pulseUtils";
 
 export interface Pulse {
   id: number;
@@ -47,31 +48,25 @@ export function usePulseTimings(pulses: Pulse[], enableRealTime: boolean = true)
 
   const calculatePulseTimings = (pulses: Pulse[], now: Date): PulseTimingInfo[] => {
     return pulses.map(pulse => {
+      // Use shared timing logic
+      const timingInfo = getPulseTimingInfo(pulse.datetimeStart, pulse.interval, now);
+      
       const startTime = new Date(pulse.datetimeStart);
       const endTime = new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
-      
-      const isEnded = now >= endTime;
-      const isActive = now >= startTime && now < endTime;
-      const isFuture = now < startTime;
-      
-      let status: PulseStatus;
-      if (isFuture) status = 'future';
-      else if (isActive) status = 'active';
-      else status = 'ended';
 
-      const timeUntilStart = isFuture ? formatTimeDifference(startTime.getTime() - now.getTime()) : null;
-      const timeUntilEnd = isActive ? formatTimeDifference(endTime.getTime() - now.getTime()) : null;
+      const timeUntilStart = timingInfo.isFuture ? formatTimeDifference(startTime.getTime() - now.getTime()) : null;
+      const timeUntilEnd = timingInfo.isActive ? formatTimeDifference(endTime.getTime() - now.getTime()) : null;
 
       return {
         pulse,
-        status,
+        status: timingInfo.status,
         startTime,
         endTime,
         timeUntilStart,
         timeUntilEnd,
-        isEnded,
-        isActive,
-        isFuture,
+        isEnded: timingInfo.isEnded,
+        isActive: timingInfo.isActive,
+        isFuture: timingInfo.isFuture,
       };
     });
   };

@@ -2,6 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { authenticatedGet } from "@/lib/api";
+import { getPulseTimingInfo } from "@/lib/pulseUtils";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, Clock, ExternalLink } from "lucide-react";
 import { PulseExecutionsTable } from "@/components/PulseExecutionsTable";
@@ -24,8 +25,8 @@ export default function PulseDetailPage() {
 
   // Fetch pulse execution data
   const { data: pulseData, isLoading: pulseLoading, refetch } = useQuery({
-    queryKey: [`/api/admin/pulse/${pulseId}/executions`],
-    queryFn: () => authenticatedGet(`/api/admin/pulse/${pulseId}/executions`, profile?.fid),
+    queryKey: [`/api/pulse/${pulseId}/executions`],
+    queryFn: () => authenticatedGet(`/api/pulse/${pulseId}/executions`, profile?.fid),
     enabled: Boolean(isAuthenticated && isAdmin && profile?.fid && pulseId),
   });
 
@@ -92,17 +93,16 @@ export default function PulseDetailPage() {
     return end;
   };
 
+  const getPulseTimingStatus = () => {
+    return getPulseTimingInfo(pulse.datetimeStart, pulse.interval);
+  };
+
   const isPulseActive = () => {
-    const now = new Date();
-    const start = new Date(pulse.datetimeStart);
-    const end = getEndDateTime(pulse.datetimeStart, pulse.interval);
-    return now >= start && now <= end;
+    return getPulseTimingStatus().isActive;
   };
 
   const isPulseEnded = () => {
-    const now = new Date();
-    const end = getEndDateTime(pulse.datetimeStart, pulse.interval);
-    return now > end;
+    return getPulseTimingStatus().isEnded;
   };
 
   const getPulseStatus = () => {

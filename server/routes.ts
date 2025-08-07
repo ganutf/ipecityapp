@@ -70,7 +70,6 @@ import {
 } from "./lib/external-api";
 import { 
   sanitizeMemberData, 
-  sanitizePulseData,
   HtmlSanitizer,
   IdentifierSanitizer,
   UrlSanitizer 
@@ -780,19 +779,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get current pulse (for backwards compatibility - returns first active pulse)
-  app.get("/api/pulses/current", async (req, res) => {
-    try {
-      const activePulses = await storage.getActivePulses();
-      const pulse = activePulses.length > 0 ? activePulses[0] : null;
-      res.json({ pulse });
-    } catch (err: any) {
-      console.error("Current pulse error:", err);
-      res
-        .status(500)
-        .json({ error: err.message || "Failed to get current pulse" });
-    }
-  });
 
   // Get all pulses
   app.get("/api/pulses", async (req, res) => {
@@ -985,55 +971,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Legacy admin endpoint - redirect to new universal endpoint
-  app.get("/api/admin/pulse/:pulseId/executions", 
-    authenticateUser, 
-    requireAdmin,
-    async (req: AuthenticatedRequest, res) => {
-    try {
-      const pulseId = parseInt(req.params.pulseId);
-      if (isNaN(pulseId)) {
-        return res.status(400).json({ error: "Invalid pulse ID" });
-      }
-
-      // Verify pulse exists
-      const pulse = await storage.getPulse(pulseId);
-      if (!pulse) {
-        return res.status(404).json({ error: "Pulse not found" });
-      }
-
-      const executionsWithAttestations = await storage.getPulseExecutionsWithAttestations(pulseId);
-      
-      res.json({ 
-        pulse,
-        executions: executionsWithAttestations.map(({ execution, member, attestation }) => ({
-          member: {
-            id: member.id,
-            farcasterFid: member.farcasterFid,
-            ipePassport: member.ipePassport,
-            ipeUsername: member.ipeUsername,
-            memberType: member.memberType
-          },
-          execution: execution ? {
-            id: execution.id,
-            actions: execution.actions,
-            executedAt: execution.executedAt,
-            points: pulse.points
-          } : null,
-          attestation: attestation ? {
-            id: attestation.id,
-            status: attestation.status,
-            attestationUid: attestation.attestationUid,
-            transactionHash: attestation.transactionHash,
-            createdAt: attestation.createdAt
-          } : null
-        }))
-      });
-    } catch (err: any) {
-      console.error("Get pulse executions error:", err);
-      res.status(500).json({ error: err.message || "Failed to get pulse executions" });
-    }
-  });
 
   // Create attestations for all pending executions in a specific pulse (admin only)
   app.post("/api/admin/pulse/:pulseId/attestations/create-all", 
@@ -1303,24 +1240,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ error: err.message || "Failed to create attestation" });
-    }
-  });
-
-  // Get member executions for a specific user (new memberId endpoint)
-  app.get("/api/executions/:memberId", 
-    authenticateUser, 
-    requireOwnership('memberId'),
-    auditLogger("GET_MEMBER_EXECUTIONS"),
-    async (req: AuthenticatedRequest, res) => {
-    try {
-      const memberId = parseInt(req.params.memberId);
-      const executions = await storage.getMemberExecutions(memberId);
-      res.json({ executions });
-    } catch (err: any) {
-      console.error("Get executions error:", err);
-      res
-        .status(500)
-        .json({ error: err.message || "Failed to get executions" });
     }
   });
 

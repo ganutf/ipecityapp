@@ -73,7 +73,6 @@ export interface IStorage {
   updateMemberByFarcasterFid(farcasterFid: number, member: UpdateMember): Promise<Member>;
   approveApplicationByFarcasterFid(farcasterFid: number, memberType: string): Promise<Member>;
   approveMemberByFarcasterFid(farcasterFid: number): Promise<Member>;
-  denyApplicationByFarcasterFid(farcasterFid: number): Promise<Member>;
   denyMemberByFarcasterFid(farcasterFid: number): Promise<Member>;
   
   // Email Verification
@@ -82,7 +81,6 @@ export interface IStorage {
   markEmailVerified(memberId: number): Promise<void>;
   
   // Legacy email verification methods
-  getEmailVerificationByFarcasterFid(farcasterFid: number, code: string): Promise<EmailVerification | undefined>;
   markEmailVerifiedByFarcasterFid(farcasterFid: number): Promise<void>;
   
   // Status Management
@@ -117,7 +115,6 @@ export interface IStorage {
   deletePulseExecution(id: number): Promise<void>;
   
   // Legacy pulse execution methods
-  getPulseExecutionByFarcasterFid(pulseId: number, memberFarcasterFid: number): Promise<PulseExecution | undefined>;
   getMemberExecutionsByFarcasterFid(memberFarcasterFid: number): Promise<PulseExecution[]>;
   
   // Attestations
@@ -137,7 +134,6 @@ export interface IStorage {
   
   // Legacy signer methods
   getUserSignerByFarcasterFid(farcasterFid: number): Promise<UserSigner | undefined>;
-  updateUserSignerStatusByFarcasterFid(farcasterFid: number, status: string): Promise<UserSigner>;
   deleteUserSignerByFarcasterFid(farcasterFid: number): Promise<void>;
 }
 
@@ -485,13 +481,6 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
   
-  async denyApplicationByFarcasterFid(farcasterFid: number): Promise<Member> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
-    }
-    return this.denyApplication(memberId);
-  }
 
   async denyMember(memberId: number): Promise<Member> {
     const [member] = await db
@@ -531,13 +520,6 @@ export class DatabaseStorage implements IStorage {
     return verification;
   }
   
-  async getEmailVerificationByFarcasterFid(farcasterFid: number, code: string): Promise<EmailVerification | undefined> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      return undefined;
-    }
-    return this.getEmailVerification(memberId, code);
-  }
 
   async markEmailVerified(memberId: number): Promise<void> {
     await db
@@ -710,13 +692,6 @@ export class DatabaseStorage implements IStorage {
     return execution;
   }
   
-  async getPulseExecutionByFarcasterFid(pulseId: number, memberFarcasterFid: number): Promise<PulseExecution | undefined> {
-    const memberId = await this.getMemberIdFromFarcasterFid(memberFarcasterFid);
-    if (!memberId) {
-      return undefined;
-    }
-    return this.getPulseExecution(pulseId, memberId);
-  }
 
   async getMemberExecutions(memberId: number): Promise<PulseExecution[]> {
     return await db
@@ -802,13 +777,6 @@ export class DatabaseStorage implements IStorage {
     return updatedSigner;
   }
   
-  async updateUserSignerStatusByFarcasterFid(farcasterFid: number, status: string): Promise<UserSigner> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
-    }
-    return this.updateUserSignerStatus(memberId, status);
-  }
 
   async deleteUserSigner(memberId: number): Promise<void> {
     await db.delete(userSigners).where(eq(userSigners.memberId, memberId));

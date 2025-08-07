@@ -130,62 +130,56 @@ export function getStatusBadge(
 }
 
 /**
- * Extracts execution status from execution data structures
+ * Helper to convert actions object to ExecutionStatus
+ */
+function actionsToExecutionStatus(actions: any, hasExecution: boolean = true): ExecutionStatus {
+  return {
+    liked: actions?.liked || false,
+    shared: actions?.shared || false,
+    abstained: actions?.abstained || false,
+    hasExecution
+  };
+}
+
+/**
+ * Extracts execution status from different API response formats
  */
 export function extractExecutionStatus(
   executionData: any,
   pulseId: number
 ): ExecutionStatus {
-  // Handle different data structure formats
-  if (executionData?.executionDetails) {
-    // Format from /api/executions/{id}/details
+  if (!executionData) {
+    return { liked: false, shared: false, abstained: false, hasExecution: false };
+  }
+
+  // Format from /api/executions/{id}/details
+  if (executionData.executionDetails) {
     const detail = executionData.executionDetails.find(
-      (detail: any) => detail.pulse.id === pulseId
+      (detail: any) => detail.pulse?.id === pulseId
     );
-    
     if (detail?.execution?.actions) {
-      return {
-        liked: detail.execution.actions.liked || false,
-        shared: detail.execution.actions.shared || false,
-        abstained: detail.execution.actions.abstained || false,
-        hasExecution: Boolean(detail.execution)
-      };
-    }
-  } else if (executionData?.executions) {
-    // Check if this is the format from /api/pulse/{id}/executions (nested execution)
-    const executionWithMember = executionData.executions.find(
-      (exec: any) => exec.member?.farcasterFid
-    );
-    
-    if (executionWithMember?.execution?.actions) {
-      return {
-        liked: executionWithMember.execution.actions.liked || false,
-        shared: executionWithMember.execution.actions.shared || false,
-        abstained: executionWithMember.execution.actions.abstained || false,
-        hasExecution: Boolean(executionWithMember.execution)
-      };
-    }
-    
-    // Check if this is the format from /api/executions/by-fid/{fid} (direct execution)
-    const directExecution = executionData.executions.find(
-      (exec: any) => exec.pulseId === pulseId && exec.actions
-    );
-    
-    if (directExecution?.actions) {
-      return {
-        liked: directExecution.actions.liked || false,
-        shared: directExecution.actions.shared || false,
-        abstained: directExecution.actions.abstained || false,
-        hasExecution: Boolean(directExecution)
-      };
+      return actionsToExecutionStatus(detail.execution.actions, Boolean(detail.execution));
     }
   }
 
-  // Default empty status
-  return {
-    liked: false,
-    shared: false,
-    abstained: false,
-    hasExecution: false
-  };
+  // Formats from /api/pulse/{id}/executions and /api/executions/by-fid/{fid}
+  if (executionData.executions) {
+    // Try nested execution format first (from /api/pulse/{id}/executions)
+    const executionWithMember = executionData.executions.find(
+      (exec: any) => exec.member?.farcasterFid && exec.execution?.actions
+    );
+    if (executionWithMember?.execution?.actions) {
+      return actionsToExecutionStatus(executionWithMember.execution.actions, Boolean(executionWithMember.execution));
+    }
+
+    // Try direct execution format (from /api/executions/by-fid/{fid})
+    const directExecution = executionData.executions.find(
+      (exec: any) => exec.pulseId === pulseId && exec.actions
+    );
+    if (directExecution?.actions) {
+      return actionsToExecutionStatus(directExecution.actions, Boolean(directExecution));
+    }
+  }
+
+  return { liked: false, shared: false, abstained: false, hasExecution: false };
 }

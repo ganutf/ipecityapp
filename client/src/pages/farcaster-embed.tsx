@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { authenticatedGet } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, History, CheckCircle2, Users, Trophy, Heart, Repeat, Ban, X } from "lucide-react";
+import { Calendar, History, CheckCircle2, Users, Trophy, Heart, Repeat, Ban, X, ArrowRight, CheckCircle, XCircle, Target } from "lucide-react";
 import { PulseCard } from "@/components/PulseCard";
+import { getCardAccentColor, hasUserExecuted, extractExecutionStatus, getPulseTimingInfo } from "@/lib/pulseUtils";
 
 // Helper functions for contextual timing information
 const formatTimeDifference = (diffMs: number): string => {
@@ -199,26 +200,7 @@ export default function FarcasterEmbed() {
   ) || 0;
 
   const getUserExecutionStatus = (pulseId: number) => {
-    if (!(executionsData as any)?.executionDetails)
-      return { liked: false, shared: false, abstained: false };
-
-    // Find the execution record for this pulse (new structure has execution details)
-    const executionDetail = (executionsData as any).executionDetails.find(
-      (detail: any) => detail.pulse.id === pulseId,
-    );
-
-    // If no execution found, return default values
-    if (!executionDetail || !executionDetail.execution?.actions) {
-      return { liked: false, shared: false, abstained: false };
-    }
-
-    // Extract actions from the execution
-    const actions = executionDetail.execution.actions;
-    return {
-      liked: actions.liked || false,
-      shared: actions.shared || false,
-      abstained: actions.abstained || false,
-    };
+    return extractExecutionStatus(executionsData, pulseId);
   };
 
   // Find today's active pulse
@@ -369,7 +351,7 @@ export default function FarcasterEmbed() {
                     const completedPulses = (pulsesData as any).pulses.filter((pulse: Pulse) => {
                       const isPast = !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart);
                       const executionStatus = getUserExecutionStatus(pulse.id);
-                      return isPast && (executionStatus.liked || executionStatus.shared || executionStatus.abstained);
+                      return isPast && hasUserExecuted(executionStatus);
                     });
                     return completedPulses.length;
                   })()})
@@ -434,19 +416,12 @@ export default function FarcasterEmbed() {
                     <div className="space-y-4">
                       {pastPulses.map((pulse: Pulse) => {
                         const executionStatus = getUserExecutionStatus(pulse.id);
-                        const executionDetail = (executionsData as any)?.executionDetails?.find(
-                          (detail: any) => detail.pulse.id === pulse.id,
-                        );
-                        const hasExecution = executionDetail && executionDetail.execution;
 
                         return (
                           <PulseCard
                             key={pulse.id}
                             pulse={pulse}
-                            executionStatus={{
-                              ...executionStatus,
-                              hasExecution
-                            }}
+                            executionStatus={executionStatus}
                             showExecutionStatus={true}
                             clickable={true}
                             isAdmin={isAdmin}
@@ -464,7 +439,7 @@ export default function FarcasterEmbed() {
                     .filter((pulse: Pulse) => {
                       const isPast = !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart);
                       const executionStatus = getUserExecutionStatus(pulse.id);
-                      return isPast && (executionStatus.liked || executionStatus.shared || executionStatus.abstained);
+                      return isPast && hasUserExecuted(executionStatus);
                     })
                     .sort((a: Pulse, b: Pulse) => (b as any).datetimeStart.localeCompare((a as any).datetimeStart));
 
@@ -482,19 +457,12 @@ export default function FarcasterEmbed() {
                     <div className="space-y-4">
                       {completedPulses.map((pulse: Pulse) => {
                         const executionStatus = getUserExecutionStatus(pulse.id);
-                        const executionDetail = (executionsData as any)?.executionDetails?.find(
-                          (detail: any) => detail.pulse.id === pulse.id,
-                        );
-                        const hasExecution = executionDetail && executionDetail.execution;
 
                         return (
                           <PulseCard
                             key={pulse.id}
                             pulse={pulse}
-                            executionStatus={{
-                              ...executionStatus,
-                              hasExecution
-                            }}
+                            executionStatus={executionStatus}
                             showExecutionStatus={true}
                             clickable={true}
                             isAdmin={isAdmin}
@@ -525,6 +493,7 @@ function PostTool({
   const { profile } = usePersistentAuth();
   const viewerFid = profile?.fid;
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Get user's executions for this component
   const { data: executionsData, error: componentExecutionsError } = useQuery({
@@ -559,26 +528,7 @@ function PostTool({
 
   // Helper function to get execution status for this component
   const getUserExecutionStatus = (pulseId: number) => {
-    if (!(executionsData as any)?.executionDetails)
-      return { liked: false, shared: false, abstained: false };
-
-    // Find the execution record for this pulse (new structure has execution details)
-    const executionDetail = (executionsData as any).executionDetails.find(
-      (detail: any) => detail.pulse.id === pulseId,
-    );
-
-    // If no execution found, return default values
-    if (!executionDetail || !executionDetail.execution?.actions) {
-      return { liked: false, shared: false, abstained: false };
-    }
-
-    // Extract actions from the execution
-    const actions = executionDetail.execution.actions;
-    return {
-      liked: actions.liked || false,
-      shared: actions.shared || false,
-      abstained: actions.abstained || false,
-    };
+    return extractExecutionStatus(executionsData, pulseId);
   };
 
   // Track execution status for pulse actions - initialize with current status
@@ -595,7 +545,6 @@ function PostTool({
     setExecutionStatus(status);
   }, [executionsData, pulse.id]);
 
-  const [url, setUrl] = useState("");
   const [checking, setChecking] = useState(false);
   const [stats, setStats] = useState<null | {
     liked: boolean;
@@ -672,7 +621,12 @@ function PostTool({
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate all related cache keys for pulse execution data
       queryClient.invalidateQueries({ queryKey: [`/api/executions/${member?.id}/details`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/executions/by-fid/${viewerFid}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
+      // Also invalidate the specific pulse execution endpoint
+      queryClient.invalidateQueries({ queryKey: [`/api/pulse/${pulse.id}/executions`] });
     },
   });
 
@@ -762,6 +716,95 @@ function PostTool({
     return false; // Circuit is closed
   };
 
+  // Sync execution status with Farcaster reality
+  async function syncExecutionWithFarcaster(farcasterLiked: boolean, farcasterShared: boolean) {
+    // Only sync if pulse is active (reuse existing utility)
+    const timingInfo = getPulseTimingInfo(pulse.datetimeStart, pulse.interval);
+    if (!timingInfo.isActive) {
+      console.log("Pulse not active, skipping sync");
+      return;
+    }
+    
+    console.log("=== FARCASTER SYNC DEBUG ===");
+    console.log("1. Input from Farcaster:", { farcasterLiked, farcasterShared });
+    console.log("2. Current executionStatus state (potentially stale):", executionStatus);
+    
+    // Get fresh execution status directly from data source
+    const freshExecutionStatus = getUserExecutionStatus(pulse.id);
+    console.log("3. Fresh execution status from database:", freshExecutionStatus);
+    
+    // Compare with current database execution status (use fresh data)
+    const dbLiked = freshExecutionStatus.liked;
+    const dbShared = freshExecutionStatus.shared;
+    const dbAbstained = freshExecutionStatus.abstained;
+    
+    // Determine what the database should be based on Farcaster
+    const shouldHaveExecution = farcasterLiked || farcasterShared;
+    const hasExecution = dbLiked || dbShared || dbAbstained;
+    
+    console.log("4. Computed values:", {
+      shouldHaveExecution,
+      hasExecution,
+      dbLiked,
+      dbShared, 
+      dbAbstained
+    });
+    
+    let targetActions = null;
+    
+    if (shouldHaveExecution) {
+      console.log("5. Branch: shouldHaveExecution = true");
+      // User has actions on Farcaster, ensure database matches
+      targetActions = {
+        liked: farcasterLiked,
+        shared: farcasterShared,
+        abstained: false
+      };
+    } else if (hasExecution && !dbAbstained) {
+      console.log("5. Branch: hasExecution && !dbAbstained = true");
+      // User has no Farcaster actions but has database execution (not abstain)
+      // Delete the execution by setting all actions to false
+      targetActions = {
+        liked: false,
+        shared: false,
+        abstained: false
+      };
+    } else {
+      console.log("5. Branch: No action needed");
+    }
+    
+    console.log("6. Target actions:", targetActions);
+    
+    const needsUpdate = targetActions && 
+        (targetActions.liked !== dbLiked || 
+         targetActions.shared !== dbShared || 
+         targetActions.abstained !== dbAbstained);
+         
+    console.log("7. Needs update?", needsUpdate);
+    console.log("=== END FARCASTER SYNC DEBUG ===");
+    
+    // Only update if different from current state
+    if (needsUpdate && targetActions) {
+      try {
+        console.log("EXECUTING SYNC: Updating database with Farcaster status:", targetActions);
+        // Reuse existing mutation and action handling
+        await recordExecutionMutation.mutateAsync({ actions: targetActions });
+        setExecutionStatus(targetActions);
+        
+        const hasAnyAction = targetActions.liked || targetActions.shared || targetActions.abstained;
+        if (hasAnyAction) {
+          setSuccessMessage("Pulse status synchronized with Farcaster");
+        } else {
+          setSuccessMessage("Pulse execution removed (no Farcaster actions found)");
+        }
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } catch (error) {
+        console.error('Sync with Farcaster failed:', error);
+        // Fail silently, don't disrupt user experience
+      }
+    }
+  }
+
   async function handleCheck() {
     if (!(pulse as any).urlEmbed || !viewerFid) return;
 
@@ -802,6 +845,9 @@ function PostTool({
         regularRecast: regularRecast,
         quotedRecast: quotedRecast,
       });
+
+      // Sync execution status with Farcaster reality
+      await syncExecutionWithFarcaster(liked, regularRecast || quotedRecast);
 
       // Reset circuit breaker on success
       setRetryCount(0);
@@ -948,8 +994,6 @@ function PostTool({
   // Auto-load the current pulse
   useEffect(() => {
     if ((pulse as any).urlEmbed && viewerFid && !isCircuitOpen) {
-      setUrl((pulse as any).urlEmbed);
-
       // Add a delay to prevent rapid successive calls
       const timeoutId = setTimeout(() => {
         handleCheck();
@@ -959,27 +1003,85 @@ function PostTool({
     }
   }, [(pulse as any).urlEmbed, viewerFid]);
 
+  const handleHeaderClick = () => {
+    setLocation(`/pulse/${pulse.id}`);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleHeaderClick();
+    }
+  };
+
+  // Check if pulse has been executed using shared utility
+  const hasExecution = hasUserExecuted(executionStatus);
+  
+  // Get execution status display (matching PulseCard logic)
+  const getExecutionDisplay = () => {
+    if (!hasExecution) {
+      return (
+        <div className="flex items-center justify-center py-2 px-4 bg-red-50 border border-red-200 rounded-lg mt-4">
+          <XCircle className="h-4 w-4 text-red-500 mr-2" />
+          <span className="text-red-700 font-medium text-sm">Not Executed</span>
+        </div>
+      );
+    }
+    
+    const actions = [];
+    if (executionStatus.liked) actions.push("Liked");
+    if (executionStatus.shared) actions.push("Shared");
+    if (executionStatus.abstained) actions.push("Abstained");
+    
+    return (
+      <div className="flex items-center justify-between py-2 px-4 bg-green-50 border border-green-200 rounded-lg mt-4">
+        <div className="flex items-center">
+          <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+          <span className="text-green-700 font-medium text-sm">
+            Executed - {actions.join("/") || "Completed"}
+          </span>
+        </div>
+        <div className="flex items-center text-purple-600">
+          <Target className="h-4 w-4 mr-2" />
+          <span className="font-semibold">{pulse.points} points</span>
+        </div>
+      </div>
+    );
+  };
+
+  // Get container border accent color using shared utility
+  const getContainerBorderColor = () => {
+    return getCardAccentColor(executionStatus, pulse.datetimeStart, pulse.interval);
+  };
+
   return (
-    <div className="w-full max-w-lg bg-green-50 border border-green-200 shadow rounded-xl">
-      <div className="p-6 border-b border-green-200 bg-green-100 rounded-t-xl">
-        <h2 className="text-xl font-bold text-green-800 mb-2 flex items-center">
-          🎯 PULSE #{pulse.id} - Active Now
+    <div className={`w-full max-w-lg bg-white border border-gray-200 shadow rounded-xl border-l-4 ${getContainerBorderColor()}`}>
+      <div 
+        className="p-6 border-b border-gray-200 bg-gray-50 rounded-t-xl cursor-pointer hover:bg-gray-100 transition-colors duration-200"
+        onClick={handleHeaderClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-label={`View details for Pulse #${pulse.id}`}
+      >
+        <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center justify-between">
+          <span className="flex items-center">
+            🎯 PULSE #{pulse.id} - Active Now
+          </span>
+          <ArrowRight className="h-5 w-5 text-gray-400" />
         </h2>
-        <p className="text-green-700 text-sm mb-2">{pulse.description}</p>
-        <p className="text-sm font-medium text-green-600 mb-2">
+        <p className="text-gray-700 text-sm mb-2">{pulse.description}</p>
+        <p className="text-sm font-medium text-gray-600 mb-2">
           {getActivePulseTimingInfo(pulse)}
         </p>
       </div>
 
-      <div className="p-6">
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="Farcaster URL will load automatically"
-          className="w-full border rounded-lg px-3 py-2 mb-4"
-          readOnly
-        />
+      {/* Execution Status Display */}
+      <div className="px-6">
+        {getExecutionDisplay()}
+      </div>
 
+      <div className="p-6">
         {error && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex justify-between items-start">
@@ -1007,8 +1109,8 @@ function PostTool({
         )}
 
         {successMessage && (
-          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-700">{successMessage}</p>
+          <div className="mt-4 p-3 bg-lime-50 border border-lime-200 rounded-lg">
+            <p className="text-sm text-lime-700">{successMessage}</p>
           </div>
         )}
 

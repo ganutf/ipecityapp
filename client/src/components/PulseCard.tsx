@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { formatPulseDate, getPulseDurationText, getContextualTimingInfo } from "@/lib/dateUtils";
 import { useLocation } from "wouter";
 import type { Pulse } from "@shared/schema";
+import { getCardAccentColor, getStatusBadge, hasUserExecuted, getPulseTimingInfo } from "@/lib/pulseUtils";
 
 interface ExecutionStatus {
   liked: boolean;
@@ -55,8 +56,7 @@ export function PulseCard({
   const endTime = new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
   const timingInfo = getContextualTimingInfo(startTime, endTime);
   
-  const hasExecution = executionStatus?.hasExecution || 
-    (executionStatus?.liked || executionStatus?.shared || executionStatus?.abstained);
+  const hasExecution = hasUserExecuted(executionStatus);
   
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't trigger if clicking on action buttons
@@ -77,31 +77,8 @@ export function PulseCard({
     }
   };
   
-  const getStatusBadge = () => {
-    const baseClasses = "px-3 py-1.5 text-sm font-semibold rounded-full";
-    
-    switch (timingInfo.status) {
-      case 'active':
-        return (
-          <Badge className={cn(baseClasses, "bg-orange-500 text-white")}>
-            Active
-          </Badge>
-        );
-      case 'future':
-        return (
-          <Badge className={cn(baseClasses, "bg-blue-500 text-white")}>
-            Scheduled
-          </Badge>
-        );
-      case 'ended':
-        return (
-          <Badge className={cn(baseClasses, "bg-gray-500 text-white")}>
-            Ended
-          </Badge>
-        );
-      default:
-        return null;
-    }
+  const getStatusBadgeConfig = () => {
+    return getStatusBadge(executionStatus, pulse.datetimeStart, pulse.interval);
   };
   
   const getExecutionDisplay = () => {
@@ -131,21 +108,15 @@ export function PulseCard({
     );
   };
 
-  const getCardAccentColor = () => {
-    if (hasExecution) return "border-l-green-500";
-    switch (timingInfo.status) {
-      case 'active': return "border-l-orange-500";
-      case 'future': return "border-l-blue-500";
-      case 'ended': return "border-l-gray-400";
-      default: return "border-l-gray-300";
-    }
+  const getCardAccentColorConfig = () => {
+    return getCardAccentColor(executionStatus, pulse.datetimeStart, pulse.interval);
   };
 
   return (
     <Card 
       className={cn(
         "relative transition-all duration-200 border-l-4 bg-white shadow-sm hover:shadow-md",
-        getCardAccentColor(),
+        getCardAccentColorConfig(),
         clickable && "cursor-pointer hover:shadow-lg",
         className
       )}
@@ -162,7 +133,14 @@ export function PulseCard({
             <h2 className="text-xl font-bold text-gray-900">
               PULSE #{pulse.id}
             </h2>
-            {getStatusBadge()}
+            {(() => {
+              const badgeConfig = getStatusBadgeConfig();
+              return badgeConfig ? (
+                <Badge className={badgeConfig.className}>
+                  {badgeConfig.text}
+                </Badge>
+              ) : null;
+            })()}
           </div>
           
           {/* Admin Actions */}

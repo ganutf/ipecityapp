@@ -940,26 +940,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: AuthenticatedRequest, res) => {
     try {
       const pulseId = parseInt(req.params.pulseId);
-      console.log('=== PULSE EXECUTIONS DEBUG ===', {
-        rawPulseId: req.params.pulseId,
-        parsedPulseId: pulseId,
-        isNaN: isNaN(pulseId),
-        userId: req.user?.id,
-        userFid: req.user?.fid,
-        timestamp: new Date().toISOString()
-      });
       
       if (isNaN(pulseId)) {
-        console.log('ERROR: Invalid pulse ID provided');
         return res.status(400).json({ error: "Invalid pulse ID" });
       }
 
       // Verify pulse exists
       const pulse = await storage.getPulse(pulseId);
-      console.log('Pulse lookup result:', { pulseId, found: !!pulse, pulse: pulse ? { id: pulse.id, description: pulse.description } : null });
       
       if (!pulse) {
-        console.log('ERROR: Pulse not found in database');
         return res.status(404).json({ error: "Pulse not found" });
       }
 

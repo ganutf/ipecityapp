@@ -10,6 +10,7 @@ import { PulseExecutionsTable } from "@/components/PulseExecutionsTable";
 import { FarcasterPostEmbed } from "@/components/FarcasterPostEmbed";
 import { formatPulseDate, getPulseDurationText } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
+import { getCardAccentColor, getStatusBadge, hasUserExecuted, extractExecutionStatus } from "@/lib/pulseUtils";
 
 export default function PulseDetailPage() {
   const params = useParams();
@@ -27,25 +28,13 @@ export default function PulseDetailPage() {
   // Check if user is admin based on memberType
   const isAdmin = (currentMemberData as any)?.member?.memberType === 'admin';
 
-  // Debug: Add logging to track authentication state
-  console.log('Pulse Detail Debug:', {
-    isAuthenticated,
-    isLoading,
-    profileFid: profile?.fid,
-    pulseId,
-    timestamp: new Date().toISOString()
-  });
 
   // Fetch pulse execution data - now accessible to all authenticated users
   const { data: pulseData, isLoading: pulseLoading, error: pulseError, refetch } = useQuery({
     queryKey: [`/api/pulse/${pulseId}/executions`, profile?.fid], // Include profile.fid in query key
-    queryFn: () => {
-      console.log('API Call - Pulse executions:', { pulseId, profileFid: profile?.fid });
-      return authenticatedGet(`/api/pulse/${pulseId}/executions`, profile?.fid);
-    },
+    queryFn: () => authenticatedGet(`/api/pulse/${pulseId}/executions`, profile?.fid),
     enabled: Boolean(isAuthenticated && profile?.fid && pulseId && !isLoading),
     retry: (failureCount, error) => {
-      console.log('Query retry attempt:', { failureCount, error: error?.message });
       // Retry up to 3 times for network/auth issues, but not for 404s
       if (error?.message?.includes('404') || error?.message?.includes('not found')) {
         return false;
@@ -71,9 +60,8 @@ export default function PulseDetailPage() {
 
   // This check is now moved below to after the error handling
 
-  // Enhanced error handling with better debugging
+  // Enhanced error handling
   if (pulseError || (!pulseData && !pulseLoading && isAuthenticated && profile?.fid && pulseId)) {
-    console.error('Pulse detail error:', { pulseError, pulseData, pulseLoading, isAuthenticated, profileFid: profile?.fid, pulseId });
     
     const isAuthError = pulseError?.message?.includes('401') || pulseError?.message?.includes('403');
     const isPulseNotFound = pulseError?.message?.includes('404') || pulseError?.message?.includes('not found');
@@ -133,46 +121,28 @@ export default function PulseDetailPage() {
   const pulse = pulseData.pulse;
   const executions = pulseData.executions;
 
-  const getStatusBadge = () => {
-    const now = new Date();
-    const startTime = new Date(pulse.datetimeStart);
-    const endTime = new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
-    
-    const baseClasses = "px-3 py-1.5 text-sm font-semibold rounded-full";
-    
-    if (now >= startTime && now <= endTime) {
-      return (
-        <Badge className={cn(baseClasses, "bg-orange-500 text-white")}>
-          Active
-        </Badge>
-      );
-    } else if (now > endTime) {
-      return (
-        <Badge className={cn(baseClasses, "bg-gray-500 text-white")}>
-          Ended
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge className={cn(baseClasses, "bg-blue-500 text-white")}>
-          Scheduled
-        </Badge>
-      );
-    }
+
+  // Find current user's execution status using shared utility
+  const currentUserExecution = executions?.find((execution: any) => 
+    execution.member?.farcasterFid === profile?.fid
+  );
+  
+  const executionStatus = currentUserExecution?.execution?.actions ? {
+    liked: currentUserExecution.execution.actions.liked || false,
+    shared: currentUserExecution.execution.actions.shared || false,
+    abstained: currentUserExecution.execution.actions.abstained || false,
+    hasExecution: Boolean(currentUserExecution)
+  } : null;
+  
+  // Check if current user has executed this pulse using shared utility
+  const hasCurrentUserExecuted = hasUserExecuted(executionStatus);
+
+  const getStatusBadgeConfig = () => {
+    return getStatusBadge(executionStatus, pulse.datetimeStart, pulse.interval);
   };
 
-  const getCardAccentColor = () => {
-    const now = new Date();
-    const startTime = new Date(pulse.datetimeStart);
-    const endTime = new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
-    
-    if (now >= startTime && now <= endTime) {
-      return "border-l-orange-500";
-    } else if (now > endTime) {
-      return "border-l-gray-400";
-    } else {
-      return "border-l-blue-500";
-    }
+  const getCardAccentColorConfig = () => {
+    return getCardAccentColor(executionStatus, pulse.datetimeStart, pulse.interval);
   };
 
   return (
@@ -200,7 +170,7 @@ export default function PulseDetailPage() {
         {/* Pulse Information Card */}
         <Card className={cn(
           "border-l-4 bg-white shadow-sm",
-          getCardAccentColor()
+          getCardAccentColorConfig()
         )}>
           <CardContent className="p-6">
             {/* Header with Status */}
@@ -209,7 +179,14 @@ export default function PulseDetailPage() {
                 <h2 className="text-xl font-bold text-gray-900">
                   PULSE #{pulse.id}
                 </h2>
-                {getStatusBadge()}
+                {(() => {
+                  const badgeConfig = getStatusBadgeConfig();
+                  return badgeConfig ? (
+                    <Badge className={badgeConfig.className}>
+                      {badgeConfig.text}
+                    </Badge>
+                  ) : null;
+                })()}
               </div>
             </div>
             

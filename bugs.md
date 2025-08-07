@@ -1,7 +1,2 @@
-- pulse pages is taking too long to load.
-- opening the pulse detail both in the pulses page as in the admin page leads to error
-  - Error Loading Pulse / An error occurred while loading the pulse details. / Error: Request failed: 500
-- start the community page with order set to low from high values (1, 2, 3...)
-- improve the spacing between name and icon @icon-name-distancing printscreen to reference.
-- review pulse creation and timezone issues.
-- 
+- when I navigate to pulse details and went back to the main pulse page, it loses my executed state.
+- change the position of the tag executed from above to below the embbeded post in the current pulse card.

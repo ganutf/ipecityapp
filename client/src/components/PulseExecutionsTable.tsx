@@ -8,6 +8,7 @@ import { authenticatedPost } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
 import { CheckCircle, XCircle, Clock, ExternalLink, Loader2 } from "lucide-react";
 import { usePulseTimings } from "@/hooks/usePulseTimings";
+import { cn } from "@/lib/utils";
 
 interface Member {
   id: number;
@@ -63,6 +64,8 @@ const useAttestationErrorHandler = (retryCallback: () => void) => {
   const { toast } = useToast();
   
   const handleError = (error: Error, context?: string) => {
+    console.error(`[ERROR_HANDLER] ${context}:`, error);
+    
     let description = error.message;
     let retryable = true;
     
@@ -81,6 +84,8 @@ const useAttestationErrorHandler = (retryCallback: () => void) => {
       description = "Attestation has already been completed for this execution.";
       retryable = false;
     }
+    
+    console.log(`[ERROR_HANDLER] Showing toast with description: "${description}"`);
     
     toast({ 
       title: "Error", 
@@ -137,16 +142,28 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
   // Mutation for creating all attestations for this pulse
   const createAllAttestationsMutation = useMutation({
     mutationFn: async () => {
-      return authenticatedPost(`/api/admin/pulse/${pulse.id}/attestations/create-all`, {}, profile?.fid);
+      console.log(`[FRONTEND] Starting bulk attestation for pulse ${pulse.id}`);
+      try {
+        const result = await authenticatedPost(`/api/admin/pulse/${pulse.id}/attestations/create-all`, {}, profile?.fid);
+        console.log(`[FRONTEND] Bulk attestation success:`, result);
+        return result;
+      } catch (error) {
+        console.error(`[FRONTEND] Bulk attestation error:`, error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
+      console.log(`[FRONTEND] Bulk attestation onSuccess:`, data);
       toast({ 
         title: "Success", 
         description: `${data.message}. Successful: ${data.successful}, Failed: ${data.failed}` 
       });
       onRefresh();
     },
-    onError: (error: Error) => bulkErrorHandler.handleError(error, "Bulk attestation creation"),
+    onError: (error: Error) => {
+      console.error(`[FRONTEND] Bulk attestation onError:`, error);
+      bulkErrorHandler.handleError(error, "Bulk attestation creation");
+    },
     retry: bulkErrorHandler.shouldRetry,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
   });
@@ -277,24 +294,124 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
     execution && (!attestation || attestation.status !== 'completed')
   );
 
-  return (
-    <div className="space-y-6">
-      {/* Header with bulk action */}
+  // Mobile card component for individual execution
+  const ExecutionMobileCard = ({ member, execution, attestation }: { member: Member; execution: Execution | null; attestation: Attestation | null }) => (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+      {/* Member Info */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-semibold">Pulse Executions & Attestations</h3>
+          <div className="text-sm font-medium text-gray-900">
+            {member.ipeUsername || member.ipePassport}
+          </div>
+          <div className="text-xs text-gray-500">
+            FID: {member.farcasterFid}
+          </div>
+        </div>
+        <div className="text-right">
+          {execution ? (
+            <span className="text-sm font-medium text-green-600">
+              {pulse.points} pts
+            </span>
+          ) : (
+            <span className="text-sm text-gray-400">0 pts</span>
+          )}
+        </div>
+      </div>
+
+      {/* Execution Status */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-gray-500 uppercase">Status</span>
+        {getExecutionStatusBadge(execution)}
+      </div>
+
+      {/* Actions */}
+      {execution && (
+        <div className="space-y-2">
+          <span className="text-xs font-medium text-gray-500 uppercase block">Actions</span>
+          <div className="flex flex-wrap gap-1">
+            {execution.actions.liked && (
+              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                ❤️ Like
+              </Badge>
+            )}
+            {execution.actions.shared && (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                🔄 Share
+              </Badge>
+            )}
+            {execution.actions.abstained && (
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
+                ⏭️ Abstain
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Attestation Status */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-gray-500 uppercase">Attestation</span>
+        {getAttestationStatusBadge(attestation)}
+      </div>
+
+      {/* Admin Action */}
+      {isAdmin && execution && (!attestation || attestation.status !== 'completed') && (
+        <div className="pt-2 border-t border-gray-100">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleCreateIndividualAttestation(execution.id)}
+                  disabled={creatingIndividual === execution.id || createAttestationMutation.isPending || !isPulseEnded()}
+                  className="text-xs disabled:bg-gray-100 w-full"
+                >
+                  {creatingIndividual === execution.id ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Attestation'
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isPulseEnded() ? (
+                  <p>Create attestation for this execution</p>
+                ) : (
+                  <p>Pulse is still active. Attestations available in {getTimeUntilEnd()}</p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6 min-w-0">
+      {/* Header with bulk action */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+            <h3 className="text-lg font-semibold break-words">Pulse Executions & Attestations</h3>
             <Badge 
               variant={isPulseEnded() ? "default" : "secondary"}
-              className={isPulseEnded() ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}
+              className={cn(
+                "w-fit text-xs",
+                isPulseEnded() ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"
+              )}
             >
               {isPulseEnded() ? "Ended" : `Active • ${getTimeUntilEnd()} remaining`}
             </Badge>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 mb-1">
             {executions.filter(e => e.execution).length} of {executions.length} members executed this pulse
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 break-words">
             Pulse ends at {getPulseEndTime()?.toLocaleString()}
           </p>
         </div>
@@ -305,15 +422,20 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
                 <Button
                   onClick={handleCreateAllAttestations}
                   disabled={creatingAll || createAllAttestationsMutation.isPending || !isPulseEnded()}
-                  className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400"
+                  className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-xs sm:text-sm w-full sm:w-auto"
+                  size="sm"
                 >
                   {creatingAll || createAllAttestationsMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating Attestations...
+                      <span className="hidden sm:inline">Creating Attestations...</span>
+                      <span className="sm:hidden">Creating...</span>
                     </>
                   ) : (
-                    `Create ${eligibleExecutions.length} Attestations`
+                    <>
+                      <span className="hidden sm:inline">Create {eligibleExecutions.length} Attestations</span>
+                      <span className="sm:hidden">Create {eligibleExecutions.length}</span>
+                    </>
                   )}
                 </Button>
               </TooltipTrigger>
@@ -330,7 +452,7 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto min-w-0">
         <div className="bg-blue-50 p-4 rounded-lg">
           <div className="text-2xl font-bold text-blue-700">
             {executions.filter(e => e.execution).length}
@@ -351,10 +473,22 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
         </div>
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
+      {/* Mobile Cards View */}
+      <div className="block sm:hidden space-y-3">
+        {executions.map(({ member, execution, attestation }) => (
+          <ExecutionMobileCard 
+            key={member.id} 
+            member={member} 
+            execution={execution} 
+            attestation={attestation} 
+          />
+        ))}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden sm:block border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -382,24 +516,24 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
             <tbody className="bg-white divide-y divide-gray-200">
               {executions.map(({ member, execution, attestation }) => (
                 <tr key={member.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
+                  <td className="px-4 py-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-gray-900 break-words">
                         {member.ipeUsername || member.ipePassport}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-500 break-words">
                         FID: {member.farcasterFid}
                       </div>
                     </div>
                   </td>
                   
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     {getExecutionStatusBadge(execution)}
                   </td>
                   
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     {execution ? (
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1 max-w-[120px]">
                         {execution.actions.liked && (
                           <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
                             ❤️ Like
@@ -421,7 +555,7 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
                     )}
                   </td>
                   
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     {execution ? (
                       <span className="text-sm font-medium text-green-600">
                         {pulse.points} pts
@@ -431,12 +565,14 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
                     )}
                   </td>
                   
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {getAttestationStatusBadge(attestation)}
+                  <td className="px-4 py-3">
+                    <div className="min-w-0">
+                      {getAttestationStatusBadge(attestation)}
+                    </div>
                   </td>
                   
                   {isAdmin && (
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3">
                       {execution && (!attestation || attestation.status !== 'completed') ? (
                         <TooltipProvider>
                           <Tooltip>
@@ -446,15 +582,15 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
                                 variant="outline"
                                 onClick={() => handleCreateIndividualAttestation(execution.id)}
                                 disabled={creatingIndividual === execution.id || createAttestationMutation.isPending || !isPulseEnded()}
-                                className="text-xs disabled:bg-gray-100"
+                                className="text-xs disabled:bg-gray-100 max-w-[120px]"
                               >
                                 {creatingIndividual === execution.id ? (
                                   <>
-                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    Creating...
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin flex-shrink-0" />
+                                    <span className="truncate">Creating...</span>
                                   </>
                                 ) : (
-                                  'Create Attestation'
+                                  <span className="truncate">Create Attestation</span>
                                 )}
                               </Button>
                             </TooltipTrigger>

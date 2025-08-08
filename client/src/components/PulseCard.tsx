@@ -115,7 +115,7 @@ export function PulseCard({
   return (
     <Card 
       className={cn(
-        "relative transition-all duration-200 border-l-4 bg-white shadow-sm hover:shadow-md",
+        "relative transition-all duration-200 border-l-4 bg-white shadow-sm hover:shadow-md overflow-hidden",
         getCardAccentColorConfig(),
         clickable && "cursor-pointer hover:shadow-lg",
         className
@@ -126,7 +126,7 @@ export function PulseCard({
       role={clickable ? "button" : undefined}  
       aria-label={clickable ? `View details for Pulse #${pulse.id}` : undefined}
     >
-      <CardContent className="p-4 sm:p-6">
+      <CardContent className="p-4 sm:p-6 min-w-0">
         {/* Header with Title, Status, and Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">

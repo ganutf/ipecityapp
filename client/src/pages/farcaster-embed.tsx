@@ -1149,66 +1149,76 @@ function PostTool({
               </div>
             )}
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center space-x-4 text-sm text-gray-500">
                 <span>❤️ {castData.reactions.likes_count}</span>
                 <span>🔄 {castData.reactions.recasts_count}</span>
                 <span>💬 {castData.replies.count}</span>
               </div>
 
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-1 sm:gap-2 min-w-0 justify-center sm:justify-end">
                 <button
                   onClick={() => handleReaction("like")}
                   disabled={actionLoading.like || executionStatus.abstained}
-                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${stats?.liked
+                  className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${stats?.liked
                       ? "bg-red-100 text-red-700"
                       : "bg-gray-100 text-gray-700 hover:bg-red-50"
                     }`}
                 >
                   {actionLoading.like ? (
-                    "⏳ Liking..."
+                    <span className="flex items-center">
+                      <span className="animate-spin mr-1">⏳</span>
+                      <span className="hidden sm:inline">Liking...</span>
+                    </span>
                   ) : (
                     <span className="flex items-center">
-                      <Heart className={`h-4 w-4 mr-1 ${stats?.liked ? "text-red-600" : "text-gray-500"}`} />
-                      {stats?.liked ? "Liked" : "Like"}
+                      <Heart className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0 ${stats?.liked ? "text-red-600" : "text-gray-500"}`} />
+                      <span className="hidden sm:inline">{stats?.liked ? "Liked" : "Like"}</span>
                     </span>
                   )}
                 </button>
                 <button
                   onClick={() => handleReaction("recast")}
                   disabled={actionLoading.recast || executionStatus.abstained}
-                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${stats?.recasted
+                  className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${stats?.recasted
                       ? "bg-blue-100 text-blue-700"
                       : "bg-gray-100 text-gray-700 hover:bg-blue-50"
                     }`}
                 >
                   {actionLoading.recast ? (
-                    "⏳ Recasting..."
+                    <span className="flex items-center">
+                      <span className="animate-spin mr-1">⏳</span>
+                      <span className="hidden sm:inline">Recasting...</span>
+                    </span>
                   ) : (
                     <span className="flex items-center">
-                      <Repeat className={`h-4 w-4 mr-1 ${stats?.recasted ? "text-blue-600" : "text-gray-500"}`} />
-                      {stats?.recasted ? "Shared" : "Share"}
+                      <Repeat className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0 ${stats?.recasted ? "text-blue-600" : "text-gray-500"}`} />
+                      <span className="hidden sm:inline">{stats?.recasted ? "Shared" : "Share"}</span>
                     </span>
                   )}
                 </button>
                 <button
                   onClick={() => handlePulseAction('abstain')}
                   disabled={actionLoading.abstain || (stats?.liked || stats?.recasted)}
-                  className={`px-3 py-1 rounded text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${executionStatus.abstained
+                  className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${executionStatus.abstained
                       ? "bg-yellow-100 text-yellow-700"
                       : "bg-gray-100 text-gray-700 hover:bg-yellow-50"
                     }`}
                 >
                   {actionLoading.abstain ? (
-                    "⏳ Recording..."
+                    <span className="flex items-center">
+                      <span className="animate-spin mr-1">⏳</span>
+                      <span className="hidden sm:inline">Recording...</span>
+                    </span>
                   ) : (
                     <span className="flex items-center">
                       {executionStatus.abstained ? (
-                        <X className="h-4 w-4 mr-1 text-yellow-600" />
+                        <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0 text-yellow-600" />
                       ) : (
-                        <Ban className="h-4 w-4 mr-1 text-gray-500" />
+                        <Ban className="h-3 w-3 sm:h-4 sm:w-4 mr-1 flex-shrink-0 text-gray-500" />
                       )}
-                      {executionStatus.abstained ? "Cancel" : "Abstain"}
+                      <span className="hidden sm:inline">{executionStatus.abstained ? "Cancel" : "Abstain"}</span>
+                      <span className="sm:hidden">{executionStatus.abstained ? "✗" : "Skip"}</span>
                     </span>
                   )}
                 </button>

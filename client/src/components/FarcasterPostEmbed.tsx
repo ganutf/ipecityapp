@@ -72,8 +72,8 @@ export function FarcasterPostEmbed({
 
   if (loading) {
     return (
-      <Card className={cn("border border-gray-200", className)}>
-        <CardContent className="p-6">
+      <Card className={cn("border border-gray-200 overflow-hidden", className)}>
+        <CardContent className="p-4 sm:p-6 min-w-0">
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
             <span className="text-gray-600">Loading post...</span>
@@ -85,8 +85,8 @@ export function FarcasterPostEmbed({
 
   if (error) {
     return (
-      <Card className={cn("border border-red-200 bg-red-50", className)}>
-        <CardContent className="p-4 sm:p-6">
+      <Card className={cn("border border-red-200 bg-red-50 overflow-hidden", className)}>
+        <CardContent className="p-4 sm:p-6 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm text-red-700 mb-2">Failed to load Farcaster post</p>
@@ -96,9 +96,10 @@ export function FarcasterPostEmbed({
               href={castUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors flex items-center w-fit flex-shrink-0"
+              className="px-2 sm:px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors flex items-center w-fit flex-shrink-0 max-w-[80px] sm:max-w-none"
             >
-              View Post <ExternalLink className="h-3 w-3 ml-1" />
+              <span className="truncate">View Post</span>
+              <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
             </a>
           </div>
         </CardContent>
@@ -108,17 +109,18 @@ export function FarcasterPostEmbed({
 
   if (!castData) {
     return (
-      <Card className={cn("border border-gray-200", className)}>
-        <CardContent className="p-4 sm:p-6">
+      <Card className={cn("border border-gray-200 overflow-hidden", className)}>
+        <CardContent className="p-4 sm:p-6 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <span className="text-gray-600 text-sm">Farcaster post</span>
             <a
               href={castUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors flex items-center w-fit flex-shrink-0"
+              className="px-2 sm:px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors flex items-center w-fit flex-shrink-0 max-w-[80px] sm:max-w-none"
             >
-              View Post <ExternalLink className="h-3 w-3 ml-1" />
+              <span className="truncate">View Post</span>
+              <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
             </a>
           </div>
         </CardContent>
@@ -127,8 +129,8 @@ export function FarcasterPostEmbed({
   }
 
   return (
-    <Card className={cn("border border-gray-200 bg-white", className)}>
-      <CardContent className="p-0">
+    <Card className={cn("border border-gray-200 bg-white overflow-hidden", className)}>
+      <CardContent className="p-0 min-w-0">
         {/* Header with "Farcaster Post" label and external link */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
           <div className="flex items-center space-x-2 min-w-0">
@@ -141,11 +143,11 @@ export function FarcasterPostEmbed({
             href={castUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2 sm:px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors flex items-center flex-shrink-0"
+            className="px-2 sm:px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition-colors flex items-center flex-shrink-0 max-w-[80px] sm:max-w-none"
           >
-            <span className="hidden sm:inline">View Original</span>
+            <span className="hidden sm:inline truncate">View Original</span>
             <span className="sm:hidden">View</span>
-            <ExternalLink className="h-3 w-3 ml-1" />
+            <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
           </a>
         </div>
 
@@ -166,7 +168,7 @@ export function FarcasterPostEmbed({
 
           {/* Post Text */}
           {castData.text && (
-            <p className="text-gray-800 mb-4 leading-relaxed text-sm sm:text-base break-words">{castData.text}</p>
+            <p className="text-gray-800 mb-4 leading-relaxed text-sm sm:text-base break-words overflow-wrap-anywhere max-w-full">{castData.text}</p>
           )}
 
           {/* Embedded Images */}
@@ -180,7 +182,8 @@ export function FarcasterPostEmbed({
                       key={index}
                       src={embed.url}
                       alt="Embedded content"
-                      className="w-full max-w-full h-auto rounded-lg border border-gray-200 mb-2"
+                      className="w-full max-w-full h-auto rounded-lg border border-gray-200 mb-2 object-contain"
+                      style={{ maxWidth: '100%', height: 'auto' }}
                     />
                   ),
               )}

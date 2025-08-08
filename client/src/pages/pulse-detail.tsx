@@ -146,8 +146,8 @@ export default function PulseDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto max-w-6xl px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-x-hidden">
+      <div className="container mx-auto max-w-6xl px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8 min-w-0 w-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           <Button
@@ -169,10 +169,10 @@ export default function PulseDetailPage() {
 
         {/* Pulse Information Card */}
         <Card className={cn(
-          "border-l-4 bg-white shadow-sm",
+          "border-l-4 bg-white shadow-sm overflow-hidden",
           getCardAccentColorConfig()
         )}>
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-4 sm:p-6 min-w-0">
             {/* Header with Status */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
@@ -226,8 +226,8 @@ export default function PulseDetailPage() {
         )}
 
         {/* Pulse Executions Table */}
-        <Card className="bg-white shadow-sm">
-          <CardContent className="p-3 sm:p-6 overflow-x-auto">
+        <Card className="bg-white shadow-sm overflow-hidden">
+          <CardContent className="p-3 sm:p-6 overflow-x-auto min-w-0">
             <PulseExecutionsTable
               pulse={pulse}
               executions={executions}

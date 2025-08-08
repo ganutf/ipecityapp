@@ -111,3 +111,19 @@ export async function authenticatedPut(url: string, data: any, fid?: number) {
 
   return response.json();
 }
+
+/**
+ * Make an authenticated DELETE request
+ */
+export async function authenticatedDelete(url: string, fid?: number) {
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: getAuthHeaders(fid),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}

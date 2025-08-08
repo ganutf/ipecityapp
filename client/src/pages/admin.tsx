@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil, Save, X, Eye, BarChart3, Clock, Globe } from "lucide-react";
+import { Pencil, Save, X, Eye, Clock, Globe } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useLocation } from "wouter";
 import { PulseCard } from "@/components/PulseCard";
@@ -18,7 +18,7 @@ import { PulseCard } from "@/components/PulseCard";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { authenticatedPost, authenticatedGet, authenticatedPatch } from "@/lib/api";
 import { useTimezone } from "@/contexts/TimezoneContext";
-import { formatPulseDate, convertDateTimeInputToUTC, formatForDateTimeInput, getCurrentUTC } from "@/lib/dateUtils";
+import { convertDateTimeInputToUTC, formatPulseDate, getCurrentUTC } from "@/lib/dateUtils";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
@@ -40,15 +40,6 @@ export default function AdminPage() {
     pulseTypeId: 1, // Default to first pulse type
   });
 
-  const [editingPulse, setEditingPulse] = useState<number | null>(null);
-  const [editData, setEditData] = useState({
-    urlEmbed: "",
-    datetimeStart: "",
-    interval: 24,
-    description: "",
-    points: 1,
-    pulseTypeId: 1,
-  });
 
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [selectedMemberType, setSelectedMemberType] = useState<MemberType>('architect');
@@ -118,27 +109,6 @@ export default function AdminPage() {
     },
   });
 
-  const updatePulseMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: { urlEmbed: string; datetimeStart: string; interval: number; description: string; points: number; pulseTypeId: number } }) => {
-      // Convert local datetime input to UTC for server storage
-      const utcDateString = convertDateTimeInputToUTC(data.datetimeStart, timezoneInfo.timeZone);
-      
-      const dataWithUTC = {
-        ...data,
-        datetimeStart: utcDateString
-      };
-      
-      return authenticatedPatch(`/api/pulses/${id}`, dataWithUTC, profile?.fid);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
-      setEditingPulse(null);
-      toast({ title: "Success", description: "Pulse updated successfully" });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
 
   const approveMemberMutation = useMutation({
     mutationFn: async (member: { farcasterFid: number; ipeUsername?: string; userWalletAddress?: string; memberType?: MemberType }) => {
@@ -216,38 +186,6 @@ export default function AdminPage() {
     );
   }
 
-  // Helper functions
-  const handleEditStart = (pulse: Pulse) => {
-    setEditingPulse(pulse.id);
-    setEditData({
-      urlEmbed: (pulse as any).urlEmbed,
-      datetimeStart: formatForDateTimeInput((pulse as any).datetimeStart, timezoneInfo.timeZone), // Convert UTC to local time for input
-      interval: (pulse as any).interval || 24,
-      description: pulse.description,
-      points: pulse.points || 1,
-      pulseTypeId: (pulse as any).pulseTypeId || 1,
-    });
-  };
-
-  const isFuturePulse = (pulse: Pulse) => {
-    const now = new Date();
-    const pulseStart = new Date((pulse as any).datetimeStart);
-    return pulseStart > now;
-  };
-
-  const isPulseActive = (pulse: Pulse) => {
-    const now = new Date();
-    const pulseStart = new Date((pulse as any).datetimeStart);
-    const pulseEnd = new Date(pulseStart.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
-    return now >= pulseStart && now <= pulseEnd;
-  };
-
-  const isPulseEnded = (pulse: Pulse) => {
-    const now = new Date();
-    const pulseStart = new Date((pulse as any).datetimeStart);
-    const pulseEnd = new Date(pulseStart.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
-    return now > pulseEnd;
-  };
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
@@ -424,107 +362,14 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {(pulsesData as any)?.pulses?.map((pulse: Pulse) => {
-                const isEditing = editingPulse === pulse.id;
-                const canEdit = isFuturePulse(pulse);
-
-                if (isEditing) {
-                  return (
-                    <div key={pulse.id} className="border rounded-lg p-4 bg-blue-50 border-blue-200">
-                      <div className="space-y-3">
-                        <Select value={editData.pulseTypeId.toString()} onValueChange={(value) => setEditData({ ...editData, pulseTypeId: parseInt(value) })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select pulse type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(pulseTypesData as any)?.pulseTypes?.map((type: PulseType) => (
-                              <SelectItem key={type.id} value={type.id.toString()}>
-                                {type.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          value={editData.urlEmbed}
-                          onChange={(e) => setEditData({ ...editData, urlEmbed: e.target.value })}
-                          placeholder="URL Embed"
-                        />
-                        <div>
-                          <Input
-                            type="datetime-local"
-                            value={editData.datetimeStart}
-                            onChange={(e) => setEditData({ ...editData, datetimeStart: e.target.value })}
-                          />
-                          {/* Timezone Preview for Edit */}
-                          {editData.datetimeStart && (
-                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                              <div className="flex items-center gap-1 text-blue-700">
-                                <Globe className="h-3 w-3" />
-                                <span className="font-medium">Preview: {timezoneInfo.displayName}</span>
-                              </div>
-                              <div className="text-blue-600">
-                                {formatPulseDate(convertDateTimeInputToUTC(editData.datetimeStart, timezoneInfo.timeZone), timezoneInfo.timeZone, true)}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="8760"
-                          value={editData.interval}
-                          onChange={(e) => setEditData({ ...editData, interval: parseInt(e.target.value) || 24 })}
-                          placeholder="Duration (hours)"
-                        />
-                        <Textarea
-                          value={editData.description}
-                          onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                          placeholder="Description"
-                        />
-                        <Input
-                          type="number"
-                          min="1"
-                          max="1000"
-                          value={editData.points}
-                          onChange={(e) => setEditData({ ...editData, points: parseInt(e.target.value) || 1 })}
-                          placeholder="Points"
-                        />
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              updatePulseMutation.mutate({ id: pulse.id, data: editData });
-                            }}
-                            disabled={updatePulseMutation.isPending}
-                          >
-                            <Save className="w-4 h-4 mr-1" />
-                            Save
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingPulse(null)}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <PulseCard
-                    key={pulse.id}
-                    pulse={pulse}
-                    showAdminActions={canEdit}
-                    clickable={true}
-                    isAdmin={true}
-                    onEdit={canEdit ? () => handleEditStart(pulse) : undefined}
-                  />
-                );
-              })}
+              {(pulsesData as any)?.pulses?.map((pulse: Pulse) => (
+                <PulseCard
+                  key={pulse.id}
+                  pulse={pulse}
+                  clickable={true}
+                  isAdmin={true}
+                />
+              ))}
             </div>
           )}
         </div>

@@ -847,6 +847,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete pulse (admin only)
+  app.delete("/api/pulses/:id", 
+    authenticateUser, 
+    requireAdmin, 
+    auditLogger("DELETE_PULSE"),
+    async (req: AuthenticatedRequest, res) => {
+    try {
+      const pulseId = parseInt(req.params.id);
+      if (isNaN(pulseId)) {
+        return res.status(400).json({ error: "Invalid pulse ID" });
+      }
+
+      // Check if pulse exists
+      const pulse = await storage.getPulse(pulseId);
+      if (!pulse) {
+        return res.status(404).json({ error: "Pulse not found" });
+      }
+
+      await storage.deletePulse(pulseId);
+      res.json({ success: true, message: "Pulse deleted successfully" });
+    } catch (err: any) {
+      console.error("Delete pulse error:", err);
+      res.status(500).json({ error: err.message || "Failed to delete pulse" });
+    }
+  });
+
   // Pulse Types API routes
   
   // Get all pulse types

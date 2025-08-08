@@ -105,6 +105,7 @@ export interface IStorage {
   getAllPulses(): Promise<Pulse[]>;
   createPulse(pulse: InsertPulse): Promise<Pulse>;
   updatePulse(id: number, pulse: UpdatePulse): Promise<Pulse>;
+  deletePulse(id: number): Promise<void>;
   
   // Pulse Executions
   getPulseExecution(pulseId: number, memberId: number): Promise<PulseExecution | undefined>;
@@ -678,6 +679,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(pulses.id, id))
       .returning();
     return pulse;
+  }
+
+  async deletePulse(id: number): Promise<void> {
+    // First, delete related attestations
+    const relatedAttestations = await db
+      .select({ id: attestations.id })
+      .from(attestations)
+      .innerJoin(pulseExecutions, eq(attestations.pulseExecutionId, pulseExecutions.id))
+      .where(eq(pulseExecutions.pulseId, id));
+    
+    if (relatedAttestations.length > 0) {
+      const attestationIds = relatedAttestations.map(a => a.id);
+      await db.delete(attestations).where(inArray(attestations.id, attestationIds));
+    }
+    
+    // Then delete pulse executions
+    await db.delete(pulseExecutions).where(eq(pulseExecutions.pulseId, id));
+    
+    // Finally delete the pulse itself
+    await db.delete(pulses).where(eq(pulses.id, id));
   }
 
   // Pulse Executions

@@ -147,21 +147,21 @@ export default function PulseDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="container mx-auto max-w-6xl px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           <Button
             onClick={() => setLocation(isAdmin ? '/admin' : '/pulses')}
             variant="outline"
             size="sm"
-            className="flex items-center"
+            className="flex items-center w-fit"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             {isAdmin ? 'Back to Admin' : 'Back to Pulses'}
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">PULSE #{pulse.id}</h1>
-            <p className="text-gray-600 text-sm">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">PULSE #{pulse.id}</h1>
+            <p className="text-gray-600 text-sm leading-relaxed">
               {isAdmin ? 'Manage executions and attestations' : 'View pulse information and execution status'}
             </p>
           </div>
@@ -172,17 +172,17 @@ export default function PulseDetailPage() {
           "border-l-4 bg-white shadow-sm",
           getCardAccentColorConfig()
         )}>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             {/* Header with Status */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <h2 className="text-xl font-bold text-gray-900">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 break-words">
                   PULSE #{pulse.id}
                 </h2>
                 {(() => {
                   const badgeConfig = getStatusBadgeConfig();
                   return badgeConfig ? (
-                    <Badge className={badgeConfig.className}>
+                    <Badge className={cn(badgeConfig.className, "w-fit")}>
                       {badgeConfig.text}
                     </Badge>
                   ) : null;
@@ -191,24 +191,24 @@ export default function PulseDetailPage() {
             </div>
             
             {/* Description */}
-            <p className="text-gray-700 text-base mb-6 leading-relaxed">
+            <p className="text-gray-700 text-sm sm:text-base mb-4 sm:mb-6 leading-relaxed break-words">
               {pulse.description}
             </p>
             
             {/* Key Information */}
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3 mb-4 sm:mb-6">
               <div className="flex items-center text-sm text-gray-600">
-                <Calendar className="h-4 w-4 mr-3 text-gray-400" />
-                <span className="font-medium">{formatPulseDate(new Date(pulse.datetimeStart))}</span>
+                <Calendar className="h-4 w-4 mr-3 flex-shrink-0 text-gray-400" />
+                <span className="font-medium break-words">{formatPulseDate(new Date(pulse.datetimeStart))}</span>
               </div>
               
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 text-sm">
                 <div className="flex items-center text-gray-600">
-                  <Clock className="h-4 w-4 mr-3 text-gray-400" />
+                  <Clock className="h-4 w-4 mr-3 flex-shrink-0 text-gray-400" />
                   <span>Duration: <span className="font-medium">{getPulseDurationText(pulse.interval)}</span></span>
                 </div>
                 <div className="flex items-center text-purple-600">
-                  <Target className="h-4 w-4 mr-2" />
+                  <Target className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="font-semibold">{pulse.points} points</span>
                 </div>
               </div>
@@ -227,7 +227,7 @@ export default function PulseDetailPage() {
 
         {/* Pulse Executions Table */}
         <Card className="bg-white shadow-sm">
-          <CardContent className="p-6">
+          <CardContent className="p-3 sm:p-6 overflow-x-auto">
             <PulseExecutionsTable
               pulse={pulse}
               executions={executions}

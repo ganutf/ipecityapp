@@ -86,9 +86,9 @@ export function PulseCard({
     
     if (!hasExecution) {
       return (
-        <div className="flex items-center justify-center py-2 px-4 bg-red-50 border border-red-200 rounded-lg">
-          <XCircle className="h-4 w-4 text-red-500 mr-2" />
-          <span className="text-red-700 font-medium text-sm">Not Executed</span>
+        <div className="flex items-center justify-center py-2 px-3 bg-red-50 border border-red-200 rounded-lg">
+          <XCircle className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />
+          <span className="text-red-700 font-medium text-sm text-center">Not Executed</span>
         </div>
       );
     }
@@ -99,9 +99,9 @@ export function PulseCard({
     if (executionStatus.abstained) actions.push("Abstained");
     
     return (
-      <div className="flex items-center justify-center py-2 px-4 bg-green-50 border border-green-200 rounded-lg">
-        <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-        <span className="text-green-700 font-medium text-sm">
+      <div className="flex items-center justify-center py-2 px-3 bg-green-50 border border-green-200 rounded-lg">
+        <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+        <span className="text-green-700 font-medium text-sm text-center break-words">
           Executed - {actions.join("/") || "Completed"}
         </span>
       </div>
@@ -126,17 +126,17 @@ export function PulseCard({
       role={clickable ? "button" : undefined}  
       aria-label={clickable ? `View details for Pulse #${pulse.id}` : undefined}
     >
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         {/* Header with Title, Status, and Actions */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <h2 className="text-xl font-bold text-gray-900">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 break-words">
               PULSE #{pulse.id}
             </h2>
             {(() => {
               const badgeConfig = getStatusBadgeConfig();
               return badgeConfig ? (
-                <Badge className={badgeConfig.className}>
+                <Badge className={cn(badgeConfig.className, "w-fit")}>
                   {badgeConfig.text}
                 </Badge>
               ) : null;
@@ -145,7 +145,7 @@ export function PulseCard({
           
           {/* Admin Actions */}
           {showAdminActions && (
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1 flex-shrink-0">
               <Button
                 size="sm"
                 variant="ghost"
@@ -173,29 +173,29 @@ export function PulseCard({
           
           {/* View Details Indicator */}
           {clickable && !showAdminActions && (
-            <ArrowRight className="h-5 w-5 text-gray-400" />
+            <ArrowRight className="h-5 w-5 text-gray-400 flex-shrink-0" />
           )}
         </div>
         
         {/* Description */}
-        <p className="text-gray-700 text-base mb-6 leading-relaxed">
+        <p className="text-gray-700 text-sm sm:text-base mb-4 sm:mb-6 leading-relaxed break-words">
           {pulse.description}
         </p>
         
         {/* Key Information */}
         <div className="space-y-3 mb-4">
           <div className="flex items-center text-sm text-gray-600">
-            <Calendar className="h-4 w-4 mr-3 text-gray-400" />
-            <span className="font-medium">{formatPulseDate(startTime)}</span>
+            <Calendar className="h-4 w-4 mr-3 flex-shrink-0 text-gray-400" />
+            <span className="font-medium break-words">{formatPulseDate(startTime)}</span>
           </div>
           
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 text-sm">
             <div className="flex items-center text-gray-600">
-              <Clock className="h-4 w-4 mr-3 text-gray-400" />
+              <Clock className="h-4 w-4 mr-3 flex-shrink-0 text-gray-400" />
               <span>Duration: <span className="font-medium">{getPulseDurationText(pulse.interval)}</span></span>
             </div>
             <div className="flex items-center text-purple-600">
-              <Target className="h-4 w-4 mr-2" />
+              <Target className="h-4 w-4 mr-2 flex-shrink-0" />
               <span className="font-semibold">{pulse.points} points</span>
             </div>
           </div>

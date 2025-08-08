@@ -1,0 +1,366 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+2025-08-08T14:16:11.862Z [[32minfo[39m]: Loading environment variables {
+  "service": "ipecity-pulse",
+  "envPath": "/home/ganutf/projects/ipecity/ipecity-pulse/.env"
+}
+2025-08-08T14:16:11.867Z [[32minfo[39m]: Environment check {
+  "service": "ipecity-pulse",
+  "EMAIL_TEST_MODE": "true",
+  "RESEND_API_KEY": "Set",
+  "NODE_ENV": "development"
+}
+2025-08-08T14:16:11.870Z [[32minfo[39m]: Server startup initiated {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:11.871Z [[32minfo[39m]: Master password loaded from file {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:11.872Z [[32minfo[39m]: Secure key management initialized {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:11.872Z [[32minfo[39m]: Secure key initialization completed in 2ms {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:11.940Z [[32minfo[39m]: Initializing database connection {
+  "service": "ipecity-pulse",
+  "environment": "development",
+  "isReplit": false,
+  "databaseType": "postgresql"
+}
+2025-08-08T14:16:11.943Z [[32minfo[39m]: Database connection initialized successfully (PostgreSQL) {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:11.943Z [[32minfo[39m]: Database initialization completed in 73ms {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:11.944Z [[32minfo[39m]: Environment validation passed {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:11.951Z [[32minfo[39m]: Route registration completed in 81ms {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:12.008Z [[32minfo[39m]: Server successfully started on port 5000 {
+  "service": "ipecity-pulse",
+  "startupTime": "137ms",
+  "environment": "development",
+  "isReplit": false
+}
+2025-08-08T14:16:12.008Z [[32minfo[39m]: Health check available at http://0.0.0.0:5000/health {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:12.048Z [[32minfo[39m]: Database connection successful {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:16:12.048Z [[32minfo[39m]: Database connection test completed in 178ms {
+  "service": "ipecity-pulse"
+}
+=== SIGNER LOOKUP DEBUG START ===
+Raw FID from params: 2790
+Sanitized FID: 2790
+Member lookup result: {
+  id: 17,
+  farcasterFid: 2790,
+  status: 'active_member',
+  memberType: 'pending'
+}
+Looking for signer for FID: 2790
+Existing signer lookup result: {
+  farcasterFid: 2790,
+  signerUuid: 'f11ec5b2-b58e-4682-84be-c14061a870bd',
+  status: 'pending_approval'
+}
+Checking signer status with Neynar for UUID: f11ec5b2-b58e-4682-84be-c14061a870bd
+Neynar client initialized with API key: DACA9364...
+Neynar signer status: {
+  signer_uuid: 'f11ec5b2-b58e-4682-84be-c14061a870bd',
+  public_key: '0x7f30252c08abd8b09c8969e336d537ff6a1f64eda80c57f23f2075196a3f1653',
+  status: 'approved',
+  fid: 2790
+}
+Signer approved! Updated database status.
+2025-08-08T14:17:55.500Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/neynar/signer/2790",
+  "statusCode": 200,
+  "duration": "629ms"
+}
+=== SIGNER LOOKUP DEBUG START ===
+Raw FID from params: 1109894
+Sanitized FID: 1109894
+2025-08-08T14:18:07.838Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/members/check/1109894",
+  "statusCode": 304,
+  "duration": "50ms"
+}
+Member lookup result: {
+  id: 13,
+  farcasterFid: 1109894,
+  status: 'active_member',
+  memberType: 'admin'
+}
+Looking for signer for FID: 1109894
+Existing signer lookup result: {
+  farcasterFid: 1109894,
+  signerUuid: '95c7255f-7a48-4147-a52a-094f60f04e8b',
+  status: 'pending_approval'
+}
+Checking signer status with Neynar for UUID: 95c7255f-7a48-4147-a52a-094f60f04e8b
+Neynar signer status: {
+  signer_uuid: '95c7255f-7a48-4147-a52a-094f60f04e8b',
+  public_key: '0xc38a9383682a71165805aea50fbeb1d7a381480621892acc6f8179a20a602709',
+  status: 'approved',
+  fid: 1109894
+}
+Signer approved! Updated database status.
+2025-08-08T14:18:08.337Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/neynar/signer/1109894",
+  "statusCode": 200,
+  "duration": "551ms"
+}
+=== SIGNER LOOKUP DEBUG START ===
+Raw FID from params: 1109894
+Sanitized FID: 1109894
+2025-08-08T14:20:04.700Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/members/check/1109894",
+  "statusCode": 304,
+  "duration": "66ms"
+}
+Member lookup result: {
+  id: 13,
+  farcasterFid: 1109894,
+  status: 'active_member',
+  memberType: 'admin'
+}
+Looking for signer for FID: 1109894
+Existing signer lookup result: {
+  farcasterFid: 1109894,
+  signerUuid: '95c7255f-7a48-4147-a52a-094f60f04e8b',
+  status: 'pending_approval'
+}
+Checking signer status with Neynar for UUID: 95c7255f-7a48-4147-a52a-094f60f04e8b
+Neynar signer status: {
+  signer_uuid: '95c7255f-7a48-4147-a52a-094f60f04e8b',
+  public_key: '0xc38a9383682a71165805aea50fbeb1d7a381480621892acc6f8179a20a602709',
+  status: 'approved',
+  fid: 1109894
+}
+Signer approved! Updated database status.
+2025-08-08T14:20:05.204Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/neynar/signer/1109894",
+  "statusCode": 200,
+  "duration": "573ms"
+}
+2025-08-08T14:20:05.239Z [[34mdebug[39m]: Auth middleware processing request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/members",
+  "fid": 1109894,
+  "hasHeader": true
+}
+2025-08-08T14:20:05.247Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/pulse-types",
+  "statusCode": 304,
+  "duration": "14ms"
+}
+2025-08-08T14:20:05.250Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/pulses",
+  "statusCode": 304,
+  "duration": "15ms"
+}
+2025-08-08T14:20:05.270Z [[34mdebug[39m]: Member lookup completed {
+  "service": "ipecity-pulse",
+  "memberId": 13,
+  "farcasterFid": 1109894,
+  "status": "active_member",
+  "memberType": "admin"
+}
+2025-08-08T14:20:05.271Z [[34mdebug[39m]: Authentication successful {
+  "service": "ipecity-pulse",
+  "fid": 1109894,
+  "memberId": 13,
+  "memberType": "admin",
+  "status": "active_member"
+}
+[AUDIT] 2025-08-08T14:20:05.271Z - GET_ALL_MEMBERS - ID: 13 - FID: 1109894 - Type: admin - Admin: true - IP: 127.0.0.1 - Path: /api/members
+2025-08-08T14:20:05.275Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/members",
+  "statusCode": 304,
+  "duration": "37ms"
+}
+=== SIGNER LOOKUP DEBUG START ===
+Raw FID from params: 2790
+Sanitized FID: 2790
+Member lookup result: {
+  id: 17,
+  farcasterFid: 2790,
+  status: 'active_member',
+  memberType: 'pending'
+}
+Looking for signer for FID: 2790
+2025-08-08T14:20:13.626Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/members/check/2790",
+  "statusCode": 304,
+  "duration": "4ms"
+}
+Existing signer lookup result: {
+  farcasterFid: 2790,
+  signerUuid: 'f11ec5b2-b58e-4682-84be-c14061a870bd',
+  status: 'pending_approval'
+}
+Checking signer status with Neynar for UUID: f11ec5b2-b58e-4682-84be-c14061a870bd
+Neynar signer status: {
+  signer_uuid: 'f11ec5b2-b58e-4682-84be-c14061a870bd',
+  public_key: '0x7f30252c08abd8b09c8969e336d537ff6a1f64eda80c57f23f2075196a3f1653',
+  status: 'approved',
+  fid: 2790
+}
+Signer approved! Updated database status.
+2025-08-08T14:20:14.118Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/neynar/signer/2790",
+  "statusCode": 200,
+  "duration": "500ms"
+}
+2025-08-08T14:20:14.158Z [[34mdebug[39m]: Auth middleware processing request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/executions/17/details",
+  "fid": 2790,
+  "hasHeader": true
+}
+2025-08-08T14:20:14.161Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/pulses",
+  "statusCode": 304,
+  "duration": "4ms"
+}
+2025-08-08T14:20:14.161Z [[34mdebug[39m]: Member lookup completed {
+  "service": "ipecity-pulse",
+  "memberId": 17,
+  "farcasterFid": 2790,
+  "status": "active_member",
+  "memberType": "pending"
+}
+2025-08-08T14:20:14.162Z [[34mdebug[39m]: Authentication successful {
+  "service": "ipecity-pulse",
+  "fid": 2790,
+  "memberId": 17,
+  "memberType": "pending",
+  "status": "active_member"
+}
+[AUDIT] 2025-08-08T14:20:14.162Z - GET_MEMBER_EXECUTION_DETAILS - ID: 17 - FID: 2790 - Type: pending - Admin: false - IP: 127.0.0.1 - Path: /api/executions/17/details
+2025-08-08T14:20:14.185Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/executions/17/details",
+  "statusCode": 304,
+  "duration": "27ms"
+}
+=== SIGNER LOOKUP DEBUG START ===
+Raw FID from params: 1109894
+Sanitized FID: 1109894
+Member lookup result: {
+  id: 13,
+  farcasterFid: 1109894,
+  status: 'active_member',
+  memberType: 'admin'
+}
+Looking for signer for FID: 1109894
+2025-08-08T14:20:14.771Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/members/check/1109894",
+  "statusCode": 304,
+  "duration": "3ms"
+}
+Existing signer lookup result: {
+  farcasterFid: 1109894,
+  signerUuid: '95c7255f-7a48-4147-a52a-094f60f04e8b',
+  status: 'pending_approval'
+}
+Checking signer status with Neynar for UUID: 95c7255f-7a48-4147-a52a-094f60f04e8b
+Neynar signer status: {
+  signer_uuid: '95c7255f-7a48-4147-a52a-094f60f04e8b',
+  public_key: '0xc38a9383682a71165805aea50fbeb1d7a381480621892acc6f8179a20a602709',
+  status: 'approved',
+  fid: 1109894
+}
+Signer approved! Updated database status.
+2025-08-08T14:20:14.929Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/neynar/signer/1109894",
+  "statusCode": 200,
+  "duration": "163ms"
+}
+2025-08-08T14:20:14.953Z [[34mdebug[39m]: Auth middleware processing request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/members",
+  "fid": 1109894,
+  "hasHeader": true
+}
+2025-08-08T14:20:14.955Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/pulse-types",
+  "statusCode": 304,
+  "duration": "4ms"
+}
+2025-08-08T14:20:14.957Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/pulses",
+  "statusCode": 304,
+  "duration": "5ms"
+}
+2025-08-08T14:20:14.959Z [[34mdebug[39m]: Member lookup completed {
+  "service": "ipecity-pulse",
+  "memberId": 13,
+  "farcasterFid": 1109894,
+  "status": "active_member",
+  "memberType": "admin"
+}
+2025-08-08T14:20:14.959Z [[34mdebug[39m]: Authentication successful {
+  "service": "ipecity-pulse",
+  "fid": 1109894,
+  "memberId": 13,
+  "memberType": "admin",
+  "status": "active_member"
+}
+[AUDIT] 2025-08-08T14:20:14.959Z - GET_ALL_MEMBERS - ID: 13 - FID: 1109894 - Type: admin - Admin: true - IP: 127.0.0.1 - Path: /api/members
+2025-08-08T14:20:14.961Z [[32minfo[39m]: API Request {
+  "service": "ipecity-pulse",
+  "method": "GET",
+  "path": "/api/members",
+  "statusCode": 304,
+  "duration": "8ms"
+}
+2025-08-08T14:20:43.394Z [[32minfo[39m]: Received SIGTERM, initiating graceful shutdown... {
+  "service": "ipecity-pulse"
+}
+2025-08-08T14:20:53.396Z [[31merror[39m]: Forcing shutdown after timeout {
+  "service": "ipecity-pulse"
+}

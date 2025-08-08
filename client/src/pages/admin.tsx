@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil, Save, X, Eye, BarChart3 } from "lucide-react";
+import { Pencil, Save, X, Eye, BarChart3, Clock, Globe } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useLocation } from "wouter";
 import { PulseCard } from "@/components/PulseCard";
@@ -17,12 +17,15 @@ import { PulseCard } from "@/components/PulseCard";
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { authenticatedPost, authenticatedGet, authenticatedPatch } from "@/lib/api";
+import { useTimezone } from "@/contexts/TimezoneContext";
+import { formatPulseDate, convertDateTimeInputToUTC, formatForDateTimeInput, getCurrentUTC } from "@/lib/dateUtils";
 
 export default function AdminPage() {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { timezoneInfo } = useTimezone();
   
   // Wallet connection for subdomain reservation
   const { address, isConnected } = useAccount();
@@ -95,9 +98,8 @@ export default function AdminPage() {
   // All mutations must also be declared before returns
   const createPulseMutation = useMutation({
     mutationFn: async (pulse: { urlEmbed: string; datetimeStart: string; interval: number; description: string; points: number; pulseTypeId: number }) => {
-      // Convert local datetime to UTC for consistent timezone handling
-      const localDate = new Date(pulse.datetimeStart);
-      const utcDateString = localDate.toISOString().slice(0, 16).replace('T', 'T');
+      // Convert local datetime input to UTC for server storage
+      const utcDateString = convertDateTimeInputToUTC(pulse.datetimeStart, timezoneInfo.timeZone);
       
       const pulseWithUTC = {
         ...pulse,
@@ -118,9 +120,8 @@ export default function AdminPage() {
 
   const updatePulseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: { urlEmbed: string; datetimeStart: string; interval: number; description: string; points: number; pulseTypeId: number } }) => {
-      // Convert local datetime to UTC for consistent timezone handling
-      const localDate = new Date(data.datetimeStart);
-      const utcDateString = localDate.toISOString().slice(0, 16).replace('T', 'T');
+      // Convert local datetime input to UTC for server storage
+      const utcDateString = convertDateTimeInputToUTC(data.datetimeStart, timezoneInfo.timeZone);
       
       const dataWithUTC = {
         ...data,
@@ -220,7 +221,7 @@ export default function AdminPage() {
     setEditingPulse(pulse.id);
     setEditData({
       urlEmbed: (pulse as any).urlEmbed,
-      datetimeStart: new Date((pulse as any).datetimeStart).toISOString().slice(0, 16), // Format for datetime-local input
+      datetimeStart: formatForDateTimeInput((pulse as any).datetimeStart, timezoneInfo.timeZone), // Convert UTC to local time for input
       interval: (pulse as any).interval || 24,
       description: pulse.description,
       points: pulse.points || 1,
@@ -341,6 +342,24 @@ export default function AdminPage() {
                 onChange={(e) => setNewPulse({ ...newPulse, datetimeStart: e.target.value })}
                 required
               />
+              {/* Timezone Preview */}
+              {newPulse.datetimeStart && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-center gap-2 text-sm text-blue-700">
+                    <Globe className="h-4 w-4" />
+                    <span className="font-medium">Timezone Preview:</span>
+                  </div>
+                  <div className="mt-1 space-y-1 text-xs text-blue-600">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatPulseDate(convertDateTimeInputToUTC(newPulse.datetimeStart, timezoneInfo.timeZone), timezoneInfo.timeZone, true)}</span>
+                    </div>
+                    <div className="text-gray-600">
+                      Stored as UTC: {new Date(convertDateTimeInputToUTC(newPulse.datetimeStart, timezoneInfo.timeZone)).toISOString()}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -430,11 +449,25 @@ export default function AdminPage() {
                           onChange={(e) => setEditData({ ...editData, urlEmbed: e.target.value })}
                           placeholder="URL Embed"
                         />
-                        <Input
-                          type="datetime-local"
-                          value={editData.datetimeStart}
-                          onChange={(e) => setEditData({ ...editData, datetimeStart: e.target.value })}
-                        />
+                        <div>
+                          <Input
+                            type="datetime-local"
+                            value={editData.datetimeStart}
+                            onChange={(e) => setEditData({ ...editData, datetimeStart: e.target.value })}
+                          />
+                          {/* Timezone Preview for Edit */}
+                          {editData.datetimeStart && (
+                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                              <div className="flex items-center gap-1 text-blue-700">
+                                <Globe className="h-3 w-3" />
+                                <span className="font-medium">Preview: {timezoneInfo.displayName}</span>
+                              </div>
+                              <div className="text-blue-600">
+                                {formatPulseDate(convertDateTimeInputToUTC(editData.datetimeStart, timezoneInfo.timeZone), timezoneInfo.timeZone, true)}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <Input
                           type="number"
                           min="1"

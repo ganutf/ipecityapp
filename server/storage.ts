@@ -824,8 +824,8 @@ export class DatabaseStorage implements IStorage {
           eq(members.passportVerified, true), // Only verified passport holders
           isNotNull(members.ipePassport), // Must have verified passport
           isNotNull(members.walletAddress), // Must have wallet address for recipient
-          // Only include pulses where interval window has closed
-          sql`${pulses.datetimeStart} + INTERVAL '1 hour' * ${pulses.interval} < NOW()` // Pulse window has closed
+          // Only include pulses where interval window has closed (UTC comparison)
+          sql`${pulses.datetimeStart} + INTERVAL '1 hour' * ${pulses.interval} < NOW() AT TIME ZONE 'UTC'` // Pulse window has closed
         )
       );
 
@@ -856,8 +856,8 @@ export class DatabaseStorage implements IStorage {
           eq(members.passportVerified, true), // Only verified passport holders
           isNotNull(members.ipePassport), // Must have verified passport
           isNotNull(members.walletAddress), // Must have wallet address for recipient
-          // Only include pulses where interval window has closed
-          sql`${pulses.datetimeStart} + INTERVAL '1 hour' * ${pulses.interval} < NOW()` // Pulse window has closed
+          // Only include pulses where interval window has closed (UTC comparison)
+          sql`${pulses.datetimeStart} + INTERVAL '1 hour' * ${pulses.interval} < NOW() AT TIME ZONE 'UTC'` // Pulse window has closed
         )
       );
     return results;

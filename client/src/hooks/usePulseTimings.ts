@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getPulseTimingInfo } from "../lib/pulseUtils";
+import { useTimezone } from "../contexts/TimezoneContext";
 
 export interface Pulse {
   id: number;
@@ -34,13 +35,15 @@ export function usePulseTimings(pulses: Pulse[], enableRealTime: boolean = true)
   endedPulses: PulseTimingInfo[];
 } {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { timezoneInfo } = useTimezone();
 
   // Update current time every minute for real-time countdowns
+  // Use UTC time for calculations, only convert for display
   useEffect(() => {
     if (!enableRealTime) return;
     
     const interval = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(new Date()); // Always use UTC current time
     }, 60000); // Update every minute
 
     return () => clearInterval(interval);
@@ -48,20 +51,25 @@ export function usePulseTimings(pulses: Pulse[], enableRealTime: boolean = true)
 
   const calculatePulseTimings = (pulses: Pulse[], now: Date): PulseTimingInfo[] => {
     return pulses.map(pulse => {
-      // Use shared timing logic
+      // Use shared timing logic with UTC timing
       const timingInfo = getPulseTimingInfo(pulse.datetimeStart, pulse.interval, now);
       
-      const startTime = new Date(pulse.datetimeStart);
-      const endTime = new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
+      // Calculate UTC times for accurate comparisons
+      const utcStartTime = new Date(pulse.datetimeStart); // Server sends UTC
+      const utcEndTime = new Date(utcStartTime.getTime() + (pulse.interval * 60 * 60 * 1000));
+      
+      // Convert to user's timezone for display
+      const localStartTime = new Date(utcStartTime.getTime());
+      const localEndTime = new Date(utcEndTime.getTime());
 
-      const timeUntilStart = timingInfo.isFuture ? formatTimeDifference(startTime.getTime() - now.getTime()) : null;
-      const timeUntilEnd = timingInfo.isActive ? formatTimeDifference(endTime.getTime() - now.getTime()) : null;
+      const timeUntilStart = timingInfo.isFuture ? formatTimeDifference(utcStartTime.getTime() - now.getTime()) : null;
+      const timeUntilEnd = timingInfo.isActive ? formatTimeDifference(utcEndTime.getTime() - now.getTime()) : null;
 
       return {
         pulse,
         status: timingInfo.status,
-        startTime,
-        endTime,
+        startTime: localStartTime, // Display time in user's timezone
+        endTime: localEndTime,     // Display time in user's timezone  
         timeUntilStart,
         timeUntilEnd,
         isEnded: timingInfo.isEnded,
@@ -89,7 +97,7 @@ export function usePulseTimings(pulses: Pulse[], enableRealTime: boolean = true)
     return `${minutes}m`;
   };
 
-  const pulseTimings = calculatePulseTimings(pulses || [], currentTime);
+  const pulseTimings = calculatePulseTimings(pulses || [], currentTime); // currentTime is UTC
   
   const activePulses = pulseTimings.filter(pt => pt.isActive);
   const futurePulses = pulseTimings.filter(pt => pt.isFuture).sort(

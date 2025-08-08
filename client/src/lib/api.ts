@@ -37,17 +37,45 @@ export async function authenticatedGet(url: string, fid?: number) {
  * Make an authenticated POST request
  */
 export async function authenticatedPost(url: string, data: any, fid?: number) {
+  console.log(`[API] POST request to ${url} with fid: ${fid}`);
+  
   const response = await fetch(url, {
     method: 'POST',
     headers: getAuthHeaders(fid),
     body: JSON.stringify(data),
   });
 
+  console.log(`[API] Response status: ${response.status} ${response.statusText}`);
+
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    let errorMessage = `Request failed: ${response.status} ${response.statusText}`;
+    
+    try {
+      const errorBody = await response.text();
+      console.error(`[API] Error response body:`, errorBody);
+      
+      // Try to parse as JSON to get more detailed error information
+      try {
+        const errorJson = JSON.parse(errorBody);
+        if (errorJson.error) {
+          errorMessage = errorJson.error;
+        }
+      } catch {
+        // If not JSON, use the raw text
+        if (errorBody) {
+          errorMessage = errorBody;
+        }
+      }
+    } catch (e) {
+      console.error(`[API] Failed to read error response:`, e);
+    }
+    
+    throw new Error(errorMessage);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log(`[API] Success response:`, result);
+  return result;
 }
 
 /**

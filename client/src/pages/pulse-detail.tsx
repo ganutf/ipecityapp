@@ -9,6 +9,7 @@ import { ArrowLeft, Calendar, Clock, Target } from "lucide-react";
 import { PulseExecutionsTable } from "@/components/PulseExecutionsTable";
 import { FarcasterPostEmbed } from "@/components/FarcasterPostEmbed";
 import { formatPulseDate, getPulseDurationText } from "@/lib/dateUtils";
+import { useTimezone } from "@/contexts/TimezoneContext";
 import { cn } from "@/lib/utils";
 import { getCardAccentColor, getStatusBadge, hasUserExecuted, extractExecutionStatus } from "@/lib/pulseUtils";
 
@@ -16,6 +17,7 @@ export default function PulseDetailPage() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
+  const { timezoneInfo } = useTimezone();
   
   const pulseId = parseInt(params.id || '0');
 
@@ -138,11 +140,11 @@ export default function PulseDetailPage() {
   const hasCurrentUserExecuted = hasUserExecuted(executionStatus);
 
   const getStatusBadgeConfig = () => {
-    return getStatusBadge(executionStatus, pulse.datetimeStart, pulse.interval);
+    return getStatusBadge(executionStatus, pulse.datetimeStart, pulse.interval, new Date());
   };
 
   const getCardAccentColorConfig = () => {
-    return getCardAccentColor(executionStatus, pulse.datetimeStart, pulse.interval);
+    return getCardAccentColor(executionStatus, pulse.datetimeStart, pulse.interval, new Date());
   };
 
   return (
@@ -199,7 +201,7 @@ export default function PulseDetailPage() {
             <div className="space-y-3 mb-4 sm:mb-6">
               <div className="flex items-center text-sm text-gray-600">
                 <Calendar className="h-4 w-4 mr-3 flex-shrink-0 text-gray-400" />
-                <span className="font-medium break-words">{formatPulseDate(new Date(pulse.datetimeStart))}</span>
+                <span className="font-medium break-words">{formatPulseDate(pulse.datetimeStart, timezoneInfo.timeZone, true)}</span>
               </div>
               
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 text-sm">

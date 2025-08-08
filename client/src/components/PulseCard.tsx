@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatPulseDate, getPulseDurationText, getContextualTimingInfo } from "@/lib/dateUtils";
 import { useLocation } from "wouter";
+import { useTimezone } from "@/contexts/TimezoneContext";
 import type { Pulse } from "@shared/schema";
 import { getCardAccentColor, getStatusBadge, hasUserExecuted, getPulseTimingInfo } from "@/lib/pulseUtils";
 
@@ -51,10 +52,15 @@ export function PulseCard({
   isAdmin = false
 }: PulseCardProps) {
   const [, setLocation] = useLocation();
+  const { timezoneInfo } = useTimezone();
   
-  const startTime = new Date(pulse.datetimeStart);
-  const endTime = new Date(startTime.getTime() + (pulse.interval * 60 * 60 * 1000));
-  const timingInfo = getContextualTimingInfo(startTime, endTime);
+  // Use UTC for calculations, convert for display
+  const timingInfo = getContextualTimingInfo(
+    pulse.datetimeStart, // UTC from server
+    pulse.datetimeStart, // Calculate end time from UTC start + interval
+    new Date(), // Current UTC time
+    timezoneInfo.timeZone
+  );
   
   const hasExecution = hasUserExecuted(executionStatus);
   
@@ -78,7 +84,7 @@ export function PulseCard({
   };
   
   const getStatusBadgeConfig = () => {
-    return getStatusBadge(executionStatus, pulse.datetimeStart, pulse.interval);
+    return getStatusBadge(executionStatus, pulse.datetimeStart, pulse.interval, new Date());
   };
   
   const getExecutionDisplay = () => {
@@ -109,7 +115,7 @@ export function PulseCard({
   };
 
   const getCardAccentColorConfig = () => {
-    return getCardAccentColor(executionStatus, pulse.datetimeStart, pulse.interval);
+    return getCardAccentColor(executionStatus, pulse.datetimeStart, pulse.interval, new Date());
   };
 
   return (
@@ -186,7 +192,7 @@ export function PulseCard({
         <div className="space-y-3 mb-4">
           <div className="flex items-center text-sm text-gray-600">
             <Calendar className="h-4 w-4 mr-3 flex-shrink-0 text-gray-400" />
-            <span className="font-medium break-words">{formatPulseDate(startTime)}</span>
+            <span className="font-medium break-words">{formatPulseDate(pulse.datetimeStart, timezoneInfo.timeZone, true)}</span>
           </div>
           
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 text-sm">

@@ -359,10 +359,17 @@ export const secureUrlEmbedSchema = z.string()
   .refine(val => !val.includes('<script'), "URL contains invalid content");
 
 export const secureDatetimeSchema = z.string()
-  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Datetime must be in YYYY-MM-DDTHH:MM format")
+  .refine(val => {
+    // Accept standard ISO datetime strings (with or without milliseconds and timezone)
+    const isoDatePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d{3})?([Z]|[+-]\d{2}:\d{2})?$/;
+    return isoDatePattern.test(val);
+  }, "Datetime must be a valid ISO datetime string (e.g., 2025-08-08T14:10:00.000Z)")
   .transform(val => {
-    // Parse as UTC to avoid timezone inconsistencies between environments
-    const utcDate = new Date(val + 'Z'); // Append 'Z' to treat as UTC
+    // Parse as-is since ISO strings already contain timezone information
+    const utcDate = new Date(val);
+    if (isNaN(utcDate.getTime())) {
+      throw new Error('Invalid datetime format');
+    }
     return utcDate;
   })
   .refine(val => {

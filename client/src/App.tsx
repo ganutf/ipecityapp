@@ -12,6 +12,7 @@ import { JustaNameProvider } from "@justaname.id/react";
 import {
   AuthGuard
 } from "@/components/AuthGuard";
+import { TimezoneProvider } from "@/contexts/TimezoneContext";
 import HomePage from "@/pages/home";
 import FarcasterEmbed from "@/pages/farcaster-embed";
 import AdminPage from "@/pages/admin";
@@ -102,10 +103,12 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <RainbowKitProvider>
             <JustaNameProvider config={justaNameConfig}>
-              <TooltipProvider>
-                <Toaster />
-                <Router />
-              </TooltipProvider>
+              <TimezoneProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Router />
+                </TooltipProvider>
+              </TimezoneProvider>
             </JustaNameProvider>
           </RainbowKitProvider>
         </QueryClientProvider>

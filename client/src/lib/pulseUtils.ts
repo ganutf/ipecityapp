@@ -1,7 +1,10 @@
 /**
  * Shared utilities for pulse status determination and execution tracking
  * This ensures consistent logic across all components displaying pulse status
+ * All timing calculations work with UTC timestamps for global consistency
  */
+
+import { convertUTCToUserTimezone, getCurrentUTC } from './dateUtils';
 
 export interface ExecutionStatus {
   liked: boolean;
@@ -31,19 +34,30 @@ export function hasUserExecuted(executionStatus?: ExecutionStatus | null): boole
 }
 
 /**
- * Gets the timing status of a pulse based on start time and interval
+ * Gets the timing status of a pulse based on UTC start time and interval
+ * All calculations work in UTC to ensure consistency across timezones
+ * @param datetimeStart - UTC datetime string from server
+ * @param interval - Duration in hours
+ * @param currentUTCTime - Current UTC time, defaults to now
  */
 export function getPulseTimingInfo(
   datetimeStart: string | Date,
   interval: number,
-  currentTime: Date = new Date()
+  currentUTCTime: Date = new Date()
 ): PulseTimingInfo {
-  const startTime = new Date(datetimeStart);
-  const endTime = new Date(startTime.getTime() + (interval * 60 * 60 * 1000));
-
-  const isEnded = currentTime > endTime;
-  const isActive = currentTime >= startTime && currentTime <= endTime;
-  const isFuture = currentTime < startTime;
+  // Ensure we're working with UTC dates
+  const utcStartTime = typeof datetimeStart === 'string' ? new Date(datetimeStart) : datetimeStart;
+  const utcEndTime = new Date(utcStartTime.getTime() + (interval * 60 * 60 * 1000));
+  
+  // Validate dates
+  if (isNaN(utcStartTime.getTime())) {
+    throw new Error(`Invalid start time: ${datetimeStart}`);
+  }
+  
+  // All comparisons in UTC
+  const isEnded = currentUTCTime > utcEndTime;
+  const isActive = currentUTCTime >= utcStartTime && currentUTCTime <= utcEndTime;
+  const isFuture = currentUTCTime < utcStartTime;
 
   return {
     status: isEnded ? 'ended' : isActive ? 'active' : 'future',
@@ -55,11 +69,13 @@ export function getPulseTimingInfo(
 
 /**
  * Gets the appropriate card accent border color based on execution and timing status
+ * Uses UTC-based timing calculations for consistency
  */
 export function getCardAccentColor(
   executionStatus?: ExecutionStatus | null,
   datetimeStart?: string | Date,
-  interval?: number
+  interval?: number,
+  currentUTCTime?: Date
 ): string {
   // If user has executed, always show green
   if (hasUserExecuted(executionStatus)) {
@@ -68,7 +84,7 @@ export function getCardAccentColor(
 
   // If timing info is available, use timing-based colors
   if (datetimeStart && interval) {
-    const timingInfo = getPulseTimingInfo(datetimeStart, interval);
+    const timingInfo = getPulseTimingInfo(datetimeStart, interval, currentUTCTime);
     
     switch (timingInfo.status) {
       case 'active':
@@ -88,17 +104,19 @@ export function getCardAccentColor(
 
 /**
  * Gets the appropriate status badge configuration
+ * Uses UTC-based timing calculations for consistency
  */
 export function getStatusBadge(
   executionStatus?: ExecutionStatus | null,
   datetimeStart?: string | Date,
-  interval?: number
+  interval?: number,
+  currentUTCTime?: Date
 ): { className: string; text: string } | null {
   const baseClasses = "px-3 py-1.5 text-sm font-semibold rounded-full";
 
   // If timing info is available, determine status
   if (datetimeStart && interval) {
-    const timingInfo = getPulseTimingInfo(datetimeStart, interval);
+    const timingInfo = getPulseTimingInfo(datetimeStart, interval, currentUTCTime);
     
     if (timingInfo.isActive) {
       // For active pulses, show execution status if available
@@ -131,6 +149,7 @@ export function getStatusBadge(
 
 /**
  * Helper to convert actions object to ExecutionStatus
+ * Timezone-aware helper for execution status parsing
  */
 function actionsToExecutionStatus(actions: any, hasExecution: boolean = true): ExecutionStatus {
   return {
@@ -143,6 +162,7 @@ function actionsToExecutionStatus(actions: any, hasExecution: boolean = true): E
 
 /**
  * Extracts execution status from different API response formats
+ * Handles timezone-aware execution data parsing
  */
 export function extractExecutionStatus(
   executionData: any,
@@ -182,4 +202,45 @@ export function extractExecutionStatus(
   }
 
   return { liked: false, shared: false, abstained: false, hasExecution: false };
+}
+
+/**
+ * Calculate time remaining until pulse ends (in UTC)
+ * @param datetimeStart - UTC start time
+ * @param interval - Duration in hours
+ * @param currentUTCTime - Current UTC time
+ * @returns Milliseconds until end, or null if pulse has ended
+ */
+export function getTimeRemainingMs(
+  datetimeStart: string | Date,
+  interval: number,
+  currentUTCTime: Date = new Date()
+): number | null {
+  const utcStartTime = typeof datetimeStart === 'string' ? new Date(datetimeStart) : datetimeStart;
+  const utcEndTime = new Date(utcStartTime.getTime() + (interval * 60 * 60 * 1000));
+  
+  if (currentUTCTime >= utcEndTime) {
+    return null; // Pulse has ended
+  }
+  
+  return utcEndTime.getTime() - currentUTCTime.getTime();
+}
+
+/**
+ * Get pulse times in user's timezone for display
+ * @param utcDatetimeStart - UTC start time from server
+ * @param interval - Duration in hours
+ * @param userTimeZone - Optional timezone override
+ */
+export function getPulseLocalTimes(
+  utcDatetimeStart: string | Date,
+  interval: number,
+  userTimeZone?: string
+): { localStartTime: Date; localEndTime: Date } {
+  const localStartTime = convertUTCToUserTimezone(utcDatetimeStart, userTimeZone);
+  const utcStart = typeof utcDatetimeStart === 'string' ? new Date(utcDatetimeStart) : utcDatetimeStart;
+  const utcEnd = new Date(utcStart.getTime() + (interval * 60 * 60 * 1000));
+  const localEndTime = convertUTCToUserTimezone(utcEnd, userTimeZone);
+  
+  return { localStartTime, localEndTime };
 }

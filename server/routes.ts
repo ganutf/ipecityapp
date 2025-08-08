@@ -6,6 +6,21 @@ import {
   isApiErrorResponse,
 } from "@neynar/nodejs-sdk";
 import { storage } from "./storage";
+
+/**
+ * Get current UTC timestamp for consistent server operations
+ * All server-side timing should use UTC
+ */
+function getCurrentUTC(): Date {
+  return new Date();
+}
+
+/**
+ * Calculate pulse end time in UTC
+ */
+function calculatePulseEndTimeUTC(pulseStartUTC: Date, intervalHours: number): Date {
+  return new Date(pulseStartUTC.getTime() + (intervalHours * 60 * 60 * 1000));
+}
 import {
   insertPulseSchema,
   updatePulseSchema,
@@ -96,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.getAllMembers();
       res.status(200).json({
         status: "healthy",
-        timestamp: new Date().toISOString(),
+        timestamp: getCurrentUTC().toISOString(),
         database: "connected",
         environment: process.env.NODE_ENV || "development",
       });
@@ -104,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       logger.error('Health check failed', { error: (error as Error)?.message || 'Unknown error' });
       res.status(503).json({
         status: "unhealthy",
-        timestamp: new Date().toISOString(),
+        timestamp: getCurrentUTC().toISOString(),
         database: "disconnected",
         error: (error as Error)?.message || 'Unknown error',
       });
@@ -980,31 +995,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     auditLogger("CREATE_ALL_PULSE_ATTESTATIONS"),
     async (req: AuthenticatedRequest, res) => {
     try {
+      console.log(`[BULK_ATTESTATION] Starting bulk attestation creation for pulse ${req.params.pulseId}`);
+      
       const pulseId = parseInt(req.params.pulseId);
       if (isNaN(pulseId) || pulseId <= 0) {
+        console.log(`[BULK_ATTESTATION] Invalid pulse ID: ${req.params.pulseId}`);
         return res.status(400).json({ error: "Invalid pulse ID: must be a positive integer" });
       }
 
       // Verify pulse exists and is in valid state for attestations
       const pulse = await storage.getPulse(pulseId);
       if (!pulse) {
+        console.log(`[BULK_ATTESTATION] Pulse not found: ${pulseId}`);
         return res.status(404).json({ error: "Pulse not found" });
       }
 
-      // Validate pulse state - only allow attestations for pulses that have ended
-      const now = new Date();
-      const pulseEndTime = new Date(pulse.datetimeStart.getTime() + (pulse.interval * 60 * 60 * 1000));
-      if (pulseEndTime > now) {
+      // Validate pulse state - only allow attestations for pulses that have ended (UTC timing)
+      const nowUTC = getCurrentUTC();
+      const pulseEndTimeUTC = calculatePulseEndTimeUTC(pulse.datetimeStart, pulse.interval);
+      console.log(`[BULK_ATTESTATION] UTC Pulse timing - Now: ${nowUTC.toISOString()}, End: ${pulseEndTimeUTC.toISOString()}, Ended: ${pulseEndTimeUTC <= nowUTC}`);
+      
+      if (pulseEndTimeUTC > nowUTC) {
+        console.log(`[BULK_ATTESTATION] Pulse still active, cannot create attestations`);
         return res.status(400).json({ 
           error: "Cannot create attestations for active pulse", 
-          details: `Pulse ends at ${pulseEndTime.toISOString()}` 
+          details: `Pulse ends at ${pulseEndTimeUTC.toISOString()} UTC` 
         });
       }
 
       // Get pending attestations for this pulse only
+      console.log(`[BULK_ATTESTATION] Getting pending attestations for pulse ${pulseId}`);
       const pendingAttestations = await storage.getPendingAttestationsByPulse(pulseId);
+      console.log(`[BULK_ATTESTATION] Found ${pendingAttestations.length} pending attestations`);
       
       if (pendingAttestations.length === 0) {
+        console.log(`[BULK_ATTESTATION] No pending attestations found, returning early`);
         return res.json({ 
           message: "No pending attestations found for this pulse",
           processed: 0,
@@ -1014,12 +1039,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Import the EAS service
+      console.log(`[BULK_ATTESTATION] Importing EAS service`);
       const { easService } = await import('./lib/easService');
       
       // Prepare attestation data for batch processing
       const attestationDataList = [];
       
+      console.log(`[BULK_ATTESTATION] Processing ${pendingAttestations.length} pending attestations`);
       for (const { execution, member, pulse } of pendingAttestations) {
+        console.log(`[BULK_ATTESTATION] Processing execution ${execution.id} for member ${member.ipePassport}`);
+        
         // Check if attestation already exists
         const existingAttestation = await storage.getAttestation(execution.id);
         if (!existingAttestation || existingAttestation.status !== 'completed') {
@@ -1030,10 +1059,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             member,
             pulse
           });
+          console.log(`[BULK_ATTESTATION] Added execution ${execution.id} to attestation list`);
+        } else {
+          console.log(`[BULK_ATTESTATION] Skipping execution ${execution.id} - already has completed attestation`);
         }
       }
+      
+      console.log(`[BULK_ATTESTATION] Prepared ${attestationDataList.length} attestations for processing`);
 
       // Create attestation records atomically
+      console.log(`[BULK_ATTESTATION] Creating ${attestationDataList.length} attestation records in database`);
       const attestationResults = await storage.createBulkAttestationsWithTransaction(
         attestationDataList.map(data => ({
           pulseExecutionId: data.pulseExecutionId,
@@ -1041,14 +1076,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }))
       );
 
+      console.log(`[BULK_ATTESTATION] Database results: ${attestationResults.successful.length} successful, ${attestationResults.failed.length} failed`);
+
       // Process EAS attestations for successfully created database records
       let successful = 0;
       let failed = attestationResults.failed.length;
       const errors: string[] = attestationResults.failed.map(f => f.error);
+      
+      console.log(`[BULK_ATTESTATION] Starting EAS attestation creation for ${attestationResults.successful.length} records`);
 
       for (const attestation of attestationResults.successful) {
         const attestationData = attestationDataList.find(d => d.pulseExecutionId === attestation.pulseExecutionId);
-        if (!attestationData) continue;
+        if (!attestationData) {
+          console.log(`[BULK_ATTESTATION] WARNING: Could not find attestation data for execution ${attestation.pulseExecutionId}`);
+          continue;
+        }
+
+        console.log(`[BULK_ATTESTATION] Processing EAS attestation for member ${attestationData.member.ipePassport} (execution ${attestation.pulseExecutionId})`);
 
         try {
           // Create the actual EAS attestation with timeout
@@ -1057,12 +1101,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               memberOnchainID: attestationData.member.ipePassport!,
               memberWalletAddress: attestationData.member.walletAddress!,
               pulseNumber: attestationData.pulse.id,
-              executedAt: attestationData.execution.executedAt ? Math.floor(new Date(attestationData.execution.executedAt).getTime() / 1000) : Math.floor(Date.now() / 1000),
+              executedAt: attestationData.execution.executedAt ? Math.floor(new Date(attestationData.execution.executedAt).getTime() / 1000) : Math.floor(getCurrentUTC().getTime() / 1000),
               actionsExecuted: JSON.stringify(attestationData.execution.actions)
             }),
             45000, // 45 second timeout for EAS operations
             'EAS Attestation Creation'
           );
+
+          console.log(`[BULK_ATTESTATION] EAS attestation created: ${attestationResult.attestationUID}`);
 
           // Update the attestation record
           await storage.updateAttestationStatus(
@@ -1072,8 +1118,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attestationResult.transactionHash
           );
 
+          console.log(`[BULK_ATTESTATION] Updated attestation ${attestation.id} status to completed`);
           successful++;
         } catch (error) {
+          console.error(`[BULK_ATTESTATION] Failed to create EAS attestation for member ${attestationData.member.ipePassport}:`, error);
           failed++;
           errors.push(`Member ${attestationData.member.ipePassport}: ${error instanceof Error ? error.message : 'Unknown error'}`);
           
@@ -1087,15 +1135,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const totalProcessed = attestationDataList.length;
-      res.json({
+      console.log(`[BULK_ATTESTATION] Completed processing: ${successful} successful, ${failed} failed out of ${totalProcessed} total`);
+      
+      const response = {
         message: `Processed ${totalProcessed} attestations for pulse ${pulseId}`,
         processed: totalProcessed,
         successful,
         failed,
         errors: errors.length > 0 ? errors : undefined
-      });
+      };
+      
+      console.log(`[BULK_ATTESTATION] Response:`, JSON.stringify(response));
+      res.json(response);
     } catch (err: any) {
-      console.error("Create all pulse attestations error:", err);
+      console.error("[BULK_ATTESTATION] Error in bulk attestation creation:", err);
+      const errorResponse = { error: err.message || "Failed to create pulse attestations", stack: err.stack };
+      console.error("[BULK_ATTESTATION] Error response:", JSON.stringify(errorResponse));
       res.status(500).json({ error: err.message || "Failed to create pulse attestations" });
     }
   });
@@ -1142,19 +1197,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Member is not eligible for attestations" });
       }
 
-      // Validate pulse state - only allow attestations for pulses that have ended
-      const now = new Date();
-      const pulseEndTime = new Date(executionData.pulse.datetimeStart.getTime() + (executionData.pulse.interval * 60 * 60 * 1000));
-      if (pulseEndTime > now) {
-        const timeUntilEnd = Math.ceil((pulseEndTime.getTime() - now.getTime()) / (1000 * 60)); // minutes
+      // Validate pulse state - only allow attestations for pulses that have ended (UTC timing)
+      const nowUTC = getCurrentUTC();
+      const pulseEndTimeUTC = calculatePulseEndTimeUTC(executionData.pulse.datetimeStart, executionData.pulse.interval);
+      if (pulseEndTimeUTC > nowUTC) {
+        const timeUntilEnd = Math.ceil((pulseEndTimeUTC.getTime() - nowUTC.getTime()) / (1000 * 60)); // minutes
         const hours = Math.floor(timeUntilEnd / 60);
         const minutes = timeUntilEnd % 60;
         const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
         
         return res.status(400).json({ 
           error: "Cannot create attestations for active pulse", 
-          details: `Pulse is still active and ends at ${pulseEndTime.toISOString()}. Time remaining: ${timeString}`,
-          pulseEndTime: pulseEndTime.toISOString(),
+          details: `Pulse is still active and ends at ${pulseEndTimeUTC.toISOString()} UTC. Time remaining: ${timeString}`,
+          pulseEndTime: pulseEndTimeUTC.toISOString(),
           timeRemaining: timeString
         });
       }
@@ -1202,7 +1257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           memberOnchainID: executionData.member.ipePassport!,
           memberWalletAddress: executionData.member.walletAddress!,
           pulseNumber: executionData.pulse.id,
-          executedAt: executionData.execution.executedAt ? Math.floor(new Date(executionData.execution.executedAt).getTime() / 1000) : Math.floor(Date.now() / 1000),
+          executedAt: executionData.execution.executedAt ? Math.floor(new Date(executionData.execution.executedAt).getTime() / 1000) : Math.floor(getCurrentUTC().getTime() / 1000),
           actionsExecuted: JSON.stringify(executionData.execution.actions)
         }),
         45000, // 45 second timeout for EAS operations
@@ -1978,7 +2033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         farcasterFid,
         email,
         verificationCode: code,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+        expiresAt: new Date(getCurrentUTC().getTime() + 10 * 60 * 1000), // 10 minutes from UTC now
       });
 
       // Send verification email
@@ -2022,7 +2077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid verification code" });
       }
 
-      if (verification.expiresAt < new Date()) {
+      if (verification.expiresAt < getCurrentUTC()) {
         return res.status(400).json({ error: "Verification code expired" });
       }
 
@@ -2183,7 +2238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         farcasterFid,
         email,
         verificationCode: code,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+        expiresAt: new Date(getCurrentUTC().getTime() + 10 * 60 * 1000), // 10 minutes from UTC now
       });
 
       // Display verification code prominently for testing
@@ -2235,7 +2290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .json({ error: "Invalid or expired verification code" });
       }
 
-      if (verification.expiresAt < new Date()) {
+      if (verification.expiresAt < getCurrentUTC()) {
         return res.status(400).json({ error: "Verification code has expired" });
       }
 
@@ -2365,7 +2420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const verificationToken = crypto.randomUUID().replace(/-/g, "");
 
       // Create challenge message
-      const challengeMessage = `Verify ownership of ${ipePassport}.ipecity.eth for Ipê City registration\n\nFID: ${farcasterFid}\nTimestamp: ${new Date().toISOString()}`;
+      const challengeMessage = `Verify ownership of ${ipePassport}.ipecity.eth for Ipê City registration\n\nFID: ${farcasterFid}\nTimestamp: ${getCurrentUTC().toISOString()}`;
 
       // Store verification in database
       const verification = await storage.createPassportVerification({
@@ -2417,7 +2472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Verification token not found" });
       }
 
-      if (verification.expiresAt < new Date()) {
+      if (verification.expiresAt < getCurrentUTC()) {
         return res
           .status(400)
           .json({ error: "Verification token has expired" });
@@ -2542,7 +2597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Passport already verified" });
       }
 
-      if (verification.expiresAt < new Date()) {
+      if (verification.expiresAt < getCurrentUTC()) {
         return res
           .status(400)
           .json({ error: "Verification token has expired" });

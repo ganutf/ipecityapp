@@ -1,2 +1,4 @@
-- when I navigate to pulse details and went back to the main pulse page, it loses my executed state.
-- change the position of the tag executed from above to below the embbeded post in the current pulse card.
+- attestation all is not working (individually they are working).
+- review and fix timezones
+- change ID in the community list and profile from fid to id member.
+- 

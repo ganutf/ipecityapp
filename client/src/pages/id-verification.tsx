@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { PassportVerificationSection } from "@/components/PassportVerificationSection";
-import { Mail } from "lucide-react";
+import { Mail, Shield, CheckCircle, Clock } from "lucide-react";
 
 interface MemberStatus {
   isMember: boolean;
@@ -74,12 +74,13 @@ export default function IdVerificationPage() {
   // Show loading state while member status is being fetched
   if (memberLoading) {
     return (
-      <div className="container mx-auto max-w-2xl py-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold">ID Verification</h1>
-          <div className="flex items-center justify-center mt-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            <span className="ml-3 text-gray-600">Loading verification status...</span>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="text-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900 mx-auto mb-4"></div>
+              <p className="text-gray-600 font-medium">Loading verification status...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -87,19 +88,67 @@ export default function IdVerificationPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl py-8 space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold">ID Verification</h1>
-        <p className="text-gray-600 mt-2">
-          Complete both email and passport verification to access all features.
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 space-y-6 sm:space-y-8">
+        
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="bg-gradient-to-r from-slate-800 to-sky-600 rounded-t-xl px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="h-12 w-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <Shield className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-white">ID Verification</h1>
+                  <p className="text-slate-200 mt-1">
+                    Complete both email and passport verification to access all features
+                  </p>
+                </div>
+              </div>
+              <div className="hidden sm:flex items-center space-x-6 text-white/90">
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {isEmailVerified && isPassportVerified ? '2' : (isEmailVerified || isPassportVerified ? '1' : '0')}/2
+                  </div>
+                  <div className="text-sm text-slate-200">Complete</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Progress indicators */}
+          <div className="px-8 py-6">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                {isEmailVerified ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Clock className="h-5 w-5 text-gray-400" />
+                )}
+                <span className={`text-sm font-medium ${isEmailVerified ? 'text-green-700' : 'text-gray-600'}`}>
+                  Email Verification
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {isPassportVerified ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <Clock className="h-5 w-5 text-gray-400" />
+                )}
+                <span className={`text-sm font-medium ${isPassportVerified ? 'text-green-700' : 'text-gray-600'}`}>
+                  Passport Verification
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
 
       {/* Email Verification Section */}
-      <Card>
+      <Card className="border-l-4 border-l-lime-500 bg-white shadow-sm hover:shadow-md transition-all duration-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
+            <Mail className="h-5 w-5 text-lime-600" />
             Email Verification
           </CardTitle>
           <CardDescription>
@@ -118,26 +167,46 @@ export default function IdVerificationPage() {
       </Card>
 
       {/* Passport Verification Section */}
-      <PassportVerificationSection
-        farcasterFid={profile?.fid || 0}
-        currentPassport={memberStatus?.member?.ipePassport}
-        isVerified={isPassportVerified}
-        onVerificationComplete={handlePassportComplete}
-        allowChange={false}
-        memberData={memberStatus}
-        farcasterProfile={profile}
-        context="id-verification"
-      />
+      <div className="border-l-4 border-l-sky-500 bg-white shadow-sm hover:shadow-md transition-all duration-200 rounded-lg">
+        <PassportVerificationSection
+          farcasterFid={profile?.fid || 0}
+          currentPassport={memberStatus?.member?.ipePassport}
+          isVerified={isPassportVerified}
+          onVerificationComplete={handlePassportComplete}
+          allowChange={false}
+          memberData={memberStatus}
+          farcasterProfile={profile}
+          context="id-verification"
+        />
+      </div>
 
 
 
       {bothComplete && (
-        <div className="text-center pt-4">
-          <Button onClick={handleDone} size="lg" className="w-full">
-            Done - Go to Home
-          </Button>
-        </div>
+        <Card className="border-l-4 border-l-green-500 bg-green-50 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-green-900">Verification Complete!</h3>
+                <p className="text-green-700 text-sm">
+                  Both email and passport verification have been completed successfully.
+                </p>
+              </div>
+            </div>
+            <Button 
+              onClick={handleDone} 
+              size="lg" 
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              Continue to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
       )}
+      </div>
     </div>
   );
 }

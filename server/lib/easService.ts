@@ -3,47 +3,12 @@ import { ethers } from "ethers";
 import { config } from 'dotenv';
 import { getSecureEnvironmentVariable } from './keyManagement';
 import logger, { logUtils } from '../logger';
+import { getServerChainConfig } from '@shared/chainConfig';
 
 // Load environment variables
 config();
 
-// Chain configuration mapping
-interface ChainConfig {
-  name: string;
-  chainId: number;
-  rpcUrl: string;
-  easContractAddress: string;
-}
-
-const CHAIN_CONFIGS: Record<string, ChainConfig> = {
-  'base-sepolia': {
-    name: 'base-sepolia',
-    chainId: 84532,
-    rpcUrl: 'https://sepolia.base.org',
-    easContractAddress: '0x4200000000000000000000000000000000000021'
-  },
-  'base': {
-    name: 'base',
-    chainId: 8453,
-    rpcUrl: 'https://mainnet.base.org',
-    easContractAddress: '0x4200000000000000000000000000000000000021'
-  }
-};
-
-// Get chain configuration from environment variable
-function getChainConfig(): ChainConfig {
-  const chainName = process.env.CHAIN || 
-    (process.env.NODE_ENV === 'development' ? 'base-sepolia' : 'base');
-  
-  const config = CHAIN_CONFIGS[chainName];
-  if (!config) {
-    throw new Error(`Unsupported chain: ${chainName}. Supported chains: ${Object.keys(CHAIN_CONFIGS).join(', ')}`);
-  }
-  
-  return config;
-}
-
-const chainConfig = getChainConfig();
+const chainConfig = getServerChainConfig();
 const EAS_CONTRACT_ADDRESS = chainConfig.easContractAddress;
 
 const SCHEMA_UID = "0x118aa1ac273ffa930b8b880a1d59da273de0c0dab6303deca9827e45dd20cc1d";
@@ -76,7 +41,7 @@ class EASService {
     if (this.initialized) return;
 
     // Get chain configuration (consistent RPC URL and chain ID)
-    const chainConfig = getChainConfig();
+    const chainConfig = getServerChainConfig();
     const baseRpcUrl = process.env.BASE_RPC_URL || chainConfig.rpcUrl;
 
     // Configure network with explicit chain ID (always consistent with RPC URL)

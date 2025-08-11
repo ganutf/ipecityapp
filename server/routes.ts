@@ -2582,10 +2582,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Store the full ENS domain (not just the subdomain name)
       const fullEnsName = ensName; // Store complete domain like "jean.ipecity.eth" or "ipecity.eth"
+      
+      // Extract username from full ENS domain
+      const ipeUsername = ensName === "ipecity.eth" 
+        ? "admin" 
+        : ensName.replace(".ipecity.eth", "");
 
       // Set active_member status after successful signature verification
       const updatedMember = await storage.updateMemberByFarcasterFid(farcasterFid, {
         ipePassport: fullEnsName,
+        ipeUsername: ipeUsername,
         passportVerified: true,
         status: "active_member",
         walletAddress: walletAddress,

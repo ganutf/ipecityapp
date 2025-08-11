@@ -411,7 +411,7 @@ export default function AdminPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
-                    const claimSubdomain = (member as any).ipeUsername;
+                    const claimSubdomain = member.ipePassport;
                     const hasPendingApplication = memberStatus === 'pending_application_review' && claimSubdomain;
                     const needsApproval = hasPendingApplication;
                     
@@ -467,7 +467,7 @@ export default function AdminPage() {
                         <td className="py-2">
                           {claimSubdomain ? (
                             <span className="text-sm font-mono">
-                              {claimSubdomain}.ipecity.eth
+                              {claimSubdomain}
                             </span>
                           ) : '-'}
                         </td>
@@ -628,9 +628,7 @@ export default function AdminPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Passport Claim</label>
                   <p className="text-sm">
-                    {(selectedMember as any).ipeUsername ? 
-                      `${(selectedMember as any).ipeUsername}.ipecity.eth` : 
-                      'Not claimed'}
+                    {selectedMember.ipePassport || 'Not claimed'}
                   </p>
                 </div>
 

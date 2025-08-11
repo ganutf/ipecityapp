@@ -276,31 +276,45 @@ export function getKeyManager(): SecureKeyManager {
 }
 
 /**
- * Check if running in Replit environment
+ * Check if running in a production-like environment that should use direct environment variables
  */
-function isReplitEnvironment(): boolean {
+function shouldUseDirectEnvironmentVariables(): boolean {
   return !!(
+    // Replit environment
     process.env.REPL_ID || 
     process.env.REPL_SLUG || 
     process.env.REPLIT_DB_URL ||
-    process.env.REPL_OWNER
+    process.env.REPL_OWNER ||
+    // Production environment
+    process.env.NODE_ENV === 'production' ||
+    // Common production platforms
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RENDER ||
+    process.env.VERCEL ||
+    process.env.NETLIFY ||
+    process.env.AWS_EXECUTION_ENV ||
+    process.env.GOOGLE_CLOUD_PROJECT ||
+    process.env.AZURE_FUNCTIONS_ENVIRONMENT ||
+    // Manual override for any platform
+    process.env.USE_DIRECT_ENV_VARS === 'true'
   );
 }
 
 /**
- * Secure environment variable replacement
- * This function retrieves keys from secure storage instead of environment variables
- * In Replit environment, it falls back directly to environment variables
+ * Secure environment variable replacement with production compatibility
+ * This function retrieves keys from secure storage in development
+ * and falls back to direct environment variables in production environments
  */
 export async function getSecureEnvironmentVariable(keyName: string, fallbackEnvVar?: string): Promise<string | undefined> {
-  // In Replit environment, skip secure storage and use environment variables directly
-  if (isReplitEnvironment()) {
+  // In production-like environments, use direct environment variables
+  if (shouldUseDirectEnvironmentVariables()) {
     if (fallbackEnvVar && process.env[fallbackEnvVar]) {
       return process.env[fallbackEnvVar];
     }
     return undefined;
   }
 
+  // Development environment - use secure storage with fallback to env vars
   try {
     const manager = getKeyManager();
     

@@ -56,27 +56,40 @@ function validateEnvironment() {
   enhancedLog('Environment validation passed');
 }
 
-// Check if running in Replit environment
-function isReplitEnvironment(): boolean {
+// Check if running in a production-like environment that should use direct environment variables
+function shouldUseDirectEnvironmentVariables(): boolean {
   return !!(
+    // Replit environment
     process.env.REPL_ID ||
     process.env.REPL_SLUG ||
     process.env.REPLIT_DB_URL ||
-    process.env.REPL_OWNER
+    process.env.REPL_OWNER ||
+    // Production environment
+    process.env.NODE_ENV === 'production' ||
+    // Common production platforms
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RENDER ||
+    process.env.VERCEL ||
+    process.env.NETLIFY ||
+    process.env.AWS_EXECUTION_ENV ||
+    process.env.GOOGLE_CLOUD_PROJECT ||
+    process.env.AZURE_FUNCTIONS_ENVIRONMENT ||
+    // Manual override for any platform
+    process.env.USE_DIRECT_ENV_VARS === 'true'
   );
 }
 
 // Initialize secure key management
 async function initializeSecureKeys() {
   try {
-    const isReplit = isReplitEnvironment();
+    const useDirectEnvVars = shouldUseDirectEnvironmentVariables();
     const isProduction = process.env.NODE_ENV === 'production';
 
-    // Skip secure key management in Replit - use standard environment variables
-    if (isReplit) {
-      logger.info('Detected Replit environment, using standard environment variables');
-      logger.info('Secure key management skipped for Replit deployment');
-      return; // Skip key manager initialization in Replit
+    // Skip secure key management in production-like environments - use standard environment variables
+    if (useDirectEnvVars) {
+      logger.info('Detected production-like environment, using standard environment variables');
+      logger.info('Secure key management skipped - using direct environment variable access');
+      return; // Skip key manager initialization in production-like environments
     }
 
     // Try to load master password from file for non-Replit environments
@@ -291,7 +304,7 @@ app.use((req, res, next) => {
       logger.info(`Server successfully started on port ${port}`, {
         startupTime: `${totalStartupTime}ms`,
         environment: process.env.NODE_ENV,
-        isReplit: isReplitEnvironment()
+        useDirectEnvVars: shouldUseDirectEnvironmentVariables()
       });
       logger.info(`Health check available at http://0.0.0.0:${port}/health`);
     });

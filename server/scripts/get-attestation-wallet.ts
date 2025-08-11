@@ -7,8 +7,23 @@ import logger from '../logger';
 
 async function getAttestationWalletAddress() {
   try {
-    // Initialize key manager first
-    initializeKeyManager();
+    // Initialize key manager with master password
+    const { readFileSync } = await import('fs');
+    const { join } = await import('path');
+    
+    try {
+      const masterKeyPath = join(process.cwd(), '.master-key');
+      const masterPassword = readFileSync(masterKeyPath, 'utf8').trim();
+      initializeKeyManager(masterPassword);
+    } catch (error) {
+      // If no master key file, try environment variable
+      if (process.env.MASTER_PASSWORD) {
+        initializeKeyManager(process.env.MASTER_PASSWORD);
+      } else {
+        console.warn('⚠️  No master password found, trying to use direct environment variables');
+        // Don't initialize key manager - will fall back to env vars
+      }
+    }
     
     const mnemonic = await getSecureEnvironmentVariable('eas_attestation_mnemonic', 'EAS_ATTESTATION_MNEMONIC');
     

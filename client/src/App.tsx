@@ -14,7 +14,7 @@ import {
 } from "@/components/AuthGuard";
 import { TimezoneProvider } from "@/contexts/TimezoneContext";
 import HomePage from "@/pages/home";
-import FarcasterEmbed from "@/pages/farcaster-embed";
+import PulseDashboard from "@/pages/pulse-dashboard";
 import AdminPage from "@/pages/admin";
 import PulseDetailPage from "@/pages/pulse-detail";
 import ProfilePage from "@/pages/profile";
@@ -76,7 +76,7 @@ function Router() {
             path="/"
             component={HomePage}
           />
-          <Route path="/pulses" component={FarcasterEmbed} />
+          <Route path="/pulses" component={PulseDashboard} />
           <Route path="/community" component={CommunityPage} />
           <Route path="/admin" component={AdminPage} />
           <Route path="/pulse/:id" component={PulseDetailPage} />

@@ -73,7 +73,7 @@ const getActivePulseTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) 
 // below your other imports / constants
 const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
 
-export default function FarcasterEmbed() {
+export default function PulseDashboard() {
   const {
     isAuthenticated,
     profile,

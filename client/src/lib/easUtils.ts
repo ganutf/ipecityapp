@@ -15,13 +15,6 @@ function getChainConfig() {
 }
 
 /**
- * Determines if we're in development mode based on chain configuration
- */
-export function isDevelopment(): boolean {
-  return getChainConfig().name === 'base-sepolia';
-}
-
-/**
  * Gets the appropriate EAS scan URL based on the current chain configuration
  * @param attestationUid - The attestation UID to link to
  * @returns The full URL to view the attestation on EAS scan

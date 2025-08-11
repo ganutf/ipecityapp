@@ -65,9 +65,7 @@ export function getClientChainConfig(): ChainConfig {
  * Helper functions for common chain information
  */
 export function getEasScanUrl(chainConfig: ChainConfig, attestationUid: string): string {
-  const url = `${chainConfig.easscanBaseUrl}/attestation/view/${attestationUid}`;
-  console.log(`[EAS] Generated EAS scan URL: ${url} (chain: ${chainConfig.name}, uid: ${attestationUid})`);
-  return url;
+  return `${chainConfig.easscanBaseUrl}/attestation/view/${attestationUid}`;
 }
 
 export function getDisplayName(chainConfig: ChainConfig): string {

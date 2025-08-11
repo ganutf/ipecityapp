@@ -7,12 +7,44 @@ import logger, { logUtils } from '../logger';
 // Load environment variables
 config();
 
-// EAS Configuration - Different for development vs production
-const isDevelopment = process.env.NODE_ENV === 'development';
+// Chain configuration mapping
+interface ChainConfig {
+  name: string;
+  chainId: number;
+  rpcUrl: string;
+  easContractAddress: string;
+}
 
-const EAS_CONTRACT_ADDRESS = isDevelopment
-  ? "0x4200000000000000000000000000000000000021" // Base Sepolia
-  : "0x4200000000000000000000000000000000000021"; // Base Mainnet
+const CHAIN_CONFIGS: Record<string, ChainConfig> = {
+  'base-sepolia': {
+    name: 'base-sepolia',
+    chainId: 84532,
+    rpcUrl: 'https://sepolia.base.org',
+    easContractAddress: '0x4200000000000000000000000000000000000021'
+  },
+  'base': {
+    name: 'base',
+    chainId: 8453,
+    rpcUrl: 'https://mainnet.base.org',
+    easContractAddress: '0x4200000000000000000000000000000000000021'
+  }
+};
+
+// Get chain configuration from environment variable
+function getChainConfig(): ChainConfig {
+  const chainName = process.env.CHAIN || 
+    (process.env.NODE_ENV === 'development' ? 'base-sepolia' : 'base');
+  
+  const config = CHAIN_CONFIGS[chainName];
+  if (!config) {
+    throw new Error(`Unsupported chain: ${chainName}. Supported chains: ${Object.keys(CHAIN_CONFIGS).join(', ')}`);
+  }
+  
+  return config;
+}
+
+const chainConfig = getChainConfig();
+const EAS_CONTRACT_ADDRESS = chainConfig.easContractAddress;
 
 const SCHEMA_UID = "0x118aa1ac273ffa930b8b880a1d59da273de0c0dab6303deca9827e45dd20cc1d";
 const COMMUNITY_UID = "0x4f28a3bf558485216079bbf254c63c6b29a5917b0cc2117baf5d0b8cff146417";
@@ -43,17 +75,16 @@ class EASService {
   private async initialize() {
     if (this.initialized) return;
 
-    // Use different RPC URLs and network configs for development vs production
-    const defaultRpcUrl = isDevelopment
-      ? "https://sepolia.base.org" // Base Sepolia testnet
-      : "https://mainnet.base.org"; // Base mainnet
+    // Get chain configuration (consistent RPC URL and chain ID)
+    const chainConfig = getChainConfig();
+    const baseRpcUrl = process.env.BASE_RPC_URL || chainConfig.rpcUrl;
 
-    const baseRpcUrl = process.env.BASE_RPC_URL || defaultRpcUrl;
-
-    // Configure network with explicit chain ID
-    const network = isDevelopment
-      ? { name: 'base-sepolia', chainId: 84532, ensAddress: undefined }
-      : { name: 'base', chainId: 8453, ensAddress: undefined };
+    // Configure network with explicit chain ID (always consistent with RPC URL)
+    const network = { 
+      name: chainConfig.name, 
+      chainId: chainConfig.chainId, 
+      ensAddress: undefined 
+    };
     const mnemonic = await getSecureEnvironmentVariable('eas_attestation_mnemonic', 'EAS_ATTESTATION_MNEMONIC');
 
     if (!mnemonic) {
@@ -83,7 +114,8 @@ class EASService {
       connectedChainId: connectedNetwork.chainId.toString(),
       networkName: connectedNetwork.name,
       rpcUrl: baseRpcUrl,
-      isDevelopment: isDevelopment
+      chainConfig: chainConfig.name,
+      easContractAddress: EAS_CONTRACT_ADDRESS
     });
 
     // Verify we're on the correct network
@@ -91,17 +123,19 @@ class EASService {
       logger.error('Network mismatch detected', {
         expected: network.chainId,
         actual: connectedNetwork.chainId.toString(),
-        isDevelopment: isDevelopment,
+        chainConfig: chainConfig.name,
         rpcUrl: baseRpcUrl,
-        message: 'Check NODE_ENV setting and network configuration'
+        message: 'Check CHAIN environment variable and network configuration'
       });
-      throw new Error(`Network mismatch: expected chain ID ${network.chainId}, got ${connectedNetwork.chainId}. Ensure NODE_ENV is set correctly.`);
+      throw new Error(`Network mismatch: expected chain ID ${network.chainId} for ${chainConfig.name}, got ${connectedNetwork.chainId}. Ensure CHAIN environment variable is set correctly.`);
     }
 
     this.initialized = true;
     logger.info('EAS Service initialized successfully', {
-      network: isDevelopment ? 'Base Sepolia' : 'Base Mainnet',
+      network: chainConfig.name,
       chainId: connectedNetwork.chainId.toString(),
+      rpcUrl: baseRpcUrl,
+      easContract: EAS_CONTRACT_ADDRESS,
       signerAddress: logUtils.sanitize({ address: this.signer.address }).address
     });
   }

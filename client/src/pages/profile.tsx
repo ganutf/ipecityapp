@@ -153,6 +153,9 @@ export default function Profile2() {
     }) => {
       return apiRequest(`/api/members/${profile?.fid}`, {
         method: "PATCH",
+        headers: {
+          "x-farcaster-fid": profile?.fid?.toString() || "",
+        },
         body: JSON.stringify({
           ...data,
           profileCompleted: true,

@@ -2680,7 +2680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update member profile
   app.patch("/api/members/:farcasterFid", 
     authenticateUser, 
-    requireOwnership('farcasterFid'),
+    requireOwnershipByFid('farcasterFid'),
     auditLogger("UPDATE_MEMBER_PROFILE"),
     async (req: AuthenticatedRequest, res) => {
     try {

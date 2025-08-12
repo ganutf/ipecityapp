@@ -15,6 +15,7 @@ interface CommunityMember {
   ipePassport?: string;
   totalPoints: number;
   pulseStreak: number;
+  createdAt: string;
   // Add any additional fields from the member model that we might need
 }
 
@@ -87,8 +88,58 @@ export default function Community() {
       });
     }
 
-    // Sort members with multi-level sorting to handle ties
-    members.sort((a, b) => {
+    // First, calculate fixed ranks based on performance (separate from display sorting)
+    let membersWithRanks = members;
+    if (sortBy === 'points' || sortBy === 'streak') {
+      // Create a performance-sorted array to determine ranks
+      const performanceSorted = [...members].sort((a, b) => {
+        let comparison = 0;
+        
+        if (sortBy === 'points') {
+          // Always sort by highest points first for ranking
+          comparison = b.totalPoints - a.totalPoints;
+          if (comparison === 0) {
+            comparison = b.pulseStreak - a.pulseStreak;
+          }
+          if (comparison === 0) {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            comparison = dateA - dateB;
+          }
+        } else { // streak
+          // Always sort by highest streak first for ranking
+          comparison = b.pulseStreak - a.pulseStreak;
+          if (comparison === 0) {
+            comparison = b.totalPoints - a.totalPoints;
+          }
+          if (comparison === 0) {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            comparison = dateA - dateB;
+          }
+        }
+        
+        return comparison;
+      });
+
+      // Assign fixed ranks based on performance position (highest performance = #1)
+      membersWithRanks = members.map(member => {
+        const performanceIndex = performanceSorted.findIndex(p => p.farcasterFid === member.farcasterFid);
+        return {
+          ...member,
+          rank: performanceIndex + 1
+        };
+      });
+    } else {
+      // For name sorting, don't show ranks
+      membersWithRanks = members.map(member => ({
+        ...member,
+        rank: undefined
+      }));
+    }
+
+    // Then, sort the display order (keeping the fixed ranks intact)
+    membersWithRanks.sort((a, b) => {
       let comparison = 0;
       
       switch (sortBy) {
@@ -99,11 +150,11 @@ export default function Community() {
           if (comparison === 0) {
             comparison = a.pulseStreak - b.pulseStreak;
           }
-          // Tiebreaker 2: if still equal, sort by name
+          // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
           if (comparison === 0) {
-            const nameA = (a.displayName || a.username || '').toLowerCase();
-            const nameB = (b.displayName || b.username || '').toLowerCase();
-            comparison = nameA.localeCompare(nameB);
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            comparison = dateA - dateB;
           }
           break;
         case 'streak':
@@ -113,11 +164,11 @@ export default function Community() {
           if (comparison === 0) {
             comparison = a.totalPoints - b.totalPoints;
           }
-          // Tiebreaker 2: if still equal, sort by name
+          // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
           if (comparison === 0) {
-            const nameA = (a.displayName || a.username || '').toLowerCase();
-            const nameB = (b.displayName || b.username || '').toLowerCase();
-            comparison = nameA.localeCompare(nameB);
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            comparison = dateA - dateB;
           }
           break;
         case 'name':
@@ -129,9 +180,11 @@ export default function Community() {
           if (comparison === 0) {
             comparison = a.totalPoints - b.totalPoints;
           }
-          // Tiebreaker 2: if still equal, sort by member ID for consistency
+          // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
           if (comparison === 0) {
-            comparison = a.farcasterFid - b.farcasterFid;
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            comparison = dateA - dateB;
           }
           break;
       }
@@ -139,54 +192,7 @@ export default function Community() {
       return sortDirection === 'desc' ? -comparison : comparison;
     });
 
-    // Add performance-based ranking positions
-    if (sortBy === 'points' || sortBy === 'streak') {
-      // For performance metrics, always rank by actual performance (highest = #1)
-      const performanceSorted = [...members].sort((a, b) => {
-        let comparison = 0;
-        
-        if (sortBy === 'points') {
-          // Always sort by highest points first for ranking
-          comparison = b.totalPoints - a.totalPoints;
-          if (comparison === 0) {
-            comparison = b.pulseStreak - a.pulseStreak;
-          }
-          if (comparison === 0) {
-            const nameA = (a.displayName || a.username || '').toLowerCase();
-            const nameB = (b.displayName || b.username || '').toLowerCase();
-            comparison = nameA.localeCompare(nameB);
-          }
-        } else { // streak
-          // Always sort by highest streak first for ranking
-          comparison = b.pulseStreak - a.pulseStreak;
-          if (comparison === 0) {
-            comparison = b.totalPoints - a.totalPoints;
-          }
-          if (comparison === 0) {
-            const nameA = (a.displayName || a.username || '').toLowerCase();
-            const nameB = (b.displayName || b.username || '').toLowerCase();
-            comparison = nameA.localeCompare(nameB);
-          }
-        }
-        
-        return comparison;
-      });
-
-      // Assign ranks based on performance position
-      return members.map(member => {
-        const performanceIndex = performanceSorted.findIndex(p => p.farcasterFid === member.farcasterFid);
-        return {
-          ...member,
-          rank: performanceIndex + 1
-        };
-      });
-    } else {
-      // For name sorting, use positional ranking
-      return members.map((member, index) => ({
-        ...member,
-        rank: index + 1
-      }));
-    }
+    return membersWithRanks;
   }, [membersData?.members, searchQuery, sortBy, sortDirection]);
 
   // Show loading state

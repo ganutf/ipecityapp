@@ -91,6 +91,15 @@ export default function Community() {
     // First, calculate fixed ranks based on performance (separate from display sorting)
     let membersWithRanks = members;
     if (sortBy === 'points' || sortBy === 'streak') {
+      console.log("=== RANKING DEBUG START ===");
+      console.log("Raw members data:", members.map(m => ({ 
+        fid: m.farcasterFid, 
+        points: m.totalPoints, 
+        streak: m.pulseStreak, 
+        createdAt: m.createdAt,
+        name: m.displayName || m.username 
+      })));
+      
       // Create a performance-sorted array to determine ranks
       const performanceSorted = [...members].sort((a, b) => {
         let comparison = 0;
@@ -102,9 +111,15 @@ export default function Community() {
             comparison = b.pulseStreak - a.pulseStreak;
           }
           if (comparison === 0) {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
-            comparison = dateA - dateB;
+            // Handle missing createdAt gracefully
+            if (a.createdAt && b.createdAt) {
+              const dateA = new Date(a.createdAt).getTime();
+              const dateB = new Date(b.createdAt).getTime();
+              comparison = dateA - dateB;
+            } else {
+              // Fallback to FID if createdAt is missing
+              comparison = a.farcasterFid - b.farcasterFid;
+            }
           }
         } else { // streak
           // Always sort by highest streak first for ranking
@@ -113,23 +128,42 @@ export default function Community() {
             comparison = b.totalPoints - a.totalPoints;
           }
           if (comparison === 0) {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
-            comparison = dateA - dateB;
+            // Handle missing createdAt gracefully
+            if (a.createdAt && b.createdAt) {
+              const dateA = new Date(a.createdAt).getTime();
+              const dateB = new Date(b.createdAt).getTime();
+              comparison = dateA - dateB;
+            } else {
+              // Fallback to FID if createdAt is missing
+              comparison = a.farcasterFid - b.farcasterFid;
+            }
           }
         }
         
         return comparison;
       });
 
+      console.log("Performance sorted order:", performanceSorted.map((m, idx) => ({ 
+        rank: idx + 1,
+        fid: m.farcasterFid, 
+        points: m.totalPoints, 
+        streak: m.pulseStreak, 
+        createdAt: m.createdAt,
+        name: m.displayName || m.username 
+      })));
+
       // Assign fixed ranks based on performance position (highest performance = #1)
       membersWithRanks = members.map(member => {
         const performanceIndex = performanceSorted.findIndex(p => p.farcasterFid === member.farcasterFid);
+        const rank = performanceIndex + 1;
+        console.log(`Member ${member.displayName || member.username} (${member.totalPoints}pts, ${member.pulseStreak}streak) -> Rank #${rank}`);
         return {
           ...member,
-          rank: performanceIndex + 1
+          rank
         };
       });
+      
+      console.log("=== RANKING DEBUG END ===");
     } else {
       // For name sorting, don't show ranks
       membersWithRanks = members.map(member => ({
@@ -139,6 +173,14 @@ export default function Community() {
     }
 
     // Then, sort the display order (keeping the fixed ranks intact)
+    console.log("=== DISPLAY SORTING DEBUG START ===");
+    console.log("Before display sort - Members with ranks:", membersWithRanks.map(m => ({ 
+      name: m.displayName || m.username,
+      rank: m.rank,
+      points: m.totalPoints,
+      streak: m.pulseStreak
+    })));
+    
     membersWithRanks.sort((a, b) => {
       let comparison = 0;
       
@@ -152,9 +194,14 @@ export default function Community() {
           }
           // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
           if (comparison === 0) {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
-            comparison = dateA - dateB;
+            if (a.createdAt && b.createdAt) {
+              const dateA = new Date(a.createdAt).getTime();
+              const dateB = new Date(b.createdAt).getTime();
+              comparison = dateA - dateB;
+            } else {
+              // Fallback to FID if createdAt is missing
+              comparison = a.farcasterFid - b.farcasterFid;
+            }
           }
           break;
         case 'streak':
@@ -166,9 +213,14 @@ export default function Community() {
           }
           // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
           if (comparison === 0) {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
-            comparison = dateA - dateB;
+            if (a.createdAt && b.createdAt) {
+              const dateA = new Date(a.createdAt).getTime();
+              const dateB = new Date(b.createdAt).getTime();
+              comparison = dateA - dateB;
+            } else {
+              // Fallback to FID if createdAt is missing
+              comparison = a.farcasterFid - b.farcasterFid;
+            }
           }
           break;
         case 'name':
@@ -182,15 +234,28 @@ export default function Community() {
           }
           // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
           if (comparison === 0) {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
-            comparison = dateA - dateB;
+            if (a.createdAt && b.createdAt) {
+              const dateA = new Date(a.createdAt).getTime();
+              const dateB = new Date(b.createdAt).getTime();
+              comparison = dateA - dateB;
+            } else {
+              // Fallback to FID if createdAt is missing
+              comparison = a.farcasterFid - b.farcasterFid;
+            }
           }
           break;
       }
 
       return sortDirection === 'desc' ? -comparison : comparison;
     });
+
+    console.log(`After display sort (${sortDirection}) - Final order:`, membersWithRanks.map(m => ({ 
+      name: m.displayName || m.username,
+      rank: m.rank,
+      points: m.totalPoints,
+      streak: m.pulseStreak
+    })));
+    console.log("=== DISPLAY SORTING DEBUG END ===");
 
     return membersWithRanks;
   }, [membersData?.members, searchQuery, sortBy, sortDirection]);

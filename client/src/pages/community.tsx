@@ -173,81 +173,51 @@ export default function Community() {
     }
 
     // Then, sort the display order (keeping the fixed ranks intact)
-    console.log("=== DISPLAY SORTING DEBUG START ===");
-    console.log("Before display sort - Members with ranks:", membersWithRanks.map(m => ({ 
-      name: m.displayName || m.username,
-      rank: m.rank,
-      points: m.totalPoints,
-      streak: m.pulseStreak
-    })));
-    
-    membersWithRanks.sort((a, b) => {
-      let comparison = 0;
+    // For performance metrics, sort by rank to maintain consistency
+    if (sortBy === 'points' || sortBy === 'streak') {
+      console.log("=== DISPLAY SORTING DEBUG START ===");
+      console.log("Before display sort - Members with ranks:", membersWithRanks.map(m => ({ 
+        name: m.displayName || m.username,
+        rank: m.rank,
+        points: m.totalPoints,
+        streak: m.pulseStreak
+      })));
       
-      switch (sortBy) {
-        case 'points':
-          // Primary: sort by points
+      // For performance-based sorting, use rank order to maintain consistency
+      membersWithRanks.sort((a, b) => {
+        const rankComparison = (a.rank || 999) - (b.rank || 999);
+        // DESC: show #1, #2, #3 (best first) - normal rank order
+        // ASC: show #3, #2, #1 (worst first) - reverse rank order  
+        return sortDirection === 'desc' ? rankComparison : -rankComparison;
+      });
+    } else {
+      // For name sorting, use normal alphabetical sorting
+      membersWithRanks.sort((a, b) => {
+        let comparison = 0;
+        
+        // Primary: sort by name
+        const nameA = (a.displayName || a.username || '').toLowerCase();
+        const nameB = (b.displayName || b.username || '').toLowerCase();
+        comparison = nameA.localeCompare(nameB);
+        // Tiebreaker 1: if names are equal, sort by points
+        if (comparison === 0) {
           comparison = a.totalPoints - b.totalPoints;
-          // Tiebreaker 1: if points are equal, sort by streak
-          if (comparison === 0) {
-            comparison = a.pulseStreak - b.pulseStreak;
+        }
+        // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
+        if (comparison === 0) {
+          if (a.createdAt && b.createdAt) {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            comparison = dateA - dateB;
+          } else {
+            // Fallback to FID if createdAt is missing
+            comparison = a.farcasterFid - b.farcasterFid;
           }
-          // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
-          if (comparison === 0) {
-            if (a.createdAt && b.createdAt) {
-              const dateA = new Date(a.createdAt).getTime();
-              const dateB = new Date(b.createdAt).getTime();
-              comparison = dateA - dateB;
-            } else {
-              // Fallback to FID if createdAt is missing
-              comparison = a.farcasterFid - b.farcasterFid;
-            }
-          }
-          break;
-        case 'streak':
-          // Primary: sort by streak
-          comparison = a.pulseStreak - b.pulseStreak;
-          // Tiebreaker 1: if streaks are equal, sort by points
-          if (comparison === 0) {
-            comparison = a.totalPoints - b.totalPoints;
-          }
-          // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
-          if (comparison === 0) {
-            if (a.createdAt && b.createdAt) {
-              const dateA = new Date(a.createdAt).getTime();
-              const dateB = new Date(b.createdAt).getTime();
-              comparison = dateA - dateB;
-            } else {
-              // Fallback to FID if createdAt is missing
-              comparison = a.farcasterFid - b.farcasterFid;
-            }
-          }
-          break;
-        case 'name':
-          // Primary: sort by name
-          const nameA = (a.displayName || a.username || '').toLowerCase();
-          const nameB = (b.displayName || b.username || '').toLowerCase();
-          comparison = nameA.localeCompare(nameB);
-          // Tiebreaker 1: if names are equal, sort by points
-          if (comparison === 0) {
-            comparison = a.totalPoints - b.totalPoints;
-          }
-          // Tiebreaker 2: if still equal, sort by registration date (earliest wins)
-          if (comparison === 0) {
-            if (a.createdAt && b.createdAt) {
-              const dateA = new Date(a.createdAt).getTime();
-              const dateB = new Date(b.createdAt).getTime();
-              comparison = dateA - dateB;
-            } else {
-              // Fallback to FID if createdAt is missing
-              comparison = a.farcasterFid - b.farcasterFid;
-            }
-          }
-          break;
-      }
+        }
 
-      return sortDirection === 'desc' ? -comparison : comparison;
-    });
+        return sortDirection === 'desc' ? -comparison : comparison;
+      });
+    }
 
     console.log(`After display sort (${sortDirection}) - Final order:`, membersWithRanks.map(m => ({ 
       name: m.displayName || m.username,

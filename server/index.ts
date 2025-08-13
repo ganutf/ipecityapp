@@ -155,12 +155,22 @@ if (isProduction) {
 }
 
 // Security headers and CORS configuration
+const frontendUrl = process.env.FRONTEND_URL || 'https://pulse.ipecity.org';
+logger.info('CORS Configuration Debug', {
+  FRONTEND_URL: process.env.FRONTEND_URL,
+  frontendUrl,
+  isProduction,
+  NODE_ENV: process.env.NODE_ENV
+});
+
 const allowedOrigins = isProduction
   ? [
-    process.env.FRONTEND_URL || 'https://pulse.ipecity.org',
+    frontendUrl,
     'https://ipecity.replit.app' // Add Replit domain
   ]
   : ['http://localhost:5000', 'http://127.0.0.1:5000']; // Development domains
+
+logger.info('CORS allowed origins', { allowedOrigins });
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -170,7 +180,15 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
-      logger.warn('CORS blocked origin', { origin, allowedOrigins });
+      logger.warn('CORS blocked origin', { 
+        origin, 
+        allowedOrigins,
+        originType: typeof origin,
+        originLength: origin?.length,
+        exactMatch: allowedOrigins.includes(origin),
+        originTrimmed: origin?.trim(),
+        allowedOriginsDetailed: allowedOrigins.map(o => ({ value: o, length: o.length, type: typeof o }))
+      });
       return callback(new Error('Not allowed by CORS'));
     }
   },

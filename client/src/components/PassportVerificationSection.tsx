@@ -53,6 +53,10 @@ export function PassportVerificationSection({
   >("idle");
   const [walletConnectedForVerification, setWalletConnectedForVerification] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
+  const [selectedDomain, setSelectedDomain] = useState<string>("");
+
+  // ENS lookup for connected wallet
+  const { ensName, ensNames, isLoading: ensLoading } = useEnsLookup(address);
 
   // Hide application form if user gets approved
   useEffect(() => {
@@ -61,17 +65,18 @@ export function PassportVerificationSection({
     }
   }, [memberData?.member?.status]);
 
-  // ENS lookup for connected wallet
-  const { ensName, isLoading: ensLoading } = useEnsLookup(address);
+  // Set default selected domain when domains are loaded
+  useEffect(() => {
+    if (ensNames.length > 0 && !selectedDomain) {
+      setSelectedDomain(ensNames[0]);
+    }
+  }, [ensNames, selectedDomain]);
 
   // JustaName accept hook for subdomain acceptance
   const { acceptSubname, isAcceptSubnamePending } = useAcceptSubname();
 
   // Check if current wallet has Ipê City domain - explicit boolean
-  const hasIpeCityDomain = ensName ? (
-    ensName === "ipecity.eth" ||
-    ensName.endsWith(".ipecity.eth")
-  ) : false;
+  const hasIpeCityDomain = ensNames.length > 0;
 
 
 
@@ -86,8 +91,8 @@ export function PassportVerificationSection({
   // Passport verification mutation with SIWE signature
   const verifyPassportMutation = useMutation({
     mutationFn: async (walletAddress: string) => {
-      if (!ensName) {
-        throw new Error("No ENS domain found for this wallet");
+      if (!selectedDomain) {
+        throw new Error("No ENS domain selected for verification");
       }
 
       // Create SIWE message for signature verification
@@ -97,7 +102,7 @@ export function PassportVerificationSection({
         domain: window.location.host,
         uri: window.location.origin,
         version: "1",
-        statement: `Verify ownership of ${ensName} for Ipe City membership activation.`,
+        statement: `Verify ownership of ${selectedDomain} for Ipe City membership activation.`,
         nonce: Math.random().toString(36).substring(2, 15),
       });
 
@@ -113,7 +118,7 @@ export function PassportVerificationSection({
                   method: "POST",
                   body: JSON.stringify({
                     farcasterFid,
-                    ensName,
+                    ensName: selectedDomain,
                     walletAddress,
                     message,
                     signature,
@@ -135,7 +140,7 @@ export function PassportVerificationSection({
       setVerificationStatus("verified");
       toast({
         title: "Passport verified successfully!",
-        description: `Your ${ensName} domain has been verified.`,
+        description: `Your ${selectedDomain} domain has been verified.`,
       });
       if (queryClient) {
         queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
@@ -331,10 +336,15 @@ export function PassportVerificationSection({
                 <div className="text-right">
                   {ensLoading ? (
                     <p className="text-sm text-gray-500">Looking up ENS domain...</p>
-                  ) : ensName ? (
-                    <p className="text-sm font-medium text-green-600">{ensName}</p>
+                  ) : ensNames.length > 1 ? (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-green-600">{ensNames.length} domains found</p>
+                      <p className="text-xs text-gray-500">Selected: {selectedDomain}</p>
+                    </div>
+                  ) : ensNames.length === 1 ? (
+                    <p className="text-sm font-medium text-green-600">{ensNames[0]}</p>
                   ) : (
-                    <p className="text-sm text-gray-500">No ENS domain</p>
+                    <p className="text-sm text-gray-500">No Ipê City domain</p>
                   )}
                 </div>
               </div>
@@ -358,18 +368,46 @@ export function PassportVerificationSection({
               {isConnected && address && !ensLoading && hasIpeCityDomain && (
                 <div className="space-y-3">
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800 font-medium">Ipê City Domain Detected!</p>
+                    <p className="text-green-800 font-medium">
+                      {ensNames.length > 1 ? 'Multiple Ipê City Domains Found!' : 'Ipê City Domain Detected!'}
+                    </p>
                     <p className="text-sm text-green-700">
-                      {ensName} detected! Sign a message to verify ownership and activate your membership.
+                      {ensNames.length > 1 
+                        ? 'Choose which domain to verify with:'
+                        : `${selectedDomain} detected! Sign a message to verify ownership and activate your membership.`
+                      }
                     </p>
                   </div>
+                  
+                  {/* Domain Selection UI */}
+                  {ensNames.length > 1 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700">Select domain to verify:</p>
+                      <div className="space-y-2">
+                        {ensNames.map((domain) => (
+                          <label key={domain} className="flex items-center space-x-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="selectedDomain"
+                              value={domain}
+                              checked={selectedDomain === domain}
+                              onChange={(e) => setSelectedDomain(e.target.value)}
+                              className="text-green-600 focus:ring-green-500"
+                            />
+                            <span className="text-sm font-medium text-gray-900">{domain}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   <Button
                     onClick={handleVerifyPassport}
-                    disabled={verifyPassportMutation.isPending}
+                    disabled={verifyPassportMutation.isPending || !selectedDomain}
                     className="w-full"
                   >
                     <Wallet className="mr-2 h-4 w-4" />
-                    {verifyPassportMutation.isPending ? "Signing..." : "Sign & Activate Membership"}
+                    {verifyPassportMutation.isPending ? "Signing..." : `Sign & Activate with ${selectedDomain}`}
                   </Button>
                 </div>
               )}

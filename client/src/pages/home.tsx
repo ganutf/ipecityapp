@@ -21,13 +21,23 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
 
   // Check member status to determine where to redirect authenticated users
-  const { data: memberCheck, isLoading: memberLoading } = useQuery({
+  const { data: memberCheck, isLoading: memberLoading, error: memberError } = useQuery({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: Boolean(isAuthenticated && profile?.fid),
     retry: 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
   });
+
+  // Log member check API results
+  useEffect(() => {
+    if (memberError) {
+      console.error("HomePage - Member check API error:", memberError);
+    }
+    if (memberCheck) {
+      console.log("HomePage - Member check API success:", memberCheck);
+    }
+  }, [memberCheck, memberError]);
 
   // Redirect authenticated users to appropriate page
   useEffect(() => {
@@ -42,6 +52,32 @@ export default function HomePage() {
       // AuthGuard will redirect them to appropriate verification pages
     }
   }, [isAuthenticated, profile, memberCheck, memberLoading, setLocation]);
+
+  // Handle member API errors  
+  if (memberError && !memberLoading) {
+    console.error("HomePage - Showing error state due to member API failure");
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div className="text-center py-16">
+              <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-red-600 text-2xl">⚠</span>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Connection Error</h2>
+              <p className="text-gray-600 mb-6">Unable to verify your account. Please try refreshing the page.</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading while determining authentication status
   if (authLoading || (isAuthenticated && memberLoading)) {

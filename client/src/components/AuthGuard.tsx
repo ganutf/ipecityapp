@@ -57,10 +57,21 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
    * Possible statuses: pending_signer, pending_id_verification, email_verified, 
    * pending_application_review, approved_application, denied_application, active_member
    */
-  const { data: memberStatus, isLoading: memberLoading } = useQuery({
+  const { data: memberStatus, isLoading: memberLoading, error: memberError } = useQuery({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: Boolean(profile?.fid),
+    retry: 2,
   });
+
+  // Log member status API results
+  useEffect(() => {
+    if (memberError) {
+      console.error("AuthGuard - Member status API error:", memberError);
+    }
+    if (memberStatus) {
+      console.log("AuthGuard - Member status API success:", memberStatus);
+    }
+  }, [memberStatus, memberError]);
 
   // Overall loading state - wait for member status, but don't wait for signer if it errors
   // (signer API fails for users with pending_signer status, which is expected)
@@ -119,6 +130,13 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
 
       // STEP 6: Process member status (only after signer is approved)
       if (signerData && (signerData as any).status === 'approved') {
+        // Handle member status API errors
+        if (memberError) {
+          console.error("AuthGuard - Member status API failed, redirecting to home:", memberError);
+          setLocation("/");
+          return;
+        }
+        
         // Wait for member status API response
         if (!memberStatus) {
           return; // Still loading member status

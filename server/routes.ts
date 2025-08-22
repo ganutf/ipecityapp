@@ -2163,10 +2163,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/members/check/:farcasterFid", async (req, res) => {
     try {
       const farcasterFid = parseInt(req.params.farcasterFid);
+      console.log(`=== MEMBER CHECK DEBUG START (FID: ${farcasterFid}) ===`);
+      console.log(`Raw params:`, req.params);
+      console.log(`Parsed FID:`, farcasterFid);
+      
       let member = await storage.getMemberByFarcasterFid(farcasterFid);
+      console.log(`Initial member lookup result:`, member ? { 
+        id: member.id, 
+        farcasterFid: member.farcasterFid, 
+        status: member.status,
+        emailVerified: member.emailVerified,
+        ipePassport: member.ipePassport 
+      } : null);
 
       // If no member exists, create one automatically after Farcaster authentication
       if (!member) {
+        console.log(`Member not found, creating new record for FID ${farcasterFid}`);
         try {
           // Get user profile from Neynar to populate username
           const userResponse = await neynar.fetchBulkUsers({
@@ -2182,7 +2194,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             passportVerified: false,
           });
 
-          console.log(`Created new member record for FID ${farcasterFid}`);
+          console.log(`Created new member record for FID ${farcasterFid}:`, {
+            id: member.id,
+            farcasterFid: member.farcasterFid,
+            status: member.status
+          });
         } catch (profileError) {
           console.error("Error creating member record:", profileError);
           // Create member without username if profile fetch fails
@@ -2227,11 +2243,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({
+      const response = {
         isMember: !!member,
         status: (member as any)?.status || "pending_signer",
         member: member || null,
-      });
+      };
+      
+      console.log(`Final response for FID ${farcasterFid}:`, response);
+      console.log(`=== MEMBER CHECK DEBUG END ===`);
+      
+      res.json(response);
     } catch (err: any) {
       console.error("Check member error:", err);
       res

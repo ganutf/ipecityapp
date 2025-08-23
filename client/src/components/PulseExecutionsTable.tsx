@@ -133,7 +133,9 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
   const pulseTimingInfo = pulseTimings[0];
   
   const isPulseEnded = () => pulseTimingInfo?.isEnded ?? false;
+  const isPulseFuture = () => pulseTimingInfo?.isFuture ?? false;
   const getTimeUntilEnd = () => pulseTimingInfo?.timeUntilEnd;
+  const getTimeUntilStart = () => pulseTimingInfo?.timeUntilStart;
   const getPulseEndTime = () => pulseTimingInfo?.endTime;
 
   // Error handlers
@@ -380,6 +382,8 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
               <TooltipContent>
                 {isPulseEnded() ? (
                   <p>Create attestation for this execution</p>
+                ) : isPulseFuture() ? (
+                  <p>Pulse scheduled. Attestations available after pulse ends in {getTimeUntilStart()}</p>
                 ) : (
                   <p>Pulse is still active. Attestations available in {getTimeUntilEnd()}</p>
                 )}
@@ -402,10 +406,19 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
               variant={isPulseEnded() ? "default" : "secondary"}
               className={cn(
                 "w-fit text-xs",
-                isPulseEnded() ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"
+                isPulseEnded() 
+                  ? "bg-gray-500 text-white" 
+                  : isPulseFuture() 
+                    ? "bg-blue-500 text-white"
+                    : "bg-orange-500 text-white"
               )}
             >
-              {isPulseEnded() ? "Ended" : `Active • ${getTimeUntilEnd()} remaining`}
+              {isPulseEnded() 
+                ? "Ended" 
+                : isPulseFuture() 
+                  ? `Scheduled • ${getTimeUntilStart() || "starting soon"} until start`
+                  : `Active • ${getTimeUntilEnd() || "ending soon"} remaining`
+              }
             </Badge>
           </div>
           <p className="text-sm text-gray-600 mb-1">
@@ -442,6 +455,8 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
               <TooltipContent>
                 {isPulseEnded() ? (
                   <p>Create attestations for all eligible executions</p>
+                ) : isPulseFuture() ? (
+                  <p>Pulse scheduled. Attestations available after pulse ends in {getTimeUntilStart()}</p>
                 ) : (
                   <p>Pulse is still active. Attestations available in {getTimeUntilEnd()}</p>
                 )}
@@ -597,6 +612,8 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
                             <TooltipContent>
                               {isPulseEnded() ? (
                                 <p>Create attestation for this execution</p>
+                              ) : isPulseFuture() ? (
+                                <p>Pulse scheduled. Attestations available after pulse ends in {getTimeUntilStart()}</p>
                               ) : (
                                 <p>Pulse is still active. Attestations available in {getTimeUntilEnd()}</p>
                               )}

@@ -50,7 +50,7 @@ export interface IStorage {
   deleteMember(memberId: number): Promise<void>;
   getAllMembers(): Promise<Member[]>;
   getActiveMembersWithStats(): Promise<Array<Member & { totalPoints: number; pulseStreak: number }>>;
-  getMemberWithStats(farcasterFid: number): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined>;
+  getMemberWithStats(memberId: number): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined>;
   calculatePulseStreak(memberId: number): Promise<number>;
   
   // Compatibility methods for farcasterFid lookup
@@ -69,23 +69,15 @@ export interface IStorage {
   denyApplication(memberId: number): Promise<Member>;
   denyMember(memberId: number): Promise<Member>;
   
-  // Legacy methods for backward compatibility
-  updateMemberByFarcasterFid(farcasterFid: number, member: UpdateMember): Promise<Member>;
-  approveApplicationByFarcasterFid(farcasterFid: number, memberType: string): Promise<Member>;
-  approveMemberByFarcasterFid(farcasterFid: number): Promise<Member>;
-  denyMemberByFarcasterFid(farcasterFid: number): Promise<Member>;
   
   // Email Verification
   createEmailVerification(verification: InsertEmailVerification): Promise<EmailVerification>;
   getEmailVerification(memberId: number, code: string): Promise<EmailVerification | undefined>;
   markEmailVerified(memberId: number): Promise<void>;
   
-  // Legacy email verification methods
-  markEmailVerifiedByFarcasterFid(farcasterFid: number): Promise<void>;
   
   // Status Management
   updateMemberStatus(memberId: number, status: string): Promise<Member>;
-  updateMemberStatusByFarcasterFid(farcasterFid: number, status: string): Promise<Member>;
   
   // Passport Verification
   createPassportVerification(verification: InsertPassportVerification): Promise<PassportVerification>;
@@ -115,8 +107,6 @@ export interface IStorage {
   updatePulseExecution(id: number, actions: PulseExecutionActions): Promise<PulseExecution>;
   deletePulseExecution(id: number): Promise<void>;
   
-  // Legacy pulse execution methods
-  getMemberExecutionsByFarcasterFid(memberFarcasterFid: number): Promise<PulseExecution[]>;
   
   // Attestations
   createAttestation(attestation: InsertAttestation): Promise<Attestation>;
@@ -133,9 +123,6 @@ export interface IStorage {
   updateUserSignerStatus(memberId: number, status: string): Promise<UserSigner>;
   deleteUserSigner(memberId: number): Promise<void>;
   
-  // Legacy signer methods
-  getUserSignerByFarcasterFid(farcasterFid: number): Promise<UserSigner | undefined>;
-  deleteUserSignerByFarcasterFid(farcasterFid: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -304,12 +291,12 @@ export class DatabaseStorage implements IStorage {
     return membersWithStats;
   }
 
-  async getMemberWithStats(farcasterFid: number): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined> {
-    const member = await this.getMemberByFarcasterFid(farcasterFid);
+  async getMemberWithStats(memberId: number): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined> {
+    const member = await this.getMember(memberId);
     if (!member) return undefined;
 
-    const totalPoints = await this.calculateTotalPoints(member.id);
-    const pulseStreak = await this.calculatePulseStreak(member.id);
+    const totalPoints = await this.calculateTotalPoints(memberId);
+    const pulseStreak = await this.calculatePulseStreak(memberId);
 
     return {
       ...member,
@@ -428,13 +415,6 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
   
-  async approveApplicationByFarcasterFid(farcasterFid: number, memberType: string): Promise<Member> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
-    }
-    return this.approveApplication(memberId, memberType);
-  }
 
   async approveMember(memberId: number): Promise<Member> {
     const [member] = await db
@@ -448,13 +428,6 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
   
-  async approveMemberByFarcasterFid(farcasterFid: number): Promise<Member> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
-    }
-    return this.approveMember(memberId);
-  }
 
   async acceptSubdomain(memberId: number): Promise<Member> {
     // First get the current member data to access ipeUsername
@@ -502,13 +475,6 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
   
-  async denyMemberByFarcasterFid(farcasterFid: number): Promise<Member> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
-    }
-    return this.denyMember(memberId);
-  }
 
   // Email Verification
   async createEmailVerification(verificationData: InsertEmailVerification): Promise<EmailVerification> {
@@ -544,13 +510,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(members.id, memberId));
   }
   
-  async markEmailVerifiedByFarcasterFid(farcasterFid: number): Promise<void> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
-    }
-    return this.markEmailVerified(memberId);
-  }
 
   // Status Management
   async updateMemberStatus(memberId: number, status: string): Promise<Member> {
@@ -565,21 +524,7 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
   
-  async updateMemberByFarcasterFid(farcasterFid: number, memberData: UpdateMember): Promise<Member> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
-    }
-    return this.updateMember(memberId, memberData);
-  }
   
-  async updateMemberStatusByFarcasterFid(farcasterFid: number, status: string): Promise<Member> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
-    }
-    return this.updateMemberStatus(memberId, status);
-  }
 
   // Passport Verification
   async createPassportVerification(verificationData: InsertPassportVerification): Promise<PassportVerification> {
@@ -745,13 +690,6 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
   
-  async getMemberExecutionsByFarcasterFid(memberFarcasterFid: number): Promise<PulseExecution[]> {
-    const memberId = await this.getMemberIdFromFarcasterFid(memberFarcasterFid);
-    if (!memberId) {
-      return [];
-    }
-    return this.getMemberExecutions(memberId);
-  }
 
   async createPulseExecution(executionData: InsertPulseExecution): Promise<PulseExecution> {
     const [execution] = await db.insert(pulseExecutions).values(executionData).returning();
@@ -780,13 +718,6 @@ export class DatabaseStorage implements IStorage {
     return signer;
   }
   
-  async getUserSignerByFarcasterFid(farcasterFid: number): Promise<UserSigner | undefined> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      return undefined;
-    }
-    return this.getUserSigner(memberId);
-  }
 
   async createUserSigner(signerData: InsertUserSigner): Promise<UserSigner> {
     const [signer] = await db.insert(userSigners).values(signerData).returning();
@@ -810,13 +741,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(userSigners).where(eq(userSigners.memberId, memberId));
   }
   
-  async deleteUserSignerByFarcasterFid(farcasterFid: number): Promise<void> {
-    const memberId = await this.getMemberIdFromFarcasterFid(farcasterFid);
-    if (!memberId) {
-      throw new Error(`Member not found for farcasterFid: ${farcasterFid}`);
-    }
-    return this.deleteUserSigner(memberId);
-  }
 
   // Attestations
   async createAttestation(attestationData: InsertAttestation): Promise<Attestation> {

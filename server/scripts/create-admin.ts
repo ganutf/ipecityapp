@@ -92,7 +92,7 @@ async function createAdmin() {
       console.log('This will grant them full administrative privileges.');
 
       // Update member to admin
-      member = await storage.updateMemberByFarcasterFid(fid, {
+      member = await storage.updateMember(member.id, {
         memberType: 'admin',
         status: 'active_member',
         emailVerified: true,

@@ -173,14 +173,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Invalid input data" });
         }
 
-        // Update member with claimed username, wallet address, and change status to pending_application_review
-        const member = await storage.updateMemberByFarcasterFid(sanitizedData.farcasterFid, {
+        // Get member first, then update with memberId
+        const existingMember = await storage.getMemberByFarcasterFid(sanitizedData.farcasterFid);
+        if (!existingMember) {
+          return res.status(404).json({ error: "Member not found" });
+        }
+        const updatedMember = await storage.updateMember(existingMember.id, {
           ipeUsername: sanitizedData.username,
           walletAddress: sanitizedData.walletAddress,
           status: "pending_application_review",
         });
 
-        res.json({ success: true, member, username: sanitizedData.username });
+        res.json({ success: true, member: updatedMember, username: sanitizedData.username });
       } catch (error) {
         console.error("Error claiming username:", error);
         res.status(500).json({ error: "Failed to claim username" });
@@ -237,8 +241,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const acceptData = await acceptResponse.json();
 
-      // Update member status to active_member
-      const updatedMember = await storage.updateMemberByFarcasterFid(farcasterFid, {
+      // Update member status to active_member - use memberId
+      const existingMember = await storage.getMemberByFarcasterFid(farcasterFid);
+      if (!existingMember) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      const updatedMember = await storage.updateMember(existingMember.id, {
         status: "active_member",
         passportVerified: true,
       });
@@ -428,12 +436,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if user already has a signer
         let userSigner;
         try {
-          userSigner = await storage.getUserSignerByFarcasterFid(sanitizedFid);
-          console.log("Existing signer lookup result:", userSigner ? {
-            farcasterFid: userSigner.farcasterFid,
-            signerUuid: userSigner.signerUuid,
-            status: userSigner.status
-          } : 'NO SIGNER FOUND');
+          const member = await storage.getMemberByFarcasterFid(sanitizedFid);
+          if (member) {
+            userSigner = await storage.getUserSigner(member.id);
+            console.log("Existing signer lookup result:", userSigner ? {
+              farcasterFid: userSigner.farcasterFid,
+              signerUuid: userSigner.signerUuid,
+              status: userSigner.status
+            } : 'NO SIGNER FOUND');
+          }
         } catch (dbError) {
           console.error("Database error when fetching signer:", dbError);
           return res.status(500).json({ error: "Database connection error" });
@@ -453,15 +464,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log("Neynar signer status:", signerStatus);
 
             if (signerStatus.status === "approved") {
-              // Update database with approved status
-              await storage.updateUserSignerStatus(sanitizedFid, "approved");
+              // Update database with approved status - use memberId
+              await storage.updateUserSignerStatus(member.id, "approved");
               console.log("Signer approved! Updated database status.");
 
               // Also update member status to 'signer_approved' if they're still pending_signer
               try {
                 const member = await storage.getMemberByFarcasterFid(sanitizedFid);
                 if (member && member.status === "pending_signer") {
-                  await storage.updateMemberStatus(sanitizedFid, "pending_id_verification");
+                  await storage.updateMemberStatus(member.id, "pending_id_verification");
                   console.log("Updated member status to pending_id_verification");
                 }
               } catch (memberError) {
@@ -490,8 +501,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               try {
                 // Delete the stale signer record
-                await storage.deleteUserSignerByFarcasterFid(sanitizedFid);
-                console.log("Deleted stale signer record");
+                const member = await storage.getMemberByFarcasterFid(sanitizedFid);
+                if (member) {
+                  await storage.deleteUserSigner(member.id);
+                  console.log("Deleted stale signer record");
+                }
                 
                 // Return error asking user to try again instead of immediately creating new signer
                 // This prevents rate limit issues from rapid signer creation
@@ -652,7 +666,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Update status if it has changed
           if (signerInfo.status !== userSigner.status) {
-            await storage.updateUserSignerStatus(sanitizedFid, signerInfo.status);
+            // Get member for memberId
+            const member = await storage.getMemberByFarcasterFid(sanitizedFid);
+            if (member) {
+              await storage.updateUserSignerStatus(member.id, signerInfo.status);
+            }
             res.json({
               status: signerInfo.status,
               updated: true,
@@ -1368,14 +1386,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Legacy endpoint for backward compatibility
-  app.get("/api/executions/by-fid/:farcasterFid", 
+  app.get("/api/executions/by-member/:memberId", 
     authenticateUser, 
-    requireOwnershipByFid('farcasterFid'),
-    auditLogger("GET_MEMBER_EXECUTIONS_BY_FID"),
+    requireOwnership('memberId'),
+    auditLogger("GET_MEMBER_EXECUTIONS_BY_ID"),
     async (req: AuthenticatedRequest, res) => {
     try {
-      const farcasterFid = parseInt(req.params.farcasterFid);
-      const executions = await storage.getMemberExecutionsByFarcasterFid(farcasterFid);
+      const memberId = parseInt(req.params.memberId);
+      if (isNaN(memberId)) {
+        return res.status(400).json({ error: "Invalid member ID" });
+      }
+      const executions = await storage.getMemberExecutions(memberId);
       res.json({ executions });
     } catch (err: any) {
       console.error("Get executions error:", err);
@@ -1552,10 +1573,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
 
-      // Update member status to approved
+      // Update member status to approved - use memberId
+      const existingMember = await storage.getMemberByFarcasterFid(farcasterFid);
+      if (!existingMember) {
+        return res.status(404).json({ error: "Member not found" });
+      }
       const updatedMember = memberType 
-        ? await storage.approveApplicationByFarcasterFid(farcasterFid, memberType)
-        : await storage.approveMemberByFarcasterFid(farcasterFid);
+        ? await storage.approveApplication(existingMember.id, memberType)
+        : await storage.approveMember(existingMember.id);
 
       // Send approval email
       if (updatedMember.email) {
@@ -1615,14 +1640,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: AuthenticatedRequest, res) => {
     try {
       const { farcasterFid } = req.body;
-      const member = await storage.denyMember(farcasterFid);
+      // Get member first, then deny using memberId
+      const existingMember = await storage.getMemberByFarcasterFid(farcasterFid);
+      if (!existingMember) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      const deniedMember = await storage.denyMember(existingMember.id);
 
       // Send denial email
-      if (member.email) {
-        await sendDenialEmail(member.email);
+      if (deniedMember.email) {
+        await sendDenialEmail(deniedMember.email);
       }
 
-      res.json({ success: true, member });
+      res.json({ success: true, member: deniedMember });
     } catch (error) {
       console.error("Deny member error:", error);
       res.status(500).json({ error: "Failed to deny member" });
@@ -1690,18 +1720,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get individual member by FID
-  app.get("/api/members/:fid", 
+  app.get("/api/members/:memberId", 
     authenticateUser, 
-    requireOwnership('fid'),
+    requireOwnership('memberId'),
     auditLogger("GET_INDIVIDUAL_MEMBER"),
     async (req: AuthenticatedRequest, res) => {
     try {
-      const fid = parseInt(req.params.fid);
-      if (isNaN(fid)) {
-        return res.status(400).json({ error: "Invalid FID" });
+      const memberId = parseInt(req.params.memberId);
+      if (isNaN(memberId)) {
+        return res.status(400).json({ error: "Invalid member ID" });
       }
 
-      const member = await storage.getMemberByFarcasterFid(fid);
+      const member = await storage.getMember(memberId);
       if (!member) {
         return res.status(404).json({ error: "Member not found" });
       }
@@ -1717,8 +1747,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/members/status", async (req, res) => {
     try {
       const { farcasterFid, status } = req.body;
-      const member = await storage.updateMemberStatusByFarcasterFid(farcasterFid, status);
-      res.json({ success: true, member });
+      // Get member first, then use memberId
+      const member = await storage.getMemberByFarcasterFid(farcasterFid);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      const updatedMember = await storage.updateMemberStatus(member.id, status);
+      res.json({ success: true, member: updatedMember });
     } catch (error) {
       console.error("Update member status error:", error);
       res.status(500).json({ error: "Failed to update member status" });
@@ -1795,33 +1830,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/community/members/:fid", 
+  app.get("/api/community/members/:memberId", 
     authenticateUser,
     auditLogger("GET_COMMUNITY_MEMBER_DETAILS"),
     async (req: AuthenticatedRequest, res) => {
     try {
       console.log("=== GET_COMMUNITY_MEMBER_DETAILS DEBUG START ===");
-      const fid = parseInt(req.params.fid);
-      console.log("Requested FID:", fid, "from params:", req.params.fid);
+      const memberId = parseInt(req.params.memberId);
+      console.log("Requested memberId:", memberId, "from params:", req.params.memberId);
       
-      if (isNaN(fid)) {
-        console.log("Invalid FID provided");
-        return res.status(400).json({ error: "Invalid FID" });
+      if (isNaN(memberId)) {
+        console.log("Invalid member ID provided");
+        return res.status(400).json({ error: "Invalid member ID" });
       }
 
-      const member = await storage.getMemberWithStats(fid);
-      console.log("Retrieved member from storage:", member ? JSON.stringify(member, null, 2) : "Member not found");
-      
+      // Get member and calculate stats using memberId
+      const member = await storage.getMember(memberId);
       if (!member) {
-        console.log("Member not found for FID:", fid);
         return res.status(404).json({ error: "Member not found" });
       }
+      
+      const totalPoints = await storage.calculateTotalPoints(memberId);
+      const pulseStreak = await storage.calculatePulseStreak(memberId);
+      const memberWithStats = {
+        ...member,
+        totalPoints,
+        pulseStreak,
+      };
+      console.log("Retrieved member from storage:", JSON.stringify(member, null, 2));
 
       // Fetch Farcaster profile data
       let profileData = null;
       try {
-        console.log("Fetching Farcaster profile for FID:", fid);
-        const userResponse = await neynar.fetchBulkUsers({ fids: [fid] });
+        console.log("Fetching Farcaster profile for FID:", member.farcasterFid);
+        const userResponse = await neynar.fetchBulkUsers({ fids: [member.farcasterFid] });
         if (userResponse.users && userResponse.users.length > 0) {
           const user = userResponse.users[0];
           profileData = {
@@ -1838,7 +1880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const memberWithProfile = {
-        ...member,
+        ...memberWithStats,
         displayName: profileData?.displayName,
         username: profileData?.username,
         pfpUrl: profileData?.pfpUrl,
@@ -1950,9 +1992,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const justanameData = await justanameResponse.json();
       console.log("JustaName reserve response:", JSON.stringify(justanameData, null, 2));
 
-      // Update member status and type
+      // Update member status and type - use memberId
       console.log("Updating member status to approved_application...");
-      const updatedMember = await storage.approveApplication(farcasterFid, memberType);
+      const updatedMember = await storage.approveApplication(member.id, memberType);
       console.log(`Member updated successfully. New status: ${updatedMember.status}, type: ${updatedMember.memberType}`);
 
       // Send approval email (with error handling to prevent server crash)
@@ -1992,14 +2034,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/passport/deny", async (req, res) => {
     try {
       const { farcasterFid } = req.body;
-      const member = await storage.denyMemberByFarcasterFid(farcasterFid);
+      // Get member first, then deny using memberId
+      const existingMember = await storage.getMemberByFarcasterFid(farcasterFid);
+      if (!existingMember) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      const deniedMember = await storage.denyMember(existingMember.id);
 
       // Send denial email
-      if (member.email) {
-        await sendDenialEmail(member.email);
+      if (deniedMember.email) {
+        await sendDenialEmail(deniedMember.email);
       }
 
-      res.json({ success: true, member });
+      res.json({ success: true, member: deniedMember });
     } catch (error) {
       console.error("Deny passport claim error:", error);
       res.status(500).json({ error: "Failed to deny passport claim" });
@@ -2044,18 +2091,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate verification code
       const code = generateVerificationCode();
 
-      // Create email verification record
-      const memberId = await storage.getMemberIdFromFarcasterFid(farcasterFid);
-      if (!memberId) {
+      // Create email verification record - use proper farcasterFid → member → memberId pattern
+      const member = await storage.getMemberByFarcasterFid(farcasterFid);
+      if (!member) {
+        console.error(`📧 Email verification failed: Member not found for farcasterFid ${farcasterFid}`);
         return res.status(404).json({ 
           error: 'Member not found',
           status: 404,
           timestamp: new Date().toISOString()
         });
       }
+      
+      console.log(`📧 Email verification request for member ID: ${member.id}, farcasterFid: ${farcasterFid}`);
+
+      // Enhanced logging for test mode
+      const emailConfig = getEmailConfig();
+      if (emailConfig.testMode) {
+        console.log("");
+        console.log("=====================================");
+        console.log(`📧 EMAIL VERIFICATION CODE (TEST MODE)`);
+        console.log(`📧 Email: ${email}`);
+        console.log(`📧 Code: ${code}`);  
+        console.log(`📧 Copy this code: ${code}`);
+        console.log("=====================================");
+        console.log("");
+      }
 
       await storage.createEmailVerification({
-        memberId,
+        memberId: member.id,
         farcasterFid,
         email,
         verificationCode: code,
@@ -2094,9 +2157,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { farcasterFid, code } = req.body;
 
-      // Get and validate verification
+      // Get and validate verification - use proper farcasterFid → member → memberId pattern  
+      const member = await storage.getMemberByFarcasterFid(farcasterFid);
+      if (!member) {
+        console.error(`📧 Email confirmation failed: Member not found for farcasterFid ${farcasterFid}`);
+        return res.status(404).json({ error: "Member not found" });
+      }
+      
+      console.log(`📧 Email confirmation attempt for member ID: ${member.id}, farcasterFid: ${farcasterFid}`);
       const verification = await storage.getEmailVerification(
-        farcasterFid,
+        member.id,
         code,
       );
       if (!verification) {
@@ -2107,50 +2177,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Verification code expired" });
       }
 
-      // Mark email as verified
-      await storage.markEmailVerifiedByFarcasterFid(farcasterFid);
+      // Mark email as verified - use existing member.id
+      await storage.markEmailVerified(member.id);
 
-      // Check if member exists, create if not
-      let member = await storage.getMemberByFarcasterFid(farcasterFid);
-      if (!member) {
-        // Get user profile from Neynar to populate username
-        try {
-          const userResponse = await neynar.fetchBulkUsers({
-            fids: [farcasterFid],
-          });
-          const userProfile = userResponse.users[0];
-
-          // Create basic member record with email_verified status
-          member = await storage.createMember({
-            farcasterFid,
-            email: verification.email,
-            status: "email_verified",
-            emailVerified: true,
-            passportVerified: false,
-          });
-        } catch (profileError) {
-          console.error("Error fetching user profile:", profileError);
-          // Create member without username if profile fetch fails
-          member = await storage.createMember({
-            farcasterFid,
-            email: verification.email,
-            status: "email_verified",
-            emailVerified: true,
-            passportVerified: false,
-          });
-        }
-      } else {
-        // Update existing member status
-        member = await storage.updateMemberStatus(
-          farcasterFid,
-          "email_verified",
-        );
-      }
+      // Update member status to email_verified (member already exists from lookup)
+      const updatedMember = await storage.updateMember(member.id, {
+        email: verification.email,
+        status: "email_verified",
+        emailVerified: true,
+      });
 
       res.json({
         success: true,
         message: "Email verified successfully",
-        member,
+        member: updatedMember,
       });
     } catch (error) {
       console.error("Verify email error:", error);
@@ -2214,10 +2254,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if member should be promoted from pending_signer to pending_id_verification
       if (member && member.status === "pending_signer") {
         try {
-          // Check if their signer is approved
-          const userSigner = await storage.getUserSigner(farcasterFid);
+          // Check if their signer is approved - use memberId
+          const userSigner = await storage.getUserSigner(member.id);
           if (userSigner && userSigner.status === "approved") {
-            member = await storage.updateMemberStatus(farcasterFid, "pending_id_verification");
+            member = await storage.updateMemberStatus(member.id, "pending_id_verification");
             console.log(`Auto-promoted FID ${farcasterFid} from pending_signer to pending_id_verification (signer approved)`);
           }
         } catch (signerError) {
@@ -2233,7 +2273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (member as any).status !== "active_member"
       ) {
         try {
-          member = await storage.updateMemberStatus(farcasterFid, "active_member");
+          member = await storage.updateMemberStatus(member.id, "active_member");
           console.log(
             `Auto-promoted FID ${farcasterFid} to active_member status (both verifications complete)`,
           );
@@ -2261,55 +2301,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Send email verification code
-  app.post("/api/auth/verify-email", async (req, res) => {
-    try {
-      console.log("Email verification request body:", req.body);
-      const { farcasterFid, email } = req.body;
-      console.log("Extracted FID:", farcasterFid, "Email:", email);
-
-      if (!farcasterFid || !email) {
-        console.log("Missing data - FID:", !!farcasterFid, "Email:", !!email);
-        return res.status(400).json({ error: "FID and email are required" });
-      }
-
-      // Get member ID from farcasterFid
-      const member = await storage.getMemberByFarcasterFid(farcasterFid);
-      if (!member) {
-        return res.status(404).json({ error: "Member not found" });
-      }
-
-      const code = generateVerificationCode();
-      const verification = await storage.createEmailVerification({
-        memberId: member.id,
-        farcasterFid,
-        email,
-        verificationCode: code,
-        expiresAt: new Date(getCurrentUTC().getTime() + 10 * 60 * 1000), // 10 minutes from UTC now
-      });
-
-      // Display verification code prominently for testing
-      console.log("");
-      console.log("=====================================");
-      console.log(`VERIFICATION CODE FOR ${email}: ${code}`);
-      console.log(`Copy this code: ${code}`);
-      console.log("=====================================");
-      console.log("");
-
-      const emailSent = await sendVerificationEmail(email, code);
-
-      if (!emailSent) {
-        return res
-          .status(500)
-          .json({ error: "Failed to send verification email" });
-      }
-
-      res.json({ success: true, message: "Verification code sent" });
-    } catch (error) {
-      console.error("Send verification email error:", error);
-      res.status(500).json({ error: "Failed to send verification email" });
-    }
-  });
 
   // Confirm email verification code
   app.post("/api/auth/confirm-email", async (req, res) => {
@@ -2320,14 +2311,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "FID and code are required" });
       }
 
-      // Get memberId from farcasterFid  
-      const memberId = await storage.getMemberIdFromFarcasterFid(farcasterFid);
-      if (!memberId) {
+      // Get member from farcasterFid - use proper pattern
+      const member = await storage.getMemberByFarcasterFid(farcasterFid);
+      if (!member) {
+        console.error(`📧 Email confirmation failed: Member not found for farcasterFid ${farcasterFid}`);
         return res.status(404).json({ error: "Member not found" });
       }
+      
+      console.log(`📧 Email confirmation attempt for member ID: ${member.id}, farcasterFid: ${farcasterFid}`);
 
       const verification = await storage.getEmailVerification(
-        memberId,
+        member.id,
         code,
       );
 
@@ -2341,10 +2335,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Verification code has expired" });
       }
 
-      await storage.markEmailVerified(memberId);
+      await storage.markEmailVerified(member.id);
 
-      // Update member status - member should already exist from member check endpoint
-      const member = await storage.updateMember(memberId, {
+      // Update member status - member already exists from earlier lookup
+      const updatedMember = await storage.updateMember(member.id, {
         email: verification.email,
         emailVerified: true,
         status: "email_verified",
@@ -2353,7 +2347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: "Email verified successfully",
-        member,
+        member: updatedMember,
       });
     } catch (error) {
       console.error("Confirm email verification error:", error);
@@ -2609,8 +2603,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? "admin" 
         : ensName.replace(".ipecity.eth", "");
 
-      // Set active_member status after successful signature verification
-      const updatedMember = await storage.updateMemberByFarcasterFid(farcasterFid, {
+      // Set active_member status after successful signature verification - use memberId
+      const updatedMember = await storage.updateMember(member.id, {
         ipePassport: fullEnsName,
         ipeUsername: ipeUsername,
         passportVerified: true,
@@ -2699,28 +2693,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update member profile
-  app.patch("/api/members/:farcasterFid", 
+  app.patch("/api/members/:memberId", 
     authenticateUser, 
-    requireOwnershipByFid('farcasterFid'),
+    requireOwnership('memberId'),
     auditLogger("UPDATE_MEMBER_PROFILE"),
     async (req: AuthenticatedRequest, res) => {
     try {
-      const farcasterFid = parseInt(req.params.farcasterFid);
+      const memberId = parseInt(req.params.memberId);
       const updateData = req.body;
 
-      if (!farcasterFid) {
+      if (isNaN(memberId)) {
         return res
           .status(400)
-          .json({ error: "Valid Farcaster FID is required" });
+          .json({ error: "Valid member ID is required" });
       }
 
-      const member = await storage.getMemberByFarcasterFid(farcasterFid);
+      const member = await storage.getMember(memberId);
       if (!member) {
         return res.status(404).json({ error: "Member not found" });
       }
 
-      const updatedMember = await storage.updateMemberByFarcasterFid(
-        farcasterFid,
+      // Update member using existing member lookup
+      const updatedMember = await storage.updateMember(
+        member.id,
         updateData,
       );
 

@@ -64,7 +64,7 @@ async function resetUserPulseExecutions() {
     console.log(`✅ Found member: ${member.email || 'No email'} (ID: ${member.id})`);
 
     // Get current executions
-    const executions = await storage.getMemberExecutionsByFarcasterFid(fid);
+    const executions = await storage.getMemberExecutions(member.id);
     console.log(`📊 Found ${executions.length} pulse execution(s) for this user`);
 
     if (executions.length === 0) {
@@ -75,7 +75,7 @@ async function resetUserPulseExecutions() {
     // Display current executions
     console.log('\n📋 CURRENT PULSE EXECUTIONS');
     console.log('============================');
-    executions.forEach((execution, index) => {
+    executions.forEach((execution: any, index: number) => {
       console.log(`${index + 1}. Pulse ID: ${execution.pulseId}`);
       console.log(`   Actions: ${JSON.stringify(execution.actions)}`);
       console.log(`   Executed: ${execution.executedAt}`);

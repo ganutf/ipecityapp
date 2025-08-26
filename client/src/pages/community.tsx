@@ -399,6 +399,7 @@ export default function Community() {
               {sortedAndFilteredMembers.map((member: CommunityMember & any) => (
                 <MemberCard
                   key={member.farcasterFid}
+                  id={member.id}
                   farcasterFid={member.farcasterFid}
                   displayName={member.displayName}
                   username={member.username}

@@ -14,6 +14,7 @@ import {
 import { Link } from "wouter";
 
 interface MemberCardProps {
+  id: number;
   farcasterFid: number;
   displayName?: string;
   username?: string;
@@ -66,6 +67,7 @@ const memberTypeConfig = {
 };
 
 export function MemberCard({ 
+  id,
   farcasterFid, 
   displayName, 
   username, 
@@ -80,7 +82,7 @@ export function MemberCard({
   const memberTypeInfo = memberTypeConfig[memberType as keyof typeof memberTypeConfig];
 
   return (
-    <Link href={`/member/${farcasterFid}`}>
+    <Link href={`/member/${id}`}>
       <Card className="hover:shadow-md transition-shadow cursor-pointer group relative">
         {showRank && rank && (
           <div className="absolute -top-2 -left-2 z-10">

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FormattedPostText } from "./FormattedPostText";
 
 interface FarcasterPostEmbedProps {
   castUrl: string;
@@ -168,7 +169,12 @@ export function FarcasterPostEmbed({
 
           {/* Post Text */}
           {castData.text && (
-            <p className="text-gray-800 mb-4 leading-relaxed text-sm sm:text-base break-words overflow-wrap-anywhere max-w-full">{castData.text}</p>
+            <div className="mb-4">
+              <FormattedPostText 
+                text={castData.text}
+                className="max-w-full"
+              />
+            </div>
           )}
 
           {/* Embedded Images */}

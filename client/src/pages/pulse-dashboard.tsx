@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, History, CheckCircle2, Users, Trophy, Heart, Repeat, Ban, X, ArrowRight, CheckCircle, XCircle, Target } from "lucide-react";
 import { PulseCard } from "@/components/PulseCard";
+import { FormattedPostText } from "@/components/FormattedPostText";
 import { getCardAccentColor, hasUserExecuted, extractExecutionStatus, getPulseTimingInfo } from "@/lib/pulseUtils";
 
 // Helper functions for contextual timing information
@@ -1130,7 +1131,12 @@ function PostTool({
                 </p>
               </div>
             </div>
-            <p className="text-gray-800 mb-4">{castData.text}</p>
+            <div className="mb-4">
+              <FormattedPostText 
+                text={castData.text}
+                className="max-w-full"
+              />
+            </div>
 
             {castData.embeds && castData.embeds.length > 0 && (
               <div className="mb-4">

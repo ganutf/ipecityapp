@@ -319,44 +319,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async calculatePulseStreak(memberId: number): Promise<number> {
-    // Get all pulse executions for this member, ordered by pulse start date (most recent first)
-    const executions = await db
+    // Get all pulses with execution status for this member in a single optimized query
+    // This LEFT JOIN approach is more efficient than multiple queries
+    const pulseResults = await db
       .select({
-        pulseId: pulseExecutions.pulseId,
+        pulseId: pulses.id,
         datetimeStart: pulses.datetimeStart,
-        executedAt: pulseExecutions.executedAt,
+        executionId: pulseExecutions.id, // NULL if not executed by this member
       })
-      .from(pulseExecutions)
-      .innerJoin(pulses, eq(pulseExecutions.pulseId, pulses.id))
-      .where(eq(pulseExecutions.memberId, memberId))
-      .orderBy(desc(pulses.datetimeStart));
+      .from(pulses)
+      .leftJoin(pulseExecutions, and(
+        eq(pulses.id, pulseExecutions.pulseId),
+        eq(pulseExecutions.memberId, memberId)
+      ))
+      .orderBy(desc(pulses.datetimeStart)); // Most recent pulse first
 
-    if (executions.length === 0) return 0;
+    if (pulseResults.length === 0) return 0;
 
-    // Calculate consecutive days from most recent execution
-    let streak = 1; // Start with 1 if there's at least one execution
-    const executionDates = executions.map(e => 
-      new Date(e.datetimeStart).toISOString().split('T')[0]
-    );
-
-    // Remove duplicates and sort by date (most recent first)
-    const uniqueDates = Array.from(new Set(executionDates)).sort().reverse();
-
-    if (uniqueDates.length <= 1) return streak;
-
-    // Check for consecutive dates
-    for (let i = 0; i < uniqueDates.length - 1; i++) {
-      const currentDate = new Date(uniqueDates[i]);
-      const nextDate = new Date(uniqueDates[i + 1]);
-      
-      // Calculate the difference in days
-      const timeDiff = currentDate.getTime() - nextDate.getTime();
-      const dayDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
-      
-      if (dayDiff === 1) {
+    // Count consecutive executions from the most recent pulse backwards
+    let streak = 0;
+    for (const result of pulseResults) {
+      if (result.executionId !== null) {
+        // User executed this pulse, increment streak
         streak++;
       } else {
-        break; // Streak is broken
+        // User missed this pulse, streak is broken
+        // Stop counting here - this is the key insight
+        break;
       }
     }
 

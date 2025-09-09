@@ -7,20 +7,13 @@ import {
 } from "@neynar/nodejs-sdk";
 import { storage } from "./storage";
 
-/**
- * Get current UTC timestamp for consistent server operations
- * All server-side timing should use UTC
- */
-function getCurrentUTC(): Date {
-  return new Date();
-}
+// Import PulseService for business logic operations
+import { PulseService } from "./services/PulseService";
+import { getCurrentUTC, calculatePulseEndTimeUTC } from "@shared/pulseUtils";
 
-/**
- * Calculate pulse end time in UTC
- */
-function calculatePulseEndTimeUTC(pulseStartUTC: Date, intervalHours: number): Date {
-  return new Date(pulseStartUTC.getTime() + (intervalHours * 60 * 60 * 1000));
-}
+// Create PulseService instance
+const pulseService = new PulseService(storage);
+
 import {
   insertPulseSchema,
   updatePulseSchema,
@@ -1769,7 +1762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("=== GET_COMMUNITY_MEMBERS DEBUG START ===");
       console.log("Authenticated user FID:", req.user?.fid);
       
-      const members = await storage.getActiveMembersWithStats();
+      const members = await storage.getActiveMembersWithStats(pulseService);
       console.log("Retrieved members count:", members.length);
       console.log("Sample member data:", members[0] ? JSON.stringify(members[0], null, 2) : "No members found");
       
@@ -1851,7 +1844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const totalPoints = await storage.calculateTotalPoints(memberId);
-      const pulseStreak = await storage.calculatePulseStreak(memberId);
+      const pulseStreak = await pulseService.calculateMemberStreak(memberId);
       const memberWithStats = {
         ...member,
         totalPoints,

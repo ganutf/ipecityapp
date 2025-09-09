@@ -1,71 +1,29 @@
 /**
- * Shared utilities for pulse status determination and execution tracking
- * This ensures consistent logic across all components displaying pulse status
- * All timing calculations work with UTC timestamps for global consistency
+ * Client-side pulse utilities that extend shared utilities with UI-specific functionality
+ * Core business logic is imported from shared utilities for consistency
  */
 
 import { convertUTCToUserTimezone, getCurrentUTC } from './dateUtils';
 
-export interface ExecutionStatus {
-  liked: boolean;
-  shared: boolean;
-  abstained: boolean;
-  hasExecution?: boolean;
-}
+// Import shared business logic
+import { 
+  getPulseTimingInfo, 
+  hasUserExecuted, 
+  isPulseActive, 
+  calculatePulseEndTimeUTC,
+  type PulseTimingInfo, 
+  type ExecutionStatus 
+} from '@shared/pulseUtils';
 
-export interface PulseTimingInfo {
-  status: 'active' | 'ended' | 'future';
-  isActive: boolean;
-  isEnded: boolean;
-  isFuture: boolean;
-}
-
-/**
- * Determines if a pulse has been executed by the user
- */
-export function hasUserExecuted(executionStatus?: ExecutionStatus | null): boolean {
-  if (!executionStatus) return false;
-  return Boolean(
-    executionStatus.hasExecution || 
-    executionStatus.liked || 
-    executionStatus.shared || 
-    executionStatus.abstained
-  );
-}
-
-/**
- * Gets the timing status of a pulse based on UTC start time and interval
- * All calculations work in UTC to ensure consistency across timezones
- * @param datetimeStart - UTC datetime string from server
- * @param interval - Duration in hours
- * @param currentUTCTime - Current UTC time, defaults to now
- */
-export function getPulseTimingInfo(
-  datetimeStart: string | Date,
-  interval: number,
-  currentUTCTime: Date = new Date()
-): PulseTimingInfo {
-  // Ensure we're working with UTC dates
-  const utcStartTime = typeof datetimeStart === 'string' ? new Date(datetimeStart) : datetimeStart;
-  const utcEndTime = new Date(utcStartTime.getTime() + (interval * 60 * 60 * 1000));
-  
-  // Validate dates
-  if (isNaN(utcStartTime.getTime())) {
-    throw new Error(`Invalid start time: ${datetimeStart}`);
-  }
-  
-  // All comparisons in UTC
-  const isEnded = currentUTCTime > utcEndTime;
-  const isActive = currentUTCTime >= utcStartTime && currentUTCTime <= utcEndTime;
-  const isFuture = currentUTCTime < utcStartTime;
-
-  return {
-    status: isEnded ? 'ended' : isActive ? 'active' : 'future',
-    isActive,
-    isEnded,
-    isFuture
-  };
-}
+// Re-export for backward compatibility
+export { 
+  getPulseTimingInfo, 
+  hasUserExecuted, 
+  isPulseActive, 
+  calculatePulseEndTimeUTC,
+  type PulseTimingInfo, 
+  type ExecutionStatus 
+};
 
 /**
  * Gets the appropriate card accent border color based on execution and timing status

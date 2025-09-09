@@ -49,8 +49,8 @@ export interface IStorage {
   updateMember(memberId: number, member: UpdateMember): Promise<Member>;
   deleteMember(memberId: number): Promise<void>;
   getAllMembers(): Promise<Member[]>;
-  getActiveMembersWithStats(): Promise<Array<Member & { totalPoints: number; pulseStreak: number }>>;
-  getMemberWithStats(memberId: number): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined>;
+  getActiveMembersWithStats(pulseService?: { calculateMemberStreak(memberId: number): Promise<number> }): Promise<Array<Member & { totalPoints: number; pulseStreak: number }>>;
+  getMemberWithStats(memberId: number, pulseService?: { calculateMemberStreak(memberId: number): Promise<number> }): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined>;
   calculatePulseStreak(memberId: number): Promise<number>;
   
   // Compatibility methods for farcasterFid lookup
@@ -95,6 +95,7 @@ export interface IStorage {
   getPulsesByDateRange(startDate: Date, endDate: Date): Promise<Pulse[]>;
   getActivePulses(): Promise<Pulse[]>; // Pulses currently active based on datetime + interval
   getAllPulses(): Promise<Pulse[]>;
+  getPulsesWithExecutionStatus(memberId: number): Promise<{pulseId: number; datetimeStart: Date; interval: number; executionId: number | null}[]>;
   createPulse(pulse: InsertPulse): Promise<Pulse>;
   updatePulse(id: number, pulse: UpdatePulse): Promise<Pulse>;
   deletePulse(id: number): Promise<void>;
@@ -267,7 +268,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(members).orderBy(desc(members.createdAt));
   }
 
-  async getActiveMembersWithStats(): Promise<Array<Member & { totalPoints: number; pulseStreak: number }>> {
+  async getActiveMembersWithStats(pulseService?: { calculateMemberStreak(memberId: number): Promise<number> }): Promise<Array<Member & { totalPoints: number; pulseStreak: number }>> {
     // Get all active members
     const activeMembers = await db
       .select()
@@ -279,7 +280,9 @@ export class DatabaseStorage implements IStorage {
     const membersWithStats = await Promise.all(
       activeMembers.map(async (member) => {
         const totalPoints = await this.calculateTotalPoints(member.id);
-        const pulseStreak = await this.calculatePulseStreak(member.id);
+        const pulseStreak = pulseService 
+          ? await pulseService.calculateMemberStreak(member.id)
+          : await this.calculatePulseStreak(member.id);
         return {
           ...member,
           totalPoints,
@@ -291,12 +294,14 @@ export class DatabaseStorage implements IStorage {
     return membersWithStats;
   }
 
-  async getMemberWithStats(memberId: number): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined> {
+  async getMemberWithStats(memberId: number, pulseService?: { calculateMemberStreak(memberId: number): Promise<number> }): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined> {
     const member = await this.getMember(memberId);
     if (!member) return undefined;
 
     const totalPoints = await this.calculateTotalPoints(memberId);
-    const pulseStreak = await this.calculatePulseStreak(memberId);
+    const pulseStreak = pulseService 
+      ? await pulseService.calculateMemberStreak(memberId)
+      : await this.calculatePulseStreak(memberId);
 
     return {
       ...member,
@@ -319,32 +324,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async calculatePulseStreak(memberId: number): Promise<number> {
-    // Get all pulses with execution status for this member in a single optimized query
-    // This LEFT JOIN approach is more efficient than multiple queries
-    const pulseResults = await db
-      .select({
-        pulseId: pulses.id,
-        datetimeStart: pulses.datetimeStart,
-        executionId: pulseExecutions.id, // NULL if not executed by this member
-      })
-      .from(pulses)
-      .leftJoin(pulseExecutions, and(
-        eq(pulses.id, pulseExecutions.pulseId),
-        eq(pulseExecutions.memberId, memberId)
-      ))
-      .orderBy(desc(pulses.datetimeStart)); // Most recent pulse first
-
+    // DEPRECATED: This method is deprecated in favor of PulseService.calculateMemberStreak()
+    // This fallback implementation uses simple consecutive logic without active pulse handling
+    // For proper business logic including active pulse handling, use PulseService instead
+    
+    const pulseResults = await this.getPulsesWithExecutionStatus(memberId);
+    
     if (pulseResults.length === 0) return 0;
 
-    // Count consecutive executions from the most recent pulse backwards
+    // Simple consecutive execution count (no complex active pulse logic)
     let streak = 0;
     for (const result of pulseResults) {
       if (result.executionId !== null) {
-        // User executed this pulse, increment streak
         streak++;
       } else {
-        // User missed this pulse, streak is broken
-        // Stop counting here - this is the key insight
         break;
       }
     }
@@ -606,6 +599,22 @@ export class DatabaseStorage implements IStorage {
 
   async getAllPulses(): Promise<Pulse[]> {
     return await db.select().from(pulses).orderBy(desc(pulses.datetimeStart));
+  }
+
+  async getPulsesWithExecutionStatus(memberId: number): Promise<{pulseId: number; datetimeStart: Date; interval: number; executionId: number | null}[]> {
+    return await db
+      .select({
+        pulseId: pulses.id,
+        datetimeStart: pulses.datetimeStart,
+        interval: pulses.interval,
+        executionId: pulseExecutions.id, // NULL if not executed by this member
+      })
+      .from(pulses)
+      .leftJoin(pulseExecutions, and(
+        eq(pulses.id, pulseExecutions.pulseId),
+        eq(pulseExecutions.memberId, memberId)
+      ))
+      .orderBy(desc(pulses.datetimeStart)); // Most recent pulse first
   }
 
   async createPulse(pulseData: InsertPulse): Promise<Pulse> {

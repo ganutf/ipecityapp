@@ -80,7 +80,17 @@ export default function PulseDashboard() {
     profile,
     isLoading: authLoading,
   } = usePersistentAuth();
-  // QR code state removed - handled by /signer-approval page
+  const [, setLocation] = useLocation();
+  
+  // Authentication check - redirect to home if not authenticated
+  // Wait for auth to stabilize before making redirect decisions
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated && !profile?.fid) {
+      console.log("PulseDashboard - Not authenticated (stable), redirecting to home");
+      setLocation("/");
+      return;
+    }
+  }, [authLoading, isAuthenticated, profile, setLocation]);
 
   // Tab state for pulse organization
   const [activeTab, setActiveTab] = useState("upcoming");
@@ -222,18 +232,8 @@ export default function PulseDashboard() {
     );
   }
 
-  // This component is now for authenticated users only
-  // Unauthenticated users should be handled by the HomePage component
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="text-gray-600 mt-4">Redirecting to home...</p>
-        </div>
-      </div>
-    );
-  }
+  // Authentication is now handled by AuthGuard at the route level
+  // This component assumes the user is authenticated
 
   // Signer approval is now handled by the dedicated /signer-approval route
   // AuthGuard will redirect users to /signer-approval when needed

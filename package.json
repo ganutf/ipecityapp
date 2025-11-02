@@ -19,6 +19,9 @@
     "migrate:pulse-structure": "tsx server/scripts/migrate-pulse-structure.ts",
     "rollback:pulse-structure": "tsx server/scripts/rollback-pulse-migration.ts",
     "populate:pulse-types": "tsx server/scripts/populate-pulse-types.ts",
+    "test-users:generate": "tsx server/scripts/generate-test-users.ts",
+    "test-streak:compare": "tsx server/scripts/test-streak-calculation.ts",
+    "test-active:status": "tsx server/scripts/test-active-pulse-status.ts",
     "production:check": "bash scripts/production-check.sh",
     "production:deploy": "npm run production:check && npm run build && npm run start"
   },

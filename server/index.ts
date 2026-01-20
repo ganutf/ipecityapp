@@ -181,36 +181,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Security headers (simplified - no need for asset exclusions since assets are served first)
-app.use((req, res, next) => {
-  // HSTS - Force HTTPS in production
-  if (isProduction) {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  }
-
-  // Prevent XSS attacks
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-  // CSP - Content Security Policy
-  const csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.neynar.com https://*.farcaster.xyz https://*.justaname.id",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https: blob:",
-    "connect-src 'self' https://*.neynar.com https://*.farcaster.xyz https://*.justaname.id https://*.ethereum.org wss:",
-    "frame-src 'none'",
-    "object-src 'none'",
-    "base-uri 'self'"
-  ].join('; ');
-
-  res.setHeader('Content-Security-Policy', csp);
-
-  next();
-});
+// Note: Security headers including CSP are set in server/middleware/validation.ts
+// via the securityHeaders() middleware function
 
 app.use(express.json({ limit: '10mb' })); // Limit request size
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));

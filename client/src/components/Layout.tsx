@@ -10,16 +10,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
+import { useAccount } from "wagmi";
+import { useTokenBalance } from "@/hooks/useTokenBalance";
+import { Coins } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, profile, isLoading } = usePersistentAuth();
   const [location] = useLocation();
-  
+  const { address } = useAccount();
+
   // Check member status to determine if user is in verification process
   const { data: memberCheck } = useQuery({
     queryKey: [`/api/members/check/${profile?.fid}`],
     enabled: Boolean(isAuthenticated && profile?.fid),
   });
+
+  // Get IPE token balance
+  const { displayBalance, isLoading: balanceLoading } = useTokenBalance(address);
 
   // Check if user is admin based on memberType instead of hardcoded FID
   const isAdmin = (memberCheck as any)?.member?.memberType === 'admin';
@@ -83,6 +90,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           
           {isAuthenticated ? (
             <div className="flex items-center space-x-4">
+              {/* IPE Token Balance */}
+              {address && (
+                <div className="flex items-center space-x-2 bg-lime-50 px-3 py-1.5 rounded-full border border-lime-200">
+                  <Coins className="h-4 w-4 text-lime-600" />
+                  <span className="text-sm font-semibold text-lime-900">
+                    {balanceLoading ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      `${displayBalance} IPE`
+                    )}
+                  </span>
+                </div>
+              )}
+
               <span className="text-sm text-gray-600">
                 Hello, {profile?.displayName || profile?.username || '?'}
               </span>

@@ -233,14 +233,14 @@ export default function Community() {
   // Show loading state
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="text-center py-16">
+      <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
+        <div className="w-full mx-auto px-3 md:px-4">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="text-center py-16">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900 mx-auto mb-4"></div>
               <p className="text-gray-600 font-medium">Loading...</p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -249,21 +249,21 @@ export default function Community() {
   // Show authentication required
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="text-center py-16 px-8">
+      <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
+        <div className="w-full mx-auto px-3 md:px-4">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="text-center py-16 px-8">
               <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Users className="h-8 w-8 text-slate-700" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
                 Authentication Required
               </h2>
-              <p className="text-gray-600 max-w-md mx-auto">
+              <p className="text-sm text-gray-600 max-w-md mx-auto">
                 Please sign in to view the community members and explore the Ipê City community.
               </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -273,25 +273,25 @@ export default function Community() {
   if (error) {
     console.error("Community page error:", error);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="text-center py-16 px-8">
+      <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
+        <div className="w-full mx-auto px-3 md:px-4">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="text-center py-16 px-8">
               <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Users className="h-8 w-8 text-red-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
                 Error Loading Community
               </h2>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
                 Failed to load community members. Please try again later.
               </p>
               <details className="text-left text-sm text-gray-500 max-w-md mx-auto bg-gray-50 rounded-lg p-4">
                 <summary className="cursor-pointer font-medium">Error Details</summary>
                 <pre className="mt-2 whitespace-pre-wrap text-xs">{error instanceof Error ? error.message : String(error)}</pre>
               </details>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -301,33 +301,36 @@ export default function Community() {
   const filteredCount = sortedAndFilteredMembers.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
-          <div className="bg-gradient-to-r from-slate-800 to-sky-600 rounded-t-xl px-8 py-6">
+    <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
+      <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
+        {/* Header Card */}
+        <Card className="bg-white shadow-sm">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="h-12 w-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <Users className="h-6 w-6 text-white" />
+                <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center">
+                  <Users className="h-6 w-6 text-slate-700" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-white">Community</h1>
-                  <p className="text-slate-200 mt-1">
+                  <h1 className="text-2xl font-bold text-gray-900">Community</h1>
+                  <p className="text-sm text-gray-600 mt-1">
                     Meet the active members of Ipê City
                   </p>
                 </div>
               </div>
-              <div className="hidden sm:flex items-center space-x-6 text-white/90">
-                <div className="text-center">
-                  <div className="text-2xl font-bold">{totalMembers}</div>
-                  <div className="text-sm text-slate-200">Members</div>
+              <div className="hidden sm:flex items-center">
+                <div className="text-center px-4 py-2 bg-slate-50 rounded-lg">
+                  <div className="text-2xl font-bold text-gray-900">{totalMembers}</div>
+                  <div className="text-xs text-gray-600">Members</div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div className="px-8 py-6 space-y-6">
+          </CardContent>
+        </Card>
+
+        {/* Search and Filters Card */}
+        <Card className="bg-white shadow-sm">
+          <CardContent className="p-6 space-y-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -335,18 +338,17 @@ export default function Community() {
                 placeholder="Search by name, passport, or role..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-11 border-gray-200 focus:border-lime-500 focus:ring-lime-500"
+                className="pl-10"
               />
             </div>
 
             {/* Sorting Controls */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant={sortBy === 'points' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSortBy('points')}
-                  className="h-9 px-4 font-medium"
                 >
                   <Trophy className="h-4 w-4 mr-2" />
                   Points
@@ -355,7 +357,6 @@ export default function Community() {
                   variant={sortBy === 'streak' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSortBy('streak')}
-                  className="h-9 px-4 font-medium"
                 >
                   <Target className="h-4 w-4 mr-2" />
                   Streak
@@ -364,7 +365,6 @@ export default function Community() {
                   variant={sortBy === 'name' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSortBy('name')}
-                  className="h-9 px-4 font-medium"
                 >
                   Name
                 </Button>
@@ -373,7 +373,6 @@ export default function Community() {
                 variant="outline"
                 size="sm"
                 onClick={() => setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc')}
-                className="h-9 px-3 font-medium border-gray-200"
               >
                 {sortDirection === 'desc' ? (
                   <SortDesc className="h-4 w-4" />
@@ -382,20 +381,19 @@ export default function Community() {
                 )}
               </Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Content Area */}
         {membersLoading ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="text-center py-16">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="text-center py-16">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900 mx-auto mb-4"></div>
               <p className="text-gray-600 font-medium">Loading community members...</p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ) : sortedAndFilteredMembers.length > 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {sortedAndFilteredMembers.map((member: CommunityMember & any) => (
                 <MemberCard
                   key={member.farcasterFid}
@@ -413,25 +411,24 @@ export default function Community() {
                 />
               ))}
             </div>
-          </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="text-center py-16 px-8">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="text-center py-16 px-8">
               {searchQuery ? (
                 <>
                   <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Search className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     No members found
                   </h3>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
                     No members match your search "{searchQuery}". Try adjusting your search terms or filters.
                   </p>
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => setSearchQuery('')}
-                    className="font-medium"
                   >
                     Clear search
                   </Button>
@@ -441,16 +438,16 @@ export default function Community() {
                   <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Users className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     No active members
                   </h3>
-                  <p className="text-gray-600 max-w-md mx-auto">
+                  <p className="text-sm text-gray-600 max-w-md mx-auto">
                     There are currently no active members in the community. Check back later!
                   </p>
                 </>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

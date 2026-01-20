@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthKitProvider } from "@farcaster/auth-kit";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
-import { mainnet } from "wagmi/chains";
+import { mainnet, base } from "wagmi/chains";
 import { http } from "wagmi";
 import { JustaNameProvider } from "@justaname.id/react";
 import {
@@ -40,9 +40,10 @@ const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "demo";
 const wagmiConfig = getDefaultConfig({
   appName: "Ipê City Pulse",
   projectId,
-  chains: [mainnet],
+  chains: [mainnet, base],
   transports: {
     [mainnet.id]: http(),
+    [base.id]: http(),
   },
 });
 

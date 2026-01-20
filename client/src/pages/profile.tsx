@@ -296,6 +296,7 @@ export default function Profile2() {
               showWalletActions={true}
               onDisconnectWallet={handleDisconnectConfirm}
               pfpUrl={profile?.pfpUrl}
+              createdAt={memberData?.member?.createdAt}
             />
           </CardContent>
         </ProfileCard>
@@ -305,6 +306,7 @@ export default function Profile2() {
           totalPoints={memberData?.member?.totalPoints}
           pulseStreak={memberData?.member?.pulseStreak}
           createdAt={memberData?.member?.createdAt}
+          walletAddress={memberData?.member?.walletAddress}
         />
 
         {/* Bio Section */}

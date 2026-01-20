@@ -36,6 +36,7 @@ interface ProfileHeaderProps {
   showWalletActions?: boolean;
   onDisconnectWallet?: () => void;
   pfpUrl?: string;
+  createdAt?: string;
 }
 
 const memberTypeConfig = {
@@ -83,10 +84,10 @@ const memberTypeConfig = {
   }
 };
 
-export function ProfileHeader({ 
-  displayName, 
-  username, 
-  fid, 
+export function ProfileHeader({
+  displayName,
+  username,
+  fid,
   memberType = 'pending',
   ipePassport,
   passportVerified,
@@ -95,16 +96,23 @@ export function ProfileHeader({
   address,
   showWalletActions = false,
   onDisconnectWallet,
-  pfpUrl
+  pfpUrl,
+  createdAt
 }: ProfileHeaderProps) {
   const memberTypeInfo = memberTypeConfig[memberType as keyof typeof memberTypeConfig];
+
+  // Format join date
+  const memberSince = createdAt ? new Date(createdAt).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric"
+  }) : null;
 
   return (
     <div className="flex flex-col space-y-4 lg:flex-row lg:items-start lg:justify-between lg:space-y-0">
       <div className="flex items-center space-x-3 md:space-x-4">
         {pfpUrl ? (
-          <img 
-            src={pfpUrl} 
+          <img
+            src={pfpUrl}
             alt={`${displayName || username || 'User'} profile picture`}
             className="h-12 w-12 md:h-16 md:w-16 rounded-full object-cover flex-shrink-0"
           />
@@ -124,7 +132,7 @@ export function ProfileHeader({
             {displayName || username}
           </h1>
           <p className="text-xs md:text-sm text-gray-500">
-            ID: {fid}
+            ID: {fid}{memberSince && <span className="text-gray-400"> • Member since {memberSince}</span>}
           </p>
           <div className="flex items-center space-x-2 mt-2">
             {memberTypeInfo && (

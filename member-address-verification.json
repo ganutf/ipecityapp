@@ -1,0 +1,182 @@
+[
+  {
+    "memberId": 24,
+    "farcasterFid": 1439456,
+    "ipeUsername": null,
+    "ipePassport": null,
+    "storedAddress": null,
+    "resolvedAddress": null,
+    "status": "no-passport",
+    "message": "No ENS passport registered"
+  },
+  {
+    "memberId": 23,
+    "farcasterFid": 1345766,
+    "ipeUsername": null,
+    "ipePassport": null,
+    "storedAddress": null,
+    "resolvedAddress": null,
+    "status": "no-passport",
+    "message": "No ENS passport registered"
+  },
+  {
+    "memberId": 22,
+    "farcasterFid": 1159812,
+    "ipeUsername": null,
+    "ipePassport": null,
+    "storedAddress": null,
+    "resolvedAddress": null,
+    "status": "no-passport",
+    "message": "No ENS passport registered"
+  },
+  {
+    "memberId": 21,
+    "farcasterFid": 1330063,
+    "ipeUsername": "nima",
+    "ipePassport": "nima.ipecity.eth",
+    "storedAddress": "0x7e09fF144C3491A504C8ECcC8A9e21Af582121B0",
+    "resolvedAddress": "0x7e09fF144C3491A504C8ECcC8A9e21Af582121B0",
+    "status": "match",
+    "message": "✅ Address matches passport (nima.ipecity.eth)"
+  },
+  {
+    "memberId": 20,
+    "farcasterFid": 1303649,
+    "ipeUsername": "gmazetto",
+    "ipePassport": "gmazetto.ipecity.eth",
+    "storedAddress": "0x121434bec53BB0209259AeDD935F27622cDFacf4",
+    "resolvedAddress": "0x121434bec53BB0209259AeDD935F27622cDFacf4",
+    "status": "match",
+    "message": "✅ Address matches passport (gmazetto.ipecity.eth)"
+  },
+  {
+    "memberId": 19,
+    "farcasterFid": 1303509,
+    "ipeUsername": null,
+    "ipePassport": null,
+    "storedAddress": null,
+    "resolvedAddress": null,
+    "status": "no-passport",
+    "message": "No ENS passport registered"
+  },
+  {
+    "memberId": 18,
+    "farcasterFid": 1303481,
+    "ipeUsername": "georgesilva",
+    "ipePassport": "georgesilva.ipecity.eth",
+    "storedAddress": "0x955BA557298bf37F6551B7E380B359E587F4fC12",
+    "resolvedAddress": "0x955BA557298bf37F6551B7E380B359E587F4fC12",
+    "status": "match",
+    "message": "✅ Address matches passport (georgesilva.ipecity.eth)"
+  },
+  {
+    "memberId": 17,
+    "farcasterFid": 1115901,
+    "ipeUsername": "vitoria",
+    "ipePassport": "vitoria.ipecity.eth",
+    "storedAddress": "0x6de004e327E1150B620F28EB8c41f925F4eC4e7b",
+    "resolvedAddress": "0x6de004e327E1150B620F28EB8c41f925F4eC4e7b",
+    "status": "match",
+    "message": "✅ Address matches passport (vitoria.ipecity.eth)"
+  },
+  {
+    "memberId": 16,
+    "farcasterFid": 1302787,
+    "ipeUsername": "franz",
+    "ipePassport": "franz.ipecity.eth",
+    "storedAddress": "0x4D95EC94b57D6D4dc72658d8164aE403e452F493",
+    "resolvedAddress": "0x4D95EC94b57D6D4dc72658d8164aE403e452F493",
+    "status": "match",
+    "message": "✅ Address matches passport (franz.ipecity.eth)"
+  },
+  {
+    "memberId": 15,
+    "farcasterFid": 1186355,
+    "ipeUsername": "paloma",
+    "ipePassport": "paloma.ipecity.eth",
+    "storedAddress": "0xC8e56c17930510a2e708a8d4a862fcD83F3743c3",
+    "resolvedAddress": "0xC8e56c17930510a2e708a8d4a862fcD83F3743c3",
+    "status": "match",
+    "message": "✅ Address matches passport (paloma.ipecity.eth)"
+  },
+  {
+    "memberId": 14,
+    "farcasterFid": 840619,
+    "ipeUsername": "chris",
+    "ipePassport": "chris.ipecity.eth",
+    "storedAddress": "0xBD1Bff4a4F2DC6f40b7D87120121875ec388A1cf",
+    "resolvedAddress": "0xBD1Bff4a4F2DC6f40b7D87120121875ec388A1cf",
+    "status": "match",
+    "message": "✅ Address matches passport (chris.ipecity.eth)"
+  },
+  {
+    "memberId": 13,
+    "farcasterFid": 2790,
+    "ipeUsername": "peerbase",
+    "ipePassport": "peerbase.ipecity.eth",
+    "storedAddress": "0x39008115BE40c31ab3eBFA786cb617eFde8151C7",
+    "resolvedAddress": "0x39008115BE40c31ab3eBFA786cb617eFde8151C7",
+    "status": "match",
+    "message": "✅ Address matches passport (peerbase.ipecity.eth)"
+  },
+  {
+    "memberId": 12,
+    "farcasterFid": 1109457,
+    "ipeUsername": "mihkel",
+    "ipePassport": "mihkel.ipecity.eth",
+    "storedAddress": "0x065c1BC23aE559BFFDBE5bbc335C30f30bE2b992",
+    "resolvedAddress": "0x065c1BC23aE559BFFDBE5bbc335C30f30bE2b992",
+    "status": "match",
+    "message": "✅ Address matches passport (door.ipecity.eth, mihkel.ipecity.eth)"
+  },
+  {
+    "memberId": 11,
+    "farcasterFid": 518901,
+    "ipeUsername": "ramona",
+    "ipePassport": "ramona.ipecity.eth",
+    "storedAddress": "0x23E11D61Fe6FaC5816B109A2D90bb7c4839C469d",
+    "resolvedAddress": "0x23E11D61Fe6FaC5816B109A2D90bb7c4839C469d",
+    "status": "match",
+    "message": "✅ Address matches passport (ramona.ipecity.eth)"
+  },
+  {
+    "memberId": 10,
+    "farcasterFid": 540115,
+    "ipeUsername": "diogo",
+    "ipePassport": "diogo.ipecity.eth",
+    "storedAddress": "0xE720e1e396d872aA4f33C95d1e59Ec5f9eC0C0d0",
+    "resolvedAddress": "0xE720e1e396d872aA4f33C95d1e59Ec5f9eC0C0d0",
+    "status": "match",
+    "message": "✅ Address matches passport (diogo.ipecity.eth)"
+  },
+  {
+    "memberId": 9,
+    "farcasterFid": 1186484,
+    "ipeUsername": "anna",
+    "ipePassport": "anna.ipecity.eth",
+    "storedAddress": "0x133016D3f4d283978e91408d79eE57D71f816dD8",
+    "resolvedAddress": "0x133016D3f4d283978e91408d79eE57D71f816dD8",
+    "status": "match",
+    "message": "✅ Address matches passport (anna.ipecity.eth)"
+  },
+  {
+    "memberId": 6,
+    "farcasterFid": 193251,
+    "ipeUsername": "ericmiki",
+    "ipePassport": "ericmiki.ipecity.eth",
+    "storedAddress": "0x7f50FBa635c53774AE5a792DE214d84b91cDc4d4",
+    "resolvedAddress": "0x7f50FBa635c53774AE5a792DE214d84b91cDc4d4",
+    "status": "match",
+    "message": "✅ Address matches passport (ericmiki.ipecity.eth)"
+  },
+  {
+    "memberId": 1,
+    "farcasterFid": 1109894,
+    "ipeUsername": null,
+    "ipePassport": "ipecity.eth",
+    "storedAddress": "0x7582Cde92962A71143185A6f8F397F52cC86ECFf",
+    "resolvedAddress": "0x7582Cde92962A71143185A6f8F397F52cC86ECFf",
+    "status": "match",
+    "message": "✅ Address matches passport (docs.ipecity.eth, claim.ipecity.eth, ipecity.eth)"
+  }
+]

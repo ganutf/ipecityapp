@@ -14,6 +14,7 @@
     "admin:list": "tsx server/scripts/list-admins.ts",
     "keys:migrate": "tsx server/scripts/migrate-keys.ts",
     "member:delete": "tsx server/scripts/delete-member.ts",
+    "members:verify-addresses": "tsx server/scripts/verify-member-addresses.ts",
     "attestations:create": "tsx server/scripts/create-attestations.ts",
     "wallet:attestation": "tsx server/scripts/get-attestation-wallet.ts",
     "migrate:pulse-structure": "tsx server/scripts/migrate-pulse-structure.ts",

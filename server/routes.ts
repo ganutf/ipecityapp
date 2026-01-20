@@ -2276,15 +2276,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Calculate totalPoints and pulseStreak if member exists
+      let memberWithStats = member;
+      if (member) {
+        try {
+          const totalPoints = await storage.calculateTotalPoints(member.id);
+          const pulseStreak = await pulseService.calculateMemberStreak(member.id);
+          memberWithStats = {
+            ...member,
+            totalPoints,
+            pulseStreak,
+          };
+          console.log(`Calculated stats for FID ${farcasterFid}: totalPoints=${totalPoints}, pulseStreak=${pulseStreak}`);
+        } catch (statsError) {
+          console.error("Error calculating member stats:", statsError);
+          // Continue without stats if calculation fails
+        }
+      }
+
       const response = {
         isMember: !!member,
         status: (member as any)?.status || "pending_signer",
-        member: member || null,
+        member: memberWithStats || null,
       };
-      
+
       console.log(`Final response for FID ${farcasterFid}:`, response);
       console.log(`=== MEMBER CHECK DEBUG END ===`);
-      
+
       res.json(response);
     } catch (err: any) {
       console.error("Check member error:", err);

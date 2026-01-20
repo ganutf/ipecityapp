@@ -26,8 +26,8 @@ const fakeUsers: FakeUser[] = [
   {
     farcasterFid: 900001,
     email: 'alice.perfect@test.dev',
-    ipeUsername: 'alice_perfect',
-    ipePassport: 'alice.perfect.ipe.city',
+    ipeUsername: 'alice',
+    ipePassport: 'alice.ipecity.eth',
     bio: 'Perfect user who never misses a pulse - testing high streaks',
     twitter: 'alice_perfect',
     profileTags: ['developer', 'web3', 'consistent'],
@@ -36,8 +36,8 @@ const fakeUsers: FakeUser[] = [
   {
     farcasterFid: 900002,
     email: 'bob.recent@test.dev',
-    ipeUsername: 'bob_recent',
-    ipePassport: 'bob.recent.ipe.city',
+    ipeUsername: 'bob',
+    ipePassport: 'bob.ipecity.eth',
     bio: 'Recently active user - good recent streak but missed some old ones',
     twitter: 'bob_recent',
     profileTags: ['designer', 'farcaster', 'active'],
@@ -46,8 +46,8 @@ const fakeUsers: FakeUser[] = [
   {
     farcasterFid: 900003,
     email: 'charlie.inconsistent@test.dev',
-    ipeUsername: 'charlie_inconsistent',
-    ipePassport: 'charlie.inconsistent.ipe.city',
+    ipeUsername: 'charlie',
+    ipePassport: 'charlie.ipecity.eth',
     bio: 'Inconsistent user - sometimes participates, sometimes doesn\'t',
     profileTags: ['artist', 'casual', 'creative'],
     executionPattern: 'inconsistent'
@@ -55,8 +55,8 @@ const fakeUsers: FakeUser[] = [
   {
     farcasterFid: 900004,
     email: 'diana.newbie@test.dev',
-    ipeUsername: 'diana_newbie',
-    ipePassport: 'diana.newbie.ipe.city',
+    ipeUsername: 'diana',
+    ipePassport: 'diana.ipecity.eth',
     bio: 'New user who just joined - testing new user experience',
     twitter: 'diana_newbie',
     profileTags: ['newcomer', 'learning', 'excited'],
@@ -65,8 +65,8 @@ const fakeUsers: FakeUser[] = [
   {
     farcasterFid: 900005,
     email: 'eve.returning@test.dev',
-    ipeUsername: 'eve_returning',
-    ipePassport: 'eve.returning.ipe.city',
+    ipeUsername: 'eve',
+    ipePassport: 'eve.ipecity.eth',
     bio: 'Returning user - was inactive but came back recently',
     profileTags: ['entrepreneur', 'busy', 'comeback'],
     executionPattern: 'returning_user'
@@ -74,8 +74,8 @@ const fakeUsers: FakeUser[] = [
   {
     farcasterFid: 900006,
     email: 'frank.weekend@test.dev',
-    ipeUsername: 'frank_weekend',
-    ipePassport: 'frank.weekend.ipe.city',
+    ipeUsername: 'frank',
+    ipePassport: 'frank.ipecity.eth',
     bio: 'Weekend warrior - participates in bursts but not consistently',
     twitter: 'frank_weekend',
     profileTags: ['weekend', 'builder', 'burst'],
@@ -84,8 +84,8 @@ const fakeUsers: FakeUser[] = [
   {
     farcasterFid: 900007,
     email: 'grace.random@test.dev',
-    ipeUsername: 'grace_random',
-    ipePassport: 'grace.random.ipe.city',
+    ipeUsername: 'grace',
+    ipePassport: 'grace.ipecity.eth',
     bio: 'Completely random participation - good for edge case testing',
     profileTags: ['random', 'unpredictable', 'tester'],
     executionPattern: 'random'
@@ -93,8 +93,8 @@ const fakeUsers: FakeUser[] = [
   {
     farcasterFid: 900008,
     email: 'henry.active@test.dev',
-    ipeUsername: 'henry_active',
-    ipePassport: 'henry.active.ipe.city',
+    ipeUsername: 'henry',
+    ipePassport: 'henry.ipecity.eth',
     bio: 'Currently active user - has been executing recent pulses but missed earlier ones',
     twitter: 'henry_active',
     profileTags: ['developer', 'active', 'recent'],

@@ -171,6 +171,7 @@ export default function MemberDetails() {
               walletAddress={member.walletAddress}
               showWalletActions={false}
               pfpUrl={member.pfpUrl}
+              createdAt={member.createdAt}
             />
           </CardContent>
         </ProfileCard>
@@ -180,6 +181,7 @@ export default function MemberDetails() {
           totalPoints={member.totalPoints}
           pulseStreak={member.pulseStreak}
           createdAt={member.createdAt}
+          walletAddress={member.walletAddress}
         />
 
         {/* About Section */}

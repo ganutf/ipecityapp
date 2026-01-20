@@ -18,7 +18,12 @@ const logger = winston.createLogger({
         winston.format.colorize(),
         winston.format.simple(),
         winston.format.printf(({ timestamp, level, message, ...meta }) => {
-          return `${timestamp} [${level}]: ${message} ${Object.keys(meta).length ? JSON.stringify(meta, null, 2) : ''}`;
+          // Custom JSON stringify that handles BigInt
+          const metaString = Object.keys(meta).length
+            ? JSON.stringify(meta, (key, value) =>
+                typeof value === 'bigint' ? value.toString() : value, 2)
+            : '';
+          return `${timestamp} [${level}]: ${message} ${metaString}`;
         })
       )
     }),

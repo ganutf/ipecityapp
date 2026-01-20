@@ -273,7 +273,7 @@ app.use((req, res, next) => {
       port,
       host: "0.0.0.0",
       reusePort: true,
-    }, () => {
+    }, async () => {
       const totalStartupTime = Date.now() - startTime;
       logger.info(`Server successfully started on port ${port}`, {
         startupTime: `${totalStartupTime}ms`,
@@ -281,11 +281,31 @@ app.use((req, res, next) => {
         useDirectEnvVars: shouldUseDirectEnvironmentVariables()
       });
       logger.info(`Health check available at http://0.0.0.0:${port}/health`);
+
+      // Start balance updater background job
+      try {
+        const { startBalanceUpdater } = await import('./jobs/balanceUpdater');
+        await startBalanceUpdater();
+        logger.info('Balance updater background job started successfully');
+      } catch (error) {
+        logger.error('Failed to start balance updater:', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
     });
 
     // Graceful shutdown handling
-    const gracefulShutdown = (signal: string) => {
+    const gracefulShutdown = async (signal: string) => {
       enhancedLog(`Received ${signal}, initiating graceful shutdown...`);
+
+      // Stop background jobs
+      try {
+        const { stopBalanceUpdater } = await import('./jobs/balanceUpdater');
+        stopBalanceUpdater();
+        enhancedLog('Background jobs stopped');
+      } catch (error) {
+        enhancedLog(`Error stopping background jobs: ${error}`, 'error');
+      }
 
       serverInstance.close(() => {
         enhancedLog('HTTP server closed');

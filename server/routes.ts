@@ -1754,18 +1754,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Community endpoints
-  app.get("/api/community/members", 
+  app.get("/api/community/members",
     authenticateUser,
     auditLogger("GET_COMMUNITY_MEMBERS"),
     async (req: AuthenticatedRequest, res) => {
     try {
       console.log("=== GET_COMMUNITY_MEMBERS DEBUG START ===");
       console.log("Authenticated user FID:", req.user?.fid);
-      
+
       const members = await storage.getActiveMembersWithStats(pulseService);
       console.log("Retrieved members count:", members.length);
       console.log("Sample member data:", members[0] ? JSON.stringify(members[0], null, 2) : "No members found");
-      
+
+      // Fetch cached IPE balances for all members
+      let balanceMap: { [address: string]: any } = {};
+      const addresses = members
+        .map(m => m.walletAddress)
+        .filter((addr): addr is string => Boolean(addr));
+
+      if (addresses.length > 0) {
+        try {
+          const { getCachedBalances } = await import('./services/balanceCache');
+          balanceMap = await getCachedBalances(addresses);
+          console.log("Fetched cached balances for", Object.keys(balanceMap).length, "addresses");
+        } catch (balanceError) {
+          console.warn("Failed to fetch cached balances:", balanceError);
+          // Continue without balance data
+        }
+      }
+
       // Fetch Farcaster profile data for all members
       let membersWithProfiles = members;
       if (members.length > 0) {
@@ -1787,30 +1804,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             });
             
-            // Merge profile data with member data
+            // Merge profile data and balance data with member data
             membersWithProfiles = members.map(member => {
               const profile = profileMap.get(member.farcasterFid);
+              const address = member.walletAddress?.toLowerCase();
+              const balanceData = address ? balanceMap[address] : null;
+
               return {
                 ...member,
                 displayName: profile?.displayName,
                 username: profile?.username,
                 pfpUrl: profile?.pfpUrl,
                 farcasterBio: profile?.bio,
+                ipeBalance: balanceData?.balance || '0',
+                ipeBalanceRaw: balanceData?.balanceRaw || '0',
               };
             });
-            
+
             console.log("Enhanced members with profile data, sample:", JSON.stringify(membersWithProfiles[0], null, 2));
           }
         } catch (profileError) {
           console.warn("Failed to fetch Farcaster profiles:", profileError);
-          // Continue with members without profile data
+          // Continue with members without profile data, but still add balance data
+          membersWithProfiles = members.map(member => {
+            const address = member.walletAddress?.toLowerCase();
+            const balanceData = address ? balanceMap[address] : null;
+
+            return {
+              ...member,
+              ipeBalance: balanceData?.balance || '0',
+              ipeBalanceRaw: balanceData?.balanceRaw || '0',
+            };
+          });
         }
+      } else {
+        // No members, but ensure consistent response structure
+        membersWithProfiles = members.map(member => ({
+          ...member,
+          ipeBalance: '0',
+          ipeBalanceRaw: '0',
+        }));
       }
-      
+
       const response = { members: membersWithProfiles };
       console.log("Sending response with", response.members.length, "members");
       console.log("=== GET_COMMUNITY_MEMBERS DEBUG END ===");
-      
+
       res.json(response);
     } catch (err: any) {
       console.error("Get community members error:", err);

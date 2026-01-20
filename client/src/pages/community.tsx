@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
-import { MemberCard } from "@/components/profile/MemberCard";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Search, Trophy, TrendingUp, Target, SortAsc, SortDesc } from "lucide-react";
+import { Users, Search, Trophy, Target, SortAsc, SortDesc, Coins, Shield, CheckCircle, Crown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useMemo } from "react";
+import { Link } from "wouter";
 
 interface CommunityMember {
   id: number;
@@ -16,47 +16,190 @@ interface CommunityMember {
   totalPoints: number;
   pulseStreak: number;
   createdAt: string;
-  // Add any additional fields from the member model that we might need
+  walletAddress?: string;
+  displayName?: string;
+  username?: string;
+  pfpUrl?: string;
+  rank?: number;
+  ipeBalance?: string; // Formatted balance from server (e.g., "1,234.56")
+  ipeBalanceRaw?: string; // Raw balance for sorting
 }
 
-type SortOption = 'points' | 'streak' | 'name';
+type SortOption = 'ipe' | 'points' | 'streak' | 'name';
 type SortDirection = 'asc' | 'desc';
+
+// Member type configuration for role display
+const MEMBER_TYPE_CONFIG = {
+  admin: {
+    label: "Admin",
+    icon: Shield,
+    color: "bg-purple-500 text-white",
+  },
+  founder: {
+    label: "Founder",
+    icon: Crown,
+    color: "bg-amber-500 text-white",
+  },
+  member: {
+    label: "Member",
+    icon: CheckCircle,
+    color: "bg-slate-500 text-white",
+  },
+} as const;
+
+// MemberRow component for table display
+function MemberRow({
+  member,
+  showRank
+}: {
+  member: CommunityMember;
+  showRank: boolean;
+}) {
+  const memberTypeConfig = MEMBER_TYPE_CONFIG[member.memberType as keyof typeof MEMBER_TYPE_CONFIG] || MEMBER_TYPE_CONFIG.member;
+  const MemberIcon = memberTypeConfig.icon;
+
+  // Rank badge styling
+  const getRankBadge = (rank?: number) => {
+    if (!rank) return null;
+
+    if (rank === 1) {
+      return (
+        <Badge className="px-3 py-1.5 text-sm font-semibold rounded-full bg-amber-500 text-white">
+          #1
+        </Badge>
+      );
+    } else if (rank === 2) {
+      return (
+        <Badge className="px-3 py-1.5 text-sm font-semibold rounded-full bg-gray-400 text-white">
+          #2
+        </Badge>
+      );
+    } else if (rank === 3) {
+      return (
+        <Badge className="px-3 py-1.5 text-sm font-semibold rounded-full bg-orange-600 text-white">
+          #3
+        </Badge>
+      );
+    } else {
+      return (
+        <span className="text-sm font-semibold text-gray-600">
+          #{rank}
+        </span>
+      );
+    }
+  };
+
+  return (
+    <tr className="border-b border-gray-200 hover:bg-slate-50 transition-colors cursor-pointer">
+      <Link href={`/members/${member.farcasterFid}`} className="contents">
+        {showRank && (
+          <td className="px-4 py-4 text-center align-middle">
+            {getRankBadge(member.rank)}
+          </td>
+        )}
+        <td className="px-4 py-4 align-middle">
+          <div className="flex items-center space-x-3">
+            <img
+              src={member.pfpUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.farcasterFid}`}
+              alt={member.displayName || member.username || `User ${member.farcasterFid}`}
+              className="w-12 h-12 rounded-full object-cover"
+            />
+            <div>
+              <div className="font-semibold text-gray-900">
+                {member.displayName || member.username || `User ${member.farcasterFid}`}
+              </div>
+              <div className="text-sm text-gray-600">
+                FID: {member.farcasterFid}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td className="px-4 py-4 align-middle">
+          <div className="flex items-center space-x-1.5">
+            <div className={`h-6 w-6 rounded-full flex items-center justify-center ${memberTypeConfig.color}`}>
+              <MemberIcon className="h-3 w-3" />
+            </div>
+            <span className="text-xs text-gray-600">{memberTypeConfig.label}</span>
+          </div>
+        </td>
+        <td className="px-4 py-4 align-middle">
+          {member.ipePassport ? (
+            <span className="text-sm font-medium text-lime-600">
+              {member.ipePassport}
+            </span>
+          ) : (
+            <span className="text-sm text-gray-400">
+              No passport
+            </span>
+          )}
+        </td>
+        <td className="px-4 py-4 align-middle">
+          {member.ipeBalance && member.ipeBalance !== '0' ? (
+            <span className="text-sm font-semibold text-gray-900">
+              {member.ipeBalance}
+            </span>
+          ) : member.walletAddress ? (
+            <span className="text-sm text-gray-400">0</span>
+          ) : (
+            <span className="text-sm text-gray-400">No wallet</span>
+          )}
+        </td>
+        <td className="px-4 py-4 align-middle">
+          <div className="flex items-center space-x-2">
+            <Trophy className="h-4 w-4 text-lime-500" />
+            <span className="text-sm font-semibold text-gray-900">
+              {member.totalPoints}
+            </span>
+          </div>
+        </td>
+        <td className="px-4 py-4 align-middle">
+          <div className="flex items-center space-x-2">
+            <Target className="h-4 w-4 text-sky-500" />
+            <span className="text-sm font-semibold text-gray-900">
+              {member.pulseStreak}
+            </span>
+          </div>
+        </td>
+      </Link>
+    </tr>
+  );
+}
 
 export default function Community() {
   const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>('points');
+  const [sortBy, setSortBy] = useState<SortOption>('ipe');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   // Fetch community members
-  const { data: membersData, isLoading: membersLoading, error } = useQuery<{ members: Array<CommunityMember & any> }>({
+  const { data: membersData, isLoading: membersLoading, error } = useQuery<{ members: CommunityMember[] }>({
     queryKey: ["/api/community/members"],
     queryFn: async () => {
       console.log("=== FRONTEND COMMUNITY QUERY DEBUG START ===");
       console.log("Making request to /api/community/members");
       console.log("Profile FID:", profile?.fid);
       console.log("Is authenticated:", isAuthenticated);
-      
+
       const response = await fetch("/api/community/members", {
         headers: {
           "x-farcaster-fid": profile?.fid?.toString() || "",
         },
       });
-      
+
       console.log("Response status:", response.status);
       console.log("Response headers:", Object.fromEntries(response.headers.entries()));
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Response error text:", errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
-      
+
       const data = await response.json();
       console.log("Response data:", data);
       console.log("Members count:", data?.members?.length || 0);
       console.log("=== FRONTEND COMMUNITY QUERY DEBUG END ===");
-      
+
       return data;
     },
     enabled: Boolean(isAuthenticated && profile?.fid),
@@ -73,7 +216,7 @@ export default function Community() {
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      members = members.filter((member: CommunityMember & any) => {
+      members = members.filter((member: CommunityMember) => {
         const searchableText = [
           member.displayName,
           member.username,
@@ -90,21 +233,50 @@ export default function Community() {
 
     // First, calculate fixed ranks based on performance (separate from display sorting)
     let membersWithRanks = members;
-    if (sortBy === 'points' || sortBy === 'streak') {
+    if (sortBy === 'ipe' || sortBy === 'points' || sortBy === 'streak') {
       console.log("=== RANKING DEBUG START ===");
-      console.log("Raw members data:", members.map(m => ({ 
-        fid: m.farcasterFid, 
-        points: m.totalPoints, 
-        streak: m.pulseStreak, 
+      console.log("Raw members data:", members.map(m => ({
+        fid: m.farcasterFid,
+        points: m.totalPoints,
+        streak: m.pulseStreak,
         createdAt: m.createdAt,
-        name: m.displayName || m.username 
+        name: m.displayName || m.username
       })));
-      
+
       // Create a performance-sorted array to determine ranks
       const performanceSorted = [...members].sort((a, b) => {
         let comparison = 0;
-        
-        if (sortBy === 'points') {
+
+        if (sortBy === 'ipe') {
+          // Sort by IPE balance (highest first) using raw balance from API
+          const balanceA = BigInt(a.ipeBalanceRaw || '0');
+          const balanceB = BigInt(b.ipeBalanceRaw || '0');
+
+          if (balanceA > balanceB) {
+            comparison = -1;
+          } else if (balanceA < balanceB) {
+            comparison = 1;
+          }
+
+          // Tiebreaker 1: points
+          if (comparison === 0) {
+            comparison = b.totalPoints - a.totalPoints;
+          }
+          // Tiebreaker 2: streak
+          if (comparison === 0) {
+            comparison = b.pulseStreak - a.pulseStreak;
+          }
+          // Tiebreaker 3: registration date
+          if (comparison === 0) {
+            if (a.createdAt && b.createdAt) {
+              const dateA = new Date(a.createdAt).getTime();
+              const dateB = new Date(b.createdAt).getTime();
+              comparison = dateA - dateB;
+            } else {
+              comparison = a.farcasterFid - b.farcasterFid;
+            }
+          }
+        } else if (sortBy === 'points') {
           // Always sort by highest points first for ranking
           comparison = b.totalPoints - a.totalPoints;
           if (comparison === 0) {
@@ -139,17 +311,17 @@ export default function Community() {
             }
           }
         }
-        
+
         return comparison;
       });
 
-      console.log("Performance sorted order:", performanceSorted.map((m, idx) => ({ 
+      console.log("Performance sorted order:", performanceSorted.map((m, idx) => ({
         rank: idx + 1,
-        fid: m.farcasterFid, 
-        points: m.totalPoints, 
-        streak: m.pulseStreak, 
+        fid: m.farcasterFid,
+        points: m.totalPoints,
+        streak: m.pulseStreak,
         createdAt: m.createdAt,
-        name: m.displayName || m.username 
+        name: m.displayName || m.username
       })));
 
       // Assign fixed ranks based on performance position (highest performance = #1)
@@ -162,7 +334,7 @@ export default function Community() {
           rank
         };
       });
-      
+
       console.log("=== RANKING DEBUG END ===");
     } else {
       // For name sorting, don't show ranks
@@ -174,27 +346,27 @@ export default function Community() {
 
     // Then, sort the display order (keeping the fixed ranks intact)
     // For performance metrics, sort by rank to maintain consistency
-    if (sortBy === 'points' || sortBy === 'streak') {
+    if (sortBy === 'ipe' || sortBy === 'points' || sortBy === 'streak') {
       console.log("=== DISPLAY SORTING DEBUG START ===");
-      console.log("Before display sort - Members with ranks:", membersWithRanks.map(m => ({ 
+      console.log("Before display sort - Members with ranks:", membersWithRanks.map(m => ({
         name: m.displayName || m.username,
         rank: m.rank,
         points: m.totalPoints,
         streak: m.pulseStreak
       })));
-      
+
       // For performance-based sorting, use rank order to maintain consistency
       membersWithRanks.sort((a, b) => {
         const rankComparison = (a.rank || 999) - (b.rank || 999);
-        // DESC: show #1, #2, #3 (best first) - normal rank order
-        // ASC: show #3, #2, #1 (worst first) - reverse rank order  
-        return sortDirection === 'desc' ? rankComparison : -rankComparison;
+        // ASC: show #1, #2, #3 (best first) - normal rank order
+        // DESC: show worst first - reverse rank order
+        return sortDirection === 'asc' ? rankComparison : -rankComparison;
       });
     } else {
       // For name sorting, use normal alphabetical sorting
       membersWithRanks.sort((a, b) => {
         let comparison = 0;
-        
+
         // Primary: sort by name
         const nameA = (a.displayName || a.username || '').toLowerCase();
         const nameB = (b.displayName || b.username || '').toLowerCase();
@@ -219,7 +391,7 @@ export default function Community() {
       });
     }
 
-    console.log(`After display sort (${sortDirection}) - Final order:`, membersWithRanks.map(m => ({ 
+    console.log(`After display sort (${sortDirection}) - Final order:`, membersWithRanks.map(m => ({
       name: m.displayName || m.username,
       rank: m.rank,
       points: m.totalPoints,
@@ -346,6 +518,14 @@ export default function Community() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <Button
+                  variant={sortBy === 'ipe' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSortBy('ipe')}
+                >
+                  <Coins className="h-4 w-4 mr-2" />
+                  $IPE
+                </Button>
+                <Button
                   variant={sortBy === 'points' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSortBy('points')}
@@ -372,9 +552,9 @@ export default function Community() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSortDirection(prev => prev === 'desc' ? 'asc' : 'desc')}
+                onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
               >
-                {sortDirection === 'desc' ? (
+                {sortDirection === 'asc' ? (
                   <SortDesc className="h-4 w-4" />
                 ) : (
                   <SortAsc className="h-4 w-4" />
@@ -393,24 +573,48 @@ export default function Community() {
             </CardContent>
           </Card>
         ) : sortedAndFilteredMembers.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {sortedAndFilteredMembers.map((member: CommunityMember & any) => (
-                <MemberCard
-                  key={member.farcasterFid}
-                  id={member.id}
-                  farcasterFid={member.farcasterFid}
-                  displayName={member.displayName}
-                  username={member.username}
-                  memberType={member.memberType}
-                  ipePassport={member.ipePassport}
-                  totalPoints={member.totalPoints}
-                  pulseStreak={member.pulseStreak}
-                  pfpUrl={member.pfpUrl}
-                  rank={member.rank}
-                  showRank={sortBy === 'points' || sortBy === 'streak'}
-                />
-              ))}
+          <Card className="bg-white shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-gray-200">
+                  <tr>
+                    {(sortBy === 'ipe' || sortBy === 'points' || sortBy === 'streak') && (
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900">
+                        Rank
+                      </th>
+                    )}
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Member
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Role
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Passport
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      $IPE
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Points
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">
+                      Streak
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedAndFilteredMembers.map((member: CommunityMember) => (
+                    <MemberRow
+                      key={member.farcasterFid}
+                      member={member}
+                      showRank={sortBy === 'ipe' || sortBy === 'points' || sortBy === 'streak'}
+                    />
+                  ))}
+                </tbody>
+              </table>
             </div>
+          </Card>
         ) : (
           <Card className="bg-white shadow-sm">
             <CardContent className="text-center py-16 px-8">

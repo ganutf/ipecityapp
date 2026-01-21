@@ -48,6 +48,7 @@ interface MemberData {
   approved: boolean;
   status?: string;
   member?: {
+    id?: number;
     name?: string;
     email?: string;
     emailVerified?: boolean;
@@ -287,6 +288,7 @@ export default function Profile2() {
               displayName={profile?.displayName}
               username={profile?.username}
               fid={profile?.fid}
+              memberId={memberData?.member?.id}
               memberType={memberData?.member?.memberType}
               ipePassport={memberData?.member?.ipePassport}
               passportVerified={memberData?.member?.passportVerified}

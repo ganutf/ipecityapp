@@ -82,7 +82,7 @@ function Router() {
           <Route path="/admin" component={AdminPage} />
           <Route path="/pulse/:id" component={PulseDetailPage} />
           <Route path="/profile" component={ProfilePage} />
-          <Route path="/member/:fid" component={MemberDetailsPage} />
+          <Route path="/member/:id" component={MemberDetailsPage} />
           <Route path="/signer-approval" component={SignerApprovalPage} />
 
           <Route path="/id-verification" component={IdVerificationPage} />

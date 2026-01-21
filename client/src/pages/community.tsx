@@ -91,7 +91,7 @@ function MemberRow({
 
   return (
     <tr className="border-b border-gray-200 hover:bg-slate-50 transition-colors cursor-pointer">
-      <Link href={`/members/${member.farcasterFid}`} className="contents">
+      <Link href={`/member/${member.id}`} className="contents">
         {showRank && (
           <td className="px-4 py-4 text-center align-middle">
             {getRankBadge(member.rank)}
@@ -109,7 +109,7 @@ function MemberRow({
                 {member.displayName || member.username || `User ${member.farcasterFid}`}
               </div>
               <div className="text-sm text-gray-600">
-                FID: {member.farcasterFid}
+                Member ID: {member.id}
               </div>
             </div>
           </div>

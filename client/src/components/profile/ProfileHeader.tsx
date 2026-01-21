@@ -27,6 +27,7 @@ interface ProfileHeaderProps {
   displayName?: string;
   username?: string;
   fid?: number;
+  memberId?: number;
   memberType?: string;
   ipePassport?: string;
   passportVerified?: boolean;
@@ -88,6 +89,7 @@ export function ProfileHeader({
   displayName,
   username,
   fid,
+  memberId,
   memberType = 'pending',
   ipePassport,
   passportVerified,
@@ -132,7 +134,7 @@ export function ProfileHeader({
             {displayName || username}
           </h1>
           <p className="text-xs md:text-sm text-gray-500">
-            ID: {fid}{memberSince && <span className="text-gray-400"> • Member since {memberSince}</span>}
+            Member ID: {memberId}{memberSince && <span className="text-gray-400"> • Member since {memberSince}</span>}
           </p>
           <div className="flex items-center space-x-2 mt-2">
             {memberTypeInfo && (

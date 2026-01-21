@@ -36,40 +36,40 @@ interface MemberDetailsData {
 }
 
 export default function MemberDetails() {
-  const { fid } = useParams();
+  const { id } = useParams();
   const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
 
   // Fetch member details
   const { data: memberData, isLoading, error } = useQuery<MemberDetailsData>({
-    queryKey: [`/api/community/members/${fid}`],
+    queryKey: [`/api/community/members/${id}`],
     queryFn: async () => {
       console.log("=== FRONTEND MEMBER DETAILS QUERY DEBUG START ===");
-      console.log("Fetching member details for FID:", fid);
+      console.log("Fetching member details for member ID:", id);
       console.log("Profile FID:", profile?.fid);
       console.log("Is authenticated:", isAuthenticated);
-      
-      const response = await fetch(`/api/community/members/${fid}`, {
+
+      const response = await fetch(`/api/community/members/${id}`, {
         headers: {
           "x-farcaster-fid": profile?.fid?.toString() || "",
         },
       });
-      
+
       console.log("Response status:", response.status);
       console.log("Response headers:", Object.fromEntries(response.headers.entries()));
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Response error text:", errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
-      
+
       const data = await response.json();
       console.log("Member details response data:", data);
       console.log("=== FRONTEND MEMBER DETAILS QUERY DEBUG END ===");
-      
+
       return data;
     },
-    enabled: Boolean(isAuthenticated && fid && profile?.fid),
+    enabled: Boolean(isAuthenticated && id && profile?.fid),
     retry: 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

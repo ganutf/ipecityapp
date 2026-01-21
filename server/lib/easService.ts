@@ -1,7 +1,6 @@
 import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 import { ethers } from "ethers";
 import { config } from 'dotenv';
-import { getSecureEnvironmentVariable } from './keyManagement';
 import logger, { logUtils } from '../logger';
 import { getServerChainConfig } from '@shared/chainConfig';
 
@@ -42,19 +41,19 @@ class EASService {
 
     // Get chain configuration (consistent RPC URL and chain ID)
     const chainConfig = getServerChainConfig();
-    const baseRpcUrl = process.env.BASE_RPC_URL || chainConfig.rpcUrl;
+    const baseRpcUrl = process.env.EAS_RPC_URL || chainConfig.rpcUrl;
 
     // Configure network with explicit chain ID (always consistent with RPC URL)
-    const network = { 
-      name: chainConfig.name, 
-      chainId: chainConfig.chainId, 
-      ensAddress: undefined 
+    const network = {
+      name: chainConfig.name,
+      chainId: chainConfig.chainId,
+      ensAddress: undefined
     };
-    const mnemonic = await getSecureEnvironmentVariable('eas_attestation_mnemonic', 'EAS_ATTESTATION_MNEMONIC');
+    const mnemonic = process.env.EAS_ATTESTATION_MNEMONIC;
 
     if (!mnemonic) {
       logger.error('EAS Service initialization failed: Missing attestation mnemonic');
-      throw new Error("EAS_ATTESTATION_MNEMONIC is not available in secure storage or environment variables");
+      throw new Error("EAS_ATTESTATION_MNEMONIC must be set in environment variables");
     }
 
     // Initialize provider and signer with explicit network configuration

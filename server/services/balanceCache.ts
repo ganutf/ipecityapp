@@ -2,6 +2,22 @@ import NodeCache from 'node-cache';
 import { ethers, Contract } from 'ethers';
 import logger from '../logger';
 
+/**
+ * Balance Cache Service for IPE Token on Base Network
+ *
+ * IMPORTANT: For production, set BASE_MAINNET_RPC_URL environment variable to use a dedicated RPC provider.
+ * Public RPC endpoints are rate-limited and not suitable for production use.
+ *
+ * Recommended providers:
+ * - Coinbase Developer Platform (CDP): https://portal.cdp.coinbase.com/ (FREE)
+ * - Alchemy: https://www.alchemy.com/ (FREE tier available)
+ *
+ * Example environment variable:
+ * BASE_MAINNET_RPC_URL=https://base-mainnet.g.alchemy.com/v2/YOUR-API-KEY
+ * or
+ * BASE_MAINNET_RPC_URL=https://api.developer.coinbase.com/rpc/v1/base/YOUR-API-KEY
+ */
+
 // Constants
 const IPE_TOKEN_ADDRESS = '0x5d48b042d4c479a5A9c25410fe0D66b742DC47dE';
 const BASE_CHAIN_ID = 8453;
@@ -21,12 +37,74 @@ const cache = new NodeCache({
   useClones: false, // Better performance, we don't mutate cached objects
 });
 
-// Initialize provider for Base network
-// Using public RPC - can upgrade to Alchemy/Infura later if needed
-const provider = new ethers.JsonRpcProvider('https://mainnet.base.org');
+// Multiple RPC endpoints for fallback
+// If BASE_MAINNET_RPC_URL env var is set (e.g., Alchemy, CDP), use it as primary
+// Otherwise fall back to public endpoints
+const RPC_ENDPOINTS = process.env.BASE_MAINNET_RPC_URL
+  ? [
+      process.env.BASE_MAINNET_RPC_URL, // Primary: Your configured RPC (Alchemy, CDP, etc.)
+      'https://mainnet.base.org',
+      'https://base.llamarpc.com',
+      'https://base-rpc.publicnode.com',
+      'https://base.gateway.tenderly.co',
+    ]
+  : [
+      'https://mainnet.base.org',
+      'https://base.llamarpc.com',
+      'https://base-rpc.publicnode.com',
+      'https://base.gateway.tenderly.co',
+    ];
 
-// Token contract instance
-const tokenContract = new Contract(IPE_TOKEN_ADDRESS, ERC20_ABI, provider);
+let currentRpcIndex = 0;
+
+// Initialize provider with fallback support
+function createProvider(): ethers.JsonRpcProvider {
+  const rpcUrl = RPC_ENDPOINTS[currentRpcIndex];
+  const isCustomRpc = currentRpcIndex === 0 && process.env.BASE_MAINNET_RPC_URL;
+
+  logger.info('Creating provider', {
+    service: 'balanceCache',
+    rpcUrl: isCustomRpc ? 'Custom RPC (from BASE_MAINNET_RPC_URL env)' : rpcUrl,
+    index: currentRpcIndex,
+    type: isCustomRpc ? 'production' : 'public',
+  });
+
+  return new ethers.JsonRpcProvider(rpcUrl, BASE_CHAIN_ID, {
+    staticNetwork: true, // Optimization for faster calls
+  });
+}
+
+let provider = createProvider();
+let tokenContract = new Contract(IPE_TOKEN_ADDRESS, ERC20_ABI, provider);
+
+// Log RPC configuration on module load
+if (process.env.BASE_MAINNET_RPC_URL) {
+  logger.info('Balance cache using custom RPC endpoint from BASE_MAINNET_RPC_URL', {
+    service: 'balanceCache',
+    fallbackCount: RPC_ENDPOINTS.length - 1,
+  });
+} else {
+  logger.warn('Balance cache using public RPC endpoints (not recommended for production)', {
+    service: 'balanceCache',
+    recommendation: 'Set BASE_MAINNET_RPC_URL environment variable for production use',
+    endpoints: RPC_ENDPOINTS,
+  });
+}
+
+// Switch to next RPC endpoint on failure
+function switchRpcEndpoint() {
+  currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
+  logger.warn('Switching RPC endpoint', {
+    service: 'balanceCache',
+    newRpcUrl: RPC_ENDPOINTS[currentRpcIndex],
+    index: currentRpcIndex,
+  });
+  provider = createProvider();
+  tokenContract = new Contract(IPE_TOKEN_ADDRESS, ERC20_ABI, provider);
+}
+
+// Delay helper for rate limiting
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Balance data structure
 export interface BalanceData {
@@ -58,33 +136,93 @@ export async function fetchBulkBalances(addresses: string[]): Promise<BalanceMap
 
     const startTime = Date.now();
 
-    // Get decimals (only need to fetch once)
-    const decimals = await tokenContract.decimals();
-    logger.debug('Token decimals fetched', {
-      service: 'balanceCache',
-      decimals,
-    });
-
-    // Fetch balances sequentially to avoid RPC rate limits
-    // Public RPC endpoints have strict batch limits (max 10 calls)
-    const results: Array<{ address: string; balance: bigint; error: any }> = [];
-
-    for (const address of addresses) {
+    // Get decimals (only need to fetch once) with retry logic
+    let decimals: number;
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const balance = await tokenContract.balanceOf(address);
-        results.push({ address, balance, error: null });
-        logger.debug('Fetched balance for address', {
+        decimals = await tokenContract.decimals();
+        logger.debug('Token decimals fetched', {
           service: 'balanceCache',
-          address,
-          balance: balance.toString(),
+          decimals,
+          attempt,
         });
+        break;
       } catch (error) {
-        logger.error('Failed to fetch balance for address', {
+        logger.warn('Failed to fetch token decimals', {
           service: 'balanceCache',
-          address,
+          attempt,
           error: error instanceof Error ? error.message : String(error),
         });
-        results.push({ address, balance: BigInt(0), error });
+
+        if (attempt === 3) {
+          throw new Error('Failed to fetch token decimals after 3 attempts');
+        }
+
+        if (attempt < 3) {
+          switchRpcEndpoint();
+          await delay(1000);
+        }
+      }
+    }
+
+    // Fetch balances sequentially with retry logic and delays
+    // Public RPC endpoints have strict rate limits
+    const results: Array<{ address: string; balance: bigint; error: any }> = [];
+    let consecutiveFailures = 0;
+
+    for (let i = 0; i < addresses.length; i++) {
+      const address = addresses[i];
+      let balance: bigint | null = null;
+      let lastError: any = null;
+
+      // Retry up to 3 times with exponential backoff
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          balance = await tokenContract.balanceOf(address);
+          consecutiveFailures = 0; // Reset on success
+          logger.debug('Fetched balance for address', {
+            service: 'balanceCache',
+            address,
+            balance: balance.toString(),
+            attempt,
+          });
+          break; // Success, exit retry loop
+        } catch (error) {
+          lastError = error;
+          consecutiveFailures++;
+
+          logger.warn('Failed to fetch balance (will retry)', {
+            service: 'balanceCache',
+            address,
+            attempt,
+            error: error instanceof Error ? error.message : String(error),
+          });
+
+          // If we've had many consecutive failures, switch RPC endpoint
+          if (consecutiveFailures >= 3 && attempt < 3) {
+            switchRpcEndpoint();
+            await delay(1000); // Wait 1s after switching
+          } else if (attempt < 3) {
+            // Exponential backoff: 500ms, 1000ms
+            await delay(500 * attempt);
+          }
+        }
+      }
+
+      if (balance !== null) {
+        results.push({ address, balance, error: null });
+      } else {
+        logger.error('Failed to fetch balance after retries', {
+          service: 'balanceCache',
+          address,
+          error: lastError instanceof Error ? lastError.message : String(lastError),
+        });
+        results.push({ address, balance: BigInt(0), error: lastError });
+      }
+
+      // Add delay between requests to avoid rate limiting (100ms)
+      if (i < addresses.length - 1) {
+        await delay(100);
       }
     }
 

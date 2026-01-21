@@ -48,12 +48,11 @@ import { hexToBytes, bytesToHex } from "viem";
 import { randomBytes } from "crypto";
 import { SiweMessage } from "siwe";
 import { lookupEnsName } from "./lib/ensLookup";
-import { 
-  verifyWalletSignature, 
+import {
+  verifyWalletSignature,
   logSignatureVerification,
-  generateChallengeMessage 
+  generateChallengeMessage
 } from "./lib/cryptography";
-import { getSecureEnvironmentVariable } from "./lib/keyManagement";
 import { 
   authenticateUser, 
   requireAdmin, 
@@ -2803,9 +2802,9 @@ async function generateSignature(
   requestFid: number,
   isSponsored = true,
 ) {
-  const mnemonic = await getSecureEnvironmentVariable('farcaster_developer_mnemonic', 'FARCASTER_DEVELOPER_MNEMONIC');
+  const mnemonic = process.env.FARCASTER_DEVELOPER_MNEMONIC;
   if (!mnemonic) {
-    throw new Error("FARCASTER_DEVELOPER_MNEMONIC is not available in secure storage or environment variables.");
+    throw new Error("FARCASTER_DEVELOPER_MNEMONIC must be set in environment variables");
   }
 
   const account = mnemonicToAccount(mnemonic);

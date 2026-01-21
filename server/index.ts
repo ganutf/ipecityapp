@@ -3,7 +3,6 @@ import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { initializeDatabase, db } from "./db";
-import { initializeKeyManager } from "./lib/keyManagement";
 import { readFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { config } from "dotenv";
@@ -56,74 +55,7 @@ function validateEnvironment() {
   enhancedLog('Environment validation passed');
 }
 
-// Check if running in a production-like environment that should use direct environment variables
-function shouldUseDirectEnvironmentVariables(): boolean {
-  return !!(
-    // Replit environment
-    process.env.REPL_ID ||
-    process.env.REPL_SLUG ||
-    process.env.REPLIT_DB_URL ||
-    process.env.REPL_OWNER ||
-    // Production environment
-    process.env.NODE_ENV === 'production' ||
-    // Common production platforms
-    process.env.RAILWAY_ENVIRONMENT ||
-    process.env.RENDER ||
-    process.env.VERCEL ||
-    process.env.NETLIFY ||
-    process.env.AWS_EXECUTION_ENV ||
-    process.env.GOOGLE_CLOUD_PROJECT ||
-    process.env.AZURE_FUNCTIONS_ENVIRONMENT ||
-    // Manual override for any platform
-    process.env.USE_DIRECT_ENV_VARS === 'true'
-  );
-}
-
-// Initialize secure key management
-async function initializeSecureKeys() {
-  try {
-    const useDirectEnvVars = shouldUseDirectEnvironmentVariables();
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    // Skip secure key management in production-like environments - use standard environment variables
-    if (useDirectEnvVars) {
-      logger.info('Detected production-like environment, using standard environment variables');
-      logger.info('Secure key management skipped - using direct environment variable access');
-      return; // Skip key manager initialization in production-like environments
-    }
-
-    // Try to load master password from file for non-Replit environments
-    const masterKeyPath = join(process.cwd(), '.master-key');
-    let masterPassword: string;
-
-    try {
-      masterPassword = readFileSync(masterKeyPath, 'utf8').trim();
-      logger.info('Master password loaded from file');
-    } catch (error) {
-      logger.warn('Master password file not found, using fallback');
-
-      // Check for environment variable fallback
-      if (process.env.MASTER_PASSWORD) {
-        masterPassword = process.env.MASTER_PASSWORD;
-        logger.info('Master password loaded from environment variable');
-      } else if (isProduction) {
-        logger.error('Production environment requires secure master password');
-        logger.error('Either create .master-key file or set MASTER_PASSWORD environment variable');
-        process.exit(1);
-      } else {
-        // For development, generate a temporary password
-        masterPassword = 'development-master-password-not-secure-for-production-use';
-        logger.info('Using temporary development master password');
-      }
-    }
-
-    initializeKeyManager(masterPassword);
-    logger.info('Secure key management initialized');
-  } catch (error) {
-    logger.error('Key management initialization failed', { error: (error as Error)?.message || 'Unknown error' });
-    process.exit(1);
-  }
-}
+// Secure key management system removed - using environment variables directly
 
 // Test database connection
 async function testDatabaseConnection() {
@@ -212,10 +144,6 @@ app.use((req, res, next) => {
     const startTime = Date.now();
     logger.info('Server startup initiated');
 
-    // Initialize secure keys first (skip in Replit)
-    await initializeSecureKeys();
-    logger.info(`Secure key initialization completed in ${Date.now() - startTime}ms`);
-
     // Initialize database connection with secure configuration
     await initializeDatabase();
     logger.info(`Database initialization completed in ${Date.now() - startTime}ms`);
@@ -258,9 +186,19 @@ app.use((req, res, next) => {
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
-    if (app.get("env") === "development") {
+    const appEnv = app.get("env");
+    logger.info('Checking environment for Vite setup', {
+      appEnv,
+      processEnv: process.env.NODE_ENV,
+      willSetupVite: appEnv === "development"
+    });
+
+    if (appEnv === "development") {
+      logger.info('Setting up Vite in development mode');
       await setupVite(app, server);
+      logger.info('Vite setup completed');
     } else {
+      logger.info('Serving static assets (production mode)');
       serveStatic(app);
     }
 
@@ -277,8 +215,7 @@ app.use((req, res, next) => {
       const totalStartupTime = Date.now() - startTime;
       logger.info(`Server successfully started on port ${port}`, {
         startupTime: `${totalStartupTime}ms`,
-        environment: process.env.NODE_ENV,
-        useDirectEnvVars: shouldUseDirectEnvironmentVariables()
+        environment: process.env.NODE_ENV
       });
       logger.info(`Health check available at http://0.0.0.0:${port}/health`);
 

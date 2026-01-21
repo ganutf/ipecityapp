@@ -1,5 +1,4 @@
 import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
-import { getSecureEnvironmentVariable } from "./keyManagement";
 
 // Initialize with placeholder - will be updated when first used
 let neynarClient: NeynarAPIClient;
@@ -7,18 +6,18 @@ let neynarClient: NeynarAPIClient;
 // Initialize client with proper API key
 async function initializeNeynarClient() {
   if (!neynarClient) {
-    const apiKey = await getSecureEnvironmentVariable('neynar_api_key', 'NEYNAR_API_KEY');
+    const apiKey = process.env.NEYNAR_API_KEY;
     if (!apiKey || apiKey === "NEYNAR_API_DOCS") {
-      throw new Error("NEYNAR_API_KEY is not properly configured in environment variables or secure storage");
+      throw new Error("NEYNAR_API_KEY must be set in environment variables");
     }
-    
+
     neynarClient = new NeynarAPIClient(
       new Configuration({
         apiKey,
         baseOptions: { headers: { "x-neynar-experimental": true } },
       })
     );
-    
+
     console.log("Neynar client initialized with API key:", apiKey.substring(0, 8) + "...");
   }
   return neynarClient;

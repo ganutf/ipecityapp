@@ -3,7 +3,6 @@ import { ViemLocalEip712Signer } from "@farcaster/hub-nodejs";
 import { bytesToHex, hexToBytes } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { getFid } from "./getFid";
-import { getSecureEnvironmentVariable } from "./keyManagement";
 
 export const getSignedKey = async (is_sponsored: boolean = true) => {
   const createSigner = await neynar.createSigner();
@@ -39,9 +38,9 @@ const generate_signature = async function (
   public_key: string,
   is_sponsored = false
 ) {
-  const mnemonic = await getSecureEnvironmentVariable('farcaster_developer_mnemonic', 'FARCASTER_DEVELOPER_MNEMONIC');
+  const mnemonic = process.env.FARCASTER_DEVELOPER_MNEMONIC;
   if (!mnemonic) {
-    throw new Error("FARCASTER_DEVELOPER_MNEMONIC is not available in secure storage or environment variables.");
+    throw new Error("FARCASTER_DEVELOPER_MNEMONIC must be set in environment variables");
   }
 
   const FID = await getFid();

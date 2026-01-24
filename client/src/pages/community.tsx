@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Search, Trophy, Target, SortAsc, SortDesc, Coins, Shield, CheckCircle, Crown } from "lucide-react";
+import { Users, Search, Trophy, Target, SortAsc, SortDesc, Coins, Shield, CheckCircle, Crown, User, Compass, Star, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,20 +30,35 @@ type SortDirection = 'asc' | 'desc';
 
 // Member type configuration for role display
 const MEMBER_TYPE_CONFIG = {
+  architect: {
+    label: "Architect",
+    icon: User,
+    color: "bg-purple-500 text-white",
+  },
+  explorer: {
+    label: "Explorer",
+    icon: Compass,
+    color: "bg-blue-500 text-white",
+  },
   admin: {
     label: "Admin",
     icon: Shield,
-    color: "bg-purple-500 text-white",
+    color: "bg-green-500 text-white",
   },
-  founder: {
-    label: "Founder",
-    icon: Crown,
-    color: "bg-amber-500 text-white",
+  org_team: {
+    label: "Org Team",
+    icon: Users,
+    color: "bg-orange-500 text-white",
   },
-  member: {
-    label: "Member",
-    icon: CheckCircle,
-    color: "bg-slate-500 text-white",
+  core_team: {
+    label: "Core Team",
+    icon: Star,
+    color: "bg-red-500 text-white",
+  },
+  pending: {
+    label: "Pending",
+    icon: AlertCircle,
+    color: "bg-gray-500 text-white",
   },
 } as const;
 
@@ -55,7 +70,7 @@ function MemberRow({
   member: CommunityMember;
   showRank: boolean;
 }) {
-  const memberTypeConfig = MEMBER_TYPE_CONFIG[member.memberType as keyof typeof MEMBER_TYPE_CONFIG] || MEMBER_TYPE_CONFIG.member;
+  const memberTypeConfig = MEMBER_TYPE_CONFIG[member.memberType as keyof typeof MEMBER_TYPE_CONFIG] || MEMBER_TYPE_CONFIG.architect;
   const MemberIcon = memberTypeConfig.icon;
 
   // Rank badge styling

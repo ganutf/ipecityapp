@@ -43,31 +43,18 @@ export default function MemberDetails() {
   const { data: memberData, isLoading, error } = useQuery<MemberDetailsData>({
     queryKey: [`/api/community/members/${id}`],
     queryFn: async () => {
-      console.log("=== FRONTEND MEMBER DETAILS QUERY DEBUG START ===");
-      console.log("Fetching member details for member ID:", id);
-      console.log("Profile FID:", profile?.fid);
-      console.log("Is authenticated:", isAuthenticated);
-
       const response = await fetch(`/api/community/members/${id}`, {
         headers: {
           "x-farcaster-fid": profile?.fid?.toString() || "",
         },
       });
 
-      console.log("Response status:", response.status);
-      console.log("Response headers:", Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Response error text:", errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      const data = await response.json();
-      console.log("Member details response data:", data);
-      console.log("=== FRONTEND MEMBER DETAILS QUERY DEBUG END ===");
-
-      return data;
+      return response.json();
     },
     enabled: Boolean(isAuthenticated && id && profile?.fid),
     retry: 2,

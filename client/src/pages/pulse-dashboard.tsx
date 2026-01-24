@@ -5,31 +5,13 @@ import type { Pulse, Member } from "@shared/schema";
 import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { authenticatedGet } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
+import { formatTimeDifference } from "@/lib/dateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, History, CheckCircle2, Users, Trophy, Heart, Repeat, Ban, X, ArrowRight, CheckCircle, XCircle, Target } from "lucide-react";
 import { PulseCard } from "@/components/PulseCard";
 import { FormattedPostText } from "@/components/FormattedPostText";
 import { getCardAccentColor, hasUserExecuted, extractExecutionStatus, getPulseTimingInfo } from "@/lib/pulseUtils";
-
-// Helper functions for contextual timing information
-const formatTimeDifference = (diffMs: number): string => {
-  const totalMinutes = Math.floor(diffMs / (1000 * 60));
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
-
-  if (days > 0) {
-    return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
-  }
-
-  if (hours > 0) {
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  }
-
-  return `${minutes}m`;
-};
 
 const getContextualTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) => {
   // Use shared timing logic
@@ -86,7 +68,6 @@ export default function PulseDashboard() {
   // Wait for auth to stabilize before making redirect decisions
   useEffect(() => {
     if (!authLoading && !isAuthenticated && !profile?.fid) {
-      console.log("PulseDashboard - Not authenticated (stable), redirecting to home");
       setLocation("/");
       return;
     }
@@ -667,7 +648,6 @@ function PostTool({
       setTimeout(() => setSuccessMessage(null), 3000);
 
     } catch (error) {
-      console.error(`Error recording pulse ${action}:`, error);
       setError(
         `Failed to record pulse ${action}: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
@@ -686,11 +666,10 @@ function PostTool({
       );
       if (quoteRes.ok) {
         const { hasQuoted } = await quoteRes.json();
-        console.log("Quote status:", hasQuoted);
         return hasQuoted;
       }
-    } catch (error) {
-      console.error("Error checking quote status:", error);
+    } catch {
+      // Silently fail - quote check is non-critical
     }
     return false;
   }
@@ -703,7 +682,6 @@ function PostTool({
     // If circuit is open, check if timeout has passed
     if (isCircuitOpen && lastFailureTime) {
       if (now - lastFailureTime > CIRCUIT_BREAKER_TIMEOUT) {
-        console.log("Circuit breaker timeout expired, resetting");
         setIsCircuitOpen(false);
         setRetryCount(0);
         setLastFailureTime(null);
@@ -720,39 +698,24 @@ function PostTool({
     // Only sync if pulse is active (reuse existing utility)
     const timingInfo = getPulseTimingInfo(pulse.datetimeStart, pulse.interval);
     if (!timingInfo.isActive) {
-      console.log("Pulse not active, skipping sync");
       return;
     }
-    
-    console.log("=== FARCASTER SYNC DEBUG ===");
-    console.log("1. Input from Farcaster:", { farcasterLiked, farcasterShared });
-    console.log("2. Current executionStatus state (potentially stale):", executionStatus);
-    
+
     // Get fresh execution status directly from data source
     const freshExecutionStatus = getUserExecutionStatus(pulse.id);
-    console.log("3. Fresh execution status from database:", freshExecutionStatus);
-    
+
     // Compare with current database execution status (use fresh data)
     const dbLiked = freshExecutionStatus.liked;
     const dbShared = freshExecutionStatus.shared;
     const dbAbstained = freshExecutionStatus.abstained;
-    
+
     // Determine what the database should be based on Farcaster
     const shouldHaveExecution = farcasterLiked || farcasterShared;
     const hasExecution = dbLiked || dbShared || dbAbstained;
-    
-    console.log("4. Computed values:", {
-      shouldHaveExecution,
-      hasExecution,
-      dbLiked,
-      dbShared, 
-      dbAbstained
-    });
-    
+
     let targetActions = null;
-    
+
     if (shouldHaveExecution) {
-      console.log("5. Branch: shouldHaveExecution = true");
       // User has actions on Farcaster, ensure database matches
       targetActions = {
         liked: farcasterLiked,
@@ -760,7 +723,6 @@ function PostTool({
         abstained: false
       };
     } else if (hasExecution && !dbAbstained) {
-      console.log("5. Branch: hasExecution && !dbAbstained = true");
       // User has no Farcaster actions but has database execution (not abstain)
       // Delete the execution by setting all actions to false
       targetActions = {
@@ -768,24 +730,16 @@ function PostTool({
         shared: false,
         abstained: false
       };
-    } else {
-      console.log("5. Branch: No action needed");
     }
-    
-    console.log("6. Target actions:", targetActions);
-    
-    const needsUpdate = targetActions && 
-        (targetActions.liked !== dbLiked || 
-         targetActions.shared !== dbShared || 
+
+    const needsUpdate = targetActions &&
+        (targetActions.liked !== dbLiked ||
+         targetActions.shared !== dbShared ||
          targetActions.abstained !== dbAbstained);
-         
-    console.log("7. Needs update?", needsUpdate);
-    console.log("=== END FARCASTER SYNC DEBUG ===");
-    
+
     // Only update if different from current state
     if (needsUpdate && targetActions) {
       try {
-        console.log("EXECUTING SYNC: Updating database with Farcaster status:", targetActions);
         // Reuse existing mutation and action handling
         await recordExecutionMutation.mutateAsync({ actions: targetActions });
         setExecutionStatus(targetActions);
@@ -797,8 +751,7 @@ function PostTool({
           setSuccessMessage("Pulse execution removed (no Farcaster actions found)");
         }
         setTimeout(() => setSuccessMessage(null), 3000);
-      } catch (error) {
-        console.error('Sync with Farcaster failed:', error);
+      } catch {
         // Fail silently, don't disrupt user experience
       }
     }
@@ -809,7 +762,6 @@ function PostTool({
 
     // Check circuit breaker
     if (checkCircuitBreaker()) {
-      console.log("Circuit breaker is open, skipping cast check");
       setError(`Cast checking temporarily disabled due to repeated failures. Will retry in ${Math.ceil((CIRCUIT_BREAKER_TIMEOUT - (Date.now() - (lastFailureTime || 0))) / 1000)} seconds.`);
       return;
     }
@@ -818,8 +770,6 @@ function PostTool({
     setError(null);
 
     try {
-      console.log("Checking cast:", (pulse as any).urlEmbed, "for viewer:", viewerFid);
-
       const res = await fetch(
         `/api/neynar/cast/${encodeURIComponent((pulse as any).urlEmbed)}/${viewerFid}?type=url`,
       );
@@ -852,18 +802,13 @@ function PostTool({
       setRetryCount(0);
       setLastFailureTime(null);
       setIsCircuitOpen(false);
-
-      console.log("Cast check successful");
     } catch (error) {
-      console.error("Error fetching cast:", error);
-
       const newRetryCount = retryCount + 1;
       setRetryCount(newRetryCount);
       setLastFailureTime(Date.now());
 
       // Open circuit breaker if max retries exceeded
       if (newRetryCount >= MAX_RETRIES) {
-        console.warn(`Circuit breaker opening after ${MAX_RETRIES} failures`);
         setIsCircuitOpen(true);
         setError(
           `Failed to load cast data after ${MAX_RETRIES} attempts. Please check your connection and try again later.`
@@ -976,11 +921,8 @@ function PostTool({
       // Only retry if circuit breaker is not open and we haven't had recent failures
       if (!isCircuitOpen && retryCount === 0) {
         setTimeout(() => handleCheck(), 2000);
-      } else {
-        console.log("Skipping automatic retry due to circuit breaker or recent failures");
       }
     } catch (error) {
-      console.error(`Error ${type}ing cast:`, error);
       setError(
         `Failed to ${type} post: ${error instanceof Error ? error.message : "Unknown error"}`,
       );

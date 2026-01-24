@@ -206,9 +206,11 @@ export const passportVerifications = pgTable("passport_verifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Member type validation
-export const memberTypeEnum = z.enum(['pending', 'architect', 'explorer', 'admin', 'org_team', 'core_team']);
-export type MemberType = z.infer<typeof memberTypeEnum>;
+// Member type validation - using shared constants
+import { MEMBER_TYPES, VALIDATION_LIMITS, VALIDATION_PATTERNS, RESERVED_USERNAMES } from './constants';
+export { MemberType, MemberStatus, ProfileTag } from './constants';
+
+export const memberTypeEnum = z.enum(MEMBER_TYPES as unknown as [string, ...string[]]);
 
 // Insert schemas
 export const insertMemberSchema = createInsertSchema(members).omit({
@@ -224,69 +226,59 @@ export const updateMemberSchema = createInsertSchema(members).omit({
   updatedAt: true,
 }).partial();
 
-// Enhanced validation schemas with security measures
+// Enhanced validation schemas with security measures - using shared constants
 export const secureUsernameSchema = z.string()
-  .min(3, "Username must be at least 3 characters")
-  .max(20, "Username must be at most 20 characters")
-  .regex(/^[a-z0-9]+$/, "Username can only contain lowercase letters and numbers")
-  .refine(val => !['admin', 'root', 'system', 'api', 'www'].includes(val), "Reserved username")
-  .refine(val => !/(.)\1{3,}/.test(val), "Username cannot have repeated characters");
+  .min(VALIDATION_LIMITS.USERNAME_MIN_LENGTH, `Username must be at least ${VALIDATION_LIMITS.USERNAME_MIN_LENGTH} characters`)
+  .max(VALIDATION_LIMITS.USERNAME_MAX_LENGTH, `Username must be at most ${VALIDATION_LIMITS.USERNAME_MAX_LENGTH} characters`)
+  .regex(VALIDATION_PATTERNS.USERNAME, "Username can only contain lowercase letters and numbers")
+  .refine(val => !RESERVED_USERNAMES.includes(val as typeof RESERVED_USERNAMES[number]), "Reserved username")
+  .refine(val => !VALIDATION_PATTERNS.REPEATED_CHARS.test(val), "Username cannot have repeated characters");
 
 export const secureEmailSchema = z.string()
   .email("Invalid email address")
-  .max(254, "Email address too long")
+  .max(VALIDATION_LIMITS.EMAIL_MAX_LENGTH, "Email address too long")
   .refine(val => !/<|>|"|'/.test(val), "Email contains invalid characters")
-  .refine(val => val.split('@')[0].length <= 64, "Email local part too long");
+  .refine(val => val.split('@')[0].length <= VALIDATION_LIMITS.EMAIL_LOCAL_PART_MAX_LENGTH, "Email local part too long");
 
 export const secureBioSchema = z.string()
-  .max(1000, "Bio too long")
+  .max(VALIDATION_LIMITS.BIO_MAX_LENGTH, "Bio too long")
   .refine(val => {
-    const dangerousPatterns = [
-      /<script/i, /javascript:/i, /data:/i, /vbscript:/i,
-      /on\w+\s*=/i, /<iframe/i, /<object/i, /<embed/i
-    ];
-    return !dangerousPatterns.some(pattern => pattern.test(val));
+    return !VALIDATION_PATTERNS.DANGEROUS_PATTERNS.some(pattern => pattern.test(val));
   }, "Bio contains potentially dangerous content")
   .refine(val => !/(https?:\/\/[^\s]+)/gi.test(val), "URLs not allowed in bio")
   .optional();
 
 export const secureSocialHandleSchema = z.string()
-  .max(200, "Social media URL too long")
+  .max(VALIDATION_LIMITS.SOCIAL_HANDLE_MAX_LENGTH, "Social media URL too long")
   .refine(val => {
     if (!val.trim()) return true; // Empty is valid
-    
-    // Allow both handles and URLs
-    const handleRegex = /^[@]?[a-zA-Z0-9_.-]*$/;
-    
-    // More permissive URL regex that allows various path structures
-    const urlRegex = /^(https?:\/\/)?(www\.)?(x\.com|twitter\.com|linkedin\.com|instagram\.com)\/[\w\-\.\/]+\/?$/i;
-    
+
     // Test simple handle first
-    if (handleRegex.test(val)) return true;
-    
+    if (VALIDATION_PATTERNS.SOCIAL_HANDLE.test(val)) return true;
+
     // Test URL patterns
-    if (urlRegex.test(val)) return true;
-    
+    if (VALIDATION_PATTERNS.SOCIAL_URL.test(val)) return true;
+
     return false;
   }, "Invalid social media handle or URL format")
   .optional();
 
 export const secureWalletAddressSchema = z.string()
-  .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum wallet address")
-  .length(42, "Wallet address must be 42 characters");
+  .regex(VALIDATION_PATTERNS.WALLET_ADDRESS, "Invalid Ethereum wallet address")
+  .length(VALIDATION_LIMITS.WALLET_ADDRESS_LENGTH, `Wallet address must be ${VALIDATION_LIMITS.WALLET_ADDRESS_LENGTH} characters`);
 
 export const secureProfileTagsSchema = z.array(
   z.string()
-    .min(2, "Tag too short")
-    .max(30, "Tag too long")
-    .regex(/^[a-zA-Z0-9\s-]+$/, "Tag contains invalid characters")
-    .refine(val => val.trim().length >= 2, "Tag cannot be empty after trimming")
-).max(10, "Too many tags").optional();
+    .min(VALIDATION_LIMITS.TAG_MIN_LENGTH, "Tag too short")
+    .max(VALIDATION_LIMITS.TAG_MAX_LENGTH, "Tag too long")
+    .regex(VALIDATION_PATTERNS.PROFILE_TAG, "Tag contains invalid characters")
+    .refine(val => val.trim().length >= VALIDATION_LIMITS.TAG_MIN_LENGTH, "Tag cannot be empty after trimming")
+).max(VALIDATION_LIMITS.MAX_PROFILE_TAGS, "Too many tags").optional();
 
 export const secureFidSchema = z.number()
   .int("FID must be an integer")
   .positive("FID must be positive")
-  .max(999999999, "FID too large");
+  .max(VALIDATION_LIMITS.MAX_FID, "FID too large");
 
 // Application schema for comprehensive application submission
 export const applicationSchema = createInsertSchema(members).pick({

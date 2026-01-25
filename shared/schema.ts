@@ -208,7 +208,7 @@ export const passportVerifications = pgTable("passport_verifications", {
 
 // Member type validation - using shared constants
 import { MEMBER_TYPES, VALIDATION_LIMITS, VALIDATION_PATTERNS, RESERVED_USERNAMES } from './constants';
-export { MemberType, MemberStatus, ProfileTag } from './constants';
+export type { MemberType, MemberStatus, ProfileTag } from './constants';
 
 export const memberTypeEnum = z.enum(MEMBER_TYPES as unknown as [string, ...string[]]);
 

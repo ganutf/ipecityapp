@@ -1,86 +1,37 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { SignInButton } from "@farcaster/auth-kit";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Users,
   Briefcase,
   GraduationCap,
-  LogIn,
   Mail,
   Wallet,
   CheckCircle,
-  Zap
+  Zap,
+  Fingerprint
 } from "lucide-react";
 
 export default function HomePage() {
-  const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
+  const { isAuthenticated, isLoading, isMember, memberStatus, login } = useAuth();
   const [, setLocation] = useLocation();
-
-  // Check member status to determine where to redirect authenticated users
-  const { data: memberCheck, isLoading: memberLoading, error: memberError } = useQuery({
-    queryKey: [`/api/members/check/${profile?.fid}`],
-    enabled: Boolean(isAuthenticated && profile?.fid),
-    retry: 2,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
-  });
-
-  // Log member check API results
-  useEffect(() => {
-    if (memberError) {
-      console.error("HomePage - Member check API error:", memberError);
-    }
-    if (memberCheck) {
-      console.log("HomePage - Member check API success:", memberCheck);
-    }
-  }, [memberCheck, memberError]);
 
   // Redirect authenticated users to appropriate page
   useEffect(() => {
-    if (isAuthenticated && profile?.fid && memberCheck && !memberLoading) {
-      const { isMember, status } = memberCheck as any;
-
-      if (isMember && status === 'active_member') {
+    if (isAuthenticated && !isLoading) {
+      if (isMember && memberStatus === 'active_member') {
         // Active members go to community (main landing page for members)
         setLocation("/community");
       }
       // For users in verification process, let AuthGuard handle the redirection
-      // AuthGuard will redirect them to appropriate verification pages
     }
-  }, [isAuthenticated, profile, memberCheck, memberLoading, setLocation]);
-
-  // Handle member API errors  
-  if (memberError && !memberLoading) {
-    console.error("HomePage - Showing error state due to member API failure");
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div className="text-center py-16">
-              <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-red-600 text-2xl">⚠</span>
-              </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Connection Error</h2>
-              <p className="text-gray-600 mb-6">Unable to verify your account. Please try refreshing the page.</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
-              >
-                Refresh Page
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, [isAuthenticated, isLoading, isMember, memberStatus, setLocation]);
 
   // Show loading while determining authentication status
-  if (authLoading || (isAuthenticated && memberLoading)) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
@@ -192,30 +143,30 @@ export default function HomePage() {
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-4">
                       <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center relative">
-                        <LogIn className="h-8 w-8 text-slate-700" />
+                        <Mail className="h-8 w-8 text-slate-700" />
                         <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-lime-500 text-white text-xs flex items-center justify-center p-0">
                           1
                         </Badge>
                       </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Log in with Farcaster</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Sign Up with Email</h3>
                     <p className="text-gray-600 text-sm">
-                      Connect your Farcaster account to get started with the community.
+                      Create your account with email and set up a secure passkey.
                     </p>
                   </div>
 
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-4">
                       <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center relative">
-                        <Mail className="h-8 w-8 text-slate-700" />
+                        <Fingerprint className="h-8 w-8 text-slate-700" />
                         <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-sky-500 text-white text-xs flex items-center justify-center p-0">
                           2
                         </Badge>
                       </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Verify Your Email</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Create Your Wallet</h3>
                     <p className="text-gray-600 text-sm">
-                      Complete email verification to secure your account and enable notifications.
+                      A smart wallet is automatically created for you, secured by your passkey.
                     </p>
                   </div>
 
@@ -228,9 +179,9 @@ export default function HomePage() {
                         </Badge>
                       </div>
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Connect & Verify</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Claim Your Username</h3>
                     <p className="text-gray-600 text-sm">
-                      Connect your wallet and verify your Ipê Passport to unlock all features.
+                      Reserve your unique Ipê subdomain and join the community.
                     </p>
                   </div>
                 </div>
@@ -239,21 +190,28 @@ export default function HomePage() {
           </div>
 
           {/* Call to Action Section */}
-          <Card className="border-l-4 border-l-green-500 bg-green-50 shadow-sm">
+          <Card className="border-l-4 border-l-lime-500 bg-lime-50 shadow-sm">
             <CardContent className="p-8 text-center">
               <div className="flex items-center justify-center mb-6">
-                <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+                <div className="h-16 w-16 bg-lime-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-8 w-8 text-lime-600" />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-green-900 mb-2">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">
                 Ready to Join?
               </h3>
-              <p className="text-green-700 mb-6 max-w-2xl mx-auto">
-                Connect your Farcaster account to join the community and collaborate with other builders.
+              <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
+                Create your account with email or connect your wallet to join the community.
               </p>
-              <div className="flex justify-center">
-                <SignInButton />
+              <div className="flex justify-center gap-4">
+                <Button
+                  onClick={() => login()}
+                  size="lg"
+                  className="bg-slate-900 hover:bg-slate-800 text-white px-8"
+                >
+                  <Mail className="h-5 w-5 mr-2" />
+                  Sign Up / Sign In
+                </Button>
               </div>
             </CardContent>
           </Card>

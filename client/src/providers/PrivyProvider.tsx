@@ -23,7 +23,9 @@ export function AppPrivyProvider({ children }: AppPrivyProviderProps) {
           logo: '/logo.png',
         },
         embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
+          ethereum: {
+            createOnLogin: 'users-without-wallets',
+          },
         },
         loginMethods: ['email', 'wallet', 'google'],
         defaultChain: base,

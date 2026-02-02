@@ -12,7 +12,9 @@ import { JustaNameProvider } from "@justaname.id/react";
 import {
   AuthGuard
 } from "@/components/AuthGuard";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { TimezoneProvider } from "@/contexts/TimezoneContext";
+import { AppPrivyProvider } from "@/providers/PrivyProvider";
 import HomePage from "@/pages/home";
 import PulseDashboard from "@/pages/pulse-dashboard";
 import AdminPage from "@/pages/admin";
@@ -22,7 +24,6 @@ import CommunityPage from "@/pages/community";
 import MemberDetailsPage from "@/pages/member-details";
 import SignerApprovalPage from "@/pages/signer-approval";
 import VerifyPassportPage from "@/pages/verify-passport";
-
 import IdVerificationPage from "@/pages/id-verification";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
@@ -70,51 +71,59 @@ const justaNameConfig = {
 
 function Router() {
   return (
-    <AuthGuard>
-      <Layout>
-        <Switch>
-          <Route
-            path="/"
-            component={HomePage}
-          />
-          <Route path="/pulses" component={PulseDashboard} />
-          <Route path="/community" component={CommunityPage} />
-          <Route path="/admin" component={AdminPage} />
-          <Route path="/pulse/:id" component={PulseDetailPage} />
-          <Route path="/profile" component={ProfilePage} />
-          <Route path="/member/:id" component={MemberDetailsPage} />
-          <Route path="/signer-approval" component={SignerApprovalPage} />
-
-          <Route path="/id-verification" component={IdVerificationPage} />
-          <Route
-            path="/verify-passport/:token"
-            component={VerifyPassportPage}
-          />
-          <Route component={NotFound} />
-        </Switch>
-      </Layout>
-    </AuthGuard>
+    <Switch>
+      {/* Protected routes */}
+      <Route>
+        <AuthGuard>
+          <Layout>
+            <Switch>
+              <Route
+                path="/"
+                component={HomePage}
+              />
+              <Route path="/pulses" component={PulseDashboard} />
+              <Route path="/community" component={CommunityPage} />
+              <Route path="/admin" component={AdminPage} />
+              <Route path="/pulse/:id" component={PulseDetailPage} />
+              <Route path="/profile" component={ProfilePage} />
+              <Route path="/member/:id" component={MemberDetailsPage} />
+              <Route path="/signer-approval" component={SignerApprovalPage} />
+              <Route path="/id-verification" component={IdVerificationPage} />
+              <Route
+                path="/verify-passport/:token"
+                component={VerifyPassportPage}
+              />
+              <Route component={NotFound} />
+            </Switch>
+          </Layout>
+        </AuthGuard>
+      </Route>
+    </Switch>
   );
 }
 
 function App() {
   return (
-    <AuthKitProvider config={authKitConfig}>
-      <WagmiProvider config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider>
-            <JustaNameProvider config={justaNameConfig}>
-              <TimezoneProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <Router />
-                </TooltipProvider>
-              </TimezoneProvider>
-            </JustaNameProvider>
-          </RainbowKitProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
-    </AuthKitProvider>
+    <AppPrivyProvider>
+      <AuthProvider>
+        <AuthKitProvider config={authKitConfig}>
+          <WagmiProvider config={wagmiConfig}>
+            <QueryClientProvider client={queryClient}>
+              <RainbowKitProvider>
+                <JustaNameProvider config={justaNameConfig}>
+                  <TimezoneProvider>
+                    <TooltipProvider>
+                      <Toaster />
+                      <Router />
+                    </TooltipProvider>
+                  </TimezoneProvider>
+                </JustaNameProvider>
+              </RainbowKitProvider>
+            </QueryClientProvider>
+          </WagmiProvider>
+        </AuthKitProvider>
+      </AuthProvider>
+    </AppPrivyProvider>
   );
 }
 

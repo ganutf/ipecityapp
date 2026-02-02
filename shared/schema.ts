@@ -42,7 +42,12 @@ export const users = pgTable("users", {
 // Community members table
 export const members = pgTable("members", {
   id: serial("id").primaryKey(),
-  farcasterFid: integer("farcaster_fid").notNull().unique(),
+  // Privy Auth: Primary identifier for Privy users
+  privyId: varchar("privy_id", { length: 255 }).unique(),
+  // Auth V2: Link to auth_users table (nullable for migration period)
+  userId: varchar("user_id", { length: 36 }).references(() => authUsers.id),
+  // Legacy: Farcaster FID (now nullable for new auth flow)
+  farcasterFid: integer("farcaster_fid").unique(),
   walletAddress: varchar("wallet_address", { length: 255 }),
   
   // State machine fields - restricted by database CHECK constraint
@@ -132,7 +137,11 @@ export const userSigners = pgTable("user_signers", {
 });
 
 // Relations
-export const membersRelations = relations(members, ({ many }) => ({
+export const membersRelations = relations(members, ({ one, many }) => ({
+  authUser: one(authUsers, {
+    fields: [members.userId],
+    references: [authUsers.id],
+  }),
   pulseExecutions: many(pulseExecutions),
   createdPulses: many(pulses, { relationName: "PulseCreator" }),
 }));
@@ -179,6 +188,93 @@ export const userSignersRelations = relations(userSigners, ({ one }) => ({
     references: [members.id],
   }),
 }));
+
+// ============================================
+// AUTH SYSTEM V2 TABLES
+// ============================================
+
+// Auth users - Primary authentication (replaces Farcaster as auth provider)
+export const authUsers = pgTable("auth_users", {
+  id: varchar("id", { length: 36 }).primaryKey(), // UUID
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  emailVerified: boolean("email_verified").default(false),
+  emailVerifiedAt: timestamp("email_verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at"),
+});
+
+// Passkeys - WebAuthn credentials for passwordless authentication
+export const passkeys = pgTable("passkeys", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 36 }).references(() => authUsers.id).notNull(),
+  credentialId: varchar("credential_id", { length: 512 }).notNull().unique(),
+  publicKey: text("public_key").notNull(),
+  signCount: integer("sign_count").default(0),
+  transports: text("transports").array(),
+  deviceName: varchar("device_name", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+});
+
+// Smart wallets - Auto-created wallets using passkey as signer
+export const smartWallets = pgTable("smart_wallets", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 36 }).references(() => authUsers.id).notNull(),
+  walletAddress: varchar("wallet_address", { length: 42 }).notNull().unique(),
+  walletType: varchar("wallet_type", { length: 20 }).notNull(), // 'coinbase' | 'safe'
+  chainId: integer("chain_id").default(8453), // Base mainnet
+  passkeyId: integer("passkey_id").references(() => passkeys.id),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Farcaster accounts - Optional Farcaster connection (no longer auth provider)
+export const farcasterAccounts = pgTable("farcaster_accounts", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 36 }).references(() => authUsers.id).notNull(),
+  farcasterFid: integer("farcaster_fid").notNull().unique(),
+  username: varchar("username", { length: 255 }),
+  custodyAddress: varchar("custody_address", { length: 42 }),
+  imported: boolean("imported").default(false), // true if linked from existing account
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Auth V2 Relations
+export const authUsersRelations = relations(authUsers, ({ many }) => ({
+  passkeys: many(passkeys),
+  smartWallets: many(smartWallets),
+  farcasterAccounts: many(farcasterAccounts),
+  members: many(members),
+}));
+
+export const passkeysRelations = relations(passkeys, ({ one }) => ({
+  user: one(authUsers, {
+    fields: [passkeys.userId],
+    references: [authUsers.id],
+  }),
+}));
+
+export const smartWalletsRelations = relations(smartWallets, ({ one }) => ({
+  user: one(authUsers, {
+    fields: [smartWallets.userId],
+    references: [authUsers.id],
+  }),
+  passkey: one(passkeys, {
+    fields: [smartWallets.passkeyId],
+    references: [passkeys.id],
+  }),
+}));
+
+export const farcasterAccountsRelations = relations(farcasterAccounts, ({ one }) => ({
+  user: one(authUsers, {
+    fields: [farcasterAccounts.userId],
+    references: [authUsers.id],
+  }),
+}));
+
+// ============================================
+// LEGACY TABLES (kept for backward compatibility)
+// ============================================
 
 // Email verification table
 export const emailVerifications = pgTable("email_verifications", {
@@ -543,3 +639,84 @@ export type UsernameClaimByMemberId = z.infer<typeof usernameClaimByMemberIdSche
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// ============================================
+// AUTH V2 SCHEMAS AND TYPES
+// ============================================
+
+// Auth user schemas
+export const insertAuthUserSchema = createInsertSchema(authUsers).omit({
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  id: z.string().uuid(),
+  email: secureEmailSchema,
+});
+
+// Passkey schemas
+export const insertPasskeySchema = createInsertSchema(passkeys).omit({
+  id: true,
+  createdAt: true,
+  lastUsedAt: true,
+}).extend({
+  userId: z.string().uuid(),
+  credentialId: z.string().min(1).max(512),
+  publicKey: z.string().min(1),
+  signCount: z.number().int().min(0).optional(),
+  transports: z.array(z.string()).optional(),
+  deviceName: z.string().max(255).optional(),
+});
+
+// Smart wallet schemas
+export const insertSmartWalletSchema = createInsertSchema(smartWallets).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  userId: z.string().uuid(),
+  walletAddress: secureWalletAddressSchema,
+  walletType: z.enum(['coinbase', 'safe']),
+  chainId: z.number().int().positive().optional(),
+  passkeyId: z.number().int().positive().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+// Farcaster account schemas
+export const insertFarcasterAccountSchema = createInsertSchema(farcasterAccounts).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  userId: z.string().uuid(),
+  farcasterFid: secureFidSchema,
+  username: z.string().max(255).optional(),
+  custodyAddress: secureWalletAddressSchema.optional(),
+  imported: z.boolean().optional(),
+});
+
+// Auth V2 request schemas
+export const authRegisterStartSchema = z.object({
+  email: secureEmailSchema,
+});
+
+export const authRegisterVerifySchema = z.object({
+  email: secureEmailSchema,
+  code: z.string().length(6).regex(/^\d+$/, "Code must be numeric"),
+});
+
+export const authLoginStartSchema = z.object({
+  email: secureEmailSchema,
+});
+
+// Auth V2 Types
+export type AuthUser = typeof authUsers.$inferSelect;
+export type InsertAuthUser = z.infer<typeof insertAuthUserSchema>;
+export type Passkey = typeof passkeys.$inferSelect;
+export type InsertPasskey = z.infer<typeof insertPasskeySchema>;
+export type SmartWallet = typeof smartWallets.$inferSelect;
+export type InsertSmartWallet = z.infer<typeof insertSmartWalletSchema>;
+export type FarcasterAccount = typeof farcasterAccounts.$inferSelect;
+export type InsertFarcasterAccount = z.infer<typeof insertFarcasterAccountSchema>;
+
+// Auth V2 Request Types
+export type AuthRegisterStartRequest = z.infer<typeof authRegisterStartSchema>;
+export type AuthRegisterVerifyRequest = z.infer<typeof authRegisterVerifySchema>;
+export type AuthLoginStartRequest = z.infer<typeof authLoginStartSchema>;

@@ -88,6 +88,17 @@ BEGIN
   END IF;
 END $$;
 
+-- 5b. Add privy_id column to members table (if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'members' AND column_name = 'privy_id'
+  ) THEN
+    ALTER TABLE members ADD COLUMN privy_id VARCHAR(255) UNIQUE;
+  END IF;
+END $$;
+
 -- 6. Make farcaster_fid nullable on members (if it's currently NOT NULL)
 -- First check if it's NOT NULL, then alter
 DO $$
@@ -107,6 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_passkeys_user_id ON passkeys(user_id);
 CREATE INDEX IF NOT EXISTS idx_smart_wallets_user_id ON smart_wallets(user_id);
 CREATE INDEX IF NOT EXISTS idx_farcaster_accounts_user_id ON farcaster_accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_members_user_id ON members(user_id);
+CREATE INDEX IF NOT EXISTS idx_members_privy_id ON members(privy_id);
 
 -- 8. Add missing constraints to pulse_executions (if needed)
 DO $$

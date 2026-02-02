@@ -576,12 +576,14 @@ export default function AdminPage() {
                       <Button
                         size="sm"
                         onClick={() => {
-                          updateMemberTypeMutation.mutate({
-                            farcasterFid: selectedMember.farcasterFid,
-                            memberType: editMemberType
-                          });
+                          if (selectedMember.farcasterFid) {
+                            updateMemberTypeMutation.mutate({
+                              farcasterFid: selectedMember.farcasterFid,
+                              memberType: editMemberType
+                            });
+                          }
                         }}
-                        disabled={updateMemberTypeMutation.isPending}
+                        disabled={updateMemberTypeMutation.isPending || !selectedMember.farcasterFid}
                         className="px-2"
                       >
                         <Save className="w-4 h-4" />
@@ -681,19 +683,21 @@ export default function AdminPage() {
               )}
 
               {/* Action buttons for pending applications */}
-              {((selectedMember as any).status === 'pending_application_review' || (selectedMember as any).status === 'pending_claim') && 
-               (selectedMember as any).ipeUsername && (
+              {((selectedMember as any).status === 'pending_application_review' || (selectedMember as any).status === 'pending_claim') &&
+               (selectedMember as any).ipeUsername && selectedMember.farcasterFid && (
                 <div className="flex space-x-2 pt-4 border-t">
                   <Button
                     onClick={(e) => {
                       e.stopPropagation();
-                      approveMemberMutation.mutate({
-                        farcasterFid: selectedMember.farcasterFid,
-                        ipeUsername: (selectedMember as any).ipeUsername,
-                        userWalletAddress: selectedMember.walletAddress || undefined,
-                        memberType: selectedMemberType
-                      });
-                      setSelectedMember(null);
+                      if (selectedMember.farcasterFid) {
+                        approveMemberMutation.mutate({
+                          farcasterFid: selectedMember.farcasterFid,
+                          ipeUsername: (selectedMember as any).ipeUsername,
+                          userWalletAddress: selectedMember.walletAddress || undefined,
+                          memberType: selectedMemberType
+                        });
+                        setSelectedMember(null);
+                      }
                     }}
                     disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                     className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
@@ -704,8 +708,10 @@ export default function AdminPage() {
                     variant="destructive"
                     onClick={(e) => {
                       e.stopPropagation();
-                      denyMemberMutation.mutate(selectedMember.farcasterFid);
-                      setSelectedMember(null);
+                      if (selectedMember.farcasterFid) {
+                        denyMemberMutation.mutate(selectedMember.farcasterFid);
+                        setSelectedMember(null);
+                      }
                     }}
                     disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                   >

@@ -3,6 +3,9 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Member } from '@shared/schema';
 
+// Check if Privy is configured
+const PRIVY_ENABLED = !!import.meta.env.VITE_PRIVY_APP_ID;
+
 interface AuthUser {
   id: string;
   email?: string;
@@ -14,6 +17,7 @@ interface AuthContextValue {
   privyUser: AuthUser | null;
   isPrivyAuthenticated: boolean;
   isPrivyLoading: boolean;
+  isPrivyEnabled: boolean;
 
   // Member state
   member: Member | null;
@@ -45,7 +49,33 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+// Provider when Privy is NOT enabled - just pass through
+function AuthProviderWithoutPrivy({ children }: AuthProviderProps) {
+  const value: AuthContextValue = {
+    privyUser: null,
+    isPrivyAuthenticated: false,
+    isPrivyLoading: false,
+    isPrivyEnabled: false,
+    member: null,
+    isMember: false,
+    memberStatus: null,
+    isMemberLoading: false,
+    isAuthenticated: false,
+    isLoading: false,
+    login: () => console.warn('Privy not configured'),
+    logout: async () => {},
+    refreshMember: () => {},
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Provider when Privy IS enabled
+function AuthProviderWithPrivy({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
   const {
     ready: privyReady,
@@ -61,9 +91,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Get access token when authenticated
   useEffect(() => {
     if (privyAuthenticated && privyReady) {
-      getAccessToken().then(token => {
+      getAccessToken().then((token: string | null) => {
         setAccessToken(token);
-      }).catch(err => {
+      }).catch((err: Error) => {
         console.error('Failed to get Privy access token:', err);
         setAccessToken(null);
       });
@@ -99,7 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     },
     enabled: !!accessToken,
     retry: false,
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
   });
 
   // Build auth user from Privy data
@@ -116,22 +146,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const value: AuthContextValue = {
-    // Privy state
     privyUser: authUser,
     isPrivyAuthenticated: privyAuthenticated,
     isPrivyLoading: !privyReady,
-
-    // Member state
+    isPrivyEnabled: true,
     member: memberData?.member || null,
     isMember: !!memberData?.isMember,
     memberStatus: memberData?.status || null,
     isMemberLoading: memberLoading,
-
-    // Combined state
     isAuthenticated: privyAuthenticated && !!authUser,
     isLoading: !privyReady || (privyAuthenticated && memberLoading),
-
-    // Actions
     login: privyLogin,
     logout: handleLogout,
     refreshMember: refetchMember,
@@ -142,4 +166,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+// Export the appropriate provider based on Privy configuration
+export function AuthProvider({ children }: AuthProviderProps) {
+  if (!PRIVY_ENABLED) {
+    return <AuthProviderWithoutPrivy>{children}</AuthProviderWithoutPrivy>;
+  }
+  return <AuthProviderWithPrivy>{children}</AuthProviderWithPrivy>;
 }

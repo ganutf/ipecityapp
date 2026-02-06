@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
-import { useAccount, useEnsAddress, useSignMessage } from "wagmi";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useEnsAddress, useSignMessage } from "wagmi";
+import { useConnectWallet, useWallets } from "@privy-io/react-auth";
 import { SiweMessage } from "siwe";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,16 @@ export default function VerifyPassportPage() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
   const [targetPassport, setTargetPassport] = useState<string>("");
-  
-  const { address, isConnected } = useAccount();
-  const { data: ensAddress } = useEnsAddress({ 
+
+  // Privy wallet hooks (replacing RainbowKit)
+  const { connectWallet } = useConnectWallet();
+  const { wallets } = useWallets();
+  const activeWallet = wallets[0]; // First connected wallet
+  const address = activeWallet?.address as `0x${string}` | undefined;
+  const isConnected = !!activeWallet;
+
+  // Keep wagmi hooks that work with @privy-io/wagmi
+  const { data: ensAddress } = useEnsAddress({
     name: targetPassport || undefined
   });
   const { signMessageAsync } = useSignMessage();
@@ -171,9 +178,11 @@ export default function VerifyPassportPage() {
 
             {/* Wallet Connection */}
             <div className="flex flex-col items-center space-y-4">
-              <ConnectButton />
-              
-              {isConnected && (
+              {!isConnected ? (
+                <Button onClick={() => connectWallet()}>
+                  Connect Wallet
+                </Button>
+              ) : (
                 <div className="text-sm text-gray-600">
                   Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
                 </div>

@@ -2,33 +2,34 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Pulse, PulseType, Member, MemberType } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil, Save, X, Eye, Clock, Globe } from "lucide-react";
-import { useAccount } from "wagmi";
+import { Pencil, Save, X, Eye, Clock, Globe, Wallet } from "lucide-react";
+import { useConnectWallet, useWallets } from "@privy-io/react-auth";
 import { useLocation } from "wouter";
 import { PulseCard } from "@/components/PulseCard";
-// Removed useAddSubname hook - using direct API calls instead
-
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { authenticatedPost, authenticatedGet, authenticatedPatch } from "@/lib/api";
 import { useTimezone } from "@/contexts/TimezoneContext";
 import { convertDateTimeInputToUTC, formatPulseDate, getCurrentUTC } from "@/lib/dateUtils";
 
 export default function AdminPage() {
-  const { isAuthenticated, profile, isLoading } = usePersistentAuth();
+  const { isAuthenticated, member, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { timezoneInfo } = useTimezone();
-  
-  // Wallet connection for subdomain reservation
-  const { address, isConnected } = useAccount();
+
+  // Privy wallet hooks (replacing RainbowKit)
+  const { connectWallet } = useConnectWallet();
+  const { wallets } = useWallets();
+  const activeWallet = wallets[0]; // First connected wallet
+  const address = activeWallet?.address as `0x${string}` | undefined;
+  const isConnected = !!activeWallet;
 
   // Initialize all state hooks first (must be at top level)
   const [newPulse, setNewPulse] = useState({
@@ -46,14 +47,8 @@ export default function AdminPage() {
   const [isEditingMemberType, setIsEditingMemberType] = useState(false);
   const [editMemberType, setEditMemberType] = useState<MemberType>('architect');
 
-  // Check current user's member data to determine admin status
-  const { data: currentMemberData } = useQuery({
-    queryKey: [`/api/members/check/${profile?.fid}`],
-    enabled: Boolean(profile?.fid),
-  });
-
-  // Check if user is admin based on memberType
-  const isAdmin = (currentMemberData as any)?.member?.memberType === 'admin';
+  // Check if user is admin based on memberType from auth context
+  const isAdmin = member?.memberType === 'admin';
 
   // Member type configuration
   const memberTypeConfig = {
@@ -68,22 +63,22 @@ export default function AdminPage() {
   // Fetch pulse types
   const { data: pulseTypesData, isLoading: pulseTypesLoading } = useQuery({
     queryKey: ["/api/pulse-types"],
-    queryFn: () => authenticatedGet("/api/pulse-types", profile?.fid),
-    enabled: Boolean(isAuthenticated && isAdmin && profile?.fid),
+    queryFn: () => authenticatedGet("/api/pulse-types"),
+    enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Fetch all pulses - must be called before any returns
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
     queryKey: ["/api/pulses"],
-    queryFn: () => authenticatedGet("/api/pulses", profile?.fid),
-    enabled: Boolean(isAuthenticated && isAdmin && profile?.fid),
+    queryFn: () => authenticatedGet("/api/pulses"),
+    enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Fetch all members
   const { data: membersData, isLoading: membersLoading } = useQuery({
     queryKey: ["/api/members"],
-    queryFn: () => authenticatedGet("/api/members", profile?.fid),
-    enabled: Boolean(isAuthenticated && isAdmin && profile?.fid),
+    queryFn: () => authenticatedGet("/api/members"),
+    enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // All mutations must also be declared before returns
@@ -97,7 +92,7 @@ export default function AdminPage() {
         datetimeStart: utcDateString
       };
       
-      return authenticatedPost("/api/pulses", pulseWithUTC, profile?.fid);
+      return authenticatedPost("/api/pulses", pulseWithUTC);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
@@ -117,7 +112,7 @@ export default function AdminPage() {
         ipeUsername: member.ipeUsername,
         userWalletAddress: member.userWalletAddress,
         memberType: member.memberType
-      }, profile?.fid);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
@@ -130,7 +125,7 @@ export default function AdminPage() {
 
   const denyMemberMutation = useMutation({
     mutationFn: async (farcasterFid: number) => {
-      return authenticatedPost("/api/admin/deny-member", { farcasterFid }, profile?.fid);
+      return authenticatedPost("/api/admin/deny-member", { farcasterFid });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
@@ -143,7 +138,7 @@ export default function AdminPage() {
 
   const updateMemberTypeMutation = useMutation({
     mutationFn: async ({ farcasterFid, memberType }: { farcasterFid: number; memberType: MemberType }) => {
-      return authenticatedPatch(`/api/admin/update-member-type`, { farcasterFid, memberType }, profile?.fid);
+      return authenticatedPatch(`/api/admin/update-member-type`, { farcasterFid, memberType });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
@@ -172,14 +167,14 @@ export default function AdminPage() {
   }
 
   if (!isAuthenticated || !isAdmin) {
-    console.log('Admin access check:', { isAuthenticated, isAdmin, profileFid: profile?.fid });
+    console.log('Admin access check:', { isAuthenticated, isAdmin, memberId: member?.id });
     return (
       <div className="max-w-6xl mx-auto p-6">
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
           <p className="text-gray-600">Admin access required.</p>
           <p className="text-sm text-gray-500 mt-2">
-            Auth: {isAuthenticated ? 'Yes' : 'No'}, Admin: {isAdmin ? 'Yes' : 'No'}, FID: {profile?.fid}
+            Auth: {isAuthenticated ? 'Yes' : 'No'}, Admin: {isAdmin ? 'Yes' : 'No'}, Member ID: {member?.id}
           </p>
         </div>
       </div>
@@ -205,32 +200,19 @@ export default function AdminPage() {
                 : "Connect wallet to create subdomains for passport claims"}
             </p>
           </div>
-          <ConnectButton.Custom>
-            {({ openConnectModal, openAccountModal, mounted, account }) => {
-              if (!mounted) return null;
-              
-              if (!account) {
-                return (
-                  <Button
-                    onClick={openConnectModal}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Connect Wallet
-                  </Button>
-                );
-              }
-              
-              return (
-                <Button
-                  onClick={openAccountModal}
-                  variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                >
-                  Disconnect
-                </Button>
-              );
-            }}
-          </ConnectButton.Custom>
+          {!isConnected ? (
+            <Button
+              onClick={() => connectWallet()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Wallet className="mr-2 h-4 w-4" />
+              Connect Wallet
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-blue-700">
+              <span className="font-mono">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
+            </div>
+          )}
         </div>
       </div>
       

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { authenticatedGet, authenticatedPatch, authenticatedDelete } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,10 +23,11 @@ import { useToast } from "@/hooks/use-toast";
 export default function PulseDetailPage() {
   const params = useParams();
   const [, setLocation] = useLocation();
-  const { isAuthenticated, profile, isLoading } = usePersistentAuth();
+  const { isAuthenticated, memberId, member, isLoading } = useAuth();
   const { timezoneInfo } = useTimezone();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const farcasterFid = member?.farcasterFid ?? undefined;
   
   const pulseId = parseInt(params.id || '0');
 
@@ -42,27 +43,21 @@ export default function PulseDetailPage() {
   });
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Check current user's member data to determine admin status
-  const { data: currentMemberData } = useQuery({
-    queryKey: [`/api/members/check/${profile?.fid}`],
-    enabled: Boolean(isAuthenticated && profile?.fid && !isLoading),
-  });
-
-  // Check if user is admin based on memberType
-  const isAdmin = (currentMemberData as any)?.member?.memberType === 'admin';
+  // Check if user is admin based on memberType from auth context
+  const isAdmin = member?.memberType === 'admin';
 
   // Fetch pulse types for admin editing
   const { data: pulseTypesData } = useQuery({
     queryKey: ["/api/pulse-types"],
-    queryFn: () => authenticatedGet("/api/pulse-types", profile?.fid),
-    enabled: Boolean(isAuthenticated && isAdmin && profile?.fid),
+    queryFn: () => authenticatedGet("/api/pulse-types", farcasterFid),
+    enabled: Boolean(isAuthenticated && isAdmin && farcasterFid),
   });
 
   // Fetch pulse execution data - now accessible to all authenticated users
   const { data: pulseData, isLoading: pulseLoading, error: pulseError, refetch } = useQuery({
-    queryKey: [`/api/pulse/${pulseId}/executions`, profile?.fid], // Include profile.fid in query key
-    queryFn: () => authenticatedGet(`/api/pulse/${pulseId}/executions`, profile?.fid),
-    enabled: Boolean(isAuthenticated && profile?.fid && pulseId && !isLoading),
+    queryKey: [`/api/pulse/${pulseId}/executions`, farcasterFid], // Include profile.fid in query key
+    queryFn: () => authenticatedGet(`/api/pulse/${pulseId}/executions`, farcasterFid),
+    enabled: Boolean(isAuthenticated && farcasterFid && pulseId && !isLoading),
     retry: (failureCount, error) => {
       // Retry up to 3 times for network/auth issues, but not for 404s
       if (error?.message?.includes('404') || error?.message?.includes('not found')) {
@@ -78,10 +73,10 @@ export default function PulseDetailPage() {
     mutationFn: async (data: { urlEmbed: string; datetimeStart: string; interval: number; description: string; points: number; pulseTypeId: number }) => {
       const utcDateString = convertDateTimeInputToUTC(data.datetimeStart, timezoneInfo.timeZone);
       const dataWithUTC = { ...data, datetimeStart: utcDateString };
-      return authenticatedPatch(`/api/pulses/${pulseId}`, dataWithUTC, profile?.fid);
+      return authenticatedPatch(`/api/pulses/${pulseId}`, dataWithUTC, farcasterFid);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/pulse/${pulseId}/executions`, profile?.fid] });
+      queryClient.invalidateQueries({ queryKey: [`/api/pulse/${pulseId}/executions`, farcasterFid] });
       setIsEditing(false);
       toast({ title: "Success", description: "Pulse updated successfully" });
     },
@@ -92,7 +87,7 @@ export default function PulseDetailPage() {
 
   const deletePulseMutation = useMutation({
     mutationFn: async () => {
-      return authenticatedDelete(`/api/pulses/${pulseId}`, profile?.fid);
+      return authenticatedDelete(`/api/pulses/${pulseId}`, farcasterFid);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Pulse deleted successfully" });
@@ -104,7 +99,7 @@ export default function PulseDetailPage() {
   });
 
   // Show loading while auth is initializing or pulse data is loading
-  if (isLoading || (pulseLoading && isAuthenticated && profile?.fid)) {
+  if (isLoading || (pulseLoading && isAuthenticated && farcasterFid)) {
     return (
       <div className="max-w-6xl mx-auto p-6">
         <div className="text-center py-12">
@@ -120,7 +115,7 @@ export default function PulseDetailPage() {
   // This check is now moved below to after the error handling
 
   // Enhanced error handling
-  if (pulseError || (!pulseData && !pulseLoading && isAuthenticated && profile?.fid && pulseId)) {
+  if (pulseError || (!pulseData && !pulseLoading && isAuthenticated && farcasterFid && pulseId)) {
     
     const isAuthError = pulseError?.message?.includes('401') || pulseError?.message?.includes('403');
     const isPulseNotFound = pulseError?.message?.includes('404') || pulseError?.message?.includes('not found');
@@ -164,7 +159,7 @@ export default function PulseDetailPage() {
   }
   
   // Still loading auth or waiting for proper auth state
-  if (!isAuthenticated || !profile?.fid || !pulseData) {
+  if (!isAuthenticated || !memberId || !pulseData) {
     return (
       <div className="max-w-6xl mx-auto p-6">
         <div className="text-center py-12">
@@ -183,7 +178,7 @@ export default function PulseDetailPage() {
 
   // Find current user's execution status using shared utility
   const currentUserExecution = executions?.find((execution: any) => 
-    execution.member?.farcasterFid === profile?.fid
+    execution.farcasterFid === farcasterFid
   );
   
   const executionStatus = currentUserExecution?.execution?.actions ? {
@@ -495,7 +490,7 @@ export default function PulseDetailPage() {
         {pulse.urlEmbed && (
           <FarcasterPostEmbed
             castUrl={pulse.urlEmbed}
-            viewerFid={profile?.fid}
+            viewerFid={farcasterFid}
             className="shadow-sm"
           />
         )}
@@ -506,7 +501,7 @@ export default function PulseDetailPage() {
             <PulseExecutionsTable
               pulse={pulse}
               executions={executions}
-              profile={profile}
+              profile={{ fid: farcasterFid }}
               onRefresh={() => refetch()}
               isAdmin={isAdmin}
             />

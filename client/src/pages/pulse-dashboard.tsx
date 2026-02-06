@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { authenticatedGet } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
 import { formatTimeDifference } from "@/lib/dateUtils";
@@ -59,33 +59,32 @@ const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
 export default function PulseDashboard() {
   const {
     isAuthenticated,
-    profile,
+    memberId,
     isLoading: authLoading,
-  } = usePersistentAuth();
+  } = useAuth();
   const [, setLocation] = useLocation();
-  
+
   // Authentication check - redirect to home if not authenticated
-  // Wait for auth to stabilize before making redirect decisions
   useEffect(() => {
-    if (!authLoading && !isAuthenticated && !profile?.fid) {
+    if (!authLoading && !isAuthenticated) {
       setLocation("/");
       return;
     }
-  }, [authLoading, isAuthenticated, profile, setLocation]);
+  }, [authLoading, isAuthenticated, setLocation]);
 
   // Tab state for pulse organization
   const [activeTab, setActiveTab] = useState("upcoming");
 
-  const viewerFid = profile?.fid;
+  const viewerMemberId = memberId ?? undefined;
   const queryClient = useQueryClient();
 
   // Only proceed with queries if we have a valid FID
   const hasValidFid =
-    !!viewerFid && typeof viewerFid === "number" && !isNaN(viewerFid);
+    !!viewerMemberId && typeof viewerMemberId === "number" && !isNaN(viewerMemberId);
 
   // Check if user is approved member
   const { data: memberCheck } = useQuery({
-    queryKey: [`/api/members/check/${viewerFid}`],
+    queryKey: [`/api/members/check/${viewerMemberId}`],
     enabled: Boolean(isAuthenticated && hasValidFid && !authLoading),
     retry: 2, // Limit retries
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -100,10 +99,10 @@ export default function PulseDashboard() {
     isLoading: signerLoading,
     refetch: refetchSigner,
   } = useQuery({
-    queryKey: [`/api/neynar/signer/${viewerFid}`],
+    queryKey: [`/api/neynar/signer/${viewerMemberId}`],
     enabled: Boolean(
       isAuthenticated &&
-      !!viewerFid &&
+      !!viewerMemberId &&
       (memberCheck as any)?.isMember &&
       !authLoading,
     ),
@@ -138,7 +137,7 @@ export default function PulseDashboard() {
   // Get user's executions with detailed information including attestations
   const { data: executionsData, isLoading: executionsLoading, error: executionsError } = useQuery({
     queryKey: [`/api/executions/${(memberCheck as any)?.member?.id}/details`],
-    queryFn: () => authenticatedGet(`/api/executions/${(memberCheck as any)?.member?.id}/details`, viewerFid),
+    queryFn: () => authenticatedGet(`/api/executions/${(memberCheck as any)?.member?.id}/details`, viewerMemberId),
     enabled: Boolean(
       isAuthenticated &&
       hasValidFid &&
@@ -470,16 +469,15 @@ function PostTool({
   member: Member;
   signerUuid: string | null;
 }) {
-  const { profile } = usePersistentAuth();
-  const viewerFid = profile?.fid;
+  const { memberId } = useAuth();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
   // Get user's executions for this component
   const { data: executionsData, error: componentExecutionsError } = useQuery({
-    queryKey: [`/api/executions/by-fid/${viewerFid}`],
-    queryFn: () => authenticatedGet(`/api/executions/by-fid/${viewerFid}`, viewerFid),
-    enabled: Boolean(viewerFid),
+    queryKey: [`/api/v2/executions/${memberId}`],
+    queryFn: () => authenticatedGet(`/api/v2/executions/${memberId}`),
+    enabled: Boolean(memberId),
     retry: (failureCount, error) => {
       // Don't retry on authentication errors (401) or forbidden (403)
       if (error && typeof error === 'object' && 'message' in error) {
@@ -577,7 +575,7 @@ function PostTool({
   // Record pulse execution mutation
   const recordExecutionMutation = useMutation({
     mutationFn: async ({ actions }: { actions: { liked: boolean; shared: boolean; abstained: boolean } }) => {
-      if (!viewerFid) {
+      if (!memberId) {
         throw new Error("User not authenticated");
       }
 
@@ -585,7 +583,7 @@ function PostTool({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-farcaster-fid": viewerFid.toString(),
+          "x-farcaster-fid": memberId.toString(),
         },
         body: JSON.stringify({
           pulseId: pulse.id,
@@ -603,7 +601,7 @@ function PostTool({
     onSuccess: () => {
       // Invalidate all related cache keys for pulse execution data
       queryClient.invalidateQueries({ queryKey: [`/api/executions/${member?.id}/details`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/executions/by-fid/${viewerFid}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/v2/executions/${memberId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
       // Also invalidate the specific pulse execution endpoint
       queryClient.invalidateQueries({ queryKey: [`/api/pulse/${pulse.id}/executions`] });
@@ -658,11 +656,11 @@ function PostTool({
 
   async function checkQuoteRecast(
     castHash: string,
-    viewerFid: number,
+    memberIdParam: number,
   ): Promise<boolean> {
     try {
       const quoteRes = await fetch(
-        `/api/neynar/cast/${castHash}/quotes/${viewerFid}`,
+        `/api/neynar/cast/${castHash}/quotes/${memberIdParam}`,
       );
       if (quoteRes.ok) {
         const { hasQuoted } = await quoteRes.json();
@@ -758,7 +756,7 @@ function PostTool({
   }
 
   async function handleCheck() {
-    if (!(pulse as any).urlEmbed || !viewerFid) return;
+    if (!(pulse as any).urlEmbed || !memberId) return;
 
     // Check circuit breaker
     if (checkCircuitBreaker()) {
@@ -771,7 +769,7 @@ function PostTool({
 
     try {
       const res = await fetch(
-        `/api/neynar/cast/${encodeURIComponent((pulse as any).urlEmbed)}/${viewerFid}?type=url`,
+        `/api/neynar/cast/${encodeURIComponent((pulse as any).urlEmbed)}/${memberId}?type=url`,
       );
 
       if (!res.ok) {
@@ -785,7 +783,7 @@ function PostTool({
       const regularRecast = !!cast.viewer_context?.recasted;
       const liked = !!cast.viewer_context?.liked;
       const quotedRecast = cast.hash
-        ? await checkQuoteRecast(cast.hash, viewerFid)
+        ? await checkQuoteRecast(cast.hash, memberId!)
         : false;
 
       setStats({
@@ -824,7 +822,7 @@ function PostTool({
   }
 
   async function handleReaction(type: "like" | "recast") {
-    if (!castData || !viewerFid || !signerUuid) return;
+    if (!castData || !memberId || !signerUuid) return;
 
     setActionLoading((prev) => ({ ...prev, [type]: true }));
     setError(null);
@@ -837,7 +835,7 @@ function PostTool({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-farcaster-fid": viewerFid.toString(),
+            "x-farcaster-fid": memberId.toString(),
           },
           body: JSON.stringify({
             signer_uuid: signer_uuid,
@@ -855,7 +853,7 @@ function PostTool({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-farcaster-fid": viewerFid.toString(),
+            "x-farcaster-fid": memberId.toString(),
           },
           body: JSON.stringify({
             signer_uuid: signer_uuid,
@@ -934,7 +932,7 @@ function PostTool({
 
   // Auto-load the current pulse
   useEffect(() => {
-    if ((pulse as any).urlEmbed && viewerFid && !isCircuitOpen) {
+    if ((pulse as any).urlEmbed && memberId && !isCircuitOpen) {
       // Add a delay to prevent rapid successive calls
       const timeoutId = setTimeout(() => {
         handleCheck();
@@ -942,7 +940,7 @@ function PostTool({
 
       return () => clearTimeout(timeoutId);
     }
-  }, [(pulse as any).urlEmbed, viewerFid]);
+  }, [(pulse as any).urlEmbed, memberId]);
 
   const handleHeaderClick = () => {
     setLocation(`/pulse/${pulse.id}`);

@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { authenticatedGet } from "@/lib/api";
 import { getPulseTimingInfo } from "@/lib/pulseUtils";
 import { Button } from "@/components/ui/button";
@@ -10,24 +10,19 @@ import { PulseExecutionsTable } from "@/components/PulseExecutionsTable";
 export default function PulseDetailPage() {
   const params = useParams();
   const [, setLocation] = useLocation();
-  const { isAuthenticated, profile, isLoading } = usePersistentAuth();
-  
+  const { isAuthenticated, member, isLoading } = useAuth();
+  const farcasterFid = member?.farcasterFid ?? undefined;
+
   const pulseId = parseInt(params.id || '0');
 
-  // Check current user's member data to determine admin status
-  const { data: currentMemberData } = useQuery({
-    queryKey: [`/api/members/check/${profile?.fid}`],
-    enabled: Boolean(profile?.fid),
-  });
-
-  // Check if user is admin based on memberType
-  const isAdmin = (currentMemberData as any)?.member?.memberType === 'admin';
+  // Check if user is admin based on memberType from auth context
+  const isAdmin = member?.memberType === 'admin';
 
   // Fetch pulse execution data
   const { data: pulseData, isLoading: pulseLoading, refetch } = useQuery({
     queryKey: [`/api/pulse/${pulseId}/executions`],
-    queryFn: () => authenticatedGet(`/api/pulse/${pulseId}/executions`, profile?.fid),
-    enabled: Boolean(isAuthenticated && isAdmin && profile?.fid && pulseId),
+    queryFn: () => authenticatedGet(`/api/pulse/${pulseId}/executions`, farcasterFid),
+    enabled: Boolean(isAuthenticated && isAdmin && farcasterFid && pulseId),
   });
 
   // Show loading while auth is initializing
@@ -200,7 +195,7 @@ export default function PulseDetailPage() {
         <PulseExecutionsTable
           pulse={pulse}
           executions={executions}
-          profile={profile}
+          profile={{ fid: farcasterFid }}
           onRefresh={() => refetch()}
         />
       </div>

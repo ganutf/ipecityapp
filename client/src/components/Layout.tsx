@@ -1,7 +1,5 @@
-import { SignInButton } from "@farcaster/auth-kit";
 import { Link, useLocation } from "wouter";
-import { usePersistentAuth, logout } from "@/hooks/use-persistent-auth";
-import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,29 +7,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useQuery } from "@tanstack/react-query";
-import { useAccount } from "wagmi";
+import { useWallets } from "@privy-io/react-auth";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { Coins } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, profile, isLoading } = usePersistentAuth();
+  const { isAuthenticated, member, isLoading, logout, login } = useAuth();
   const [location] = useLocation();
-  const { address } = useAccount();
 
-  // Check member status to determine if user is in verification process
-  const { data: memberCheck } = useQuery({
-    queryKey: [`/api/members/check/${profile?.fid}`],
-    enabled: Boolean(isAuthenticated && profile?.fid),
-  });
+  // Privy wallet hooks (replacing wagmi useAccount)
+  const { wallets } = useWallets();
+  const activeWallet = wallets[0]; // First connected wallet
+  const address = activeWallet?.address as `0x${string}` | undefined;
 
   // Get IPE token balance
   const { displayBalance, isLoading: balanceLoading } = useTokenBalance(address);
 
-  // Check if user is admin based on memberType instead of hardcoded FID
-  const isAdmin = (memberCheck as any)?.member?.memberType === 'admin';
-  
-  const memberStatus = (memberCheck as any)?.status;
+  // Check if user is admin based on memberType
+  const isAdmin = member?.memberType === 'admin';
+
+  const memberStatus = member?.status;
   const isInVerificationProcess = Boolean(isAuthenticated && memberStatus && !['active_member'].includes(memberStatus));
   
   // Don't render navigation until auth is determined
@@ -105,25 +100,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
 
               <span className="text-sm text-gray-600">
-                Hello, {profile?.displayName || profile?.username || '?'}
+                Hello, {member?.email?.split('@')[0] || 'User'}
               </span>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="h-8 w-8 rounded-full p-0">
-                    {profile?.pfpUrl ? (
-                      <img 
-                        src={profile.pfpUrl} 
-                        alt="Profile" 
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                        <span className="text-purple-600 text-sm font-semibold">
-                          {(profile?.displayName || profile?.username || '?')[0].toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                      <span className="text-purple-600 text-sm font-semibold">
+                        {(member?.email?.split('@')[0] || 'U')[0].toUpperCase()}
+                      </span>
+                    </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -139,7 +126,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </DropdownMenu>
             </div>
           ) : (
-            <SignInButton />
+            <Button onClick={login} variant="default">
+              Sign In
+            </Button>
           )}
         </div>
       </header>

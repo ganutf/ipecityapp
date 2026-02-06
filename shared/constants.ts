@@ -23,12 +23,10 @@ export type MemberType = (typeof MEMBER_TYPES)[number];
 
 /**
  * Valid member statuses (state machine progression)
+ * Removed unused statuses: pending_signer, email_verified, pending_application
  */
 export const MEMBER_STATUSES = [
-  'pending_signer',
   'pending_id_verification',
-  'email_verified',
-  'pending_application',
   'pending_application_review',
   'approved_application',
   'denied_application',
@@ -43,7 +41,6 @@ export type MemberStatus = (typeof MEMBER_STATUSES)[number];
 export const ACTIVE_MEMBER_STATUSES: readonly MemberStatus[] = [
   'active_member',
   'approved_application',
-  'email_verified',
 ] as const;
 
 // ============================================

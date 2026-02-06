@@ -4,9 +4,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthKitProvider } from "@farcaster/auth-kit";
-import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { WagmiProvider } from "wagmi";
-import { mainnet, base } from "wagmi/chains";
+// Use @privy-io/wagmi for Privy-compatible wagmi integration (no RainbowKit needed)
+import { createConfig, WagmiProvider } from "@privy-io/wagmi";
+import { mainnet, base } from "viem/chains";
 import { http } from "wagmi";
 import { JustaNameProvider } from "@justaname.id/react";
 import {
@@ -27,7 +27,6 @@ import VerifyPassportPage from "@/pages/verify-passport";
 import IdVerificationPage from "@/pages/id-verification";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
-import "@rainbow-me/rainbowkit/styles.css";
 
 const authKitConfig = {
   relay: "https://relay.farcaster.xyz",
@@ -36,11 +35,8 @@ const authKitConfig = {
   siweUri: window.location.origin,
 };
 
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "demo";
-
-const wagmiConfig = getDefaultConfig({
-  appName: "Ipê City Pulse",
-  projectId,
+// Privy-compatible wagmi config (createConfig from @privy-io/wagmi)
+const wagmiConfig = createConfig({
   chains: [mainnet, base],
   transports: {
     [mainnet.id]: http(),
@@ -105,24 +101,22 @@ function Router() {
 function App() {
   return (
     <AppPrivyProvider>
-      <AuthProvider>
-        <AuthKitProvider config={authKitConfig}>
-          <WagmiProvider config={wagmiConfig}>
-            <QueryClientProvider client={queryClient}>
-              <RainbowKitProvider>
-                <JustaNameProvider config={justaNameConfig}>
-                  <TimezoneProvider>
-                    <TooltipProvider>
-                      <Toaster />
-                      <Router />
-                    </TooltipProvider>
-                  </TimezoneProvider>
-                </JustaNameProvider>
-              </RainbowKitProvider>
-            </QueryClientProvider>
-          </WagmiProvider>
-        </AuthKitProvider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={wagmiConfig}>
+          <AuthProvider>
+            <AuthKitProvider config={authKitConfig}>
+              <JustaNameProvider config={justaNameConfig}>
+                <TimezoneProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Router />
+                  </TooltipProvider>
+                </TimezoneProvider>
+              </JustaNameProvider>
+            </AuthKitProvider>
+          </AuthProvider>
+        </WagmiProvider>
+      </QueryClientProvider>
     </AppPrivyProvider>
   );
 }

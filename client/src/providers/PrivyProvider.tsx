@@ -27,7 +27,7 @@ export function AppPrivyProvider({ children }: AppPrivyProviderProps) {
             createOnLogin: 'users-without-wallets',
           },
         },
-        loginMethods: ['email', 'wallet', 'google'],
+        loginMethods: ['email', 'wallet'], // Google OAuth disabled in Privy app settings
         defaultChain: base,
         supportedChains: [base],
       }}

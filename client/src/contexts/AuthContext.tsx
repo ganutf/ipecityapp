@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useIdentityToken } from '@privy-io/react-auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Member } from '@shared/schema';
 
@@ -21,6 +21,7 @@ interface AuthContextValue {
 
   // Member state
   member: Member | null;
+  memberId: number | null;  // Primary identifier for all API calls
   isMember: boolean;
   memberStatus: string | null;
   isMemberLoading: boolean;
@@ -33,6 +34,7 @@ interface AuthContextValue {
   login: () => void;
   logout: () => Promise<void>;
   refreshMember: () => void;
+  getAccessToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -57,6 +59,7 @@ function AuthProviderWithoutPrivy({ children }: AuthProviderProps) {
     isPrivyLoading: false,
     isPrivyEnabled: false,
     member: null,
+    memberId: null,
     isMember: false,
     memberStatus: null,
     isMemberLoading: false,
@@ -65,6 +68,7 @@ function AuthProviderWithoutPrivy({ children }: AuthProviderProps) {
     login: () => console.warn('Privy not configured'),
     logout: async () => {},
     refreshMember: () => {},
+    getAccessToken: async () => null,
   };
 
   return (
@@ -85,6 +89,9 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     logout: privyLogout,
     getAccessToken,
   } = usePrivy();
+
+  // Get identity token (contains full user profile including email)
+  const { identityToken } = useIdentityToken();
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
@@ -108,13 +115,15 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     isLoading: memberLoading,
     refetch: refetchMember,
   } = useQuery({
-    queryKey: ['/api/v2/auth/me', accessToken],
+    queryKey: ['/api/v2/auth/me', accessToken, identityToken],
     queryFn: async () => {
       if (!accessToken) return null;
 
       const response = await fetch('/api/v2/auth/me', {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          // Include identity token so server can extract email/wallet
+          ...(identityToken ? { 'privy-id-token': identityToken } : {}),
         },
       });
 
@@ -151,6 +160,7 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     isPrivyLoading: !privyReady,
     isPrivyEnabled: true,
     member: memberData?.member || null,
+    memberId: memberData?.memberId || memberData?.member?.id || null,
     isMember: !!memberData?.isMember,
     memberStatus: memberData?.status || null,
     isMemberLoading: memberLoading,
@@ -159,6 +169,7 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     login: privyLogin,
     logout: handleLogout,
     refreshMember: refetchMember,
+    getAccessToken,
   };
 
   return (

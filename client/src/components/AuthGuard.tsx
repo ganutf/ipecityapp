@@ -66,20 +66,39 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
       if (isMember) {
         console.log("AuthGuard - Member status:", memberStatus);
 
-        // STATUS: 'active_member' - User completed all verifications
+        // STATUS: 'active_member' - User completed all verifications (wallet + email + subdomain)
         if (memberStatus === 'active_member') {
           // Allow access to all pages
           return;
         }
 
-        // STATUS: Incomplete verification states - redirect to id-verification
-        if (memberStatus === 'pending_id_verification' ||
-            memberStatus === 'email_verified' ||
-            memberStatus === 'pending_application' ||
-            memberStatus === 'pending_application_review' ||
-            memberStatus === 'approved_application') {
+        // STATUS: 'pending_id_verification' - Incomplete onboarding (missing wallet OR email OR subdomain)
+        // Redirect to id-verification page to complete wallet connection, email, and subdomain
+        if (memberStatus === 'pending_id_verification') {
           if (currentPath !== '/id-verification' && currentPath !== '/') {
-            console.log("AuthGuard - Incomplete verification, redirecting to id-verification");
+            console.log("AuthGuard - Incomplete ID verification, redirecting to id-verification");
+            setLocation("/id-verification");
+            return;
+          }
+          return;
+        }
+
+        // STATUS: 'pending_application_review' - Application submitted, awaiting admin approval
+        if (memberStatus === 'pending_application_review') {
+          // Allow access to home and id-verification (to see status)
+          if (currentPath !== '/id-verification' && currentPath !== '/' && currentPath !== '/profile') {
+            console.log("AuthGuard - Application pending, limited access");
+            setLocation("/id-verification");
+            return;
+          }
+          return;
+        }
+
+        // STATUS: 'approved_application' - Admin approved, subdomain reserved (waiting for user to accept)
+        if (memberStatus === 'approved_application') {
+          // Allow access to id-verification to accept subdomain
+          if (currentPath !== '/id-verification' && currentPath !== '/' && currentPath !== '/profile') {
+            console.log("AuthGuard - Subdomain ready, redirecting to id-verification");
             setLocation("/id-verification");
             return;
           }

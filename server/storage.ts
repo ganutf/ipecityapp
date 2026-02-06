@@ -170,6 +170,7 @@ export interface IStorage {
 
   // Privy Auth
   getMemberByPrivyId(privyId: string): Promise<Member | undefined>;
+  getMemberByIpeUsername(ipeUsername: string): Promise<Member | undefined>;
   createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string): Promise<Member>;
 }
 
@@ -544,16 +545,38 @@ export class DatabaseStorage implements IStorage {
   async updateMemberStatus(memberId: number, status: string): Promise<Member> {
     const [member] = await db
       .update(members)
-      .set({ 
+      .set({
         status: status as any,
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(members.id, memberId))
       .returning();
     return member;
   }
-  
-  
+
+  /**
+   * Upgrade member to active status with subdomain
+   * Used when user completes ID verification and subdomain is found
+   */
+  async upgradeMemberToActive(
+    memberId: number,
+    ipePassport: string,
+    memberType: string = 'explorer'
+  ): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({
+        status: 'active_member',
+        ipePassport,
+        passportVerified: true,
+        memberType,
+        updatedAt: new Date(),
+      })
+      .where(eq(members.id, memberId))
+      .returning();
+    return member;
+  }
+
 
   // Passport Verification
   async createPassportVerification(verificationData: InsertPassportVerification): Promise<PassportVerification> {
@@ -1030,12 +1053,18 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
 
+  async getMemberByIpeUsername(ipeUsername: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.ipeUsername, ipeUsername));
+    return member;
+  }
+
   async createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string): Promise<Member> {
     const [member] = await db.insert(members).values({
       privyId,
       email,
       walletAddress,
-      status: 'pending_application',
+      status: 'pending_id_verification', // Start with email/passport verification
+      emailVerified: !!email, // If email provided, Privy already verified it
       memberType: 'pending',
     }).returning();
     return member;

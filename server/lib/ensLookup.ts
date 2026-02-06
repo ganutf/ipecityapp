@@ -66,8 +66,13 @@ export async function lookupEnsName(address: string): Promise<EnsLookupResult> {
     // First, check specifically for ipecity.eth subdomains
     const ipecityDomains = await lookupIpecitySubdomain(address);
     if (ipecityDomains.length > 0) {
+      // Prioritize the root domain 'ipecity.eth' if present (admin user)
+      const primaryDomain = ipecityDomains.includes('ipecity.eth')
+        ? 'ipecity.eth'
+        : ipecityDomains[0];
+
       return {
-        ensName: ipecityDomains[0], // Default to first domain for backward compatibility
+        ensName: primaryDomain,
         ensNames: ipecityDomains,
         source: 'justaname',
         error: null

@@ -221,16 +221,20 @@ app.use((req, res, next) => {
       });
       logger.info(`Health check available at http://0.0.0.0:${port}/health`);
 
-      // Start balance updater background job
-      try {
-        const { startBalanceUpdater } = await import('./jobs/balanceUpdater');
-        await startBalanceUpdater();
-        logger.info('Balance updater background job started successfully');
-      } catch (error) {
-        logger.error('Failed to start balance updater:', {
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
+      // Start balance updater background job after a delay
+      // In development, delay longer to let Vite pre-bundle dependencies
+      const balanceUpdaterDelay = process.env.NODE_ENV === 'development' ? 60000 : 5000;
+      setTimeout(async () => {
+        try {
+          const { startBalanceUpdater } = await import('./jobs/balanceUpdater');
+          await startBalanceUpdater();
+          logger.info('Balance updater background job started successfully');
+        } catch (error) {
+          logger.error('Failed to start balance updater:', {
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }, balanceUpdaterDelay);
     });
 
     // Graceful shutdown handling

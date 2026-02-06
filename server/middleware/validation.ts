@@ -238,7 +238,8 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "font-src 'self' https://fonts.gstatic.com; " +
     "img-src 'self' data: https:; " +
-    "connect-src 'self' https://api.neynar.com https://api.justaname.id https://relay.farcaster.xyz https://pulse.walletconnect.org https://api.web3modal.org https://mainnet.infura.io https://rpc.ankr.com https://mainnet.optimism.io https://optimism-mainnet.infura.io https://opt-mainnet.g.alchemy.com https://ethereum.publicnode.com https://optimism.publicnode.com https://rpc.payload.de https://eth.blockrazor.xyz https://eth.merkle.io https://api.wallet.coinbase.com https://walletconnect.com https://ethereum-api.xyz https://ccip-v2.ens.xyz https://mainnet.base.org https://cca-lite.coinbase.com wss://www.walletlink.org wss://relay.walletconnect.org wss://relay.walletconnect.com wss://bridge.walletconnect.org; " +
+    "connect-src 'self' https://api.neynar.com https://api.justaname.id https://cdn.justaname.id https://relay.farcaster.xyz https://pulse.walletconnect.org https://api.web3modal.org https://mainnet.infura.io https://rpc.ankr.com https://mainnet.optimism.io https://optimism-mainnet.infura.io https://opt-mainnet.g.alchemy.com https://ethereum.publicnode.com https://optimism.publicnode.com https://rpc.payload.de https://eth.blockrazor.xyz https://eth.merkle.io https://api.wallet.coinbase.com https://walletconnect.com https://ethereum-api.xyz https://ccip-v2.ens.xyz https://mainnet.base.org https://cca-lite.coinbase.com https://auth.privy.io https://explorer-api.walletconnect.com wss://www.walletlink.org wss://relay.walletconnect.org wss://relay.walletconnect.com wss://bridge.walletconnect.org;" +
+    "frame-src https://auth.privy.io https://verify.walletconnect.com https://verify.walletconnect.org; " +
     "frame-ancestors 'none'"
   );
   

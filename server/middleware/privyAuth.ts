@@ -39,12 +39,15 @@ export async function privyAuthMiddleware(
     // Verify the Privy access token
     const verifiedClaims = await privy.utils().auth().verifyAccessToken(token);
 
+    // Try to find existing member by Privy ID first
+    let member = await storage.getMemberByPrivyId(verifiedClaims.user_id);
+
     req.privyUser = {
       id: verifiedClaims.user_id,
+      // Get email/wallet from member if available (avoids extra API call)
+      email: member?.email ?? undefined,
+      wallet: member?.walletAddress ?? undefined,
     };
-
-    // Try to find existing member by Privy ID
-    let member = await storage.getMemberByPrivyId(verifiedClaims.user_id);
 
     if (member) {
       req.member = member;
@@ -79,11 +82,15 @@ export async function optionalPrivyAuthMiddleware(
     const token = authHeader.slice(7);
     const verifiedClaims = await privy.utils().auth().verifyAccessToken(token);
 
+    // Try to find existing member by Privy ID first
+    const member = await storage.getMemberByPrivyId(verifiedClaims.user_id);
+
     req.privyUser = {
       id: verifiedClaims.user_id,
+      // Get email/wallet from member if available (avoids extra API call)
+      email: member?.email ?? undefined,
+      wallet: member?.walletAddress ?? undefined,
     };
-
-    const member = await storage.getMemberByPrivyId(verifiedClaims.user_id);
     if (member) {
       req.member = member;
     }

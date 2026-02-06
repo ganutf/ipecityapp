@@ -96,8 +96,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply request sanitization to all routes
   app.use(sanitizeRequestBody);
 
-  // Register Auth V2 routes (Privy-based authentication)
-  app.use('/api/v2/auth', authRoutes);
+  // Register V2 routes (Privy-based authentication)
+  app.use('/api/v2', authRoutes);
 
   /* ────────────────────────────────  HEALTH CHECK  ──────────────────────────────── */
   // Health check endpoint for deployment monitoring
@@ -464,10 +464,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               await storage.updateUserSignerStatus(member.id, "approved");
               console.log("Signer approved! Updated database status.");
 
-              // Also update member status to 'signer_approved' if they're still pending_signer
+              // Also update member status if they're still pending_signer (legacy)
               try {
                 const member = await storage.getMemberByFarcasterFid(sanitizedFid);
-                if (member && member.status === "pending_signer") {
+                if (member && (member.status === "pending_signer" || member.status === "pending_id_verification")) {
                   await storage.updateMemberStatus(member.id, "pending_id_verification");
                   console.log("Updated member status to pending_id_verification");
                 }
@@ -2261,10 +2261,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           const userProfile = userResponse.users[0];
 
-          // Create basic member record with pending_signer status
+          // Create basic member record with pending_id_verification status
           member = await storage.createMember({
             farcasterFid,
-            status: "pending_signer",
+            status: "pending_id_verification",
             emailVerified: false,
             passportVerified: false,
           });
@@ -2279,24 +2279,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Create member without username if profile fetch fails
           member = await storage.createMember({
             farcasterFid,
-            status: "pending_signer",
+            status: "pending_id_verification",
             emailVerified: false,
             passportVerified: false,
           });
         }
       }
 
-      // Check if member should be promoted from pending_signer to pending_id_verification
+      // Legacy: promote any remaining pending_signer members to pending_id_verification
       if (member && member.status === "pending_signer") {
         try {
-          // Check if their signer is approved - use memberId
-          const userSigner = await storage.getUserSigner(member.id);
-          if (userSigner && userSigner.status === "approved") {
-            member = await storage.updateMemberStatus(member.id, "pending_id_verification");
-            console.log(`Auto-promoted FID ${farcasterFid} from pending_signer to pending_id_verification (signer approved)`);
-          }
+          member = await storage.updateMemberStatus(member.id, "pending_id_verification");
+          console.log(`Auto-promoted FID ${farcasterFid} from pending_signer to pending_id_verification`);
         } catch (signerError) {
-          console.error("Error checking signer status for promotion:", signerError);
+          console.error("Error promoting member status:", signerError);
         }
       }
 
@@ -2338,7 +2334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const response = {
         isMember: !!member,
-        status: (member as any)?.status || "pending_signer",
+        status: (member as any)?.status || "pending_id_verification",
         member: memberWithStats || null,
       };
 

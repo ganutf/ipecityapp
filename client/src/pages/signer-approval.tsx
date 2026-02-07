@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Smartphone, ExternalLink, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 
 export default function SignerApprovalPage() {
-  const { isAuthenticated, isLoading: authLoading, member, memberId } = useAuth();
+  const { profile, isAuthenticated, isLoading: authLoading } = usePersistentAuth();
   const [, setLocation] = useLocation();
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [qrCodeError, setQrCodeError] = useState<string>("");
@@ -16,17 +16,17 @@ export default function SignerApprovalPage() {
   // Authentication check - redirect to home if truly not authenticated
   // Wait for auth to stabilize before making redirect decisions
   useEffect(() => {
-    if (!authLoading && !isAuthenticated && !member?.farcasterFid) {
+    if (!authLoading && !isAuthenticated && !profile?.fid) {
       console.log("SignerApproval - Not authenticated (stable), redirecting to home");
       setLocation("/");
       return;
     }
-  }, [authLoading, isAuthenticated, member, setLocation]);
+  }, [authLoading, isAuthenticated, profile, setLocation]);
 
   // Get signer data
   const { data: signerData, refetch: refetchSigner, error: signerError } = useQuery<{ status?: string; signer_uuid?: string; signer_approval_url?: string }>({
-    queryKey: [`/api/neynar/signer/${member?.farcasterFid}`],
-    enabled: Boolean(member?.farcasterFid),
+    queryKey: [`/api/neynar/signer/${profile?.fid}`],
+    enabled: Boolean(profile?.fid),
     refetchInterval: (query) => {
       // Stop polling if there's a rate limit error
       if (query?.state?.error && (query.state.error as any)?.response?.status === 429) {
@@ -48,7 +48,7 @@ export default function SignerApprovalPage() {
         signerData,
         approvalUrl,
         hasApprovalUrl: !!approvalUrl,
-        profileFid: member?.farcasterFid
+        profileFid: profile?.fid
       });
       
       if (approvalUrl) {
@@ -94,14 +94,14 @@ export default function SignerApprovalPage() {
     };
     
     generateQR();
-  }, [signerData, member?.farcasterFid]);
+  }, [signerData, profile?.fid]);
 
   // Auto-redirect when signer is approved
   useEffect(() => {
     if ((signerData as any)?.status === 'approved') {
       // Invalidate member status cache to trigger server auto-promotion check
       queryClient.invalidateQueries({
-        queryKey: [`/api/members/check/${member?.farcasterFid}`],
+        queryKey: [`/api/members/check/${profile?.fid}`],
       });
       
       // Small delay to allow cache invalidation and status update
@@ -109,14 +109,14 @@ export default function SignerApprovalPage() {
         setLocation('/id-verification');
       }, 1000);
     }
-  }, [(signerData as any)?.status, setLocation, queryClient, member?.farcasterFid]);
+  }, [(signerData as any)?.status, setLocation, queryClient, profile?.fid]);
 
 
 
 
 
   // Show loading while auth is stabilizing
-  if (authLoading || (!member?.farcasterFid && isAuthenticated)) {
+  if (authLoading || (!profile?.fid && isAuthenticated)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="container mx-auto max-w-md px-4">

@@ -10,30 +10,28 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useSignMessage } from "wagmi";
-import { useConnectWallet, useWallets, useLogout as usePrivyLogout } from "@privy-io/react-auth";
+import { useAccount, useSignMessage, useDisconnect } from "wagmi";
 import { createSiweMessage } from "viem/siwe";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
-import { useAuth } from "@/contexts/AuthContext";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { useAcceptSubname } from "@justaname.id/react";
 import { mainnet } from "viem/chains";
 import { ApplicationForm } from "@/components/ApplicationForm";
 import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users } from "lucide-react";
 
 interface PassportVerificationSectionProps {
-  memberId: number;
-  farcasterFid?: number; // Optional, kept for backward compatibility
+  farcasterFid: number;
   currentPassport?: string;
   isVerified?: boolean;
   onVerificationComplete?: () => void;
   allowChange?: boolean;
   memberData: any;
-  farcasterProfile?: any; // Optional, no longer required
+  farcasterProfile: any;
   context?: 'profile' | 'id-verification';
 }
 
 export function PassportVerificationSection({
-  memberId,
   farcasterFid,
   currentPassport,
   isVerified,
@@ -45,18 +43,10 @@ export function PassportVerificationSection({
 }: PassportVerificationSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { member: authMember } = useAuth();
-
-  // Privy wallet hooks (replacing RainbowKit/wagmi)
-  const { connectWallet } = useConnectWallet();
-  const { wallets } = useWallets();
-  const { logout: privyLogout } = usePrivyLogout();
-  const activeWallet = wallets[0]; // First connected wallet
-  const address = activeWallet?.address as `0x${string}` | undefined;
-  const isConnected = !!activeWallet;
-
-  // Keep useSignMessage from wagmi (works with @privy-io/wagmi)
+  const { profile } = usePersistentAuth();
+  const { address, isConnected } = useAccount();
   const { signMessage } = useSignMessage();
+  const { disconnect } = useDisconnect();
 
   const [verificationStatus, setVerificationStatus] = useState<
     "idle" | "checking" | "verifying" | "verified" | "failed"
@@ -123,11 +113,11 @@ export function PassportVerificationSection({
           {
             onSuccess: async (signature) => {
               try {
-                // Send verification request with signature (uses v2 endpoint with memberId)
-                const response = await apiRequest("/api/v2/auth/passport/verify", {
+                // Send verification request with signature
+                const response = await apiRequest("/api/passport/verify", {
                   method: "POST",
                   body: JSON.stringify({
-                    memberId,
+                    farcasterFid,
                     ensName: selectedDomain,
                     walletAddress,
                     message,
@@ -182,11 +172,11 @@ export function PassportVerificationSection({
           ens: ensName,
         });
 
-        // Update backend status to active_member (uses v2 endpoint with memberId)
-        await apiRequest("/api/v2/auth/passport/accept", {
+        // Update backend status to active_member
+        await apiRequest("/api/passport/accept", {
           method: "POST",
           body: JSON.stringify({
-            memberId,
+            farcasterFid,
           }),
         });
 
@@ -205,10 +195,10 @@ export function PassportVerificationSection({
 
               if (data.ensName === ensName) {
                 // Domain is verified as belonging to wallet, update backend
-                await apiRequest("/api/v2/auth/passport/accept", {
+                await apiRequest("/api/passport/accept", {
                   method: "POST",
                   body: JSON.stringify({
-                    memberId,
+                    farcasterFid,
                   }),
                 });
                 return { success: true, alreadyAccepted: true };
@@ -219,10 +209,10 @@ export function PassportVerificationSection({
           }
 
           // If verification fails, still update backend but note the conflict
-          await apiRequest("/api/v2/auth/passport/accept", {
+          await apiRequest("/api/passport/accept", {
             method: "POST",
             body: JSON.stringify({
-              memberId,
+              farcasterFid,
             }),
           });
           return { success: true, alreadyAccepted: true };
@@ -324,10 +314,14 @@ export function PassportVerificationSection({
           {/* Wallet Connection */}
           {!isConnected && (
             <div className="text-center">
-              <Button onClick={() => connectWallet()} className="w-full">
-                <Wallet className="mr-2 h-4 w-4" />
-                Connect Wallet
-              </Button>
+              <ConnectButton.Custom>
+                {({ openConnectModal }) => (
+                  <Button onClick={openConnectModal} className="w-full">
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Connect Wallet
+                  </Button>
+                )}
+              </ConnectButton.Custom>
             </div>
           )}
 
@@ -361,7 +355,7 @@ export function PassportVerificationSection({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    privyLogout();
+                    disconnect();
                     setWalletConnectedForVerification(false);
                     setVerificationStatus("idle");
                   }}
@@ -500,7 +494,6 @@ export function PassportVerificationSection({
       {showApplicationForm && memberData?.member?.status !== "approved_application" && memberData?.member?.status !== "active_member" && (
         <ApplicationForm
           memberData={memberData}
-          memberId={memberId}
           farcasterProfile={farcasterProfile}
           onSuccess={() => {
             setShowApplicationForm(false);

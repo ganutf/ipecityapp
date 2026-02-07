@@ -15,8 +15,7 @@ import { Loader2, CheckCircle, User, Globe, Twitter, Linkedin, Instagram, Tag } 
 import { PROFILE_TAGS, VALIDATION_LIMITS } from "@shared/constants";
 import { secureUsernameSchema, secureBioSchema, secureSocialHandleSchema, secureProfileTagsSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { useWallets } from "@privy-io/react-auth";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAccount } from "wagmi";
 import { apiRequest } from "@/lib/queryClient";
 import { validateSocialMediaUrl, type SocialPlatform } from "@/lib/utils";
 
@@ -46,21 +45,14 @@ type ApplicationFormData = z.infer<typeof applicationFormSchema>;
 
 interface ApplicationFormProps {
   memberData: any;
-  memberId: number;
-  farcasterProfile?: any; // Optional, no longer required
+  farcasterProfile: any;
   onSuccess: () => void;
 }
 
-export function ApplicationForm({ memberData, memberId, farcasterProfile, onSuccess }: ApplicationFormProps) {
+export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: ApplicationFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { getAccessToken } = useAuth();
-
-  // Privy wallet hooks (replacing wagmi useAccount)
-  const { wallets } = useWallets();
-  const activeWallet = wallets[0]; // First connected wallet
-  const address = activeWallet?.address as `0x${string}` | undefined;
-
+  const { address } = useAccount();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -83,10 +75,7 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
   const form = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationFormSchema),
     defaultValues: {
-      // Use Farcaster username if available, otherwise use member email prefix or empty
-      ipeUsername: farcasterProfile?.username?.replace(/[^a-z0-9]/g, "").toLowerCase()
-        || memberData?.member?.email?.split('@')[0]?.replace(/[^a-z0-9]/g, "").toLowerCase()
-        || "",
+      ipeUsername: farcasterProfile?.username?.replace(/[^a-z0-9]/g, "").toLowerCase() || "",
       bio: "",
       twitter: "",
       linkedin: "",
@@ -120,7 +109,7 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
     return () => clearTimeout(timeoutId);
   }, [watchedUsername]);
 
-  // Submit application mutation (uses v2 endpoint with memberId)
+  // Submit application mutation
   const submitApplicationMutation = useMutation({
     mutationFn: async (data: ApplicationFormData) => {
       if (!address) {
@@ -128,7 +117,7 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
       }
 
       const payload = {
-        memberId,
+        farcasterFid: memberData.member.farcasterFid,
         ...data,
         profileTags: selectedTags,
         walletAddress: address,
@@ -137,11 +126,9 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
       console.log("Submitting application with payload:", payload);
 
       try {
-        const token = await getAccessToken();
-        const response = await apiRequest("/api/v2/auth/application/submit", {
+        const response = await apiRequest("/api/application/submit", {
           method: "POST",
           body: JSON.stringify(payload),
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         });
         console.log("Application submission response:", response);
         return response;
@@ -155,6 +142,14 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
         title: "Application submitted successfully!",
         description: "Your application is now pending admin approval.",
       });
+      // Invalidate member status queries to refresh UI
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
+        // Small delay to ensure backend has processed the update
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: [`/api/members/check/${memberData.member.farcasterFid}`] });
+        }, 500);
+      }
       onSuccess();
     },
     onError: (error: Error) => {

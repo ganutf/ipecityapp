@@ -5,12 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/queryClient";
 import { CheckCircle, AlertCircle } from "lucide-react";
 
 interface EmailVerificationSectionProps {
-  memberId: number;
-  farcasterFid?: number; // Optional, kept for backward compatibility
+  farcasterFid: number;
   currentEmail?: string;
   isVerified?: boolean;
   onVerificationComplete?: () => void;
@@ -18,15 +17,12 @@ interface EmailVerificationSectionProps {
 }
 
 export function EmailVerificationSection({
-  memberId,
   farcasterFid,
   currentEmail,
   isVerified = false,
   onVerificationComplete,
   allowChange = false
 }: EmailVerificationSectionProps) {
-  const { getAccessToken } = useAuth();
-
   // Ensure we always have string values, never null/undefined
   const initialEmail = currentEmail || "";
   const [email, setEmail] = useState(initialEmail);
@@ -45,26 +41,16 @@ export function EmailVerificationSection({
     console.log("EmailVerificationSection: Updated state - isVerified:", isVerified, "currentEmail:", currentEmail, "emailVerified state:", emailVerified);
   }, [currentEmail, isVerified]);
 
-  // Send verification email (uses v2 endpoint with memberId)
+  // Send verification email
   const sendVerificationMutation = useMutation({
     mutationFn: async (emailAddress: string) => {
-      const token = await getAccessToken();
-      const response = await fetch(`/api/v2/auth/request-email-verification`, {
+      return apiRequest(`/api/auth/request-email-verification`, {
         method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
         body: JSON.stringify({
-          memberId,
+          farcasterFid,
           email: emailAddress,
         }),
       });
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || response.statusText);
-      }
-      return response.json();
     },
     onSuccess: () => {
       setShowVerification(true);
@@ -85,26 +71,16 @@ export function EmailVerificationSection({
     },
   });
 
-  // Confirm verification code (uses v2 endpoint with memberId)
+  // Confirm verification code
   const confirmVerificationMutation = useMutation({
     mutationFn: async (code: string) => {
-      const token = await getAccessToken();
-      const response = await fetch(`/api/v2/auth/verify-email`, {
+      return apiRequest(`/api/auth/confirm-email`, {
         method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
         body: JSON.stringify({
-          memberId,
+          farcasterFid,
           code,
         }),
       });
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || response.statusText);
-      }
-      return response.json();
     },
     onSuccess: () => {
       setEmailVerified(true);

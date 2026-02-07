@@ -31,22 +31,6 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
-  },
-  optimizeDeps: {
-    // Pre-bundle heavy Web3 dependencies to prevent esbuild crashes
-    include: [
-      '@privy-io/react-auth',
-      '@privy-io/wagmi',
-      'wagmi',
-      'viem',
-      'viem/chains',
-      '@tanstack/react-query',
-      'wouter',
-      '@justaname.id/react',
-    ],
-    // Increase esbuild workers for better stability
-    esbuildOptions: {
-      target: 'esnext',
-    },
+
   },
 });

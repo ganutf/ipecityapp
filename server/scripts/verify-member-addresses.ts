@@ -16,7 +16,7 @@ import { lookupEnsName } from '../lib/ensLookup';
 
 interface VerificationResult {
   memberId: number;
-  farcasterFid: number | null;
+  farcasterFid: number;
   ipeUsername: string | null;
   ipePassport: string | null;
   storedAddress: string | null;

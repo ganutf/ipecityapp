@@ -12,33 +12,35 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle, User, Globe, Twitter, Linkedin, Instagram, Tag } from "lucide-react";
-import { PROFILE_TAGS, VALIDATION_LIMITS } from "@shared/constants";
-import { secureUsernameSchema, secureBioSchema, secureSocialHandleSchema, secureProfileTagsSchema } from "@shared/schema";
+import { PROFILE_TAGS } from "@/constants/profileTags";
 import { useToast } from "@/hooks/use-toast";
 import { useAccount } from "wagmi";
 import { apiRequest } from "@/lib/queryClient";
 import { validateSocialMediaUrl, type SocialPlatform } from "@/lib/utils";
 
-// Application form schema - using shared validation
+// Application form schema
 const applicationFormSchema = z.object({
-  ipeUsername: secureUsernameSchema,
-  bio: secureBioSchema,
-  twitter: secureSocialHandleSchema.refine((value) => {
+  ipeUsername: z.string()
+    .min(3, "Username must be at least 3 characters")
+    .max(20, "Username must be at most 20 characters")
+    .regex(/^[a-z0-9]+$/, "Username can only contain lowercase letters and numbers"),
+  bio: z.string().optional(),
+  twitter: z.string().optional().refine((value) => {
     if (!value) return true;
     const validation = validateSocialMediaUrl(value, "twitter");
     return validation.isValid;
   }, "Please enter a valid Twitter/X URL"),
-  linkedin: secureSocialHandleSchema.refine((value) => {
+  linkedin: z.string().optional().refine((value) => {
     if (!value) return true;
     const validation = validateSocialMediaUrl(value, "linkedin");
     return validation.isValid;
   }, "Please enter a valid LinkedIn URL"),
-  instagram: secureSocialHandleSchema.refine((value) => {
+  instagram: z.string().optional().refine((value) => {
     if (!value) return true;
     const validation = validateSocialMediaUrl(value, "instagram");
     return validation.isValid;
   }, "Please enter a valid Instagram URL"),
-  profileTags: secureProfileTagsSchema,
+  profileTags: z.array(z.string()).optional(),
 });
 
 type ApplicationFormData = z.infer<typeof applicationFormSchema>;
@@ -184,7 +186,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
     setSelectedTags(prev => {
       const newTags = prev.includes(tag)
         ? prev.filter(t => t !== tag)
-        : prev.length < VALIDATION_LIMITS.MAX_PROFILE_TAGS
+        : prev.length < 5
           ? [...prev, tag]
           : prev; // Don't add if already at max
 
@@ -355,7 +357,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
             <div className="space-y-3">
               <FormLabel className="flex items-center gap-2">
                 <Tag className="h-4 w-4" />
-                Skills & Interests (max {VALIDATION_LIMITS.MAX_PROFILE_TAGS})
+                Skills & Interests (max 5)
               </FormLabel>
               <p className="text-xs text-gray-500">Select tags that describe you</p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -365,7 +367,7 @@ export function ApplicationForm({ memberData, farcasterProfile, onSuccess }: App
                       id={tag}
                       checked={selectedTags.includes(tag)}
                       onCheckedChange={() => handleTagToggle(tag)}
-                      disabled={selectedTags.length >= VALIDATION_LIMITS.MAX_PROFILE_TAGS && !selectedTags.includes(tag)}
+                      disabled={selectedTags.length >= 5 && !selectedTags.includes(tag)}
                     />
                     <Label htmlFor={tag} className="text-sm cursor-pointer">
                       {tag}

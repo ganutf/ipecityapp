@@ -1,36 +1,32 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import DOMPurify from 'isomorphic-dompurify';
-import { VALIDATION_LIMITS, VALIDATION_PATTERNS, RATE_LIMITS, TIMING } from '@shared/constants';
-
-// Re-export validation schemas from shared for backward compatibility
-export {
-  secureUsernameSchema as usernameSchema,
-  secureEmailSchema as emailSchema,
-  secureBioSchema as bioSchema,
-  secureFidSchema as fidSchema,
-  secureWalletAddressSchema as walletAddressSchema,
-  secureSocialHandleSchema as socialMediaSchema,
-} from '@shared/schema';
 
 /**
  * Comprehensive Input Validation Middleware
- *
+ * 
  * Provides secure validation and sanitization for all user inputs
  * to prevent SQL injection, XSS, and other injection attacks
- *
- * NOTE: Validation schemas have been consolidated in @shared/schema.ts
- * This file now re-exports them for backward compatibility and provides
- * middleware functions for request validation.
  */
 
-// Security validation schema for generic strings
+// Security validation schemas
 export const secureStringSchema = z.string()
   .min(1, "Field cannot be empty")
-  .max(VALIDATION_LIMITS.BIO_MAX_LENGTH, "Field too long")
-  .refine(val => !VALIDATION_PATTERNS.DANGEROUS_PATTERNS.some(p => p.test(val)), "Invalid content detected");
+  .max(1000, "Field too long")
+  .refine(val => !/<script|javascript:|data:|vbscript:/i.test(val), "Invalid content detected");
 
-// URL validation schema
+export const usernameSchema = z.string()
+  .min(3, "Username must be at least 3 characters")
+  .max(20, "Username must be at most 20 characters")
+  .regex(/^[a-z0-9]+$/, "Username can only contain lowercase letters and numbers")
+  .refine(val => val.length >= 3 && val.length <= 20, "Username length invalid")
+  .refine(val => !val.includes('admin') && !val.includes('root'), "Reserved username");
+
+export const emailSchema = z.string()
+  .email("Invalid email format")
+  .max(254, "Email too long")
+  .refine(val => !/<|>|"|'/.test(val), "Invalid characters in email");
+
 export const urlSchema = z.string()
   .url("Invalid URL format")
   .max(2048, "URL too long")
@@ -43,6 +39,34 @@ export const urlSchema = z.string()
     }
   }, "Only HTTP/HTTPS URLs allowed")
   .refine(val => !val.includes('<script'), "Invalid URL content");
+
+export const socialMediaSchema = z.string()
+  .max(100, "Social media handle too long")
+  .regex(/^[a-zA-Z0-9_.-]*$/, "Invalid characters in social media handle")
+  .optional()
+  .or(z.literal(''));
+
+export const bioSchema = z.string()
+  .max(1000, "Bio too long")
+  .refine(val => {
+    // Check for potential XSS patterns
+    const dangerousPatterns = [
+      /<script/i, /javascript:/i, /data:/i, /vbscript:/i,
+      /on\w+\s*=/i, /<iframe/i, /<object/i, /<embed/i
+    ];
+    return !dangerousPatterns.some(pattern => pattern.test(val));
+  }, "Bio contains invalid content")
+  .optional()
+  .or(z.literal(''));
+
+export const fidSchema = z.number()
+  .int("FID must be an integer")
+  .positive("FID must be positive")
+  .max(999999999, "FID too large");
+
+export const walletAddressSchema = z.string()
+  .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum wallet address")
+  .length(42, "Wallet address must be 42 characters");
 
 /**
  * Sanitize HTML content to prevent XSS attacks
@@ -200,26 +224,65 @@ export function sanitizeRequestBody(req: Request, res: Response, next: NextFunct
 }
 
 /**
- * Endpoint-specific validation schemas
- * NOTE: Most schemas are now in @shared/schema.ts - re-exported here for backward compatibility
+ * Specific validation schemas for different endpoints
  */
 
-// Re-export endpoint schemas from shared
-export {
-  emailVerificationRequestSchema as emailVerificationSchema,
-  usernameClaimSchema,
-  applicationSchema as memberRegistrationSchema,
-} from '@shared/schema';
-
-// Verification code schema (not in shared, keeping local)
-import { secureFidSchema } from '@shared/schema';
-export const verificationCodeSchema = z.object({
-  farcasterFid: secureFidSchema,
-  code: z.string().length(TIMING.EMAIL_CODE_LENGTH, `Verification code must be ${TIMING.EMAIL_CODE_LENGTH} characters`).regex(/^\d+$/, "Code must be numeric")
+// Member registration validation
+export const memberRegistrationSchema = z.object({
+  farcasterFid: fidSchema,
+  email: emailSchema.optional(),
+  ipeUsername: usernameSchema.optional(),
+  bio: bioSchema,
+  twitter: socialMediaSchema,
+  linkedin: socialMediaSchema,
+  instagram: socialMediaSchema,
+  walletAddress: walletAddressSchema.optional(),
+  profileTags: z.array(z.string().max(50)).max(10).optional()
 });
 
-// Re-export constants from shared for backward compatibility
-export { VALIDATION_LIMITS as maxLengths, RATE_LIMITS as requestLimits } from '@shared/constants';
+// Note: Pulse creation validation moved to shared/schema.ts
+// Using insertPulseSchema and insertPulseTypeSchema from shared schema
+
+// Username claim validation
+export const usernameClaimSchema = z.object({
+  farcasterFid: fidSchema,
+  username: usernameSchema,
+  walletAddress: walletAddressSchema
+});
+
+// Email verification validation
+export const emailVerificationSchema = z.object({
+  farcasterFid: fidSchema,
+  email: emailSchema
+});
+
+// Password/code validation
+export const verificationCodeSchema = z.object({
+  farcasterFid: fidSchema,
+  code: z.string().length(6, "Verification code must be 6 characters").regex(/^\d+$/, "Code must be numeric")
+});
+
+/**
+ * Rate limiting validation
+ */
+export const requestLimits = {
+  perMinute: 60,
+  perHour: 1000,
+  perDay: 10000
+};
+
+/**
+ * Input length validation
+ */
+export const maxLengths = {
+  username: 20,
+  email: 254,
+  bio: 1000,
+  socialMedia: 100,
+  url: 2048,
+  description: 500,
+  tags: 50
+};
 
 /**
  * Security headers middleware

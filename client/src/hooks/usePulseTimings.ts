@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { getPulseTimingInfo } from "../lib/pulseUtils";
-import { formatTimeDifference } from "../lib/dateUtils";
 import { useTimezone } from "../contexts/TimezoneContext";
 
 export interface Pulse {
@@ -78,6 +77,24 @@ export function usePulseTimings(pulses: Pulse[], enableRealTime: boolean = true)
         isFuture: timingInfo.isFuture,
       };
     });
+  };
+
+  const formatTimeDifference = (diffMs: number): string => {
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+
+    if (days > 0) {
+      return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+    }
+    
+    if (hours > 0) {
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    }
+    
+    return `${minutes}m`;
   };
 
   const pulseTimings = calculatePulseTimings(pulses || [], currentTime); // currentTime is UTC

@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { initializeDatabase, db } from "./db";
@@ -119,7 +118,6 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' })); // Limit request size
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
-app.use(cookieParser()); // Parse cookies for session management
 
 // Request logging middleware (simplified - static assets served first)
 app.use((req, res, next) => {

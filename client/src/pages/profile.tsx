@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ import { PassportVerificationSection } from "@/components/PassportVerificationSe
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { StatsCards } from "@/components/profile/StatsCards";
-import { useWallets, useLogout as usePrivyLogout } from "@privy-io/react-auth";
+import { useAccount, useDisconnect } from "wagmi";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import {
   Mail,
@@ -78,7 +78,7 @@ const profileSchema = z.object({
 });
 
 export default function Profile2() {
-  const { member, memberId, isAuthenticated, isLoading: authLoading, isMemberLoading, memberStatus, refreshMember, getAccessToken } = useAuth();
+  const { profile, isAuthenticated, isLoading: authLoading } = usePersistentAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -86,20 +86,15 @@ export default function Profile2() {
   // Authentication check - redirect to home if not authenticated
   // Wait for auth to stabilize before making redirect decisions
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!authLoading && !isAuthenticated && !profile?.fid) {
       console.log("Profile - Not authenticated (stable), redirecting to home");
       setLocation("/");
       return;
     }
-  }, [authLoading, isAuthenticated, setLocation]);
+  }, [authLoading, isAuthenticated, profile, setLocation]);
 
-  // Privy wallet hooks (replacing RainbowKit/wagmi)
-  const { wallets } = useWallets();
-  const { logout: privyLogout } = usePrivyLogout();
-  const activeWallet = wallets[0]; // First connected wallet
-  const address = activeWallet?.address as `0x${string}` | undefined;
-  const isConnected = !!activeWallet;
-
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
   const { ensName, isLoading: ensLoading } = useEnsLookup(address);
 
   // Edit states
@@ -124,65 +119,48 @@ export default function Profile2() {
   // Wallet disconnect confirmation dialog state
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
-  // Use member data from AuthContext instead of fetching via query
-  const memberData: MemberData | undefined = member ? {
-    isMember: true,
-    approved: memberStatus === 'active_member',
-    status: memberStatus || undefined,
-    member: {
-      id: member.id,
-      name: member.ipeUsername || member.email?.split('@')[0] || undefined, // Use username or email prefix as name
-      email: member.email || undefined,
-      emailVerified: member.emailVerified,
-      passportVerified: !!member.ipePassport,
-      bio: member.bio || undefined,
-      twitter: member.twitter || undefined,
-      linkedin: member.linkedin || undefined,
-      instagram: member.instagram || undefined,
-      profileTags: member.profileTags || undefined,
-      ipePassport: member.ipePassport || undefined,
-      ipeUsername: member.ipeUsername || undefined,
-      memberType: member.memberType,
-      profileCompleted: !!member.bio, // Considered completed if bio is filled
-      walletAddress: member.walletAddress || undefined,
-      totalPoints: (member as any).totalPoints,
-      pulseStreak: (member as any).pulseStreak,
-      createdAt: member.createdAt?.toString(),
-    },
-  } : undefined;
-  const isLoading = isMemberLoading;
+  const { data: memberData, isLoading } = useQuery<MemberData>({
+    queryKey: [`/api/members/check/${profile?.fid}`],
+    enabled: !!profile?.fid,
+  });
 
   // Verification status check - redirect incomplete users to id-verification
   useEffect(() => {
-    if (member && memberId) {
-      const incompleteStatuses = [
-        'pending_id_verification',
-        'email_verified',
-        'pending_application_review',
-        'approved_application'
-      ];
-      if (incompleteStatuses.includes(memberStatus || '')) {
-        console.log("Profile - Incomplete verification, redirecting to id-verification. Status:", memberStatus);
-        setLocation("/id-verification");
-        return;
+    if (memberData && profile?.fid) {
+      const { isMember, status } = memberData as any;
+      if (isMember) {
+        const incompleteStatuses = [
+          'pending_id_verification',
+          'email_verified', 
+          'pending_application_review',
+          'approved_application'
+        ];
+        if (incompleteStatuses.includes(status)) {
+          console.log("Profile - Incomplete verification, redirecting to id-verification. Status:", status);
+          setLocation("/id-verification");
+          return;
+        }
       }
     }
-  }, [member, memberId, memberStatus, setLocation]);
+  }, [memberData, profile, setLocation]);
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: {
+    mutationFn: (data: {
       bio?: string;
       twitter?: string;
       linkedin?: string;
       instagram?: string;
       profileTags?: string[];
     }) => {
-      const token = await getAccessToken();
-      // Use memberId for profile updates via v2 endpoint
-      return apiRequest(`/api/v2/members/${memberId}/profile`, {
+      return apiRequest(`/api/members/${profile?.fid}`, {
         method: "PATCH",
-        body: JSON.stringify(data),
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        headers: {
+          "x-farcaster-fid": profile?.fid?.toString() || "",
+        },
+        body: JSON.stringify({
+          ...data,
+          profileCompleted: true,
+        }),
       });
     },
     onSuccess: () => {
@@ -190,8 +168,9 @@ export default function Profile2() {
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
       });
-      // Refresh member data from AuthContext
-      refreshMember();
+      queryClient.invalidateQueries({
+        queryKey: [`/api/members/check/${profile?.fid}`],
+      });
       // Reset edit modes
       setEditingBio(false);
       setEditingSocial(false);
@@ -229,8 +208,7 @@ export default function Profile2() {
   };
 
   const handleDisconnectConfirm = () => {
-    // Use Privy logout to disconnect wallet and sign out
-    privyLogout();
+    disconnect();
     setShowDisconnectDialog(false);
   };
 
@@ -254,21 +232,20 @@ export default function Profile2() {
     setEditingTags(false);
   };
 
-  // Initialize form values when member data loads
-  // Use member (from auth context, stable reference) instead of memberData (recreated each render)
+  // Initialize form values when memberData loads
   useEffect(() => {
-    if (member) {
-      setBioValue(member.bio || "");
-      setTwitterValue(member.twitter || "");
-      setLinkedinValue(member.linkedin || "");
-      setInstagramValue(member.instagram || "");
-      setEmailValue(member.email || "");
-      setSelectedTags(member.profileTags || []);
+    if (memberData?.member) {
+      setBioValue(memberData.member.bio || "");
+      setTwitterValue(memberData.member.twitter || "");
+      setLinkedinValue(memberData.member.linkedin || "");
+      setInstagramValue(memberData.member.instagram || "");
+      setEmailValue(memberData.member.email || "");
+      setSelectedTags(memberData.member.profileTags || []);
     }
-  }, [member]);
+  }, [memberData]);
 
   // Show loading while auth is stabilizing
-  if (authLoading || isMemberLoading) {
+  if (authLoading || (!profile?.fid && isAuthenticated)) {
     return (
       <div className="container mx-auto max-w-2xl py-8">
         <Card>
@@ -308,10 +285,10 @@ export default function Profile2() {
         <ProfileCard>
           <CardContent className="pt-4 md:pt-6">
             <ProfileHeader
-              displayName={member?.ipeUsername || member?.email?.split('@')[0]}
-              username={member?.ipeUsername || undefined}
-              fid={member?.farcasterFid || undefined}
-              memberId={memberId || undefined}
+              displayName={profile?.displayName}
+              username={profile?.username}
+              fid={profile?.fid}
+              memberId={memberData?.member?.id}
               memberType={memberData?.member?.memberType}
               ipePassport={memberData?.member?.ipePassport}
               passportVerified={memberData?.member?.passportVerified}
@@ -320,7 +297,7 @@ export default function Profile2() {
               address={address}
               showWalletActions={true}
               onDisconnectWallet={handleDisconnectConfirm}
-              pfpUrl={undefined}
+              pfpUrl={profile?.pfpUrl}
               createdAt={memberData?.member?.createdAt}
             />
           </CardContent>
@@ -413,12 +390,10 @@ export default function Profile2() {
                 {/* Email Section with Verification */}
                 <div>
                   <EmailVerificationSection
-                    memberId={memberId || 0}
-                    farcasterFid={member?.farcasterFid || undefined}
+                    farcasterFid={profile?.fid || 0}
                     currentEmail={memberData?.member?.email}
                     isVerified={memberData?.member?.emailVerified || false}
                     allowChange={true}
-                    onVerificationComplete={refreshMember}
                   />
                 </div>
 

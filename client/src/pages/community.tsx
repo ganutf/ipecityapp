@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Search, Trophy, Target, SortAsc, SortDesc, Coins, Shield, User, Compass, Star, AlertCircle } from "lucide-react";
+import { Users, Search, Trophy, Target, SortAsc, SortDesc, Coins, Shield, CheckCircle, Crown, User, Compass, Star, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useMemo } from "react";
-import { useLocation } from "wouter";
+import { Link } from "wouter";
 
 interface CommunityMember {
   id: number;
@@ -70,7 +70,6 @@ function MemberRow({
   member: CommunityMember;
   showRank: boolean;
 }) {
-  const [, setLocation] = useLocation();
   const memberTypeConfig = MEMBER_TYPE_CONFIG[member.memberType as keyof typeof MEMBER_TYPE_CONFIG] || MEMBER_TYPE_CONFIG.architect;
   const MemberIcon = memberTypeConfig.icon;
 
@@ -106,7 +105,8 @@ function MemberRow({
   };
 
   return (
-    <tr className="border-b border-gray-200 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setLocation(`/member/${member.id}`)}>
+    <tr className="border-b border-gray-200 hover:bg-slate-50 transition-colors cursor-pointer">
+      <Link href={`/member/${member.id}`} className="contents">
         {showRank && (
           <td className="px-4 py-4 text-center align-middle">
             {getRankBadge(member.rank)}
@@ -175,26 +175,34 @@ function MemberRow({
             </span>
           </div>
         </td>
+      </Link>
     </tr>
   );
 }
 
 export default function Community() {
-  const { isAuthenticated, isLoading: authLoading, getAccessToken } = useAuth();
+  const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>('ipe');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Fetch community members using Privy auth
+  // Fetch community members
   const { data: membersData, isLoading: membersLoading, error } = useQuery<{ members: CommunityMember[] }>({
-    queryKey: ["/api/v2/community/members"],
+    queryKey: ["/api/community/members"],
     queryFn: async () => {
-      const token = await getAccessToken();
-      const response = await fetch("/api/v2/community/members", {
+      console.log("=== FRONTEND COMMUNITY QUERY DEBUG START ===");
+      console.log("Making request to /api/community/members");
+      console.log("Profile FID:", profile?.fid);
+      console.log("Is authenticated:", isAuthenticated);
+
+      const response = await fetch("/api/community/members", {
         headers: {
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          "x-farcaster-fid": profile?.fid?.toString() || "",
         },
       });
+
+      console.log("Response status:", response.status);
+      console.log("Response headers:", Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -202,9 +210,14 @@ export default function Community() {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log("Response data:", data);
+      console.log("Members count:", data?.members?.length || 0);
+      console.log("=== FRONTEND COMMUNITY QUERY DEBUG END ===");
+
+      return data;
     },
-    enabled: isAuthenticated,
+    enabled: Boolean(isAuthenticated && profile?.fid),
     retry: 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -238,11 +251,10 @@ export default function Community() {
     if (sortBy === 'ipe' || sortBy === 'points' || sortBy === 'streak') {
       console.log("=== RANKING DEBUG START ===");
       console.log("Raw members data:", members.map(m => ({
-        id: m.id,
-        ipeBalance: m.ipeBalance,
-        ipeBalanceRaw: m.ipeBalanceRaw,
+        fid: m.farcasterFid,
         points: m.totalPoints,
         streak: m.pulseStreak,
+        createdAt: m.createdAt,
         name: m.displayName || m.username
       })));
 
@@ -269,14 +281,14 @@ export default function Community() {
           if (comparison === 0) {
             comparison = b.pulseStreak - a.pulseStreak;
           }
-          // Tiebreaker 3: registration date or member ID
+          // Tiebreaker 3: registration date
           if (comparison === 0) {
             if (a.createdAt && b.createdAt) {
               const dateA = new Date(a.createdAt).getTime();
               const dateB = new Date(b.createdAt).getTime();
               comparison = dateA - dateB;
             } else {
-              comparison = a.id - b.id;
+              comparison = a.farcasterFid - b.farcasterFid;
             }
           }
         } else if (sortBy === 'points') {
@@ -292,8 +304,8 @@ export default function Community() {
               const dateB = new Date(b.createdAt).getTime();
               comparison = dateA - dateB;
             } else {
-              // Fallback to member ID if createdAt is missing
-              comparison = a.id - b.id;
+              // Fallback to FID if createdAt is missing
+              comparison = a.farcasterFid - b.farcasterFid;
             }
           }
         } else { // streak
@@ -309,8 +321,8 @@ export default function Community() {
               const dateB = new Date(b.createdAt).getTime();
               comparison = dateA - dateB;
             } else {
-              // Fallback to member ID if createdAt is missing
-              comparison = a.id - b.id;
+              // Fallback to FID if createdAt is missing
+              comparison = a.farcasterFid - b.farcasterFid;
             }
           }
         }
@@ -320,18 +332,16 @@ export default function Community() {
 
       console.log("Performance sorted order:", performanceSorted.map((m, idx) => ({
         rank: idx + 1,
-        id: m.id,
-        ipeBalance: m.ipeBalance,
-        ipeBalanceRaw: m.ipeBalanceRaw,
+        fid: m.farcasterFid,
         points: m.totalPoints,
         streak: m.pulseStreak,
+        createdAt: m.createdAt,
         name: m.displayName || m.username
       })));
 
       // Assign fixed ranks based on performance position (highest performance = #1)
       membersWithRanks = members.map(member => {
-        // Use member.id for matching since farcasterFid may not be unique (Privy users without Farcaster)
-        const performanceIndex = performanceSorted.findIndex(p => p.id === member.id);
+        const performanceIndex = performanceSorted.findIndex(p => p.farcasterFid === member.farcasterFid);
         const rank = performanceIndex + 1;
         console.log(`Member ${member.displayName || member.username} (${member.totalPoints}pts, ${member.pulseStreak}streak) -> Rank #${rank}`);
         return {
@@ -387,8 +397,8 @@ export default function Community() {
             const dateB = new Date(b.createdAt).getTime();
             comparison = dateA - dateB;
           } else {
-            // Fallback to member ID if createdAt is missing
-            comparison = a.id - b.id;
+            // Fallback to FID if createdAt is missing
+            comparison = a.farcasterFid - b.farcasterFid;
           }
         }
 
@@ -611,7 +621,7 @@ export default function Community() {
                 <tbody>
                   {sortedAndFilteredMembers.map((member: CommunityMember) => (
                     <MemberRow
-                      key={member.id}
+                      key={member.farcasterFid}
                       member={member}
                       showRank={sortBy === 'ipe' || sortBy === 'points' || sortBy === 'streak'}
                     />

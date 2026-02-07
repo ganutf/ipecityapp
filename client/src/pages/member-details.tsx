@@ -1,6 +1,6 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import { usePersistentAuth } from "@/hooks/use-persistent-auth";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { StatsCards } from "@/components/profile/StatsCards";
@@ -37,16 +37,15 @@ interface MemberDetailsData {
 
 export default function MemberDetails() {
   const { id } = useParams();
-  const { isAuthenticated, isLoading: authLoading, getAccessToken } = useAuth();
+  const { isAuthenticated, profile, isLoading: authLoading } = usePersistentAuth();
 
-  // Fetch member details using Privy auth
+  // Fetch member details
   const { data: memberData, isLoading, error } = useQuery<MemberDetailsData>({
-    queryKey: [`/api/v2/community/members/${id}`],
+    queryKey: [`/api/community/members/${id}`],
     queryFn: async () => {
-      const token = await getAccessToken();
-      const response = await fetch(`/api/v2/community/members/${id}`, {
+      const response = await fetch(`/api/community/members/${id}`, {
         headers: {
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          "x-farcaster-fid": profile?.fid?.toString() || "",
         },
       });
 
@@ -55,10 +54,9 @@ export default function MemberDetails() {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      const data = await response.json();
-      return data.member;
+      return response.json();
     },
-    enabled: Boolean(isAuthenticated && id),
+    enabled: Boolean(isAuthenticated && id && profile?.fid),
     retry: 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

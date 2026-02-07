@@ -22,16 +22,11 @@ export default function HomePage() {
   // Redirect authenticated users to appropriate page
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      if (isMember) {
-        if (memberStatus === 'active_member') {
-          // Active members go to community (main landing page for members)
-          setLocation("/community");
-        } else if (memberStatus === 'pending_id_verification') {
-          // Users in ID verification process go to id-verification page
-          setLocation("/id-verification");
-        }
-        // For other statuses (pending_application_review, etc), let AuthGuard handle it
+      if (isMember && memberStatus === 'active_member') {
+        // Active members go to community (main landing page for members)
+        setLocation("/community");
       }
+      // For users in verification process, let AuthGuard handle the redirection
     }
   }, [isAuthenticated, isLoading, isMember, memberStatus, setLocation]);
 

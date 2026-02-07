@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useConnectWallet } from "@privy-io/react-auth";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { 
   User, 
   Wallet, 
@@ -101,9 +101,6 @@ export function ProfileHeader({
   pfpUrl,
   createdAt
 }: ProfileHeaderProps) {
-  // Privy wallet hooks (replacing RainbowKit)
-  const { connectWallet } = useConnectWallet();
-
   const memberTypeInfo = memberTypeConfig[memberType as keyof typeof memberTypeConfig];
 
   // Format join date
@@ -207,12 +204,16 @@ export function ProfileHeader({
                   </Badge>
                 </div>
               ) : (
-                <button
-                  onClick={() => connectWallet()}
-                  className="text-xs md:text-sm text-gray-500 hover:underline transition-colors font-medium"
-                >
-                  Connect
-                </button>
+                <ConnectButton.Custom>
+                  {({ openConnectModal }) => (
+                    <button
+                      onClick={openConnectModal}
+                      className="text-xs md:text-sm text-gray-500 hover:underline transition-colors font-medium"
+                    >
+                      Connect
+                    </button>
+                  )}
+                </ConnectButton.Custom>
               )}
             </div>
           </div>

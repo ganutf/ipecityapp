@@ -82,7 +82,6 @@ import {
   UrlSanitizer 
 } from "./lib/sanitizer";
 import logger, { logUtils } from "./logger";
-import authRoutes from "./routes/auth.routes";
 // JustaName server-side imports removed
 
 /* local unions for clarity */
@@ -95,10 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Apply request sanitization to all routes
   app.use(sanitizeRequestBody);
-
-  // Register Auth V2 routes (Privy-based authentication)
-  app.use('/api/v2/auth', authRoutes);
-
+  
   /* ────────────────────────────────  HEALTH CHECK  ──────────────────────────────── */
   // Health check endpoint for deployment monitoring
   app.get("/health", async (req, res) => {
@@ -2319,7 +2315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Calculate totalPoints and pulseStreak if member exists
-      let memberWithStats: (typeof member & { totalPoints?: number; pulseStreak?: number }) | null = member;
+      let memberWithStats = member;
       if (member) {
         try {
           const totalPoints = await storage.calculateTotalPoints(member.id);
@@ -2328,7 +2324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...member,
             totalPoints,
             pulseStreak,
-          } as typeof member & { totalPoints: number; pulseStreak: number };
+          };
           console.log(`Calculated stats for FID ${farcasterFid}: totalPoints=${totalPoints}, pulseStreak=${pulseStreak}`);
         } catch (statsError) {
           console.error("Error calculating member stats:", statsError);

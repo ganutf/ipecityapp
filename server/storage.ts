@@ -1,17 +1,12 @@
-import {
-  members,
-  pulses,
+import { 
+  members, 
+  pulses, 
   pulseTypes,
   pulseExecutions,
   attestations,
   userSigners,
   emailVerifications,
   passportVerifications,
-  // Auth V2 tables
-  authUsers,
-  passkeys,
-  smartWallets,
-  farcasterAccounts,
   type Member,
   type InsertMember,
   type UpdateMember,
@@ -34,15 +29,6 @@ import {
   type InsertUserSigner,
   type EmailVerificationRequest,
   type ApplicationByMemberId,
-  // Auth V2 types
-  type AuthUser,
-  type InsertAuthUser,
-  type Passkey,
-  type InsertPasskey,
-  type SmartWallet,
-  type InsertSmartWallet,
-  type FarcasterAccount,
-  type InsertFarcasterAccount,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, asc, isNull, isNotNull, inArray, sql } from "drizzle-orm";
@@ -70,7 +56,7 @@ export interface IStorage {
   // Compatibility methods for farcasterFid lookup
   getMemberByFarcasterFid(farcasterFid: number): Promise<Member | undefined>;
   getMemberIdFromFarcasterFid(farcasterFid: number): Promise<number | undefined>;
-  getFarcasterFidFromMemberId(memberId: number): Promise<number | null | undefined>;
+  getFarcasterFidFromMemberId(memberId: number): Promise<number | undefined>;
   
   // Application Flow
   submitApplication(application: Application): Promise<Member>;
@@ -137,40 +123,7 @@ export interface IStorage {
   createUserSigner(signer: InsertUserSigner): Promise<UserSigner>;
   updateUserSignerStatus(memberId: number, status: string): Promise<UserSigner>;
   deleteUserSigner(memberId: number): Promise<void>;
-
-  // ============================================
-  // AUTH V2 METHODS
-  // ============================================
-
-  // Auth Users
-  getAuthUserById(id: string): Promise<AuthUser | undefined>;
-  getAuthUserByEmail(email: string): Promise<AuthUser | undefined>;
-  createAuthUser(user: InsertAuthUser): Promise<AuthUser>;
-  updateAuthUserEmailVerified(id: string, verified: boolean): Promise<AuthUser>;
-
-  // Passkeys
-  getPasskeysByUserId(userId: string): Promise<Passkey[]>;
-  getPasskeyByCredentialId(credentialId: string): Promise<Passkey | undefined>;
-  createPasskey(passkey: InsertPasskey): Promise<Passkey>;
-  updatePasskeySignCount(id: number, signCount: number): Promise<Passkey>;
-  deletePasskey(id: number): Promise<void>;
-
-  // Smart Wallets
-  getSmartWalletByUserId(userId: string): Promise<SmartWallet | undefined>;
-  getSmartWalletByAddress(address: string): Promise<SmartWallet | undefined>;
-  createSmartWallet(wallet: InsertSmartWallet): Promise<SmartWallet>;
-
-  // Farcaster Accounts
-  getFarcasterAccountByUserId(userId: string): Promise<FarcasterAccount | undefined>;
-  getFarcasterAccountByFid(fid: number): Promise<FarcasterAccount | undefined>;
-  createFarcasterAccount(account: InsertFarcasterAccount): Promise<FarcasterAccount>;
-
-  // Member by userId
-  getMemberByUserId(userId: string): Promise<Member | undefined>;
-
-  // Privy Auth
-  getMemberByPrivyId(privyId: string): Promise<Member | undefined>;
-  createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string): Promise<Member>;
+  
 }
 
 export class DatabaseStorage implements IStorage {
@@ -249,7 +202,7 @@ export class DatabaseStorage implements IStorage {
     return member?.id;
   }
   
-  async getFarcasterFidFromMemberId(memberId: number): Promise<number | null | undefined> {
+  async getFarcasterFidFromMemberId(memberId: number): Promise<number | undefined> {
     const member = await this.getMember(memberId);
     return member?.farcasterFid;
   }
@@ -914,131 +867,6 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return !!execution;
-  }
-
-  // ============================================
-  // AUTH V2 METHODS
-  // ============================================
-
-  // Auth Users
-  async getAuthUserById(id: string): Promise<AuthUser | undefined> {
-    const [user] = await db.select().from(authUsers).where(eq(authUsers.id, id));
-    return user;
-  }
-
-  async getAuthUserByEmail(email: string): Promise<AuthUser | undefined> {
-    const [user] = await db.select().from(authUsers).where(eq(authUsers.email, email.toLowerCase()));
-    return user;
-  }
-
-  async createAuthUser(userData: InsertAuthUser): Promise<AuthUser> {
-    const [user] = await db.insert(authUsers).values({
-      ...userData,
-      email: userData.email.toLowerCase(),
-    }).returning();
-    return user;
-  }
-
-  async updateAuthUserEmailVerified(id: string, verified: boolean): Promise<AuthUser> {
-    const [user] = await db
-      .update(authUsers)
-      .set({
-        emailVerified: verified,
-        emailVerifiedAt: verified ? new Date() : null,
-        updatedAt: new Date(),
-      })
-      .where(eq(authUsers.id, id))
-      .returning();
-    return user;
-  }
-
-  // Passkeys
-  async getPasskeysByUserId(userId: string): Promise<Passkey[]> {
-    return await db.select().from(passkeys).where(eq(passkeys.userId, userId));
-  }
-
-  async getPasskeyByCredentialId(credentialId: string): Promise<Passkey | undefined> {
-    const [passkey] = await db.select().from(passkeys).where(eq(passkeys.credentialId, credentialId));
-    return passkey;
-  }
-
-  async createPasskey(passkeyData: InsertPasskey): Promise<Passkey> {
-    const [passkey] = await db.insert(passkeys).values(passkeyData).returning();
-    return passkey;
-  }
-
-  async updatePasskeySignCount(id: number, signCount: number): Promise<Passkey> {
-    const [passkey] = await db
-      .update(passkeys)
-      .set({
-        signCount,
-        lastUsedAt: new Date(),
-      })
-      .where(eq(passkeys.id, id))
-      .returning();
-    return passkey;
-  }
-
-  async deletePasskey(id: number): Promise<void> {
-    await db.delete(passkeys).where(eq(passkeys.id, id));
-  }
-
-  // Smart Wallets
-  async getSmartWalletByUserId(userId: string): Promise<SmartWallet | undefined> {
-    const [wallet] = await db.select().from(smartWallets).where(eq(smartWallets.userId, userId));
-    return wallet;
-  }
-
-  async getSmartWalletByAddress(address: string): Promise<SmartWallet | undefined> {
-    const [wallet] = await db.select().from(smartWallets).where(eq(smartWallets.walletAddress, address.toLowerCase()));
-    return wallet;
-  }
-
-  async createSmartWallet(walletData: InsertSmartWallet): Promise<SmartWallet> {
-    const [wallet] = await db.insert(smartWallets).values({
-      ...walletData,
-      walletAddress: walletData.walletAddress.toLowerCase(),
-    }).returning();
-    return wallet;
-  }
-
-  // Farcaster Accounts
-  async getFarcasterAccountByUserId(userId: string): Promise<FarcasterAccount | undefined> {
-    const [account] = await db.select().from(farcasterAccounts).where(eq(farcasterAccounts.userId, userId));
-    return account;
-  }
-
-  async getFarcasterAccountByFid(fid: number): Promise<FarcasterAccount | undefined> {
-    const [account] = await db.select().from(farcasterAccounts).where(eq(farcasterAccounts.farcasterFid, fid));
-    return account;
-  }
-
-  async createFarcasterAccount(accountData: InsertFarcasterAccount): Promise<FarcasterAccount> {
-    const [account] = await db.insert(farcasterAccounts).values(accountData).returning();
-    return account;
-  }
-
-  // Member by userId
-  async getMemberByUserId(userId: string): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.userId, userId));
-    return member;
-  }
-
-  // Privy Auth
-  async getMemberByPrivyId(privyId: string): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.privyId, privyId));
-    return member;
-  }
-
-  async createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string): Promise<Member> {
-    const [member] = await db.insert(members).values({
-      privyId,
-      email,
-      walletAddress,
-      status: 'pending_application',
-      memberType: 'pending',
-    }).returning();
-    return member;
   }
 }
 

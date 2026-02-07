@@ -37,14 +37,14 @@ export async function privyAuthMiddleware(
     const token = authHeader.slice(7);
 
     // Verify the Privy access token
-    const verifiedClaims = await privy.utils().auth().verifyAccessToken(token);
+    const verifiedClaims = await privy.verifyAuthToken(token);
 
     req.privyUser = {
-      id: verifiedClaims.user_id,
+      id: verifiedClaims.userId,
     };
 
     // Try to find existing member by Privy ID
-    let member = await storage.getMemberByPrivyId(verifiedClaims.user_id);
+    let member = await storage.getMemberByPrivyId(verifiedClaims.userId);
 
     if (member) {
       req.member = member;
@@ -77,13 +77,13 @@ export async function optionalPrivyAuthMiddleware(
     }
 
     const token = authHeader.slice(7);
-    const verifiedClaims = await privy.utils().auth().verifyAccessToken(token);
+    const verifiedClaims = await privy.verifyAuthToken(token);
 
     req.privyUser = {
-      id: verifiedClaims.user_id,
+      id: verifiedClaims.userId,
     };
 
-    const member = await storage.getMemberByPrivyId(verifiedClaims.user_id);
+    const member = await storage.getMemberByPrivyId(verifiedClaims.userId);
     if (member) {
       req.member = member;
     }

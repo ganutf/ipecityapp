@@ -26,11 +26,11 @@ export default function HomePage() {
         if (memberStatus === 'active_member') {
           // Active members go to community (main landing page for members)
           setLocation("/community");
-        } else if (memberStatus === 'pending_id_verification') {
-          // Users in ID verification process go to id-verification page
+        } else {
+          // All other statuses: id-verification page handles the full onboarding flow
+          // (pending_id_verification, pending_application_review, approved_application, denied_application)
           setLocation("/id-verification");
         }
-        // For other statuses (pending_application_review, etc), let AuthGuard handle it
       }
     }
   }, [isAuthenticated, isLoading, isMember, memberStatus, setLocation]);

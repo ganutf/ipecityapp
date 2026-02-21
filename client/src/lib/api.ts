@@ -1,6 +1,16 @@
 /**
- * Utility functions for making authenticated API requests
+ * Utility functions for making authenticated API requests.
+ *
+ * Supports both Privy Bearer token auth (primary) and legacy Farcaster FID auth.
+ * The AuthContext sets the Privy token via setApiAccessToken() when authenticated.
  */
+
+let _accessToken: string | null = null;
+
+/** Called by AuthContext to keep the token in sync */
+export function setApiAccessToken(token: string | null) {
+  _accessToken = token;
+}
 
 /**
  * Get authentication headers for API requests
@@ -10,6 +20,12 @@ export function getAuthHeaders(fid?: number): HeadersInit {
     'Content-Type': 'application/json',
   };
 
+  // Privy Bearer token (primary auth)
+  if (_accessToken) {
+    headers['Authorization'] = `Bearer ${_accessToken}`;
+  }
+
+  // Legacy Farcaster FID header (fallback)
   if (fid) {
     headers['x-farcaster-fid'] = fid.toString();
   }
@@ -37,45 +53,35 @@ export async function authenticatedGet(url: string, fid?: number) {
  * Make an authenticated POST request
  */
 export async function authenticatedPost(url: string, data: any, fid?: number) {
-  console.log(`[API] POST request to ${url} with fid: ${fid}`);
-  
   const response = await fetch(url, {
     method: 'POST',
     headers: getAuthHeaders(fid),
     body: JSON.stringify(data),
   });
 
-  console.log(`[API] Response status: ${response.status} ${response.statusText}`);
-
   if (!response.ok) {
     let errorMessage = `Request failed: ${response.status} ${response.statusText}`;
-    
+
     try {
       const errorBody = await response.text();
-      console.error(`[API] Error response body:`, errorBody);
-      
-      // Try to parse as JSON to get more detailed error information
       try {
         const errorJson = JSON.parse(errorBody);
         if (errorJson.error) {
           errorMessage = errorJson.error;
         }
       } catch {
-        // If not JSON, use the raw text
         if (errorBody) {
           errorMessage = errorBody;
         }
       }
-    } catch (e) {
-      console.error(`[API] Failed to read error response:`, e);
+    } catch {
+      // Failed to read error response
     }
-    
+
     throw new Error(errorMessage);
   }
 
-  const result = await response.json();
-  console.log(`[API] Success response:`, result);
-  return result;
+  return response.json();
 }
 
 /**

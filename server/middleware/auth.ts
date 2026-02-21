@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
 import { MemberType } from '@shared/schema';
 import logger from '../logger';
+import { privy } from '../lib/privy';
 
 /**
  * Enhanced Request interface with user information
@@ -26,51 +27,48 @@ export const authenticateUser = async (
   next: NextFunction
 ) => {
   try {
-    // Extract FID from various sources
+    let member;
+
+    // Try FID-based auth first (legacy)
     const fid = extractFidFromRequest(req);
-    
-    logger.debug('Auth middleware processing request', { 
-      method: req.method, 
-      path: req.path, 
-      fid,
-      hasHeader: !!req.headers['x-farcaster-fid']
-    });
-    
-    if (!fid) {
-      logger.debug('Authentication failed: No FID found in request');
+
+    if (fid) {
+      member = await storage.getMemberByFarcasterFid(fid);
+      logger.debug('FID auth lookup', member ? { memberId: member.id, fid } : { fid, found: false });
+    }
+
+    // Try Privy Bearer token auth if no FID or member not found
+    if (!member) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ') && privy) {
+        try {
+          const token = authHeader.slice(7);
+          const verifiedClaims = await privy.utils().auth().verifyAccessToken(token);
+          member = await storage.getMemberByPrivyId(verifiedClaims.user_id);
+          logger.debug('Privy auth lookup', member ? { memberId: member.id, privyId: verifiedClaims.user_id } : { privyId: verifiedClaims.user_id, found: false });
+        } catch (err) {
+          logger.debug('Privy token verification failed', { error: (err as Error)?.message });
+        }
+      }
+    }
+
+    if (!member) {
+      logger.debug('Authentication failed: No valid credentials');
       return res.status(401).json({
         error: 'Authentication required',
-        message: 'Farcaster FID must be provided in x-farcaster-fid header or request body'
+        message: 'Valid Privy token or Farcaster FID required'
       });
     }
 
-    // Validate that the user exists in our system
-    const member = await storage.getMemberByFarcasterFid(fid);
-    logger.debug('Member lookup completed', member ? {
-      memberId: member.id,
-      farcasterFid: member.farcasterFid,
-      status: member.status,
-      memberType: member.memberType
-    } : { fid, found: false });
-    
-    if (!member) {
-      logger.debug('Authentication failed: Member not found', { fid });
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'User not found in system'
-      });
-    }
-
-    // Check if user is active or admin - be more permissive during development
-    const allowedStatuses = ['active_member', 'approved_application', 'email_verified'];
+    // Check if user is active or admin
+    const allowedStatuses = ['active_member', 'approved_application'];
     const isAdmin = member.memberType === 'admin';
-    
+
     if (!allowedStatuses.includes(member.status) && !isAdmin) {
-      logger.debug('Authentication failed: User account not active', { 
-        fid, 
-        status: member.status, 
-        memberType: member.memberType,
-        allowedStatuses 
+      logger.debug('Authentication failed: User account not active', {
+        memberId: member.id,
+        status: member.status,
+        memberType: member.memberType
       });
       return res.status(401).json({
         error: 'Unauthorized',
@@ -78,27 +76,26 @@ export const authenticateUser = async (
       });
     }
 
-    // Add user info to request (both internal and external IDs)
+    // Add user info to request
     req.user = {
-      id: member.id,                                    // Internal member ID
-      fid,                                              // External farcaster FID
+      id: member.id,
+      fid: member.farcasterFid || 0,
       memberType: member.memberType as MemberType,
       isAdmin: member.memberType === 'admin',
       member
     };
 
-    logger.debug('Authentication successful', { 
-      fid, 
-      memberId: member.id, 
+    logger.debug('Authentication successful', {
+      memberId: member.id,
       memberType: member.memberType,
-      status: member.status 
+      status: member.status
     });
 
     next();
   } catch (error) {
-    logger.error('Authentication middleware error', { 
-      error: (error as Error)?.message || 'Unknown error', 
-      stack: (error as Error)?.stack 
+    logger.error('Authentication middleware error', {
+      error: (error as Error)?.message || 'Unknown error',
+      stack: (error as Error)?.stack
     });
     return res.status(500).json({
       error: 'Authentication failed',

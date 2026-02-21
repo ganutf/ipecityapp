@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { usePrivy, useIdentityToken } from '@privy-io/react-auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Member } from '@shared/schema';
+import { setApiAccessToken } from '@/lib/api';
 
 // Check if Privy is configured
 const PRIVY_ENABLED = !!import.meta.env.VITE_PRIVY_APP_ID;
@@ -95,17 +96,20 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  // Get access token when authenticated
+  // Get access token when authenticated and sync to api.ts
   useEffect(() => {
     if (privyAuthenticated && privyReady) {
       getAccessToken().then((token: string | null) => {
         setAccessToken(token);
+        setApiAccessToken(token);
       }).catch((err: Error) => {
         console.error('Failed to get Privy access token:', err);
         setAccessToken(null);
+        setApiAccessToken(null);
       });
     } else {
       setAccessToken(null);
+      setApiAccessToken(null);
     }
   }, [privyAuthenticated, privyReady, getAccessToken]);
 
@@ -151,6 +155,7 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
   const handleLogout = async () => {
     await privyLogout();
     setAccessToken(null);
+    setApiAccessToken(null);
     queryClient.clear();
   };
 

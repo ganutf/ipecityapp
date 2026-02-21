@@ -80,3 +80,13 @@ jspm_packages/
 .master-key
 .keys/
 *.enc
+
+# Database backups and migration scripts (DO NOT COMMIT)
+backup-*
+/migrate-member-ids*.sql
+/backup-*.sql
+/backup-*.csv
+
+# Test files
+client/src/TestApp.tsx
+client/src/pages/test-home.tsx

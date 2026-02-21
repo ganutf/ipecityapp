@@ -51,9 +51,8 @@ export const members = pgTable("members", {
   walletAddress: varchar("wallet_address", { length: 255 }),
   
   // State machine fields - restricted by database CHECK constraint
-  // Valid values: pending_signer, pending_id_verification, email_verified, pending_application, 
-  // pending_application_review, approved_application, denied_application, active_member
-  status: varchar("status", { length: 30 }).default("pending_signer").notNull(),
+  // Valid values: pending_id_verification, pending_application_review, approved_application, denied_application, active_member
+  status: varchar("status", { length: 30 }).default("pending_id_verification").notNull(),
   // Valid member types: pending, architect, explorer, admin, org_team, core_team
   memberType: varchar("member_type", { length: 20 }).default("pending").notNull(),
   
@@ -77,7 +76,7 @@ export const members = pgTable("members", {
   
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Pulse types table - defines different types of pulses
@@ -133,7 +132,7 @@ export const userSigners = pgTable("user_signers", {
   status: varchar("status"), // "pending_approval", "approved", "revoked", etc.
   approvalUrl: varchar("approval_url"), // Using existing column name
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Relations
@@ -200,7 +199,7 @@ export const authUsers = pgTable("auth_users", {
   emailVerified: boolean("email_verified").default(false),
   emailVerifiedAt: timestamp("email_verified_at"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Passkeys - WebAuthn credentials for passwordless authentication

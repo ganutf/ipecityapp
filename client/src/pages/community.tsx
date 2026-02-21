@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Search, Trophy, Target, SortAsc, SortDesc, Coins, Shield, User, Compass, Star, AlertCircle } from "lucide-react";
+import { Users, Search, Trophy, Target, SortAsc, SortDesc, Coins } from "lucide-react";
+import { getMemberTypeInfo } from "@/lib/memberTypeConfig";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,39 +29,6 @@ interface CommunityMember {
 type SortOption = 'ipe' | 'points' | 'streak' | 'name';
 type SortDirection = 'asc' | 'desc';
 
-// Member type configuration for role display
-const MEMBER_TYPE_CONFIG = {
-  architect: {
-    label: "Architect",
-    icon: User,
-    color: "bg-purple-500 text-white",
-  },
-  explorer: {
-    label: "Explorer",
-    icon: Compass,
-    color: "bg-blue-500 text-white",
-  },
-  admin: {
-    label: "Admin",
-    icon: Shield,
-    color: "bg-green-500 text-white",
-  },
-  org_team: {
-    label: "Org Team",
-    icon: Users,
-    color: "bg-orange-500 text-white",
-  },
-  core_team: {
-    label: "Core Team",
-    icon: Star,
-    color: "bg-red-500 text-white",
-  },
-  pending: {
-    label: "Pending",
-    icon: AlertCircle,
-    color: "bg-gray-500 text-white",
-  },
-} as const;
 
 // MemberRow component for table display
 function MemberRow({
@@ -71,8 +39,8 @@ function MemberRow({
   showRank: boolean;
 }) {
   const [, setLocation] = useLocation();
-  const memberTypeConfig = MEMBER_TYPE_CONFIG[member.memberType as keyof typeof MEMBER_TYPE_CONFIG] || MEMBER_TYPE_CONFIG.architect;
-  const MemberIcon = memberTypeConfig.icon;
+  const typeInfo = getMemberTypeInfo(member.memberType);
+  const MemberIcon = typeInfo.icon;
 
   // Rank badge styling
   const getRankBadge = (rank?: number) => {
@@ -131,10 +99,10 @@ function MemberRow({
         </td>
         <td className="px-4 py-4 align-middle">
           <div className="flex items-center space-x-1.5">
-            <div className={`h-6 w-6 rounded-full flex items-center justify-center ${memberTypeConfig.color}`}>
+            <div className={`h-6 w-6 rounded-full flex items-center justify-center ${typeInfo.badgeColor}`}>
               <MemberIcon className="h-3 w-3" />
             </div>
-            <span className="text-xs text-gray-600">{memberTypeConfig.label}</span>
+            <span className="text-xs text-gray-600">{typeInfo.label}</span>
           </div>
         </td>
         <td className="px-4 py-4 align-middle">

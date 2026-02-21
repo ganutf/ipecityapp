@@ -1,16 +1,12 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  User, 
-  Compass, 
-  Shield, 
-  Users, 
-  Star, 
-  AlertCircle,
+import {
+  User,
   Globe,
   TrendingUp,
   Target
 } from "lucide-react";
+import { getMemberTypeInfo } from "@/lib/memberTypeConfig";
 import { Link } from "wouter";
 
 interface MemberCardProps {
@@ -27,44 +23,6 @@ interface MemberCardProps {
   showRank?: boolean;
 }
 
-const memberTypeConfig = {
-  architect: { 
-    label: 'Architect', 
-    icon: User, 
-    color: 'bg-purple-100 text-purple-600',
-    description: 'Building the future of communities'
-  },
-  explorer: { 
-    label: 'Explorer', 
-    icon: Compass, 
-    color: 'bg-blue-100 text-blue-600',
-    description: 'Discovering new possibilities'
-  },
-  admin: { 
-    label: 'Admin', 
-    icon: Shield, 
-    color: 'bg-green-100 text-green-600',
-    description: 'Leading and managing the community'
-  },
-  org_team: { 
-    label: 'Org Team', 
-    icon: Users, 
-    color: 'bg-orange-100 text-orange-600',
-    description: 'Supporting organizational operations'
-  },
-  core_team: { 
-    label: 'Core Team', 
-    icon: Star, 
-    color: 'bg-red-100 text-red-600',
-    description: 'Core development and leadership'
-  },
-  pending: { 
-    label: 'Pending', 
-    icon: AlertCircle, 
-    color: 'bg-gray-100 text-gray-600',
-    description: 'Awaiting approval'
-  }
-};
 
 export function MemberCard({ 
   id,
@@ -79,7 +37,7 @@ export function MemberCard({
   rank,
   showRank = false
 }: MemberCardProps) {
-  const memberTypeInfo = memberTypeConfig[memberType as keyof typeof memberTypeConfig];
+  const memberTypeInfo = getMemberTypeInfo(memberType);
 
   return (
     <Link href={`/member/${id}`}>

@@ -11,7 +11,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useSignMessage } from "wagmi";
-import { useConnectWallet, useWallets, useLogout as usePrivyLogout } from "@privy-io/react-auth";
+import { useConnectWallet, useLogout as usePrivyLogout } from "@privy-io/react-auth";
+import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { createSiweMessage } from "viem/siwe";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,11 +48,9 @@ export function PassportVerificationSection({
   const queryClient = useQueryClient();
   const { member: authMember } = useAuth();
 
-  // Privy wallet hooks (replacing RainbowKit/wagmi)
   const { connectWallet } = useConnectWallet();
-  const { wallets } = useWallets();
   const { logout: privyLogout } = usePrivyLogout();
-  const activeWallet = wallets[0]; // First connected wallet
+  const { activeWallet } = useActiveWallet();
   const address = activeWallet?.address as `0x${string}` | undefined;
   const isConnected = !!activeWallet;
 

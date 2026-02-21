@@ -7,17 +7,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useWallets } from "@privy-io/react-auth";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
+import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { Coins } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, member, isLoading, logout, login } = useAuth();
   const [location] = useLocation();
 
-  // Privy wallet hooks (replacing wagmi useAccount)
-  const { wallets } = useWallets();
-  const activeWallet = wallets[0]; // First connected wallet
+  const { activeWallet } = useActiveWallet();
   const address = activeWallet?.address as `0x${string}` | undefined;
 
   // Get IPE token balance

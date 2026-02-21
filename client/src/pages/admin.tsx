@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Pencil, Save, X, Eye, Clock, Globe, Wallet } from "lucide-react";
-import { useConnectWallet, useWallets } from "@privy-io/react-auth";
+import { getMemberTypeInfo } from "@/lib/memberTypeConfig";
+import { useConnectWallet } from "@privy-io/react-auth";
+import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { useLocation } from "wouter";
 import { PulseCard } from "@/components/PulseCard";
 import { authenticatedPost, authenticatedGet, authenticatedPatch } from "@/lib/api";
@@ -24,10 +26,8 @@ export default function AdminPage() {
   const [, setLocation] = useLocation();
   const { timezoneInfo } = useTimezone();
 
-  // Privy wallet hooks (replacing RainbowKit)
   const { connectWallet } = useConnectWallet();
-  const { wallets } = useWallets();
-  const activeWallet = wallets[0]; // First connected wallet
+  const { activeWallet } = useActiveWallet();
   const address = activeWallet?.address as `0x${string}` | undefined;
   const isConnected = !!activeWallet;
 
@@ -51,14 +51,6 @@ export default function AdminPage() {
   const isAdmin = member?.memberType === 'admin';
 
   // Member type configuration
-  const memberTypeConfig = {
-    architect: { label: 'Architect', color: 'bg-purple-100 text-purple-800' },
-    explorer: { label: 'Explorer', color: 'bg-blue-100 text-blue-800' },
-    admin: { label: 'Admin', color: 'bg-green-100 text-green-800' },
-    org_team: { label: 'Org Team', color: 'bg-orange-100 text-orange-800' },
-    core_team: { label: 'Core Team', color: 'bg-red-100 text-red-800' },
-    pending: { label: 'Pending', color: 'bg-gray-100 text-gray-800' }
-  };
 
   // Fetch pulse types
   const { data: pulseTypesData, isLoading: pulseTypesLoading } = useQuery({
@@ -441,9 +433,9 @@ export default function AdminPage() {
                         </td>
                         <td className="py-2">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            memberTypeConfig[member.memberType as keyof typeof memberTypeConfig]?.color || 'bg-gray-100 text-gray-800'
+                            getMemberTypeInfo(member.memberType).color
                           }`}>
-                            {memberTypeConfig[member.memberType as keyof typeof memberTypeConfig]?.label || 'Unknown'}
+                            {getMemberTypeInfo(member.memberType).label}
                           </span>
                         </td>
                         <td className="py-2">
@@ -583,9 +575,9 @@ export default function AdminPage() {
                     // View mode for approved members
                     <div className="flex items-center justify-between mt-1">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        memberTypeConfig[selectedMember.memberType as keyof typeof memberTypeConfig]?.color || 'bg-gray-100 text-gray-800'
+                        getMemberTypeInfo(selectedMember.memberType).color
                       }`}>
-                        {memberTypeConfig[selectedMember.memberType as keyof typeof memberTypeConfig]?.label || 'Unknown'}
+                        {getMemberTypeInfo(selectedMember.memberType).label}
                       </span>
                       <Button
                         size="sm"

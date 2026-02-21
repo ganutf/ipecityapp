@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { useEnsAddress, useSignMessage } from "wagmi";
-import { useConnectWallet, useWallets } from "@privy-io/react-auth";
+import { useConnectWallet } from "@privy-io/react-auth";
+import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { SiweMessage } from "siwe";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,10 +17,8 @@ export default function VerifyPassportPage() {
   const [verified, setVerified] = useState(false);
   const [targetPassport, setTargetPassport] = useState<string>("");
 
-  // Privy wallet hooks (replacing RainbowKit)
   const { connectWallet } = useConnectWallet();
-  const { wallets } = useWallets();
-  const activeWallet = wallets[0]; // First connected wallet
+  const { activeWallet } = useActiveWallet();
   const address = activeWallet?.address as `0x${string}` | undefined;
   const isConnected = !!activeWallet;
 

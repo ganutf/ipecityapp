@@ -11,17 +11,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useConnectWallet } from "@privy-io/react-auth";
-import { 
-  User, 
-  Wallet, 
-  Globe, 
+import {
+  User,
+  Wallet,
+  Globe,
   CheckCircle,
-  AlertCircle,
-  Compass,
-  Shield,
-  Users,
-  Star
 } from "lucide-react";
+import { getMemberTypeInfo } from "@/lib/memberTypeConfig";
 
 interface ProfileHeaderProps {
   displayName?: string;
@@ -40,50 +36,6 @@ interface ProfileHeaderProps {
   createdAt?: string;
 }
 
-const memberTypeConfig = {
-  architect: { 
-    label: 'Architect', 
-    icon: User, 
-    color: 'bg-purple-100 text-purple-600',
-    hoverColor: 'hover:bg-purple-200',
-    description: 'Building the future of communities'
-  },
-  explorer: { 
-    label: 'Explorer', 
-    icon: Compass, 
-    color: 'bg-blue-100 text-blue-600',
-    hoverColor: 'hover:bg-blue-200',
-    description: 'Discovering new possibilities'
-  },
-  admin: { 
-    label: 'Admin', 
-    icon: Shield, 
-    color: 'bg-green-100 text-green-600',
-    hoverColor: 'hover:bg-green-200',
-    description: 'Leading and managing the community'
-  },
-  org_team: { 
-    label: 'Org Team', 
-    icon: Users, 
-    color: 'bg-orange-100 text-orange-600',
-    hoverColor: 'hover:bg-orange-200',
-    description: 'Supporting organizational operations'
-  },
-  core_team: { 
-    label: 'Core Team', 
-    icon: Star, 
-    color: 'bg-red-100 text-red-600',
-    hoverColor: 'hover:bg-red-200',
-    description: 'Core development and leadership'
-  },
-  pending: { 
-    label: 'Pending', 
-    icon: AlertCircle, 
-    color: 'bg-gray-100 text-gray-600',
-    hoverColor: 'hover:bg-gray-200',
-    description: 'Awaiting approval'
-  }
-};
 
 export function ProfileHeader({
   displayName,
@@ -104,7 +56,7 @@ export function ProfileHeader({
   // Privy wallet hooks (replacing RainbowKit)
   const { connectWallet } = useConnectWallet();
 
-  const memberTypeInfo = memberTypeConfig[memberType as keyof typeof memberTypeConfig];
+  const memberTypeInfo = memberType ? getMemberTypeInfo(memberType) : null;
 
   // Format join date
   const memberSince = createdAt ? new Date(createdAt).toLocaleDateString("en-US", {
@@ -142,7 +94,7 @@ export function ProfileHeader({
           <div className="flex items-center space-x-2 mt-2">
             {memberTypeInfo && (
               <div className="group relative">
-                <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium transition-colors ${memberTypeInfo.color} ${memberTypeInfo.hoverColor} cursor-pointer`}>
+                <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium transition-colors ${memberTypeInfo.color} cursor-pointer`}>
                   <memberTypeInfo.icon className="h-4 w-4" />
                   <span>{memberTypeInfo.label}</span>
                 </div>

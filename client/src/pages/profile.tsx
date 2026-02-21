@@ -26,7 +26,8 @@ import { PassportVerificationSection } from "@/components/PassportVerificationSe
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { StatsCards } from "@/components/profile/StatsCards";
-import { useWallets, useLogout as usePrivyLogout } from "@privy-io/react-auth";
+import { useLogout as usePrivyLogout } from "@privy-io/react-auth";
+import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import {
   Mail,
@@ -93,10 +94,8 @@ export default function Profile2() {
     }
   }, [authLoading, isAuthenticated, setLocation]);
 
-  // Privy wallet hooks (replacing RainbowKit/wagmi)
-  const { wallets } = useWallets();
   const { logout: privyLogout } = usePrivyLogout();
-  const activeWallet = wallets[0]; // First connected wallet
+  const { activeWallet } = useActiveWallet();
   const address = activeWallet?.address as `0x${string}` | undefined;
   const isConnected = !!activeWallet;
 

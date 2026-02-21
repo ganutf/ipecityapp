@@ -15,7 +15,7 @@ import { Loader2, CheckCircle, User, Globe, Twitter, Linkedin, Instagram, Tag } 
 import { PROFILE_TAGS, VALIDATION_LIMITS } from "@shared/constants";
 import { secureUsernameSchema, secureBioSchema, secureSocialHandleSchema, secureProfileTagsSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { useWallets } from "@privy-io/react-auth";
+import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 import { validateSocialMediaUrl, type SocialPlatform } from "@/lib/utils";
@@ -56,9 +56,7 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
   const queryClient = useQueryClient();
   const { getAccessToken } = useAuth();
 
-  // Privy wallet hooks (replacing wagmi useAccount)
-  const { wallets } = useWallets();
-  const activeWallet = wallets[0]; // First connected wallet
+  const { activeWallet } = useActiveWallet();
   const address = activeWallet?.address as `0x${string}` | undefined;
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);

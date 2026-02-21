@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
 import { SubdomainCheckSection } from "@/components/SubdomainCheckSection";
-import { useConnectWallet, useWallets } from "@privy-io/react-auth";
+import { useConnectWallet } from "@privy-io/react-auth";
+import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { Mail, Shield, CheckCircle, Clock, Wallet } from "lucide-react";
 
@@ -15,10 +16,8 @@ export default function IdVerificationPage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
-  // Privy wallet hooks (replacing RainbowKit)
   const { connectWallet } = useConnectWallet();
-  const { wallets } = useWallets();
-  const activeWallet = wallets[0]; // First connected wallet
+  const { activeWallet, isExternalWallet, disconnectExternalWallet } = useActiveWallet();
   const address = activeWallet?.address as `0x${string}` | undefined;
   const isConnected = !!activeWallet;
 
@@ -222,17 +221,30 @@ export default function IdVerificationPage() {
                     <p className="font-medium text-green-900">Wallet Connected</p>
                     <p className="text-sm text-green-700">
                       {(address ?? member?.walletAddress)?.slice(0, 6)}...{(address ?? member?.walletAddress)?.slice(-4)}
+                      {isExternalWallet && <span className="ml-1 text-green-600">(external)</span>}
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => connectWallet()}
-                  className="text-xs"
-                >
-                  Change Wallet
-                </Button>
+                <div className="flex gap-2">
+                  {isExternalWallet && disconnectExternalWallet && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={disconnectExternalWallet}
+                      className="text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      Disconnect
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => connectWallet()}
+                    className="text-xs"
+                  >
+                    Change Wallet
+                  </Button>
+                </div>
               </div>
             </div>
           )}

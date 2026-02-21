@@ -249,14 +249,14 @@ router.post('/auth/request-email-verification', privyAuthMiddleware, async (req:
         code,
         memberId,
       });
-      console.log('');
-      console.log('=====================================');
-      console.log(`📧 EMAIL VERIFICATION CODE (TEST MODE)`);
-      console.log(`📧 Email: ${email}`);
-      console.log(`📧 Code: ${code}`);
-      console.log(`📧 Copy this code: ${code}`);
-      console.log('=====================================');
-      console.log('');
+      logger.info('');
+      logger.info('=====================================');
+      logger.info(`📧 EMAIL VERIFICATION CODE (TEST MODE)`);
+      logger.info(`📧 Email: ${email}`);
+      logger.info(`📧 Code: ${code}`);
+      logger.info(`📧 Copy this code: ${code}`);
+      logger.info('=====================================');
+      logger.info('');
     }
 
     await storage.createEmailVerification({

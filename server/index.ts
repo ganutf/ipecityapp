@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { initializeDatabase, db } from "./db";
-import { readFileSync, mkdirSync } from "fs";
+import { mkdirSync } from "fs";
 import { join } from "path";
 import { config } from "dotenv";
 import { resolve } from "path";
@@ -32,39 +32,13 @@ logger.info('Environment check', {
 });
 
 
-// Legacy logging function - replaced with proper logger
-function enhancedLog(message: string, level: 'info' | 'error' = 'info') {
-  if (level === 'error') {
-    logger.error(message);
-  } else {
-    logger.info(message);
-  }
-}
-
-// Validate required environment variables
-function validateEnvironment() {
-  // Note: DATABASE_URL is now handled by secure key management
-  // Other critical environment variables can be added here if needed
-  const required: string[] = [];
-  const missing = required.filter(key => !process.env[key]);
-
-  if (missing.length > 0) {
-    enhancedLog(`Missing required environment variables: ${missing.join(', ')}`, 'error');
-    process.exit(1);
-  }
-
-  enhancedLog('Environment validation passed');
-}
-
-// Secure key management system removed - using environment variables directly
-
 // Test database connection
 async function testDatabaseConnection() {
   try {
     await db.execute('SELECT 1 as test');
-    enhancedLog('Database connection successful');
+    logger.info('Database connection successful');
   } catch (error) {
-    enhancedLog(`Database connection failed: ${(error as Error)?.message || 'Unknown error'}`, 'error');
+    logger.error(`Database connection failed: ${(error as Error)?.message || 'Unknown error'}`);
     process.exit(1);
   }
 }
@@ -150,9 +124,6 @@ app.use((req, res, next) => {
     await initializeDatabase();
     logger.info(`Database initialization completed in ${Date.now() - startTime}ms`);
 
-    // Validate environment (lightweight check)
-    validateEnvironment();
-
     // Register routes
     const server = await registerRoutes(app);
     logger.info(`Route registration completed in ${Date.now() - startTime}ms`);
@@ -173,9 +144,9 @@ app.use((req, res, next) => {
       const message = err.message || "Internal Server Error";
 
       // Log error details for debugging
-      enhancedLog(`Error ${status}: ${message} on ${req.method} ${req.path}`, 'error');
+      logger.error(`Error ${status}: ${message} on ${req.method} ${req.path}`);
       if (status >= 500) {
-        enhancedLog(`Stack trace: ${err.stack}`, 'error');
+        logger.error(`Stack trace: ${err.stack}`);
       }
 
       res.status(status).json({
@@ -239,25 +210,25 @@ app.use((req, res, next) => {
 
     // Graceful shutdown handling
     const gracefulShutdown = async (signal: string) => {
-      enhancedLog(`Received ${signal}, initiating graceful shutdown...`);
+      logger.info(`Received ${signal}, initiating graceful shutdown...`);
 
       // Stop background jobs
       try {
         const { stopBalanceUpdater } = await import('./jobs/balanceUpdater');
         stopBalanceUpdater();
-        enhancedLog('Background jobs stopped');
+        logger.info('Background jobs stopped');
       } catch (error) {
-        enhancedLog(`Error stopping background jobs: ${error}`, 'error');
+        logger.error(`Error stopping background jobs: ${error}`);
       }
 
       serverInstance.close(() => {
-        enhancedLog('HTTP server closed');
+        logger.info('HTTP server closed');
         process.exit(0);
       });
 
       // Force shutdown after 10 seconds
       setTimeout(() => {
-        enhancedLog('Forcing shutdown after timeout', 'error');
+        logger.error('Forcing shutdown after timeout');
         process.exit(1);
       }, 10000);
     };
@@ -267,18 +238,18 @@ app.use((req, res, next) => {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-      enhancedLog(`Uncaught Exception: ${error.message}`, 'error');
-      enhancedLog(`Stack: ${error.stack}`, 'error');
+      logger.error(`Uncaught Exception: ${error.message}`);
+      logger.error(`Stack: ${error.stack}`);
       process.exit(1);
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      enhancedLog(`Unhandled Rejection at: ${promise}, reason: ${reason}`, 'error');
+      logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
       process.exit(1);
     });
 
   } catch (error) {
-    enhancedLog(`Failed to start server: ${(error as Error)?.message || 'Unknown error'}`, 'error');
+    logger.error(`Failed to start server: ${(error as Error)?.message || 'Unknown error'}`);
     process.exit(1);
   }
 })();

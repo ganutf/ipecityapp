@@ -46,6 +46,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, asc, isNull, isNotNull, inArray, sql } from "drizzle-orm";
+import logger from "./logger";
 
 export interface IStorage {
   // Database Transactions
@@ -234,9 +235,9 @@ export class DatabaseStorage implements IStorage {
   
   // Compatibility methods for farcasterFid lookup
   async getMemberByFarcasterFid(farcasterFid: number): Promise<Member | undefined> {
-    console.log(`Storage: getMemberByFarcasterFid called with FID: ${farcasterFid} (type: ${typeof farcasterFid})`);
+    logger.debug(`Storage: getMemberByFarcasterFid called with FID: ${farcasterFid} (type: ${typeof farcasterFid})`);
     const [member] = await db.select().from(members).where(eq(members.farcasterFid, farcasterFid));
-    console.log(`Storage: Query result:`, member ? {
+    logger.debug(`Storage: Query result:`, member ? {
       id: member.id,
       farcasterFid: member.farcasterFid,
       status: member.status,

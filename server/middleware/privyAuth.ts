@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { privy } from '../lib/privy';
 import { storage } from '../storage';
 import type { Member } from '../../shared/schema';
+import logger from '../logger';
 
 export interface PrivyAuthRequest extends Request {
   privyUser?: {
@@ -24,7 +25,7 @@ export async function privyAuthMiddleware(
 ) {
   if (!privy) {
     // Privy not configured - skip authentication
-    console.warn('Privy middleware called but Privy not configured');
+    logger.warn('Privy middleware called but Privy not configured');
     return next();
   }
 
@@ -55,7 +56,7 @@ export async function privyAuthMiddleware(
 
     next();
   } catch (error) {
-    console.error('Privy auth error:', error);
+    logger.error('Privy auth error:', error);
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
@@ -98,7 +99,7 @@ export async function optionalPrivyAuthMiddleware(
     next();
   } catch (error) {
     // Token invalid, but since this is optional, continue without auth
-    console.warn('Optional Privy auth failed:', error);
+    logger.warn('Optional Privy auth failed:', error);
     next();
   }
 }

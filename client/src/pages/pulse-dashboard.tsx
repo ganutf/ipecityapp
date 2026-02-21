@@ -13,30 +13,6 @@ import { PulseCard } from "@/components/PulseCard";
 import { FormattedPostText } from "@/components/FormattedPostText";
 import { getCardAccentColor, hasUserExecuted, extractExecutionStatus, getPulseTimingInfo } from "@/lib/pulseUtils";
 
-const getContextualTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) => {
-  // Use shared timing logic
-  const timingInfo = getPulseTimingInfo((pulse as any).datetimeStart, (pulse as any).interval || 24, currentTime);
-  
-  const startTime = new Date((pulse as any).datetimeStart);
-  const endTime = new Date(startTime.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
-  const duration = (pulse as any).interval || 24;
-
-  if (timingInfo.isFuture) {
-    const timeUntilStart = formatTimeDifference(startTime.getTime() - currentTime.getTime());
-    return `⏰ Starts in ${timeUntilStart} • Duration: ${duration}h`;
-  }
-
-  if (timingInfo.isActive) {
-    const timeStarted = formatTimeDifference(currentTime.getTime() - startTime.getTime());
-    const timeRemaining = formatTimeDifference(endTime.getTime() - currentTime.getTime());
-    return `🔥 Started ${timeStarted} ago • ${timeRemaining} remaining`;
-  }
-
-  // Ended
-  const timeEnded = formatTimeDifference(currentTime.getTime() - endTime.getTime());
-  return `✅ Ended ${timeEnded} ago • Was active for ${duration}h`;
-};
-
 const getActivePulseTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) => {
   const startTime = new Date((pulse as any).datetimeStart);
   const endTime = new Date(startTime.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
@@ -52,9 +28,6 @@ const getActivePulseTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) 
 
   return `Started ${startDateStr} • ${timeRemaining} remaining`;
 };
-
-// below your other imports / constants
-const SIGNER_KEY = "ipe.signer"; // ← NEW: cache for signer_uuid
 
 export default function PulseDashboard() {
   const {

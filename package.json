@@ -24,6 +24,7 @@
     "test-users:generate": "tsx server/scripts/generate-test-users.ts",
     "test-streak:compare": "tsx server/scripts/test-streak-calculation.ts",
     "test-active:status": "tsx server/scripts/test-active-pulse-status.ts",
+    "onboarding": "tsx server/scripts/test-onboarding.ts",
     "production:check": "bash scripts/production-check.sh",
     "production:deploy": "npm run production:check && npm run build && npm run start"
   },
@@ -70,7 +71,6 @@
     "@radix-ui/react-toggle-group": "^1.1.3",
     "@radix-ui/react-tooltip": "^1.2.0",
     "@tanstack/react-query": "^5.60.5",
-    "axios": "^1.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

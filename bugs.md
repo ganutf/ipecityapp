@@ -1,4 +1,0 @@
-- attestation all is not working (individually they are working).
-- review and fix timezones
-- change ID in the community list and profile from fid to id member.
-- 

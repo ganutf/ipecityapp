@@ -33,9 +33,10 @@ npm run wallet:attestation  # Get EAS attestation wallet address for funding
 - **Backend**: Express.js + TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
 - **Styling**: Tailwind CSS + shadcn/ui components
-- **Authentication**: Farcaster Auth Kit with custom signer management
-- **Blockchain**: Ethereum mainnet integration via Wagmi + RainbowKit
-- **ENS**: JustaName SDK for subdomain management
+- **Authentication**: Privy (email + passkey + wallet) with Bearer token auth
+- **Blockchain**: Ethereum mainnet via Wagmi + RainbowKit, Base L2 for EAS attestations
+- **ENS**: JustaName SDK for subdomain management (client-side)
+- **Farcaster**: Neynar SDK for post interactions (optional integration)
 
 ### Project Structure
 ```
@@ -43,43 +44,55 @@ client/src/           # React frontend
 ├── components/       # Reusable UI components
 ├── pages/           # Route components
 ├── hooks/           # Custom React hooks
-└── lib/             # Utility functions
+├── contexts/        # Auth context (Privy-based)
+└── lib/             # Utility functions (api.ts, queryClient.ts, dateUtils.ts)
 
 server/              # Express.js backend
-├── routes.ts        # API endpoint definitions
+├── routes.ts        # V1 API endpoints
+├── routes/          # V2 API route modules
+│   └── auth.routes.ts  # Privy auth endpoints (/api/v2/auth/*)
+├── middleware/       # Auth middleware (privyAuth.ts), validation
+├── services/        # Business logic (PulseService, justanamePassport)
 ├── db.ts            # Database connection setup
 ├── storage.ts       # Database query layer
 └── lib/             # Server utilities
 
 shared/
-└── schema.ts        # Shared database schema and types
+├── schema.ts        # Database schema (Drizzle ORM)
+└── constants.ts     # Member statuses, types, validation limits, timing
 ```
 
 ### Key Features
-- **Member Management**: Multi-stage verification process (signer → email → passport → application)
+- **Member Management**: Multi-stage verification (email → wallet → passport/application)
 - **Pulse System**: Daily engagement tracking with Farcaster post interactions
-- **ENS Integration**: Automated subdomain reservation and management via JustaName API
-- **Farcaster Integration**: Sponsored signer creation, cast interactions, and user profile management
+- **ENS Integration**: Automated subdomain reservation and acceptance via JustaName SDK
+- **EAS Attestations**: On-chain rewards on Base L2 for pulse completion
+- **Farcaster Integration**: Sponsored signers, cast interactions (optional)
 
 ### Database Schema
 The system uses a state machine approach for member progression:
-- `pending_signer` → `pending_id_verification` → `email_verified` → `pending_application` → `pending_application_review` → `approved_application` → `active_member`
+- `pending_id_verification` → `pending_application_review` → `approved_application` → `active_member`
+- (or `denied_application` if rejected)
 
 Key tables:
-- `members`: Core member data with status tracking
+- `members`: Core member data with status, privyId, walletAddress, ipePassport
 - `pulses`: Daily engagement tasks created by admins
 - `pulse_executions`: Tracks like/recast completion
-- `user_signers`: Farcaster signer management
-- `email_verifications`: Email verification tokens
-- `passport_verifications`: ENS passport verification
+- `attestations`: EAS on-chain attestation records
 
 ### Authentication Flow
-1. Farcaster Auth Kit authentication
-2. Sponsored signer creation and approval
-3. Email verification with 6-digit codes
-4. ENS passport verification via wallet signature
-5. Application submission with profile details
-6. Admin approval with subdomain reservation
+1. Privy authentication (email, passkey, or wallet)
+2. Member auto-created with `pending_id_verification` status
+3. Connect wallet (external preferred over Privy embedded)
+4. Email verification (auto-verified if Privy email login)
+5. ENS passport check or application submission
+6. Admin approval with subdomain reservation → user accepts → `active_member`
+
+### Auth Architecture
+- **Frontend**: `useAuth()` context calls `/api/v2/auth/me`, stores member state
+- **Backend**: `privyAuthMiddleware` verifies Bearer token from Privy access token
+- **API calls**: Use `authenticatedPost`/`authenticatedGet` from `client/src/lib/api.ts` (sends Bearer token)
+- **Wallet preference**: Both client (`useActiveWallet` hook) and server prefer external wallets over Privy embedded
 
 ### API Architecture
 - RESTful endpoints in `/api/*`
@@ -90,11 +103,15 @@ Key tables:
 ### Environment Variables
 Required for development:
 - `DATABASE_URL`: PostgreSQL connection string
-- `NEYNAR_API_KEY`: Neynar API key
-- `JUSTANAME_API_KEY`: JustaName API key
+- `PRIVY_APP_ID` / `VITE_PRIVY_APP_ID`: Privy application ID
+- `PRIVY_APP_SECRET`: Privy app secret (server only)
+- `NEYNAR_API_KEY`: Neynar API key for Farcaster
+- `JUSTANAME_API_KEY`: JustaName API key for ENS subdomains
 - `FARCASTER_DEVELOPER_MNEMONIC`: Developer mnemonic for sponsored signers
 - `EAS_ATTESTATION_MNEMONIC`: Separate wallet mnemonic for EAS attestations
 - `SESSION_SECRET`: Session encryption secret
+- `VITE_WALLETCONNECT_PROJECT_ID`: WalletConnect project ID
+- `EMAIL_TEST_MODE`: Set `true` for development (logs emails instead of sending)
 
 ### Admin System
 - Admin privileges are determined by `memberType = 'admin'` in the database
@@ -103,18 +120,17 @@ Required for development:
 - Admin approval triggers automatic subdomain reservation
 
 ### Testing and Deployment
-- Configured for Replit deployment
 - Health check endpoint at `/health`
 - Graceful shutdown handling
-- Enhanced logging for debugging
+- Winston structured logging
 
 ## Common Development Patterns
 
 ### Database Operations
 Use the storage layer in `server/storage.ts` for all database operations. Example:
 ```typescript
-const member = await storage.getMember(farcasterFid);
-const updatedMember = await storage.updateMember(farcasterFid, updateData);
+const member = await storage.getMemberByPrivyId(privyId);
+const updatedMember = await storage.updateMember(memberId, updateData);
 ```
 
 ### API Error Handling
@@ -127,16 +143,19 @@ res.status(500).json({
 });
 ```
 
-### Farcaster Integration
-Use the neynar client for Farcaster API calls:
+### Authenticated API Requests (Frontend)
+Use helpers from `client/src/lib/api.ts` for V2 endpoints (Bearer token auth):
 ```typescript
-const userResponse = await neynar.fetchBulkUsers({ fids: [farcasterFid] });
+import { authenticatedPost, authenticatedGet } from "@/lib/api";
+const data = await authenticatedPost("/api/v2/auth/passport/accept", { memberId });
 ```
+
+For V1 endpoints or React Query mutations, `apiRequest` from `queryClient.ts` uses cookies only (no Bearer token).
 
 ### Frontend State Management
 - React Query for server state management
-- Custom hooks for authentication state
-- Context providers for global state (auth, theming)
+- `useAuth()` context for authentication state (member, login, logout, refreshMember)
+- `useActiveWallet()` hook for wallet management (prefers external over embedded)
 
 ## Design System
 

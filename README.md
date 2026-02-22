@@ -1,113 +1,102 @@
-# Ipê City Pulse
+# Ipe City Pulse
 
-A community engagement tracking platform that manages daily Farcaster post interactions for approved community members.
-
-## Overview
-
-Ipê City Pulse allows admins to create "pulses" (engagement tasks) with specific dates and descriptions, while members authenticate via Farcaster to view and complete current tasks. The system tracks like/recast completion status and provides historical views of community participation.
+A community engagement tracking platform for Ipe City members. Admins create daily "pulses" (engagement tasks) with Farcaster posts, and members complete like/recast actions tracked on-chain via EAS attestations.
 
 ## Features
 
-- **Admin Dashboard**: Create and manage daily pulses with Farcaster post URLs
-- **Member Management**: CSV import functionality for approved community members
-- **Farcaster Integration**: Authenticate via Farcaster Auth Kit
-- **Real-time Tracking**: Monitor like/recast completion status
-- **Historical View**: Complete pulse history with engagement analytics
-- **Edit Functionality**: Modify future pulse details (date, description, URL)
+- **Privy Authentication**: Email, passkey, and wallet-based login
+- **Member Onboarding**: Email verification, wallet connection, ENS passport (ipecity.eth subdomain)
+- **Pulse System**: Daily engagement tasks with Farcaster post interactions
+- **Admin Dashboard**: Pulse creation, member application review, approval workflow
+- **ENS Integration**: Automated subdomain reservation and acceptance via JustaName SDK
+- **EAS Attestations**: On-chain rewards on Base L2 for pulse completion
+- **Community Page**: Member directory with profiles and engagement stats
 
 ## Tech Stack
 
-- **Frontend**: React with TypeScript, Vite
-- **Backend**: Express.js with TypeScript
+- **Frontend**: React 18 + TypeScript + Vite
+- **Backend**: Express.js + TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
-- **Styling**: Tailwind CSS with shadcn/ui components
-- **Authentication**: Farcaster Auth Kit
-- **API Integration**: Neynar SDK for Farcaster interactions
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Authentication**: Privy (email + passkey + wallet)
+- **Blockchain**: Ethereum mainnet (ENS), Base L2 (EAS attestations)
+- **Farcaster**: Neynar SDK for post interactions and sponsored signers
 
-## Prerequisites
+## Getting Started
+
+### Prerequisites
 
 - Node.js 20+
 - PostgreSQL database
-- Neynar API account with paid plan
-- Farcaster Auth Kit credentials
 
-## Environment Variables
+### Environment Variables
 
-Create a `.env` file with the following variables:
+Create a `.env` file:
 
 ```env
-DATABASE_URL=your_postgresql_connection_string
+DATABASE_URL=postgresql://...
 NEYNAR_API_KEY=your_neynar_api_key
-VITE_NEYNAR_CLIENT_ID=your_neynar_client_id
-VITE_NEYNAR_SIGNER_UUID=your_neynar_signer_uuid
+JUSTANAME_API_KEY=your_justaname_api_key
+FARCASTER_DEVELOPER_MNEMONIC=your_mnemonic
+EAS_ATTESTATION_MNEMONIC=your_eas_mnemonic
 SESSION_SECRET=your_session_secret
+VITE_PRIVY_APP_ID=your_privy_app_id
+PRIVY_APP_ID=your_privy_app_id
+PRIVY_APP_SECRET=your_privy_app_secret
+VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_id
+EMAIL_TEST_MODE=true  # Set false for production
 ```
 
-## Installation
+### Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/ipe-city-pulse.git
-cd ipe-city-pulse
-```
-
-2. Install dependencies:
 ```bash
 npm install
+npm run db:push    # Push schema to database
+npm run dev        # Start development server
 ```
 
-3. Set up the database:
+### Commands
+
 ```bash
-npm run db:push
+npm run dev              # Start dev server (client + server)
+npm run build            # Build production bundle
+npm run start            # Start production server
+npm run check            # TypeScript type checking
+npm run db:push          # Push schema changes to database
+npm run wallet:attestation  # Get EAS attestation wallet address
 ```
 
-4. Start the development server:
-```bash
-npm run dev
+## Architecture
+
+```
+client/src/           # React frontend
+├── components/       # UI components
+├── pages/            # Route pages
+├── hooks/            # Custom React hooks
+├── contexts/         # Auth context
+└── lib/              # Utilities
+
+server/               # Express backend
+├── routes/           # API route modules
+├── middleware/        # Auth, validation middleware
+├── services/         # Business logic services
+├── lib/              # Server utilities
+└── scripts/          # Admin scripts
+
+shared/
+├── schema.ts         # Database schema (Drizzle)
+└── constants.ts      # Shared constants
 ```
 
-## Usage
+## Member Status Flow
 
-### Admin Access
-- Admin privileges are determined by `memberType = 'admin'` in the database
-- Multiple admins can be created using the `server/scripts/create-admin.ts` script
-- Access admin dashboard to create pulses and manage member approvals
-- Edit future pulses (past/current pulses are protected)
-
-### Member Access
-- Members authenticate via Farcaster with signer approval
-- Complete registration with email verification
-- View current active pulse with embedded post
-- Complete like/recast actions tracked automatically
-- View historical pulse completion status
-
-## API Endpoints
-
-- `GET /api/pulses` - Get all pulses
-- `POST /api/pulses` - Create new pulse (admin)
-- `PUT /api/pulses/:id` - Update pulse (admin, future only)
-- `GET /api/members` - Get all members
-
-- `GET /api/executions/:fid` - Get user's pulse executions
-
-## Database Schema
-
-- **users**: User authentication data
-- **members**: Community member profiles with Farcaster info
-- **pulses**: Daily engagement tasks with dates and URLs
-- **pulse_executions**: Tracking like/recast completion status
-
-## Deployment
-
-The project is configured for Replit deployment with automatic scaling and PostgreSQL integration.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+```
+Login (Privy) → pending_id_verification → [verify email + connect wallet]
+  → Submit application → pending_application_review
+  → Admin approves → approved_application (subdomain reserved)
+  → Accept passport → active_member
+```
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT

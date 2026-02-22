@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,9 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { authenticatedPost } from "@/lib/api";
 import { useSignMessage } from "wagmi";
-import { useConnectWallet, useLogout as usePrivyLogout } from "@privy-io/react-auth";
+import { useConnectWallet } from "@privy-io/react-auth";
 import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { createSiweMessage } from "viem/siwe";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
@@ -23,34 +23,27 @@ import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users } from "lucide-re
 
 interface PassportVerificationSectionProps {
   memberId: number;
-  farcasterFid?: number; // Optional, kept for backward compatibility
   currentPassport?: string;
   isVerified?: boolean;
   onVerificationComplete?: () => void;
-  allowChange?: boolean;
   memberData: any;
-  farcasterProfile?: any; // Optional, no longer required
   context?: 'profile' | 'id-verification';
 }
 
 export function PassportVerificationSection({
   memberId,
-  farcasterFid,
   currentPassport,
   isVerified,
   onVerificationComplete,
-  allowChange = false,
   memberData,
-  farcasterProfile,
   context = 'profile',
 }: PassportVerificationSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { member: authMember } = useAuth();
+  const { member: authMember, refreshMember } = useAuth();
 
   const { connectWallet } = useConnectWallet();
-  const { logout: privyLogout } = usePrivyLogout();
-  const { activeWallet } = useActiveWallet();
+  const { activeWallet, isExternalWallet, disconnectExternalWallet } = useActiveWallet();
   const address = activeWallet?.address as `0x${string}` | undefined;
   const isConnected = !!activeWallet;
 
@@ -123,15 +116,12 @@ export function PassportVerificationSection({
             onSuccess: async (signature) => {
               try {
                 // Send verification request with signature (uses v2 endpoint with memberId)
-                const response = await apiRequest("/api/v2/auth/passport/verify", {
-                  method: "POST",
-                  body: JSON.stringify({
+                const response = await authenticatedPost("/api/v2/auth/passport/verify", {
                     memberId,
                     ensName: selectedDomain,
                     walletAddress,
                     message,
                     signature,
-                  }),
                 });
                 resolve(response);
               } catch (error) {
@@ -182,12 +172,7 @@ export function PassportVerificationSection({
         });
 
         // Update backend status to active_member (uses v2 endpoint with memberId)
-        await apiRequest("/api/v2/auth/passport/accept", {
-          method: "POST",
-          body: JSON.stringify({
-            memberId,
-          }),
-        });
+        await authenticatedPost("/api/v2/auth/passport/accept", { memberId });
 
         return result;
       } catch (error: any) {
@@ -204,12 +189,7 @@ export function PassportVerificationSection({
 
               if (data.ensName === ensName) {
                 // Domain is verified as belonging to wallet, update backend
-                await apiRequest("/api/v2/auth/passport/accept", {
-                  method: "POST",
-                  body: JSON.stringify({
-                    memberId,
-                  }),
-                });
+                await authenticatedPost("/api/v2/auth/passport/accept", { memberId });
                 return { success: true, alreadyAccepted: true };
               }
             } catch (lookupError) {
@@ -218,12 +198,7 @@ export function PassportVerificationSection({
           }
 
           // If verification fails, still update backend but note the conflict
-          await apiRequest("/api/v2/auth/passport/accept", {
-            method: "POST",
-            body: JSON.stringify({
-              memberId,
-            }),
-          });
+          await authenticatedPost("/api/v2/auth/passport/accept", { memberId });
           return { success: true, alreadyAccepted: true };
         }
 
@@ -354,23 +329,27 @@ export function PassportVerificationSection({
                 </div>
               </div>
 
-              {/* Disconnect Wallet Button */}
-              <div className="text-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    privyLogout();
-                    setWalletConnectedForVerification(false);
-                    setVerificationStatus("idle");
-                  }}
-                >
-                  Disconnect Wallet
-                </Button>
-              </div>
+              {/* Disconnect External Wallet Button */}
+              {isExternalWallet && disconnectExternalWallet && (
+                <div className="text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      disconnectExternalWallet();
+                      setWalletConnectedForVerification(false);
+                      setVerificationStatus("idle");
+                    }}
+                  >
+                    Disconnect Wallet
+                  </Button>
+                </div>
+              )}
 
-              {/* Show domain verification button if Ipê City domain is found */}
-              {isConnected && address && !ensLoading && hasIpeCityDomain && (
+              {/* Show domain verification button if Ipê City domain is found (but not if approved/active - those have their own UI) */}
+              {isConnected && address && !ensLoading && hasIpeCityDomain &&
+                memberData?.member?.status !== "approved_application" &&
+                memberData?.member?.status !== "active_member" && (
                 <div className="space-y-3">
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-green-800 font-medium">
@@ -500,9 +479,9 @@ export function PassportVerificationSection({
         <ApplicationForm
           memberData={memberData}
           memberId={memberId}
-          farcasterProfile={farcasterProfile}
           onSuccess={() => {
             setShowApplicationForm(false);
+            refreshMember();
             if (queryClient) {
               queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
             }

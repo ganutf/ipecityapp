@@ -98,7 +98,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
 
               <span className="text-sm text-gray-600">
-                Hello, {member?.email?.split('@')[0] || 'User'}
+                Hello, {(member as any)?.ipeUsername || member?.email?.split('@')[0] || 'User'}
               </span>
 
               <DropdownMenu>

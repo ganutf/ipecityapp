@@ -98,12 +98,12 @@ export default function AdminPage() {
 
 
   const approveMemberMutation = useMutation({
-    mutationFn: async (member: { farcasterFid: number; ipeUsername?: string; userWalletAddress?: string; memberType?: MemberType }) => {
-      return authenticatedPost("/api/admin/approve-member", { 
-        farcasterFid: member.farcasterFid,
-        ipeUsername: member.ipeUsername,
-        userWalletAddress: member.userWalletAddress,
-        memberType: member.memberType
+    mutationFn: async (data: { memberId: number; ipeUsername?: string; userWalletAddress?: string; memberType?: MemberType }) => {
+      return authenticatedPost("/api/admin/approve-member", {
+        memberId: data.memberId,
+        ipeUsername: data.ipeUsername,
+        userWalletAddress: data.userWalletAddress,
+        memberType: data.memberType
       });
     },
     onSuccess: () => {
@@ -116,8 +116,8 @@ export default function AdminPage() {
   });
 
   const denyMemberMutation = useMutation({
-    mutationFn: async (farcasterFid: number) => {
-      return authenticatedPost("/api/admin/deny-member", { farcasterFid });
+    mutationFn: async (memberId: number) => {
+      return authenticatedPost("/api/admin/deny-member", { memberId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
@@ -129,8 +129,8 @@ export default function AdminPage() {
   });
 
   const updateMemberTypeMutation = useMutation({
-    mutationFn: async ({ farcasterFid, memberType }: { farcasterFid: number; memberType: MemberType }) => {
-      return authenticatedPatch(`/api/admin/update-member-type`, { farcasterFid, memberType });
+    mutationFn: async ({ memberId, memberType }: { memberId: number; memberType: MemberType }) => {
+      return authenticatedPatch(`/api/admin/update-member-type`, { memberId, memberType });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
@@ -385,8 +385,8 @@ export default function AdminPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {(membersData as any)?.members?.map((member: Member) => {
                     const memberStatus = (member as any).status || 'unknown';
-                    const claimSubdomain = member.ipePassport;
-                    const hasPendingApplication = memberStatus === 'pending_application_review' && claimSubdomain;
+                    const claimSubdomain = member.ipePassport || ((member as any).ipeUsername ? `${(member as any).ipeUsername}.ipecity.eth` : null);
+                    const hasPendingApplication = memberStatus === 'pending_application_review' && (member as any).ipeUsername;
                     const needsApproval = hasPendingApplication;
                     
                     return (
@@ -395,13 +395,11 @@ export default function AdminPage() {
                           <div className="flex items-center space-x-2">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {(member as any).farcasterUsername || `FID ${member.farcasterFid}`}
+                                {(member as any).ipeUsername || member.email || `Member #${member.id}`}
                               </div>
-                              {(member as any).farcasterUsername && (
-                                <div className="text-sm text-gray-500">
-                                  FID: {member.farcasterFid}
-                                </div>
-                              )}
+                              <div className="text-sm text-gray-500">
+                                {member.email || (member.farcasterFid ? `FID: ${member.farcasterFid}` : '')}
+                              </div>
                             </div>
                             <Eye className="h-4 w-4 text-gray-400" />
                           </div>
@@ -484,8 +482,10 @@ export default function AdminPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Farcaster FID</label>
-                  <p className="text-sm">{selectedMember.farcasterFid}</p>
+                  <label className="text-sm font-medium text-gray-500">
+                    {selectedMember.farcasterFid ? 'Farcaster FID' : 'Member ID'}
+                  </label>
+                  <p className="text-sm">{selectedMember.farcasterFid || `#${selectedMember.id}`}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Username</label>
@@ -550,14 +550,12 @@ export default function AdminPage() {
                       <Button
                         size="sm"
                         onClick={() => {
-                          if (selectedMember.farcasterFid) {
-                            updateMemberTypeMutation.mutate({
-                              farcasterFid: selectedMember.farcasterFid,
-                              memberType: editMemberType
-                            });
-                          }
+                          updateMemberTypeMutation.mutate({
+                            memberId: selectedMember.id,
+                            memberType: editMemberType
+                          });
                         }}
-                        disabled={updateMemberTypeMutation.isPending || !selectedMember.farcasterFid}
+                        disabled={updateMemberTypeMutation.isPending}
                         className="px-2"
                       >
                         <Save className="w-4 h-4" />
@@ -604,7 +602,7 @@ export default function AdminPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Passport Claim</label>
                   <p className="text-sm">
-                    {selectedMember.ipePassport || 'Not claimed'}
+                    {selectedMember.ipePassport || ((selectedMember as any).ipeUsername ? `${(selectedMember as any).ipeUsername}.ipecity.eth` : 'Not claimed')}
                   </p>
                 </div>
 
@@ -658,20 +656,18 @@ export default function AdminPage() {
 
               {/* Action buttons for pending applications */}
               {((selectedMember as any).status === 'pending_application_review' || (selectedMember as any).status === 'pending_claim') &&
-               (selectedMember as any).ipeUsername && selectedMember.farcasterFid && (
+               (selectedMember as any).ipeUsername && (
                 <div className="flex space-x-2 pt-4 border-t">
                   <Button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (selectedMember.farcasterFid) {
-                        approveMemberMutation.mutate({
-                          farcasterFid: selectedMember.farcasterFid,
-                          ipeUsername: (selectedMember as any).ipeUsername,
-                          userWalletAddress: selectedMember.walletAddress || undefined,
-                          memberType: selectedMemberType
-                        });
-                        setSelectedMember(null);
-                      }
+                      approveMemberMutation.mutate({
+                        memberId: selectedMember.id,
+                        ipeUsername: (selectedMember as any).ipeUsername,
+                        userWalletAddress: selectedMember.walletAddress || undefined,
+                        memberType: selectedMemberType
+                      });
+                      setSelectedMember(null);
                     }}
                     disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                     className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
@@ -682,10 +678,8 @@ export default function AdminPage() {
                     variant="destructive"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (selectedMember.farcasterFid) {
-                        denyMemberMutation.mutate(selectedMember.farcasterFid);
-                        setSelectedMember(null);
-                      }
+                      denyMemberMutation.mutate(selectedMember.id);
+                      setSelectedMember(null);
                     }}
                     disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                   >

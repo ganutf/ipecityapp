@@ -1314,10 +1314,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     auditLogger("APPROVE_MEMBER"),
     async (req: AuthenticatedRequest, res) => {
     try {
-      const { farcasterFid, ipeUsername, userWalletAddress, memberType } = req.body;
+      const { memberId, ipeUsername, userWalletAddress, memberType } = req.body;
 
-      if (!farcasterFid) {
-        return res.status(400).json({ error: "FID is required" });
+      if (!memberId) {
+        return res.status(400).json({ error: "memberId is required" });
       }
 
       if (!userWalletAddress) {
@@ -1332,7 +1332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid member type. Must be 'architect', 'explorer', 'admin', 'org_team', or 'core_team'" });
       }
 
-      const member = await storage.getMemberByFarcasterFid(farcasterFid);
+      const member = await storage.getMember(memberId);
       if (!member) {
         return res.status(404).json({ error: "Member not found" });
       }
@@ -1399,13 +1399,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update member status to approved - use memberId
-      const existingMember = await storage.getMemberByFarcasterFid(farcasterFid);
-      if (!existingMember) {
-        return res.status(404).json({ error: "Member not found" });
-      }
-      const updatedMember = memberType 
-        ? await storage.approveApplication(existingMember.id, memberType)
-        : await storage.approveMember(existingMember.id);
+      const updatedMember = memberType
+        ? await storage.approveApplication(member.id, memberType)
+        : await storage.approveMember(member.id);
 
       // Send approval email
       if (updatedMember.email) {
@@ -1431,9 +1427,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     auditLogger("DENY_MEMBER"),
     async (req: AuthenticatedRequest, res) => {
     try {
-      const { farcasterFid } = req.body;
-      // Get member first, then deny using memberId
-      const existingMember = await storage.getMemberByFarcasterFid(farcasterFid);
+      const { memberId } = req.body;
+      if (!memberId) {
+        return res.status(400).json({ error: "memberId is required" });
+      }
+      const existingMember = await storage.getMember(memberId);
       if (!existingMember) {
         return res.status(404).json({ error: "Member not found" });
       }
@@ -1458,11 +1456,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     auditLogger("UPDATE_MEMBER_TYPE"),
     async (req: AuthenticatedRequest, res) => {
     try {
-      const { farcasterFid, memberType } = req.body;
+      const { memberId, memberType } = req.body;
 
-      // Validate required fields
-      if (!farcasterFid || typeof farcasterFid !== 'number') {
-        return res.status(400).json({ error: "Valid farcasterFid is required" });
+      if (!memberId) {
+        return res.status(400).json({ error: "memberId is required" });
       }
 
       if (!memberType || typeof memberType !== 'string') {
@@ -1472,23 +1469,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate member type against allowed values
       const validMemberTypes = ['pending', 'architect', 'explorer', 'admin', 'org_team', 'core_team'];
       if (!validMemberTypes.includes(memberType)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Invalid member type. Must be one of: " + validMemberTypes.join(', ')
         });
       }
 
-      // Check if member exists and get memberId
-      const existingMember = await storage.getMemberByFarcasterFid(farcasterFid);
+      const existingMember = await storage.getMember(memberId);
       if (!existingMember) {
         return res.status(404).json({ error: "Member not found" });
       }
 
       // Update member type using memberId
-      const updatedMember = await storage.updateMember(existingMember.id, { 
-        memberType: memberType as any 
+      const updatedMember = await storage.updateMember(existingMember.id, {
+        memberType: memberType as any
       });
 
-      logger.info(`Updated member type for FID ${farcasterFid} to ${memberType}`);
+      logger.info(`Updated member type for member ${existingMember.id} to ${memberType}`);
       res.json({ success: true, member: updatedMember });
     } catch (error) {
       logger.error("Update member type error:", error);

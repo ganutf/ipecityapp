@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { EmailVerificationSection } from "@/components/EmailVerificationSection";
-import { SubdomainCheckSection } from "@/components/SubdomainCheckSection";
+import { PassportVerificationSection } from "@/components/PassportVerificationSection";
 import { useConnectWallet } from "@privy-io/react-auth";
 import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
@@ -72,16 +72,23 @@ export default function IdVerificationPage() {
       if (isConnected && address && memberId && address.toLowerCase() !== member?.walletAddress?.toLowerCase()) {
         try {
           const token = await getAccessToken();
+          if (!token) {
+            console.error('No access token available for wallet save');
+            return;
+          }
           const response = await fetch(`/api/v2/members/${memberId}/wallet`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
-              ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+              'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify({ walletAddress: address }),
           });
           if (response.ok) {
             refreshMember(); // Refresh to get updated member data
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Failed to save wallet address:', response.status, errorData);
           }
         } catch (error) {
           console.error('Failed to save wallet address:', error);
@@ -273,17 +280,29 @@ export default function IdVerificationPage() {
         </CardContent>
       </Card>
 
-      {/* 3. Subdomain Check Section - Only show if wallet is connected */}
-      {isWalletConnected && (address || member?.walletAddress) && (
-        <SubdomainCheckSection
-          walletAddress={(address || member?.walletAddress) as string}
+      {/* 3. Passport Verification Section - Only show if wallet is connected */}
+      {isWalletConnected && (
+        <PassportVerificationSection
           memberId={memberId || 0}
-          onSubdomainFound={() => {
+          memberData={{
+            isMember: true,
+            status: member?.status,
+            member: member ? {
+              id: member.id,
+              email: member.email,
+              status: member.status,
+              ipeUsername: member.ipeUsername,
+              walletAddress: member.walletAddress || address,
+              memberType: member.memberType,
+              ipePassport: member.ipePassport,
+            } : undefined,
+          }}
+          currentPassport={member?.ipePassport || undefined}
+          isVerified={member?.status === 'active_member'}
+          context="id-verification"
+          onVerificationComplete={() => {
             refreshMember();
             setLocation("/");
-          }}
-          onNoSubdomain={() => {
-            // User will see the "Apply for Membership" button in the component
           }}
         />
       )}

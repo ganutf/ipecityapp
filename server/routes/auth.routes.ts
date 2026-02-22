@@ -93,11 +93,18 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
           );
           privyEmail = (emailAccount as any)?.address;
 
-          // Extract wallet from linked accounts
-          const walletAccount = privyUserData.linked_accounts?.find(
+          // Extract wallet from linked accounts - prefer external wallets
+          // (matches client-side useActiveWallet which prefers external over embedded)
+          const walletAccounts = privyUserData.linked_accounts?.filter(
             (account: any) => account.type === 'wallet'
+          ) ?? [];
+          const externalWallet = walletAccounts.find(
+            (account: any) => account.wallet_client_type !== 'privy'
           );
-          privyWallet = (walletAccount as any)?.address;
+          const embeddedWallet = walletAccounts.find(
+            (account: any) => account.wallet_client_type === 'privy'
+          );
+          privyWallet = (externalWallet as any ?? embeddedWallet as any)?.address;
         }
       } catch (parseError) {
         logger.warn('Could not parse identity token', {
@@ -144,16 +151,29 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
         });
       }
     } else {
-      // Member exists - sync email from Privy if member doesn't have one
+      // Member exists - sync missing data from Privy
+      const updates: Record<string, any> = {};
+
       if (!member.email && privyEmail) {
         logger.info('Syncing email from Privy to existing member', {
           memberId: member.id,
           email: privyEmail,
         });
-        member = await storage.updateMember(member.id, {
-          email: privyEmail,
-          emailVerified: true, // Privy already verified it
+        updates.email = privyEmail;
+        updates.emailVerified = true; // Privy already verified it
+      }
+
+      // Sync wallet if member doesn't have one yet
+      if (!member.walletAddress && privyWallet) {
+        logger.info('Syncing wallet from Privy to existing member', {
+          memberId: member.id,
+          wallet: privyWallet,
         });
+        updates.walletAddress = privyWallet;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        member = await storage.updateMember(member.id, updates);
       }
     }
 

@@ -7,6 +7,8 @@ import {
   userSigners,
   emailVerifications,
   passportVerifications,
+  // Member wallets
+  memberWallets,
   // Auth V2 tables
   authUsers,
   passkeys,
@@ -43,6 +45,7 @@ import {
   type InsertSmartWallet,
   type FarcasterAccount,
   type InsertFarcasterAccount,
+  type MemberWallet,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, asc, isNull, isNotNull, inArray, sql } from "drizzle-orm";
@@ -173,6 +176,12 @@ export interface IStorage {
   getMemberByPrivyId(privyId: string): Promise<Member | undefined>;
   getMemberByIpeUsername(ipeUsername: string): Promise<Member | undefined>;
   createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string): Promise<Member>;
+
+  // Member Wallets
+  getMemberWallets(memberId: number): Promise<MemberWallet[]>;
+  getMemberWalletByAddress(walletAddress: string): Promise<MemberWallet | undefined>;
+  linkMemberWallet(data: { memberId: number; walletAddress: string; walletType: string; label?: string }): Promise<MemberWallet>;
+  unlinkMemberWallet(memberId: number, walletAddress: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -308,7 +317,10 @@ export class DatabaseStorage implements IStorage {
     
     // Delete passport verifications
     await db.delete(passportVerifications).where(eq(passportVerifications.memberId, memberId));
-    
+
+    // Delete member wallets
+    await db.delete(memberWallets).where(eq(memberWallets.memberId, memberId));
+
     // Finally delete the member
     await db.delete(members).where(eq(members.id, memberId));
   }
@@ -1069,6 +1081,49 @@ export class DatabaseStorage implements IStorage {
       memberType: 'pending',
     }).returning();
     return member;
+  }
+
+  // Member Wallets
+  async getMemberWallets(memberId: number): Promise<MemberWallet[]> {
+    return await db.select().from(memberWallets)
+      .where(eq(memberWallets.memberId, memberId))
+      .orderBy(asc(memberWallets.linkedAt));
+  }
+
+  async getMemberWalletByAddress(walletAddress: string): Promise<MemberWallet | undefined> {
+    const [wallet] = await db.select().from(memberWallets)
+      .where(eq(memberWallets.walletAddress, walletAddress.toLowerCase()));
+    return wallet;
+  }
+
+  async linkMemberWallet(data: { memberId: number; walletAddress: string; walletType: string; label?: string }): Promise<MemberWallet> {
+    const normalizedAddress = data.walletAddress.toLowerCase();
+
+    const existing = await this.getMemberWalletByAddress(normalizedAddress);
+    if (existing) {
+      if (existing.memberId === data.memberId) {
+        return existing;
+      }
+      throw new Error('WALLET_ALREADY_LINKED');
+    }
+
+    const [wallet] = await db.insert(memberWallets).values({
+      memberId: data.memberId,
+      walletAddress: normalizedAddress,
+      walletType: data.walletType,
+      label: data.label,
+    }).returning();
+    return wallet;
+  }
+
+  async unlinkMemberWallet(memberId: number, walletAddress: string): Promise<boolean> {
+    const result = await db.delete(memberWallets)
+      .where(and(
+        eq(memberWallets.memberId, memberId),
+        eq(memberWallets.walletAddress, walletAddress.toLowerCase()),
+      ))
+      .returning();
+    return result.length > 0;
   }
 }
 

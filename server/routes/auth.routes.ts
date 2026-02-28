@@ -163,13 +163,22 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
         updates.emailVerified = true; // Privy already verified it
       }
 
-      // Sync wallet if member doesn't have one yet
+      // Sync wallet if member doesn't have one yet (only if not owned by another member)
       if (!member.walletAddress && privyWallet) {
-        logger.info('Syncing wallet from Privy to existing member', {
-          memberId: member.id,
-          wallet: privyWallet,
-        });
-        updates.walletAddress = privyWallet;
+        const existingWallet = await storage.getMemberWalletByAddress(privyWallet);
+        if (!existingWallet || existingWallet.memberId === member.id) {
+          logger.info('Syncing wallet from Privy to existing member', {
+            memberId: member.id,
+            wallet: privyWallet,
+          });
+          updates.walletAddress = privyWallet;
+        } else {
+          logger.warn('Skipping wallet sync - wallet belongs to another member', {
+            memberId: member.id,
+            wallet: privyWallet,
+            ownerMemberId: existingWallet.memberId,
+          });
+        }
       }
 
       if (Object.keys(updates).length > 0) {
@@ -192,6 +201,26 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
       });
     }
 
+    // Fetch IPE balance from backend cache (passport wallet only)
+    let ipeBalance = '0';
+    let ipeBalanceRaw = '0';
+    if (member.walletAddress) {
+      try {
+        const { getCachedBalances } = await import('../services/balanceCache');
+        const balanceMap = await getCachedBalances([member.walletAddress]);
+        const balanceData = balanceMap[member.walletAddress.toLowerCase()];
+        if (balanceData) {
+          ipeBalance = balanceData.balance;
+          ipeBalanceRaw = balanceData.balanceRaw;
+        }
+      } catch (balanceError) {
+        logger.warn('Failed to fetch balance in /me', {
+          memberId: member.id,
+          error: balanceError instanceof Error ? balanceError.message : String(balanceError),
+        });
+      }
+    }
+
     res.json({
       isMember: true,
       memberId: member.id,  // Expose memberId at top level for easy access
@@ -200,6 +229,8 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
         ...member,
         totalPoints,
         pulseStreak,
+        ipeBalance,
+        ipeBalanceRaw,
       },
       privyUser: {
         id: req.privyUser.id,
@@ -437,6 +468,14 @@ router.post('/auth/application/submit', privyAuthMiddleware, async (req: PrivyAu
       return res.status(400).json({ error: 'Username is already taken' });
     }
 
+    // Check if wallet is already linked to another member
+    if (walletAddress) {
+      const existingWallet = await storage.getMemberWalletByAddress(walletAddress);
+      if (existingWallet && existingWallet.memberId !== memberId) {
+        return res.status(409).json({ error: 'This wallet is already linked to another account' });
+      }
+    }
+
     // Update member with application data
     const updatedMember = await storage.updateMember(memberId, {
       ipeUsername,
@@ -645,6 +684,12 @@ router.patch('/members/:memberId/wallet', privyAuthMiddleware, async (req: Privy
       return res.status(400).json({ error: 'Invalid wallet address format' });
     }
 
+    // Check if this wallet is already linked to another member
+    const existingWallet = await storage.getMemberWalletByAddress(walletAddress);
+    if (existingWallet && existingWallet.memberId !== memberId) {
+      return res.status(409).json({ error: 'This wallet is already linked to another account' });
+    }
+
     const updatedMember = await storage.updateMember(memberId, {
       walletAddress,
     });
@@ -661,6 +706,132 @@ router.patch('/members/:memberId/wallet', privyAuthMiddleware, async (req: Privy
       error: error instanceof Error ? error.message : String(error),
     });
     res.status(500).json({ error: 'Failed to update wallet address' });
+  }
+});
+
+/**
+ * GET /api/v2/members/:memberId/wallets
+ * Get all wallets linked to a member
+ */
+router.get('/members/:memberId/wallets', privyAuthMiddleware, async (req: PrivyAuthRequest, res: Response) => {
+  try {
+    if (!req.privyUser || !req.member) {
+      return res.status(401).json({ error: 'Not authenticated or member not found' });
+    }
+
+    const memberId = parseInt(req.params.memberId);
+    if (isNaN(memberId)) {
+      return res.status(400).json({ error: 'Invalid memberId' });
+    }
+
+    // Only own wallets or admin
+    if (req.member.id !== memberId && req.member.memberType !== 'admin') {
+      return res.status(403).json({ error: 'Cannot view another user wallets' });
+    }
+
+    const wallets = await storage.getMemberWallets(memberId);
+    res.json({ wallets });
+  } catch (error) {
+    logger.error('Get member wallets error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: 'Failed to get wallets' });
+  }
+});
+
+/**
+ * POST /api/v2/members/:memberId/wallets
+ * Link a new wallet to the member. Returns 409 if wallet is already linked to another account.
+ */
+router.post('/members/:memberId/wallets', privyAuthMiddleware, async (req: PrivyAuthRequest, res: Response) => {
+  try {
+    if (!req.privyUser || !req.member) {
+      return res.status(401).json({ error: 'Not authenticated or member not found' });
+    }
+
+    const memberId = parseInt(req.params.memberId);
+    if (isNaN(memberId)) {
+      return res.status(400).json({ error: 'Invalid memberId' });
+    }
+
+    if (req.member.id !== memberId) {
+      return res.status(403).json({ error: 'Cannot link wallets to another user' });
+    }
+
+    const { walletAddress, walletType, label } = req.body;
+
+    if (!walletAddress || !walletAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+      return res.status(400).json({ error: 'Invalid wallet address format' });
+    }
+
+    if (!walletType || !['external', 'privy_embedded'].includes(walletType)) {
+      return res.status(400).json({ error: 'Invalid wallet type' });
+    }
+
+    const wallet = await storage.linkMemberWallet({
+      memberId,
+      walletAddress,
+      walletType,
+      label: label || undefined,
+    });
+
+    logger.info('Wallet linked', { memberId, walletAddress: walletAddress.toLowerCase(), walletType });
+
+    res.json({ success: true, wallet });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'WALLET_ALREADY_LINKED') {
+      return res.status(409).json({ error: 'This wallet is already linked to another account' });
+    }
+    logger.error('Link wallet error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: 'Failed to link wallet' });
+  }
+});
+
+/**
+ * DELETE /api/v2/members/:memberId/wallets/:walletAddress
+ * Unlink a wallet from the member. Cannot unlink the passport wallet.
+ */
+router.delete('/members/:memberId/wallets/:walletAddress', privyAuthMiddleware, async (req: PrivyAuthRequest, res: Response) => {
+  try {
+    if (!req.privyUser || !req.member) {
+      return res.status(401).json({ error: 'Not authenticated or member not found' });
+    }
+
+    const memberId = parseInt(req.params.memberId);
+    if (isNaN(memberId)) {
+      return res.status(400).json({ error: 'Invalid memberId' });
+    }
+
+    if (req.member.id !== memberId) {
+      return res.status(403).json({ error: 'Cannot unlink wallets from another user' });
+    }
+
+    const { walletAddress } = req.params;
+
+    if (!walletAddress || !walletAddress.match(/^0x[a-fA-F0-9]{40}$/i)) {
+      return res.status(400).json({ error: 'Invalid wallet address format' });
+    }
+
+    // Prevent unlinking the passport wallet
+    if (req.member.walletAddress && req.member.walletAddress.toLowerCase() === walletAddress.toLowerCase()) {
+      return res.status(400).json({ error: 'Cannot unlink your passport wallet. Change your passport wallet first.' });
+    }
+
+    const deleted = await storage.unlinkMemberWallet(memberId, walletAddress);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Wallet not found in your linked wallets' });
+    }
+
+    logger.info('Wallet unlinked', { memberId, walletAddress: walletAddress.toLowerCase() });
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Unlink wallet error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    res.status(500).json({ error: 'Failed to unlink wallet' });
   }
 });
 

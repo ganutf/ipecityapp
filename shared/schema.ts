@@ -79,6 +79,18 @@ export const members = pgTable("members", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Member wallets table - tracks all wallets linked by each member
+export const memberWallets = pgTable("member_wallets", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  walletAddress: varchar("wallet_address", { length: 42 }).notNull().unique(),
+  walletType: varchar("wallet_type", { length: 30 }).notNull(), // 'external' | 'privy_embedded'
+  label: varchar("label", { length: 100 }), // e.g. "MetaMask", "Coinbase Wallet"
+  linkedAt: timestamp("linked_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_member_wallets_member_id").on(table.memberId),
+]);
+
 // Pulse types table - defines different types of pulses
 export const pulseTypes = pgTable("pulse_types", {
   id: serial("id").primaryKey(),
@@ -143,6 +155,14 @@ export const membersRelations = relations(members, ({ one, many }) => ({
   }),
   pulseExecutions: many(pulseExecutions),
   createdPulses: many(pulses, { relationName: "PulseCreator" }),
+  wallets: many(memberWallets),
+}));
+
+export const memberWalletsRelations = relations(memberWallets, ({ one }) => ({
+  member: one(members, {
+    fields: [memberWallets.memberId],
+    references: [members.id],
+  }),
 }));
 
 export const pulseTypesRelations = relations(pulseTypes, ({ many }) => ({
@@ -628,6 +648,8 @@ export type UserSigner = typeof userSigners.$inferSelect;
 export type InsertUserSigner = z.infer<typeof insertUserSignerSchema>;
 export type Attestation = typeof attestations.$inferSelect;
 export type InsertAttestation = z.infer<typeof insertAttestationSchema>;
+export type MemberWallet = typeof memberWallets.$inferSelect;
+export type InsertMemberWallet = typeof memberWallets.$inferInsert;
 
 // Request types
 export type EmailVerificationRequest = z.infer<typeof emailVerificationRequestSchema>;

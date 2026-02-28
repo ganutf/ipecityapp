@@ -1,19 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { useConnectWallet } from "@privy-io/react-auth";
-import {
   User,
-  Wallet,
   Globe,
   CheckCircle,
 } from "lucide-react";
@@ -27,11 +14,6 @@ interface ProfileHeaderProps {
   memberType?: string;
   ipePassport?: string;
   passportVerified?: boolean;
-  walletAddress?: string;
-  isConnected?: boolean;
-  address?: string;
-  showWalletActions?: boolean;
-  onDisconnectWallet?: () => void;
   pfpUrl?: string;
   createdAt?: string;
 }
@@ -45,17 +27,9 @@ export function ProfileHeader({
   memberType = 'pending',
   ipePassport,
   passportVerified,
-  walletAddress,
-  isConnected,
-  address,
-  showWalletActions = false,
-  onDisconnectWallet,
   pfpUrl,
   createdAt
 }: ProfileHeaderProps) {
-  // Privy wallet hooks (replacing RainbowKit)
-  const { connectWallet } = useConnectWallet();
-
   const memberTypeInfo = memberType ? getMemberTypeInfo(memberType) : null;
 
   // Format join date
@@ -109,67 +83,6 @@ export function ProfileHeader({
       </div>
 
       <div className="flex flex-col space-y-2 lg:flex-shrink-0">
-        {/* Connected Wallet Info Box */}
-        {showWalletActions && (
-          <div
-            className={`flex flex-col px-3 py-3 rounded-lg border-l-4 border ${
-              isConnected
-                ? "bg-sky-50 border-sky-200 border-l-sky-500"
-                : "bg-gray-50 border-gray-200 border-l-gray-400"
-            }`}
-          >
-            <div className="flex items-center space-x-2">
-              <Wallet
-                className={`h-4 w-4 ${isConnected ? "text-sky-600" : "text-gray-400"}`}
-              />
-              <span className="text-xs text-gray-600 font-medium">
-                {isConnected ? "Connected Wallet" : "Wallet Not Connected"}
-              </span>
-            </div>
-            <div className="mt-1">
-              {isConnected ? (
-                <div className="flex items-center space-x-2">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button className="text-xs md:text-sm font-mono hover:underline transition-colors text-sky-600 font-medium">
-                        {address?.slice(0, 6)}...{address?.slice(-4)}
-                      </button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Disconnect Wallet</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to disconnect your wallet? You'll need to reconnect to perform transactions.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={onDisconnectWallet}>
-                          Disconnect
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <Badge
-                    variant="secondary"
-                    className="bg-green-100 text-green-800 text-xs"
-                  >
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Connected
-                  </Badge>
-                </div>
-              ) : (
-                <button
-                  onClick={() => connectWallet()}
-                  className="text-xs md:text-sm text-gray-500 hover:underline transition-colors font-medium"
-                >
-                  Connect
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Passport Info Box */}
         {ipePassport && passportVerified && (
           <div className="inline-block px-3 py-3 bg-lime-50 border border-lime-200 border-l-4 border-l-lime-500 rounded-lg">
@@ -188,12 +101,6 @@ export function ProfileHeader({
               <p className="text-lime-600 font-semibold text-base">
                 {ipePassport}
               </p>
-              {walletAddress && (
-                <div className="text-xs text-gray-500 mt-1">
-                  Passport wallet: {walletAddress?.slice(0, 6)}...
-                  {walletAddress?.slice(-4)}
-                </div>
-              )}
             </div>
           </div>
         )}

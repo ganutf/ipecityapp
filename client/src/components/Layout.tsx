@@ -7,19 +7,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTokenBalance } from "@/hooks/useTokenBalance";
-import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { Coins } from "lucide-react";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, member, isLoading, logout, login } = useAuth();
   const [location] = useLocation();
 
-  const { activeWallet } = useActiveWallet();
-  const address = activeWallet?.address as `0x${string}` | undefined;
-
-  // Get IPE token balance
-  const { displayBalance, isLoading: balanceLoading } = useTokenBalance(address);
+  // IPE balance from backend (passport wallet only)
+  const ipeBalance = (member as any)?.ipeBalance || '0';
 
   // Check if user is admin based on memberType
   const isAdmin = member?.memberType === 'admin';
@@ -83,16 +78,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           
           {isAuthenticated ? (
             <div className="flex items-center space-x-4">
-              {/* IPE Token Balance */}
-              {address && (
+              {/* IPE Token Balance (from backend, passport wallet) */}
+              {member?.walletAddress && (
                 <div className="flex items-center space-x-2 bg-lime-50 px-3 py-1.5 rounded-full border border-lime-200">
                   <Coins className="h-4 w-4 text-lime-600" />
                   <span className="text-sm font-semibold text-lime-900">
-                    {balanceLoading ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      `${displayBalance} IPE`
-                    )}
+                    {`${ipeBalance} IPE`}
                   </span>
                 </div>
               )}

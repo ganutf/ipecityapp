@@ -33,6 +33,7 @@ interface MemberDetailsData {
   pulseStreak: number;
   createdAt?: string;
   pfpUrl?: string;
+  ipeBalance?: string;
 }
 
 export default function MemberDetails() {
@@ -157,8 +158,6 @@ export default function MemberDetails() {
               memberType={member.memberType}
               ipePassport={member.ipePassport}
               passportVerified={member.passportVerified}
-              walletAddress={member.walletAddress}
-              showWalletActions={false}
               pfpUrl={member.pfpUrl}
               createdAt={member.createdAt}
             />
@@ -170,7 +169,7 @@ export default function MemberDetails() {
           totalPoints={member.totalPoints}
           pulseStreak={member.pulseStreak}
           createdAt={member.createdAt}
-          walletAddress={member.walletAddress}
+          ipeBalance={member.ipeBalance}
         />
 
         {/* About Section */}

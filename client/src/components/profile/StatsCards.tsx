@@ -1,19 +1,14 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, Target, Coins } from "lucide-react";
-import { useTokenBalance } from "@/hooks/useTokenBalance";
 
 interface StatsCardsProps {
   totalPoints?: number;
   pulseStreak?: number;
   createdAt?: string;
-  walletAddress?: string;
+  ipeBalance?: string;
 }
 
-export function StatsCards({ totalPoints = 0, pulseStreak = 0, createdAt, walletAddress }: StatsCardsProps) {
-  // Get IPE token balance
-  const { displayBalance, isLoading: balanceLoading } = useTokenBalance(
-    walletAddress as `0x${string}` | undefined
-  );
+export function StatsCards({ totalPoints = 0, pulseStreak = 0, createdAt, ipeBalance = '0' }: StatsCardsProps) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -26,11 +21,7 @@ export function StatsCards({ totalPoints = 0, pulseStreak = 0, createdAt, wallet
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {balanceLoading ? (
-                  <span className="animate-pulse">...</span>
-                ) : (
-                  displayBalance
-                )}
+                {ipeBalance}
               </p>
               <p className="text-sm text-gray-600">IPE Balance</p>
             </div>

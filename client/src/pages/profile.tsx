@@ -26,9 +26,7 @@ import { PassportVerificationSection } from "@/components/PassportVerificationSe
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { StatsCards } from "@/components/profile/StatsCards";
-import { useLogout as usePrivyLogout } from "@privy-io/react-auth";
-import { useActiveWallet } from "@/hooks/useActiveWallet";
-import { useEnsLookup } from "@/hooks/useEnsLookup";
+import { WalletsCard } from "@/components/profile/WalletsCard";
 import {
   Mail,
   CheckCircle,
@@ -67,6 +65,7 @@ interface MemberData {
     totalPoints?: number;
     pulseStreak?: number;
     createdAt?: string;
+    ipeBalance?: string;
   };
 }
 
@@ -94,12 +93,6 @@ export default function Profile2() {
     }
   }, [authLoading, isAuthenticated, setLocation]);
 
-  const { logout: privyLogout } = usePrivyLogout();
-  const { activeWallet } = useActiveWallet();
-  const address = activeWallet?.address as `0x${string}` | undefined;
-  const isConnected = !!activeWallet;
-
-  const { ensName, isLoading: ensLoading } = useEnsLookup(address);
 
   // Edit states
   const [editingBio, setEditingBio] = useState(false);
@@ -120,8 +113,6 @@ export default function Profile2() {
   const [isSendingVerification, setIsSendingVerification] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
 
-  // Wallet disconnect confirmation dialog state
-  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
   // Use member data from AuthContext instead of fetching via query
   const memberData: MemberData | undefined = member ? {
@@ -227,12 +218,6 @@ export default function Profile2() {
     );
   };
 
-  const handleDisconnectConfirm = () => {
-    // Use Privy logout to disconnect wallet and sign out
-    privyLogout();
-    setShowDisconnectDialog(false);
-  };
-
   const cancelBioEdit = () => {
     setBioValue(memberData?.member?.bio || "");
     setEditingBio(false);
@@ -297,9 +282,6 @@ export default function Profile2() {
     );
   }
 
-  const hasIpeCityDomain =
-    ensName && (ensName.endsWith(".ipecity.eth") || ensName === "ipecity.eth");
-
   return (
     <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
       <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
@@ -314,11 +296,6 @@ export default function Profile2() {
               memberType={memberData?.member?.memberType}
               ipePassport={memberData?.member?.ipePassport}
               passportVerified={memberData?.member?.passportVerified}
-              walletAddress={memberData?.member?.walletAddress}
-              isConnected={isConnected}
-              address={address}
-              showWalletActions={true}
-              onDisconnectWallet={handleDisconnectConfirm}
               pfpUrl={undefined}
               createdAt={memberData?.member?.createdAt}
             />
@@ -330,7 +307,7 @@ export default function Profile2() {
           totalPoints={memberData?.member?.totalPoints}
           pulseStreak={memberData?.member?.pulseStreak}
           createdAt={memberData?.member?.createdAt}
-          walletAddress={memberData?.member?.walletAddress}
+          ipeBalance={memberData?.member?.ipeBalance}
         />
 
         {/* Bio Section */}
@@ -627,6 +604,13 @@ export default function Profile2() {
             )}
           </CardContent>
         </Card>
+
+        {/* Wallets */}
+        <WalletsCard
+          memberId={memberId || 0}
+          passportWalletAddress={memberData?.member?.walletAddress}
+          ipePassport={memberData?.member?.ipePassport}
+        />
 
         {/* Projects Section */}
         <Card className="bg-white shadow-sm">

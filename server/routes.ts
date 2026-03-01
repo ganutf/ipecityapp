@@ -1,9 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import {
-  isApiErrorResponse,
-} from "@neynar/nodejs-sdk";
 import { storage } from "./storage";
+import { getErrorStatus, getErrorMessage, getNeynarErrorData, isNotFoundError, isRateLimitError, getRetryAfter } from "./lib/errors";
 
 // Import PulseService for business logic operations
 import { PulseService } from "./services/PulseService";
@@ -161,11 +159,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json(out);
       } catch (e) {
-        const msg = isApiErrorResponse(e)
-          ? e.response.data
-          : (e as Error).message;
-        // @ts-ignore: e is API error object with statusCode
-        res.status(e.statusCode ?? 500).json({ error: msg });
+        const msg = getNeynarErrorData(e) || getErrorMessage(e);
+        res.status(getErrorStatus(e)).json({ error: msg });
       }
     }
   );
@@ -202,11 +197,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json(out);
       } catch (e) {
-        const msg = isApiErrorResponse(e)
-          ? e.response.data
-          : (e as Error).message;
-        // @ts-ignore: e is API error object with statusCode
-        res.status(e.statusCode ?? 500).json({ error: msg });
+        const msg = getNeynarErrorData(e) || getErrorMessage(e);
+        res.status(getErrorStatus(e)).json({ error: msg });
       }
     }
   );
@@ -320,10 +312,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             
             // Handle 404 (signer not found) and 429 (rate limit) errors
-            // @ts-ignore: statusError is API error object with status codes
-            if (statusError.status === 404 || statusError.response?.status === 404) {
+            if (isNotFoundError(statusError)) {
               logger.info("Signer not found on Neynar - cleaning up stale record");
-              
+
               try {
                 // Delete the stale signer record
                 const member = await storage.getMemberByFarcasterFid(sanitizedFid);
@@ -331,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   await storage.deleteUserSigner(member.id);
                   logger.info("Deleted stale signer record");
                 }
-                
+
                 // Return error asking user to try again instead of immediately creating new signer
                 // This prevents rate limit issues from rapid signer creation
                 return res.status(404).json({
@@ -339,28 +330,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   message: "Your previous signer was invalid and has been cleaned up. Please refresh the page to get a new signer.",
                   action: "refresh_required"
                 });
-                
+
               } catch (cleanupError) {
                 logger.error("Error cleaning up stale signer:", cleanupError);
-                return res.status(500).json({ 
+                return res.status(500).json({
                   error: "Failed to cleanup stale signer",
-                  // @ts-ignore: cleanupError is API error object  
-                  details: cleanupError.message 
+                  details: getErrorMessage(cleanupError),
                 });
               }
             }
-            
+
             // Handle rate limiting errors
-            // @ts-ignore: statusError is API error object with status codes
-            if (statusError.status === 429 || statusError.response?.status === 429) {
+            if (isRateLimitError(statusError)) {
               logger.info("Rate limit hit when checking signer status");
-              // @ts-ignore: statusError is API error object with response headers
-              const retryAfter = statusError.response?.headers?.['retry-after'] || 60;
-              
+              const retryAfter = getRetryAfter(statusError);
+
               return res.status(429).json({
                 error: "Rate limit exceeded",
                 message: `Too many requests to Neynar API. Please wait ${retryAfter} seconds before trying again.`,
-                retryAfter: parseInt(retryAfter),
+                retryAfter,
                 action: "wait_and_retry"
               });
             }
@@ -428,34 +416,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           logger.error("Error creating signer:", signerError);
           
           // Handle rate limiting specifically
-          // @ts-ignore: signerError is API error object with status codes
-          if (signerError.status === 429 || signerError.response?.status === 429) {
-            // @ts-ignore: signerError is API error object with response headers
-            const retryAfter = signerError.response?.headers?.['retry-after'] || 60;
-            
+          if (isRateLimitError(signerError)) {
+            const retryAfter = getRetryAfter(signerError);
+
             return res.status(429).json({
               error: "Rate limit exceeded",
               message: `Too many signer creation requests. Please wait ${retryAfter} seconds before trying again.`,
-              retryAfter: parseInt(retryAfter),
+              retryAfter,
               action: "wait_and_retry"
             });
           }
-          
-          return res.status(500).json({ 
-            error: "Failed to create signer", 
-            // @ts-ignore: signerError is API error object
-            details: signerError.message,
+
+          return res.status(500).json({
+            error: "Failed to create signer",
+            details: getErrorMessage(signerError),
             message: "Unable to create Farcaster signer. Please try again in a few minutes."
           });
         }
       }
     } catch (e) {
       logger.error("Signer endpoint error:", e);
-      const msg = isApiErrorResponse(e)
-        ? e.response.data
-        : (e as Error).message;
-      // @ts-ignore: e is API error object with statusCode
-      res.status(e.statusCode ?? 500).json({ error: msg });
+      const msg = getNeynarErrorData(e) || getErrorMessage(e);
+      res.status(getErrorStatus(e)).json({ error: msg });
     }
   });
 
@@ -519,11 +501,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     } catch (e) {
-      const msg = isApiErrorResponse(e)
-        ? e.response.data
-        : (e as Error).message;
-      // @ts-ignore - Complex API error handling with status codes
-      res.status(e.statusCode ?? 500).json({ error: msg });
+      const msg = getNeynarErrorData(e) || getErrorMessage(e);
+      res.status(getErrorStatus(e)).json({ error: msg });
     }
   });
 
@@ -551,7 +530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ hasQuoted });
     } catch (e) {
-      res.status(500).json({ error: (e as Error).message });
+      res.status(500).json({ error: getErrorMessage(e) });
     }
   });
 
@@ -607,16 +586,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         identifier: req.params.identifier,
         viewerFid: req.params.viewerFid,
         type: req.query.type,
-        error: (e as Error).message,
-        stack: (e as Error).stack,
-        neynarError: isApiErrorResponse(e) ? e.response.data : null
+        error: getErrorMessage(e),
+        stack: e instanceof Error ? e.stack : undefined,
+        neynarError: getNeynarErrorData(e)
       });
 
-      const msg = isApiErrorResponse(e)
-        ? e.response.data
-        : (e as Error).message;
-      // @ts-ignore - Complex API error handling with status codes
-      res.status(e.statusCode ?? 500).json({ error: msg });
+      const msg = getNeynarErrorData(e) || getErrorMessage(e);
+      res.status(getErrorStatus(e)).json({ error: msg });
     }
   });
 
@@ -629,11 +605,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const pulses = await storage.getActivePulses();
       res.json({ pulses });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Active pulses error:", err);
       res
         .status(500)
-        .json({ error: err.message || "Failed to get active pulses" });
+        .json({ error: getErrorMessage(err) || "Failed to get active pulses" });
     }
   });
 
@@ -643,9 +619,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const pulses = await storage.getAllPulses();
       res.json({ pulses });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Get pulses error:", err);
-      res.status(500).json({ error: err.message || "Failed to get pulses" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to get pulses" });
     }
   });
 
@@ -663,9 +639,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertPulseSchema.parse(pulseData);
       const pulse = await storage.createPulse(validatedData);
       res.json({ success: true, pulse });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Create pulse error:", err);
-      res.status(500).json({ error: err.message || "Failed to create pulse" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to create pulse" });
     }
   });
 
@@ -684,9 +660,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = updatePulseSchema.parse(req.body);
       const pulse = await storage.updatePulse(pulseId, validatedData);
       res.json({ success: true, pulse });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Update pulse error:", err);
-      res.status(500).json({ error: err.message || "Failed to update pulse" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to update pulse" });
     }
   });
 
@@ -710,9 +686,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.deletePulse(pulseId);
       res.json({ success: true, message: "Pulse deleted successfully" });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Delete pulse error:", err);
-      res.status(500).json({ error: err.message || "Failed to delete pulse" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to delete pulse" });
     }
   });
 
@@ -723,9 +699,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const pulseTypes = await storage.getAllPulseTypes();
       res.json({ pulseTypes });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Get pulse types error:", err);
-      res.status(500).json({ error: err.message || "Failed to get pulse types" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to get pulse types" });
     }
   });
 
@@ -739,9 +715,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertPulseTypeSchema.parse(req.body);
       const pulseType = await storage.createPulseType(validatedData);
       res.json({ success: true, pulseType });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Create pulse type error:", err);
-      res.status(500).json({ error: err.message || "Failed to create pulse type" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to create pulse type" });
     }
   });
 
@@ -781,9 +757,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionHash: attestation.transactionHash,
         createdAt: attestation.createdAt
       });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Get attestation error:", err);
-      res.status(500).json({ error: err.message || "Failed to get attestation status" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to get attestation status" });
     }
   });
 
@@ -798,9 +774,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         count: pendingAttestations.length,
         attestations: pendingAttestations
       });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Get pending attestations error:", err);
-      res.status(500).json({ error: err.message || "Failed to get pending attestations" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to get pending attestations" });
     }
   });
 
@@ -849,9 +825,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } : null
         }))
       });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Get pulse executions error:", err);
-      res.status(500).json({ error: err.message || "Failed to get pulse executions" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to get pulse executions" });
     }
   });
 
@@ -1016,11 +992,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       logger.info(`[BULK_ATTESTATION] Response:`, JSON.stringify(response));
       res.json(response);
-    } catch (err: any) {
+    } catch (err) {
       logger.error("[BULK_ATTESTATION] Error in bulk attestation creation:", err);
-      const errorResponse = { error: err.message || "Failed to create pulse attestations", stack: err.stack };
+      const errorResponse = { error: getErrorMessage(err) || "Failed to create pulse attestations", stack: err instanceof Error ? err.stack : undefined };
       logger.error("[BULK_ATTESTATION] Error response:", JSON.stringify(errorResponse));
-      res.status(500).json({ error: err.message || "Failed to create pulse attestations" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to create pulse attestations" });
     }
   });
 
@@ -1150,7 +1126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           transactionHash: updatedAttestation.transactionHash
         }
       });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Create single attestation error:", err);
       
       // Try to mark as failed
@@ -1163,7 +1139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logger.error('Failed to update attestation status to failed:', updateError);
       }
       
-      res.status(500).json({ error: err.message || "Failed to create attestation" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to create attestation" });
     }
   });
 
@@ -1202,11 +1178,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       res.json({ executionDetails: executionsWithDetails });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Get execution details error:", err);
       res
         .status(500)
-        .json({ error: err.message || "Failed to get execution details" });
+        .json({ error: getErrorMessage(err) || "Failed to get execution details" });
     }
   });
   
@@ -1223,11 +1199,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const executions = await storage.getMemberExecutions(memberId);
       res.json({ executions });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Get executions error:", err);
       res
         .status(500)
-        .json({ error: err.message || "Failed to get executions" });
+        .json({ error: getErrorMessage(err) || "Failed to get executions" });
     }
   });
 
@@ -1283,11 +1259,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const execution = await storage.createPulseExecution(executionData);
           res.json({ success: true, execution, updated: false });
         }
-      } catch (err: any) {
+      } catch (err) {
         logger.error("Create/update execution error:", err);
         res
           .status(500)
-          .json({ error: err.message || "Failed to record execution" });
+          .json({ error: getErrorMessage(err) || "Failed to record execution" });
       }
     }
   );
@@ -1501,9 +1477,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const members = await storage.getAllMembers();
       res.json({ members });
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Get members error:", err);
-      res.status(500).json({ error: err.message || "Failed to get members" });
+      res.status(500).json({ error: getErrorMessage(err) || "Failed to get members" });
     }
   });
 
@@ -1525,7 +1501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json(member);
-    } catch (error: any) {
+    } catch (error) {
       logger.error("Failed to get member:", error);
       res.status(500).json({ error: "Failed to get member" });
     }
@@ -1639,11 +1615,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       logger.info(`=== MEMBER CHECK DEBUG END ===`);
 
       res.json(response);
-    } catch (err: any) {
+    } catch (err) {
       logger.error("Check member error:", err);
       res
         .status(500)
-        .json({ error: err.message || "Failed to check member status" });
+        .json({ error: getErrorMessage(err) || "Failed to check member status" });
     }
   });
 

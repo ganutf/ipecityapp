@@ -1,0 +1,205 @@
+# Code Quality Analysis Report
+
+> Generated: 2026-02-28 | Branch: privy-migration
+
+## Executive Summary
+
+Full-codebase audit across server, client, schema, and architecture. Found **~90 distinct issues** across 8 categories. The codebase has solid foundations (Drizzle ORM, Privy auth, service layer started) but suffers from an incomplete V1-to-V2 migration, excessive `any` types, business logic in route handlers, and zero test coverage.
+
+---
+
+## CRITICAL Issues (Fix Immediately)
+
+### 1. No Test Suite
+- **Location**: Entire project
+- **Problem**: Zero test files (*.test.ts, *.spec.ts) found anywhere. All refactoring is high-risk.
+- **Fix**: Add Vitest, write tests for auth flows, storage methods, and API endpoints.
+
+### 2. `@ts-ignore` Suppressing Real Type Errors (Server)
+- **Location**: server/routes.ts — lines 163-169, 204-210, 454-458, 522-526
+- **Problem**: `// @ts-ignore: e is API error object with statusCode` used repeatedly instead of typing API errors
+- **Fix**: Create `ApiError` class with `statusCode` property; remove all `@ts-ignore`
+- **Status**: [x] Fixed in Phase 1
+
+### 3. 82+ `as any` Casts Across Client
+- **Location**: pulse-dashboard.tsx, profile.tsx, community.tsx, admin.tsx, Layout.tsx, and more
+- **Problem**: Pervasive `as any` bypasses TypeScript entirely. Example: `(pulse as any).datetimeStart`, `(member as any).totalPoints`
+- **Fix**: Define proper response interfaces for all API endpoints. The shared schema types exist but aren't used on the client.
+- **Status**: [x] Fixed in Phase 2
+
+### 4. Wallet Address Uniqueness Race Condition
+- **Location**: server/routes.ts — lines 278-315
+- **Problem**: PATCH wallet endpoint checks-then-updates without transaction-level locking. Two concurrent requests could bypass uniqueness check.
+- **Fix**: Wrap check + update in a database transaction with row-level locking.
+
+---
+
+## HIGH Issues
+
+### 5. Business Logic Scattered in Route Handlers
+- **Location**: server/routes.ts (1700+ lines) — signer state machine (lines 215-460), attestation batch (lines 860-1025), member promotion (lines 1535-1648)
+- **Problem**: Routes contain raw DB queries, complex business logic, and external API calls. PulseService exists but most logic bypasses it.
+- **Fix**: Extract into dedicated services: `SignerService`, `AttestationService`, `MemberService`, `ENSSubdomainService`
+
+### 6. Inconsistent API Call Patterns (Client)
+- **Location**: api.ts, queryClient.ts, various pages
+- **Problem**: 4 different ways to call APIs:
+  1. `authenticatedGet`/`authenticatedPost` (Bearer token) — api.ts
+  2. `apiRequest` (cookies only, no Bearer) — queryClient.ts
+  3. Raw `fetch()` with manual headers — community.tsx:159
+  4. Raw `fetch()` with FID header — pulse-dashboard.tsx:555
+- **Fix**: Consolidate into a single API layer that handles auth, errors, and retries consistently.
+- **Status**: [x] Fixed in Phase 4
+
+### 7. Incomplete V1 to V2 API Migration
+- **Location**: server/routes.ts (V1, FID-based) vs server/routes/auth.routes.ts (V2, Privy)
+- **Problem**: Only auth endpoints migrated to V2. Pulses, attestations, community endpoints still use V1 with FID-based auth. Dual auth middleware creates confusion.
+- **Fix**: Plan and execute migration of remaining endpoints; deprecate V1.
+
+### 8. Missing Error Boundaries (Client)
+- **Location**: App.tsx
+- **Problem**: No React Error Boundary wraps the router. A single component crash shows a blank white screen.
+- **Fix**: Add ErrorBoundary component wrapping route components with a recovery UI.
+- **Status**: [x] Fixed in Phase 1
+
+### 9. Missing Database Indexes
+- **Location**: shared/schema.ts
+- **Missing indexes on frequently queried columns**:
+  - `members.email` (queried in `getMemberByEmail`)
+  - `members.ipeUsername` (queried in lookup flows)
+  - `userSigners.memberId`
+  - `pulseExecutions.pulseId` (junction table)
+  - `attestations.status` (filtered in pending queries)
+  - `emailVerifications.memberId`, `passportVerifications.memberId`
+- **Fix**: Add indexes to schema definition
+- **Status**: [x] Fixed in Phase 3
+
+### 10. No Environment Variable Validation at Startup
+- **Location**: server/index.ts, server/db.ts
+- **Problem**: Only `DATABASE_URL` is validated. Missing `PRIVY_APP_SECRET`, `NEYNAR_API_KEY`, etc. causes cryptic runtime errors.
+- **Fix**: Validate all required env vars at startup with clear error messages.
+- **Status**: [x] Fixed in Phase 1
+
+### 11. `err: any` in 50+ Server Catch Blocks
+- **Location**: server/routes.ts — lines 632, 646, 666, 687, 713, 726, 742, 784, 801, 852, etc.
+- **Problem**: Every catch block uses `(err: any)` or untyped `error`, losing type safety.
+- **Fix**: Define typed error classes; use `instanceof` checks.
+- **Status**: [x] Fixed in Phase 2
+
+### 12. State Race Conditions in PostTool Component
+- **Location**: pulse-dashboard.tsx — PostTool (lines 485-630)
+- **Problem**: `executionStatus` local state + `executionsData` query + manual sync between them. Risk of UI showing stale/wrong state.
+- **Fix**: Use React Query mutations for state changes; derive UI state from query data only.
+
+### 13. Missing Input Validation on Several Endpoints
+- **Location**: server/routes.ts — e.g., `/api/qrcode` (line 88) accepts raw URL without validation
+- **Problem**: `validateRequest` middleware exists but isn't applied to all endpoints.
+- **Fix**: Add validation schemas to all POST/PATCH endpoints.
+
+---
+
+## MEDIUM Issues
+
+### 14. 68+ console.log Statements in Client Production Code
+- **Files**: community.tsx (debug blocks with `=== RANKING DEBUG ===`), use-persistent-auth.ts (10+ logs), profile.tsx, id-verification.tsx, EmailVerificationSection.tsx
+- **Fix**: Remove all or wrap with `import.meta.env.DEV` check.
+- **Status**: [x] Fixed in Phase 3
+
+### 15. Duplicated Code Patterns (Server)
+| Pattern | Locations | Fix |
+|---------|-----------|-----|
+| Rate limit error handlers | routes.ts lines 322-365, 354-366, 430-442 | Extract `handleNeynarRateLimit()` utility |
+| Member profile enrichment | auth.routes.ts lines 981-1044 (3 copies) | Extract `enrichMembersWithProfiles()` |
+| Ownership middleware | auth.ts `requireOwnership` + `requireOwnershipByFid` | Consolidate into single polymorphic middleware |
+| Pending attestation queries | storage.ts `getPendingAttestations` + `getPendingAttestationsByPulse` | Extract shared WHERE clause builder |
+
+### 16. Neynar Client Type Safety
+- **Location**: server/lib/neynarClient.ts — lines 30-60
+- **Problem**: All methods use `(client.methodName as any)(...args)` pattern. 15+ unsafe casts.
+- **Fix**: Type the Neynar SDK responses properly or create typed wrapper.
+- **Status**: [x] Fixed in Phase 2
+
+### 17. Privy Auth Types
+- **Location**: server/routes/auth.routes.ts — lines 87, 94, 102, 107, 155
+- **Problem**: 20+ `as any` casts for Privy linked account objects.
+- **Fix**: Define Privy account type interfaces.
+- **Status**: [x] Fixed in Phase 2
+
+### 18. Wallet Address Length Mismatch
+- **Location**: shared/schema.ts — `members.walletAddress` is `varchar(255)` but `memberWallets.walletAddress` is `varchar(42)`
+- **Fix**: Standardize all wallet address fields to `varchar(42)`.
+- **Status**: [x] Fixed in Phase 2
+
+### 19. Redundant Wallet Tracking
+- **Location**: shared/schema.ts — `members.walletAddress` (line 51) AND `memberWallets` table (lines 83-92)
+- **Problem**: Unclear relationship between passport wallet in `members` and wallets in `member_wallets`. Risk of drift.
+- **Fix**: Document relationship; consider making `members.walletAddress` a view/derived from `member_wallets` with a `isPrimary` flag.
+
+### 20. API Response Format Inconsistency
+- **Problem**: V1 returns `{ error: string }`, V2 returns `{ error: string, status: number, timestamp: string }`, some return `{ success: boolean, data }`. No standard envelope.
+- **Fix**: Create a response helper: `sendSuccess(res, data)` / `sendError(res, code, message)`
+- **Status**: [x] Fixed in Phase 4
+
+### 21. Query Key Inconsistencies (Client)
+- **Problem**: React Query keys use mixed formats — sometimes strings, sometimes arrays with tokens. Invalidation is unreliable.
+- **Fix**: Create query key factory: `queryKeys.pulses.list()`, `queryKeys.members.detail(id)`, etc.
+- **Status**: [x] Fixed in Phase 4
+
+### 22. Timezone Comment Misleading
+- **Location**: usePulseTimings.ts — lines 59-64
+- **Problem**: Comment says "Convert to user's timezone for display" but code just copies the value: `new Date(utcStartTime.getTime())`
+- **Fix**: Remove misleading comment or implement actual conversion.
+- **Status**: [x] Fixed in Phase 3
+
+### 23. PulseCard Missing React.memo
+- **Location**: PulseCard.tsx
+- **Problem**: Rendered in lists without memoization. All cards re-render when parent state changes.
+- **Fix**: Wrap with `React.memo()`.
+- **Status**: [x] Fixed in Phase 5
+
+### 24. Massive Component Files
+| File | Lines | Concern |
+|------|-------|---------|
+| pulse-dashboard.tsx | 1100+ | PostTool is a nested 600-line component |
+| profile.tsx | 640 | Editing + display mixed |
+| community.tsx | 630 | Complex sorting + ranking |
+| server/routes.ts | 1700+ | All V1 endpoints in one file |
+
+### 25. Legacy Tables Still Present
+- **Location**: shared/schema.ts — `emailVerifications` (line 298), `passportVerifications` (line 313)
+- **Problem**: Marked "kept for backward compatibility" but unclear if actually used.
+- **Fix**: Audit usage; remove or document deprecation timeline.
+
+### 26. Hardcoded Magic Numbers
+| Value | Location | Should Be |
+|-------|----------|-----------|
+| `8453` (Base chain ID) | schema.ts:244 | `CHAIN_IDS.BASE_MAINNET` constant |
+| Schema/Community UIDs | easService.ts:13-14 | `EAS_UIDS` constant |
+| Batch size `10` | storage.ts:217 | `ATTESTATION_BATCH_SIZE` constant |
+
+### 27. CORS Allows Null Origin
+- **Location**: server/index.ts — line 77
+- **Problem**: `if (!origin) callback(null, true)` allows requests with no origin header.
+- **Fix**: Require explicit origin in production.
+
+### 28. Farcaster FID in Multiple Tables
+- **Location**: `members.farcasterFid`, `userSigners.memberId`, `farcasterAccounts.fid`, `emailVerifications.farcasterFid`, `passportVerifications.farcasterFid`
+- **Problem**: Same data in 5 places. Source of truth unclear.
+- **Fix**: Centralize in `farcasterAccounts`, reference by `memberId` elsewhere.
+
+---
+
+## LOW Issues
+
+### 29. Accessibility Gaps
+- Clickable table rows in community.tsx without keyboard support or ARIA labels
+- Div with `role="button"` in pulse-dashboard.tsx instead of semantic `<button>`
+
+### 30. Unused Imports
+- `queryClient` imported but unused in profile.tsx:84
+- Deprecated `calculatePulseStreak` still referenced in storage.ts:387
+- **Status**: [x] Fixed in Phase 3
+
+### 31. WebSocket Error Suppression
+- **Location**: main.tsx — lines 8-21
+- **Problem**: Global `unhandledrejection` handler hides WebSocket errors, could mask real bugs.

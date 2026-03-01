@@ -9,6 +9,8 @@ import { join } from "path";
 import { config } from "dotenv";
 import { resolve } from "path";
 import logger from "./logger";
+import { validateEnvironment } from "./lib/validateEnv";
+import { AppError, getErrorStatus, getErrorMessage } from "./lib/errors";
 
 // Load environment variables from .env file
 const envPath = resolve(process.cwd(), '.env');
@@ -24,12 +26,8 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-// Log environment status (without sensitive values)
-logger.info('Environment check', {
-  EMAIL_TEST_MODE: process.env.EMAIL_TEST_MODE,
-  RESEND_API_KEY: process.env.RESEND_API_KEY ? 'Set' : 'Not set',
-  NODE_ENV: process.env.NODE_ENV
-});
+// Validate required environment variables
+validateEnvironment();
 
 
 // Test database connection
@@ -139,9 +137,9 @@ app.use((req, res, next) => {
     });
 
     // Enhanced error handling middleware
-    app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
+    app.use((err: Error | AppError, req: Request, res: Response, _next: NextFunction) => {
+      const status = getErrorStatus(err);
+      const message = getErrorMessage(err);
 
       // Log error details for debugging
       logger.error(`Error ${status}: ${message} on ${req.method} ${req.path}`);

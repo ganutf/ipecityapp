@@ -27,6 +27,7 @@ import VerifyPassportPage from "@/pages/verify-passport";
 import IdVerificationPage from "@/pages/id-verification";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const authKitConfig = {
   relay: "https://relay.farcaster.xyz",
@@ -109,7 +110,9 @@ function App() {
                 <TimezoneProvider>
                   <TooltipProvider>
                     <Toaster />
-                    <Router />
+                    <ErrorBoundary>
+                      <Router />
+                    </ErrorBoundary>
                   </TooltipProvider>
                 </TimezoneProvider>
               </JustaNameProvider>

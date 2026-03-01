@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { privy } from '../lib/privy';
 import { storage } from '../storage';
-import type { Member } from '../../shared/schema';
+import type { Member, MemberType } from '../../shared/schema';
 import logger from '../logger';
 
 export interface PrivyAuthRequest extends Request {
@@ -102,4 +102,99 @@ export async function optionalPrivyAuthMiddleware(
     logger.warn('Optional Privy auth failed:', error);
     next();
   }
+}
+
+/**
+ * Middleware to require admin privileges (V2 Privy auth)
+ * Must be used after privyAuthMiddleware
+ */
+export function requireAdminV2(
+  req: PrivyAuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  if (!req.member) {
+    return res.status(401).json({
+      error: 'Authentication required',
+      message: 'User must be authenticated',
+    });
+  }
+
+  if (req.member.memberType !== 'admin') {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'Admin privileges required',
+    });
+  }
+
+  next();
+}
+
+/**
+ * Middleware to require resource ownership (V2 Privy auth)
+ * Validates that the authenticated member owns the resource or is admin
+ * Must be used after privyAuthMiddleware
+ */
+export function requireOwnershipV2(idParamName: string = 'memberId') {
+  return (req: PrivyAuthRequest, res: Response, next: NextFunction) => {
+    if (!req.member) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'User must be authenticated',
+      });
+    }
+
+    // Check URL params first, then request body
+    const rawId = req.params[idParamName] ?? req.body?.[idParamName];
+    const resourceId = rawId ? parseInt(String(rawId), 10) : NaN;
+
+    if (isNaN(resourceId)) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: `${idParamName} parameter is required`,
+      });
+    }
+
+    if (req.member.id !== resourceId && req.member.memberType !== 'admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'You can only access your own resources',
+      });
+    }
+
+    next();
+  };
+}
+
+/**
+ * Middleware to log auth events for audit purposes (V2 Privy auth)
+ * Must be used after privyAuthMiddleware
+ */
+export function auditLoggerV2(action: string) {
+  return (req: PrivyAuthRequest, res: Response, next: NextFunction) => {
+    const memberId = req.member?.id;
+    const memberType = req.member?.memberType;
+    const isAdmin = memberType === 'admin';
+    const timestamp = new Date().toISOString();
+    const ip = req.ip || req.socket.remoteAddress;
+
+    logger.info(`[AUDIT] ${action}`, {
+      memberId,
+      memberType,
+      isAdmin,
+      ip,
+      path: req.path,
+      method: req.method,
+    });
+
+    if (req.body && Object.keys(req.body).length > 0) {
+      const sanitizedBody = { ...req.body };
+      delete sanitizedBody.password;
+      delete sanitizedBody.secret;
+      delete sanitizedBody.token;
+      logger.info(`[AUDIT] ${action} - body`, sanitizedBody);
+    }
+
+    next();
+  };
 }

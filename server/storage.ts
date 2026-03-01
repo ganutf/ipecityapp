@@ -127,6 +127,9 @@ export interface IStorage {
   deletePulseExecution(id: number): Promise<void>;
   
   
+  // Execution Joins
+  getExecutionWithMemberAndPulse(executionId: number): Promise<{ execution: PulseExecution; member: Member; pulse: Pulse } | undefined>;
+
   // Attestations
   createAttestation(attestation: InsertAttestation): Promise<Attestation>;
   getAttestation(pulseExecutionId: number): Promise<Attestation | undefined>;
@@ -792,6 +795,20 @@ export class DatabaseStorage implements IStorage {
 
   async deletePulseExecution(id: number): Promise<void> {
     await db.delete(pulseExecutions).where(eq(pulseExecutions.id, id));
+  }
+
+  async getExecutionWithMemberAndPulse(executionId: number): Promise<{ execution: PulseExecution; member: Member; pulse: Pulse } | undefined> {
+    const [row] = await db
+      .select({
+        execution: pulseExecutions,
+        member: members,
+        pulse: pulses,
+      })
+      .from(pulseExecutions)
+      .innerJoin(members, eq(pulseExecutions.memberId, members.id))
+      .innerJoin(pulses, eq(pulseExecutions.pulseId, pulses.id))
+      .where(eq(pulseExecutions.id, executionId));
+    return row ?? undefined;
   }
 
   // User Signers

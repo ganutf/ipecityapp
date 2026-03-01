@@ -50,22 +50,6 @@ export default function IdVerificationPage() {
   const progressCount = [isWalletConnected, isEmailVerified, isSubdomainLinked].filter(Boolean).length;
   const allComplete = progressCount === 3;
 
-  // Debug logging
-  console.log("ID Verification Page - Status:", {
-    isWalletConnected,
-    isEmailVerified,
-    isSubdomainLinked,
-    hasSubdomainFromEns,
-    memberIpePassport: member?.ipePassport,
-    progressCount,
-    memberStatus,
-    memberId,
-    // Wallet debug
-    privyWalletAddress: address,
-    memberWalletAddress: member?.walletAddress,
-    displayedWallet: address ?? member?.walletAddress,
-  });
-
   // Save wallet address when connected via Privy (also updates if wallet changed)
   useEffect(() => {
     const saveWalletAddress = async () => {

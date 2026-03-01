@@ -49,7 +49,6 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
     // STEP 2: Protect authenticated-only pages
     const protectedPaths = ['/id-verification', '/profile', '/community', '/pulses', '/admin'];
     if (protectedPaths.some(path => currentPath.startsWith(path)) && !isAuthenticated) {
-      console.log(`AuthGuard - ${currentPath} requires authentication, redirecting to home`);
       setLocation("/");
       return;
     }
@@ -64,8 +63,6 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
     if (isAuthenticated) {
       // If user is a member, check their status
       if (isMember) {
-        console.log("AuthGuard - Member status:", memberStatus);
-
         // STATUS: 'active_member' - User completed all verifications (wallet + email + subdomain)
         if (memberStatus === 'active_member') {
           // Allow access to all pages
@@ -76,7 +73,6 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         // Redirect to id-verification page to complete wallet connection, email, and subdomain
         if (memberStatus === 'pending_id_verification') {
           if (currentPath !== '/id-verification' && currentPath !== '/') {
-            console.log("AuthGuard - Incomplete ID verification, redirecting to id-verification");
             setLocation("/id-verification");
             return;
           }
@@ -87,7 +83,6 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         if (memberStatus === 'pending_application_review') {
           // Allow access to home and id-verification (to see status)
           if (currentPath !== '/id-verification' && currentPath !== '/' && currentPath !== '/profile') {
-            console.log("AuthGuard - Application pending, limited access");
             setLocation("/id-verification");
             return;
           }
@@ -98,7 +93,6 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
         if (memberStatus === 'approved_application') {
           // Allow access to id-verification to accept subdomain
           if (currentPath !== '/id-verification' && currentPath !== '/' && currentPath !== '/profile') {
-            console.log("AuthGuard - Subdomain ready, redirecting to id-verification");
             setLocation("/id-verification");
             return;
           }
@@ -118,7 +112,6 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
       // Authenticated but not a member yet - allow access to home and profile
       // They need to complete onboarding
       if (currentPath !== '/' && currentPath !== '/profile' && currentPath !== '/id-verification') {
-        console.log("AuthGuard - Not a member yet, redirecting to home");
         setLocation("/");
         return;
       }

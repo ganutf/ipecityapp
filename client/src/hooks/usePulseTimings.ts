@@ -59,9 +59,9 @@ export function usePulseTimings(pulses: Pulse[], enableRealTime: boolean = true)
       const utcStartTime = new Date(pulse.datetimeStart); // Server sends UTC
       const utcEndTime = new Date(utcStartTime.getTime() + (pulse.interval * 60 * 60 * 1000));
       
-      // Convert to user's timezone for display
-      const localStartTime = new Date(utcStartTime.getTime());
-      const localEndTime = new Date(utcEndTime.getTime());
+      // JS Date objects display in the browser's local timezone automatically
+      const localStartTime = utcStartTime;
+      const localEndTime = utcEndTime;
 
       const timeUntilStart = timingInfo.isFuture ? formatTimeDifference(utcStartTime.getTime() - now.getTime()) : null;
       const timeUntilEnd = timingInfo.isActive ? formatTimeDifference(utcEndTime.getTime() - now.getTime()) : null;
@@ -69,8 +69,8 @@ export function usePulseTimings(pulses: Pulse[], enableRealTime: boolean = true)
       return {
         pulse,
         status: timingInfo.status,
-        startTime: localStartTime, // Display time in user's timezone
-        endTime: localEndTime,     // Display time in user's timezone  
+        startTime: localStartTime,
+        endTime: localEndTime,
         timeUntilStart,
         timeUntilEnd,
         isEnded: timingInfo.isEnded,

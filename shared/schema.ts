@@ -77,7 +77,11 @@ export const members = pgTable("members", {
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_members_email").on(table.email),
+  index("idx_members_ipe_username").on(table.ipeUsername),
+  index("idx_members_status").on(table.status),
+]);
 
 // Member wallets table - tracks all wallets linked by each member
 export const memberWallets = pgTable("member_wallets", {
@@ -122,6 +126,8 @@ export const pulseExecutions = pgTable("pulse_executions", {
 }, (table) => [
   // Unique constraint: only one execution per member per pulse
   unique("pulse_executions_unique_member_pulse").on(table.pulseId, table.memberId),
+  index("idx_pulse_executions_pulse_id").on(table.pulseId),
+  index("idx_pulse_executions_member_id").on(table.memberId),
 ]);
 
 // Attestations - EAS attestations for pulse completions
@@ -132,7 +138,9 @@ export const attestations = pgTable("attestations", {
   transactionHash: varchar("transaction_hash", { length: 255 }), // Nullable for pending status
   status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending' | 'completed' | 'failed'
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_attestations_status").on(table.status),
+]);
 
 // User signers - individual Farcaster signers per user
 export const userSigners = pgTable("user_signers", {
@@ -145,7 +153,9 @@ export const userSigners = pgTable("user_signers", {
   approvalUrl: varchar("approval_url"), // Using existing column name
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_user_signers_member_id").on(table.memberId),
+]);
 
 // Relations
 export const membersRelations = relations(members, ({ one, many }) => ({

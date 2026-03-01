@@ -193,7 +193,7 @@ export function PassportVerificationSection({
                 return { success: true, alreadyAccepted: true };
               }
             } catch (lookupError) {
-              console.log('ENS lookup error:', lookupError);
+              // ENS lookup failed — fall through to backend update
             }
           }
 

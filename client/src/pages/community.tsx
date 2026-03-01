@@ -204,16 +204,6 @@ export default function Community() {
     // First, calculate fixed ranks based on performance (separate from display sorting)
     let membersWithRanks = members;
     if (sortBy === 'ipe' || sortBy === 'points' || sortBy === 'streak') {
-      console.log("=== RANKING DEBUG START ===");
-      console.log("Raw members data:", members.map(m => ({
-        id: m.id,
-        ipeBalance: m.ipeBalance,
-        ipeBalanceRaw: m.ipeBalanceRaw,
-        points: m.totalPoints,
-        streak: m.pulseStreak,
-        name: m.displayName || m.username
-      })));
-
       // Create a performance-sorted array to determine ranks
       const performanceSorted = [...members].sort((a, b) => {
         let comparison = 0;
@@ -286,29 +276,16 @@ export default function Community() {
         return comparison;
       });
 
-      console.log("Performance sorted order:", performanceSorted.map((m, idx) => ({
-        rank: idx + 1,
-        id: m.id,
-        ipeBalance: m.ipeBalance,
-        ipeBalanceRaw: m.ipeBalanceRaw,
-        points: m.totalPoints,
-        streak: m.pulseStreak,
-        name: m.displayName || m.username
-      })));
-
       // Assign fixed ranks based on performance position (highest performance = #1)
       membersWithRanks = members.map(member => {
         // Use member.id for matching since farcasterFid may not be unique (Privy users without Farcaster)
         const performanceIndex = performanceSorted.findIndex(p => p.id === member.id);
         const rank = performanceIndex + 1;
-        console.log(`Member ${member.displayName || member.username} (${member.totalPoints}pts, ${member.pulseStreak}streak) -> Rank #${rank}`);
         return {
           ...member,
           rank
         };
       });
-
-      console.log("=== RANKING DEBUG END ===");
     } else {
       // For name sorting, don't show ranks
       membersWithRanks = members.map(member => ({
@@ -320,14 +297,6 @@ export default function Community() {
     // Then, sort the display order (keeping the fixed ranks intact)
     // For performance metrics, sort by rank to maintain consistency
     if (sortBy === 'ipe' || sortBy === 'points' || sortBy === 'streak') {
-      console.log("=== DISPLAY SORTING DEBUG START ===");
-      console.log("Before display sort - Members with ranks:", membersWithRanks.map(m => ({
-        name: m.displayName || m.username,
-        rank: m.rank,
-        points: m.totalPoints,
-        streak: m.pulseStreak
-      })));
-
       // For performance-based sorting, use rank order to maintain consistency
       membersWithRanks.sort((a, b) => {
         const rankComparison = (a.rank || 999) - (b.rank || 999);
@@ -363,14 +332,6 @@ export default function Community() {
         return sortDirection === 'desc' ? -comparison : comparison;
       });
     }
-
-    console.log(`After display sort (${sortDirection}) - Final order:`, membersWithRanks.map(m => ({
-      name: m.displayName || m.username,
-      rank: m.rank,
-      points: m.totalPoints,
-      streak: m.pulseStreak
-    })));
-    console.log("=== DISPLAY SORTING DEBUG END ===");
 
     return membersWithRanks;
   }, [membersData?.members, searchQuery, sortBy, sortDirection]);

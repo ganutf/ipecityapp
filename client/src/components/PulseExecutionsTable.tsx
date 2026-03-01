@@ -62,13 +62,13 @@ interface PulseExecutionsTableProps {
 // Reusable error handling for attestation operations
 const useAttestationErrorHandler = (retryCallback: () => void) => {
   const { toast } = useToast();
-  
+
   const handleError = (error: Error, context?: string) => {
     console.error(`[ERROR_HANDLER] ${context}:`, error);
-    
+
     let description = error.message;
     let retryable = true;
-    
+
     // Parse specific error types
     if (error.message.includes('timed out')) {
       description = `${context || 'Operation'} timed out. This may indicate network issues or high blockchain congestion.`;
@@ -84,15 +84,13 @@ const useAttestationErrorHandler = (retryCallback: () => void) => {
       description = "Attestation has already been completed for this execution.";
       retryable = false;
     }
-    
-    console.log(`[ERROR_HANDLER] Showing toast with description: "${description}"`);
-    
-    toast({ 
-      title: "Error", 
+
+    toast({
+      title: "Error",
       description,
       variant: "destructive",
       action: retryable ? (
-        <button 
+        <button
           onClick={retryCallback}
           className="text-sm font-medium text-red-600 hover:text-red-800"
         >
@@ -118,7 +116,7 @@ const useAttestationErrorHandler = (retryCallback: () => void) => {
     }
     return failureCount < 2; // Retry up to 2 times for other errors
   };
-  
+
   return { handleError, shouldRetry };
 };
 
@@ -144,10 +142,8 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
   // Mutation for creating all attestations for this pulse
   const createAllAttestationsMutation = useMutation({
     mutationFn: async () => {
-      console.log(`[FRONTEND] Starting bulk attestation for pulse ${pulse.id}`);
       try {
         const result = await authenticatedPost(`/api/admin/pulse/${pulse.id}/attestations/create-all`, {}, profile?.fid);
-        console.log(`[FRONTEND] Bulk attestation success:`, result);
         return result;
       } catch (error) {
         console.error(`[FRONTEND] Bulk attestation error:`, error);
@@ -155,15 +151,13 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
       }
     },
     onSuccess: (data) => {
-      console.log(`[FRONTEND] Bulk attestation onSuccess:`, data);
-      toast({ 
-        title: "Success", 
-        description: `${data.message}. Successful: ${data.successful}, Failed: ${data.failed}` 
+      toast({
+        title: "Success",
+        description: `${data.message}. Successful: ${data.successful}, Failed: ${data.failed}`
       });
       onRefresh();
     },
     onError: (error: Error) => {
-      console.error(`[FRONTEND] Bulk attestation onError:`, error);
       bulkErrorHandler.handleError(error, "Bulk attestation creation");
     },
     retry: bulkErrorHandler.shouldRetry,

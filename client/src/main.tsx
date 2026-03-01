@@ -15,7 +15,7 @@ window.addEventListener('unhandledrejection', (event) => {
       error.message.includes('Connection interrupted while trying to subscribe')
     )) {
       event.preventDefault();
-      console.log('Suppressed WebSocket connection error:', error.message);
+      // Silently suppress known WebSocket/WalletConnect errors
     }
   }
 });

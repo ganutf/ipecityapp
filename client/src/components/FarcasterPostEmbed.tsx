@@ -31,8 +31,6 @@ export function FarcasterPostEmbed({
       setError(null);
 
       try {
-        console.log("Fetching cast data for:", castUrl);
-        
         const res = await fetch(
           `/api/neynar/cast/${encodeURIComponent(castUrl)}/${viewerFid}?type=url`,
         );
@@ -46,7 +44,6 @@ export function FarcasterPostEmbed({
         
         if (isMounted) {
           setCastData(cast);
-          console.log("Cast data loaded successfully");
         }
       } catch (error) {
         console.error("Error fetching cast:", error);

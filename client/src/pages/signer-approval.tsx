@@ -18,7 +18,6 @@ export default function SignerApprovalPage() {
   // Wait for auth to stabilize before making redirect decisions
   useEffect(() => {
     if (!authLoading && !isAuthenticated && !member?.farcasterFid) {
-      console.log("SignerApproval - Not authenticated (stable), redirecting to home");
       setLocation("/");
       return;
     }
@@ -44,40 +43,25 @@ export default function SignerApprovalPage() {
   useEffect(() => {
     const generateQR = async () => {
       const approvalUrl = signerData?.signer_approval_url;
-      
-      console.log('QR Code Generation Debug:', {
-        signerData,
-        approvalUrl,
-        hasApprovalUrl: !!approvalUrl,
-        profileFid: member?.farcasterFid
-      });
-      
+
       if (approvalUrl) {
         try {
-          console.log('Making QR code API request for URL:', approvalUrl);
           setQrCodeError(""); // Clear previous errors
-          
+
           const response = await fetch(`/api/qrcode`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url: approvalUrl }),
           });
-          
-          console.log('QR Code API Response:', {
-            status: response.status,
-            statusText: response.statusText,
-            ok: response.ok
-          });
-          
+
           if (response.ok) {
             const qrDataUrl = await response.text();
-            console.log('QR Code generated successfully, length:', qrDataUrl.length);
             setQrCodeUrl(qrDataUrl);
             setQrCodeError("");
           } else {
             const errorText = await response.text();
             console.error('QR Code API error:', errorText);
-            
+
             // Handle specific error cases
             if (response.status === 429) {
               setQrCodeError("Too many requests. Please wait a moment and refresh the page.");
@@ -93,7 +77,7 @@ export default function SignerApprovalPage() {
         }
       }
     };
-    
+
     generateQR();
   }, [signerData, member?.farcasterFid]);
 

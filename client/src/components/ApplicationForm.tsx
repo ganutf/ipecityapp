@@ -132,8 +132,6 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
         walletAddress: address,
       };
 
-      console.log("Submitting application with payload:", payload);
-
       try {
         const token = await getAccessToken();
         const response = await apiRequest("/api/v2/auth/application/submit", {
@@ -141,7 +139,6 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
           body: JSON.stringify(payload),
           headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         });
-        console.log("Application submission response:", response);
         return response;
       } catch (error) {
         console.error("Application submission error:", error);
@@ -166,11 +163,6 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
   });
 
   const onSubmit = (data: ApplicationFormData) => {
-    console.log("Form submitted with data:", data);
-    console.log("Username status:", usernameStatus);
-    console.log("Selected tags:", selectedTags);
-    console.log("Wallet address:", address);
-    
     if (usernameStatus !== "available") {
       toast({
         title: "Username not available",

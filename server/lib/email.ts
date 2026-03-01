@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import logger from '../logger';
 
 // Lazy-loaded email configuration
 let resend: Resend | null = null;
@@ -16,11 +17,12 @@ function getEmailConfig() {
 
   // Log configuration once
   if (!configLogged) {
-    console.log('📧 Email Configuration (Lazy-loaded):');
-    console.log(`  NODE_ENV: ${NODE_ENV}`);
-    console.log(`  EMAIL_TEST_MODE: ${EMAIL_TEST_MODE}`);
-    console.log(`  RESEND_API_KEY: ${RESEND_API_KEY ? 'Configured ✓' : 'Missing ✗'}`);
-    console.log(`  Resend Client: ${resend ? 'Initialized ✓' : 'Not initialized ✗'}`);
+    logger.info('Email configuration loaded', {
+      environment: NODE_ENV,
+      testMode: EMAIL_TEST_MODE,
+      apiKeyConfigured: !!RESEND_API_KEY,
+      clientInitialized: !!resend,
+    });
     configLogged = true;
   }
 
@@ -46,20 +48,17 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
 
   // Test mode - log emails without sending them (controlled by EMAIL_TEST_MODE env var)
   if (config.testMode) {
-    console.log('📧 Email would be sent (TEST MODE - NO QUOTA USED):');
-    console.log('  To:', params.to);
-    console.log('  From:', params.from);
-    console.log('  Subject:', params.subject);
-    if (params.text) console.log('  Text:', params.text);
-    if (params.html) console.log('  HTML:', params.html.substring(0, 200) + '...');
-    console.log('  💡 To send real emails, set EMAIL_TEST_MODE=false in .env');
+    logger.info('Email test mode - not sending', {
+      to: params.to,
+      from: params.from,
+      subject: params.subject,
+    });
     return true;
   }
 
   // Send real emails (development or production)
   if (!config.resendClient) {
-    console.error('📧 Cannot send email: RESEND_API_KEY not configured');
-    console.error('💡 Add RESEND_API_KEY to your .env file or set EMAIL_TEST_MODE=true for testing');
+    logger.error('Cannot send email: RESEND_API_KEY not configured');
     return false;
   }
 
@@ -75,10 +74,10 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     
     const result = await config.resendClient!.emails.send(emailData);
     
-    console.log(`📧 Email sent successfully to ${params.to}`, result);
+    logger.info(`Email sent to ${params.to}`);
     return true;
   } catch (error) {
-    console.error('📧 Email sending failed:', error);
+    logger.error('Email sending failed', { error: error instanceof Error ? error.message : String(error) });
     return false;
   }
 }

@@ -87,7 +87,6 @@ export default function Profile2() {
   // Wait for auth to stabilize before making redirect decisions
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      console.log("Profile - Not authenticated (stable), redirecting to home");
       setLocation("/");
       return;
     }
@@ -152,7 +151,6 @@ export default function Profile2() {
         'approved_application'
       ];
       if (incompleteStatuses.includes(memberStatus || '')) {
-        console.log("Profile - Incomplete verification, redirecting to id-verification. Status:", memberStatus);
         setLocation("/id-verification");
         return;
       }

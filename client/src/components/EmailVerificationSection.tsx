@@ -42,7 +42,6 @@ export function EmailVerificationSection({
     setEmail(emailValue);
     setOriginalEmail(emailValue);
     setEmailVerified(isVerified || false);
-    console.log("EmailVerificationSection: Updated state - isVerified:", isVerified, "currentEmail:", currentEmail, "emailVerified state:", emailVerified);
   }, [currentEmail, isVerified]);
 
   // Send verification email (uses v2 endpoint with memberId)

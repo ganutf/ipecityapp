@@ -25,6 +25,8 @@
     "test-streak:compare": "tsx server/scripts/test-streak-calculation.ts",
     "test-active:status": "tsx server/scripts/test-active-pulse-status.ts",
     "onboarding": "tsx server/scripts/test-onboarding.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "production:check": "bash scripts/production-check.sh",
     "production:deploy": "npm run production:check && npm run build && npm run start"
   },
@@ -138,7 +140,8 @@
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.1",
     "typescript": "5.6.3",
-    "vite": "^5.4.14"
+    "vite": "^5.4.14",
+    "vitest": "^4.0.18"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

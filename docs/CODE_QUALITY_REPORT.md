@@ -14,6 +14,7 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 - **Location**: Entire project
 - **Problem**: Zero test files (*.test.ts, *.spec.ts) found anywhere. All refactoring is high-risk.
 - **Fix**: Add Vitest, write tests for auth flows, storage methods, and API endpoints.
+- **Status**: [x] Fixed — 82 tests across 4 files (errors, pulseUtils, dateUtils, client pulseUtils)
 
 ### 2. `@ts-ignore` Suppressing Real Type Errors (Server)
 - **Location**: server/routes.ts — lines 163-169, 204-210, 454-458, 522-526
@@ -31,6 +32,7 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 - **Location**: server/routes.ts — lines 278-315
 - **Problem**: PATCH wallet endpoint checks-then-updates without transaction-level locking. Two concurrent requests could bypass uniqueness check.
 - **Fix**: Wrap check + update in a database transaction with row-level locking.
+- **Status**: [x] Fixed — `updateMemberWalletAtomic` and `submitApplicationAtomic` in storage.ts
 
 ---
 
@@ -243,10 +245,10 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 
 These items were identified in the audit but not included in the implementation phases. They remain as future improvement opportunities:
 
-| # | Issue | Priority |
-|---|-------|----------|
-| 1 | No test suite (Vitest) | CRITICAL |
-| 4 | Wallet address uniqueness race condition | CRITICAL |
+| # | Issue | Priority | Status |
+|---|-------|----------|--------|
+| 1 | No test suite (Vitest) | CRITICAL | DONE — 82 tests across 4 files |
+| 4 | Wallet address uniqueness race condition | CRITICAL | DONE — atomic transactions in storage |
 | 5 | Business logic in route handlers → extract services | HIGH |
 | 7 | Incomplete V1→V2 API migration | HIGH |
 | 12 | PostTool state race conditions | HIGH |

@@ -17,6 +17,41 @@ export class AppError extends Error {
   }
 }
 
+/** 404 resource not found */
+export class NotFoundError extends AppError {
+  constructor(message: string) {
+    super(message, 404, 'NOT_FOUND');
+    this.name = 'NotFoundError';
+  }
+}
+
+/** 400 validation failure */
+export class ValidationError extends AppError {
+  constructor(message: string) {
+    super(message, 400, 'VALIDATION_ERROR');
+    this.name = 'ValidationError';
+  }
+}
+
+/** 403 forbidden action */
+export class ForbiddenError extends AppError {
+  constructor(message: string) {
+    super(message, 403, 'FORBIDDEN');
+    this.name = 'ForbiddenError';
+  }
+}
+
+/** 429 rate limit exceeded */
+export class RateLimitError extends AppError {
+  constructor(
+    message: string,
+    public retryAfter: number = 60,
+  ) {
+    super(message, 429, 'RATE_LIMIT_EXCEEDED');
+    this.name = 'RateLimitError';
+  }
+}
+
 /**
  * Neynar/external API error shape.
  * Matches the structure from @neynar/nodejs-sdk errors.

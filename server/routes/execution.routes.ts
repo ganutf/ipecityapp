@@ -12,9 +12,8 @@ import {
 import { validateRequest } from '../middleware/validation';
 import { ExecutionService } from '../services/ExecutionService';
 import { storage } from '../storage';
-import { getErrorMessage } from '../lib/errors';
+import { parseIntParam, handleServiceError } from '../lib/routeHelpers';
 import { z } from 'zod';
-import logger from '../logger';
 
 const router = Router();
 
@@ -27,12 +26,11 @@ router.get(
   requireOwnershipV2('memberId'),
   async (req: PrivyAuthRequest, res: Response) => {
     try {
-      const memberId = parseInt(req.params.memberId);
+      const memberId = parseIntParam(req, 'memberId');
       const executions = await executionService.getMemberExecutions(memberId);
       res.json({ executions });
     } catch (err) {
-      logger.error('Get executions error:', err);
-      res.status(500).json({ error: getErrorMessage(err) || 'Failed to get executions' });
+      handleServiceError(err, res, 'Failed to get executions');
     }
   },
 );
@@ -44,12 +42,11 @@ router.get(
   requireOwnershipV2('memberId'),
   async (req: PrivyAuthRequest, res: Response) => {
     try {
-      const memberId = parseInt(req.params.memberId);
+      const memberId = parseIntParam(req, 'memberId');
       const executionDetails = await executionService.getMemberExecutionDetails(memberId);
       res.json({ executionDetails });
     } catch (err) {
-      logger.error('Get execution details error:', err);
-      res.status(500).json({ error: getErrorMessage(err) || 'Failed to get execution details' });
+      handleServiceError(err, res, 'Failed to get execution details');
     }
   },
 );
@@ -78,11 +75,7 @@ router.post(
       const result = await executionService.recordExecution(req.member.id, pulseId, actions);
       res.json(result);
     } catch (err) {
-      if (err instanceof Error && err.message.includes('At least one action')) {
-        return res.status(400).json({ error: 'Validation failed', message: err.message });
-      }
-      logger.error('Create/update execution error:', err);
-      res.status(500).json({ error: getErrorMessage(err) || 'Failed to record execution' });
+      handleServiceError(err, res, 'Failed to record execution');
     }
   },
 );

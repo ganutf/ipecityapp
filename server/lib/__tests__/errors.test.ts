@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   AppError,
+  NotFoundError,
+  ValidationError,
+  ForbiddenError,
+  RateLimitError,
   isNeynarError,
   getErrorStatus,
   getErrorMessage,
@@ -23,6 +27,57 @@ describe('AppError', () => {
     const err = new AppError('not found', 404, 'NOT_FOUND');
     expect(err.statusCode).toBe(404);
     expect(err.code).toBe('NOT_FOUND');
+  });
+});
+
+describe('NotFoundError', () => {
+  it('has status 404 and correct code', () => {
+    const err = new NotFoundError('resource missing');
+    expect(err.message).toBe('resource missing');
+    expect(err.statusCode).toBe(404);
+    expect(err.code).toBe('NOT_FOUND');
+    expect(err.name).toBe('NotFoundError');
+    expect(err).toBeInstanceOf(AppError);
+    expect(err).toBeInstanceOf(Error);
+  });
+});
+
+describe('ValidationError', () => {
+  it('has status 400 and correct code', () => {
+    const err = new ValidationError('bad input');
+    expect(err.message).toBe('bad input');
+    expect(err.statusCode).toBe(400);
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.name).toBe('ValidationError');
+    expect(err).toBeInstanceOf(AppError);
+  });
+});
+
+describe('ForbiddenError', () => {
+  it('has status 403 and correct code', () => {
+    const err = new ForbiddenError('access denied');
+    expect(err.message).toBe('access denied');
+    expect(err.statusCode).toBe(403);
+    expect(err.code).toBe('FORBIDDEN');
+    expect(err.name).toBe('ForbiddenError');
+    expect(err).toBeInstanceOf(AppError);
+  });
+});
+
+describe('RateLimitError', () => {
+  it('has status 429, default retryAfter, and correct code', () => {
+    const err = new RateLimitError('slow down');
+    expect(err.message).toBe('slow down');
+    expect(err.statusCode).toBe(429);
+    expect(err.code).toBe('RATE_LIMIT_EXCEEDED');
+    expect(err.name).toBe('RateLimitError');
+    expect(err.retryAfter).toBe(60);
+    expect(err).toBeInstanceOf(AppError);
+  });
+
+  it('accepts custom retryAfter', () => {
+    const err = new RateLimitError('slow down', 30);
+    expect(err.retryAfter).toBe(30);
   });
 });
 

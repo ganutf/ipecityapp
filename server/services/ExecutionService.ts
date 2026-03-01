@@ -5,6 +5,7 @@
 
 import type { IStorage } from '../storage';
 import type { PulseExecution, Attestation, Pulse } from '@shared/schema';
+import { ValidationError } from '../lib/errors';
 import logger from '../logger';
 
 interface PulseExecutionActions {
@@ -106,7 +107,7 @@ export class ExecutionService {
 
     // New execution — require at least one action
     if (!actions.liked && !actions.shared && !actions.abstained) {
-      throw new Error('At least one action must be taken when creating a new execution');
+      throw new ValidationError('At least one action must be taken when creating a new execution');
     }
 
     const execution = await this.storage.createPulseExecution({

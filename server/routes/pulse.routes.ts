@@ -12,11 +12,10 @@ import {
 } from '../middleware/privyAuth';
 import { validateRequest } from '../middleware/validation';
 import { PulseService } from '../services/PulseService';
-import { AttestationService, NotFoundError } from '../services/AttestationService';
+import { AttestationService } from '../services/AttestationService';
 import { storage } from '../storage';
 import { insertPulseSchema, updatePulseSchema } from '@shared/schema';
-import { getErrorMessage } from '../lib/errors';
-import logger from '../logger';
+import { parseIntParam, handleServiceError } from '../lib/routeHelpers';
 
 const router = Router();
 
@@ -29,8 +28,7 @@ router.get('/', async (req, res) => {
     const pulses = await storage.getAllPulses();
     res.json({ pulses });
   } catch (err) {
-    logger.error('Get pulses error:', err);
-    res.status(500).json({ error: getErrorMessage(err) || 'Failed to get pulses' });
+    handleServiceError(err, res, 'Failed to get pulses');
   }
 });
 
@@ -40,8 +38,7 @@ router.get('/active', async (req, res) => {
     const pulses = await storage.getActivePulses();
     res.json({ pulses });
   } catch (err) {
-    logger.error('Active pulses error:', err);
-    res.status(500).json({ error: getErrorMessage(err) || 'Failed to get active pulses' });
+    handleServiceError(err, res, 'Failed to get active pulses');
   }
 });
 
@@ -57,8 +54,7 @@ router.post(
       const pulse = await pulseService.createPulse(req.body);
       res.status(201).json(pulse);
     } catch (err) {
-      logger.error('Create pulse error:', err);
-      res.status(500).json({ error: getErrorMessage(err) || 'Failed to create pulse' });
+      handleServiceError(err, res, 'Failed to create pulse');
     }
   },
 );
@@ -69,17 +65,14 @@ router.patch(
   privyAuthMiddleware,
   requireAdminV2,
   auditLoggerV2('UPDATE_PULSE'),
+  validateRequest(updatePulseSchema),
   async (req: PrivyAuthRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ error: 'Invalid pulse ID' });
-      }
+      const id = parseIntParam(req, 'id');
       const pulse = await pulseService.updatePulse(id, req.body);
       res.json(pulse);
     } catch (err) {
-      logger.error('Update pulse error:', err);
-      res.status(500).json({ error: getErrorMessage(err) || 'Failed to update pulse' });
+      handleServiceError(err, res, 'Failed to update pulse');
     }
   },
 );
@@ -92,15 +85,11 @@ router.delete(
   auditLoggerV2('DELETE_PULSE'),
   async (req: PrivyAuthRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ error: 'Invalid pulse ID' });
-      }
+      const id = parseIntParam(req, 'id');
       await pulseService.deletePulse(id);
       res.json({ success: true });
     } catch (err) {
-      logger.error('Delete pulse error:', err);
-      res.status(500).json({ error: getErrorMessage(err) || 'Failed to delete pulse' });
+      handleServiceError(err, res, 'Failed to delete pulse');
     }
   },
 );
@@ -111,18 +100,11 @@ router.get(
   privyAuthMiddleware,
   async (req: PrivyAuthRequest, res: Response) => {
     try {
-      const pulseId = parseInt(req.params.pulseId);
-      if (isNaN(pulseId)) {
-        return res.status(400).json({ error: 'Invalid pulse ID' });
-      }
+      const pulseId = parseIntParam(req, 'pulseId');
       const result = await attestationService.getPulseExecutionsWithAttestations(pulseId);
       res.json(result);
     } catch (err) {
-      if (err instanceof NotFoundError) {
-        return res.status(404).json({ error: err.message });
-      }
-      logger.error('Get pulse executions error:', err);
-      res.status(500).json({ error: getErrorMessage(err) || 'Failed to get pulse executions' });
+      handleServiceError(err, res, 'Failed to get pulse executions');
     }
   },
 );

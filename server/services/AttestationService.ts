@@ -7,6 +7,7 @@ import type { IStorage } from '../storage';
 import type { Attestation, Member, Pulse, PulseExecution } from '@shared/schema';
 import { getCurrentUTC, calculatePulseEndTimeUTC } from '@shared/pulseUtils';
 import { withTimeout } from '../lib/rateLimiter';
+import { ForbiddenError, NotFoundError } from '../lib/errors';
 import logger from '../logger';
 
 interface BulkAttestationResult {
@@ -416,19 +417,8 @@ export class AttestationService {
   }
 }
 
-export class ForbiddenError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ForbiddenError';
-  }
-}
-
-export class NotFoundError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'NotFoundError';
-  }
-}
+// Re-export shared error classes for backward compatibility with route imports
+export { ForbiddenError, NotFoundError } from '../lib/errors';
 
 export class PulseActiveError extends Error {
   constructor(

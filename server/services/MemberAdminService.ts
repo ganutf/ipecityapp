@@ -6,6 +6,7 @@
 import type { IStorage } from '../storage';
 import type { Member } from '@shared/schema';
 import { sendApprovalEmail, sendDenialEmail } from '../lib/email';
+import { ValidationError, NotFoundError } from '../lib/errors';
 import logger from '../logger';
 
 const VALID_APPROVAL_TYPES = ['architect', 'explorer', 'admin', 'org_team', 'core_team'];
@@ -165,18 +166,5 @@ export class MemberAdminService {
   }
 }
 
-/** Thrown when request parameters fail validation */
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ValidationError';
-  }
-}
-
-/** Thrown when a referenced resource does not exist */
-export class NotFoundError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'NotFoundError';
-  }
-}
+// Re-export shared error classes for backward compatibility with route imports
+export { ValidationError, NotFoundError } from '../lib/errors';

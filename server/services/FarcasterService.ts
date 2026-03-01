@@ -7,11 +7,10 @@ import type { IStorage } from '../storage';
 import { getSignedKey } from '../lib/getSignedKey';
 import { HtmlSanitizer, IdentifierSanitizer } from '../lib/sanitizer';
 import {
-  getErrorStatus,
-  getErrorMessage,
-  getNeynarErrorData,
-  isNotFoundError,
-  isRateLimitError,
+  NotFoundError,
+  RateLimitError,
+  isNotFoundError as isNeynarNotFound,
+  isRateLimitError as isNeynarRateLimit,
   getRetryAfter,
 } from '../lib/errors';
 import logger from '../logger';
@@ -91,7 +90,7 @@ export class FarcasterService {
           }
         } catch (statusError) {
           // Handle 404 — stale signer
-          if (isNotFoundError(statusError)) {
+          if (isNeynarNotFound(statusError)) {
             logger.info(`Stale signer for member ${memberId} — cleaning up`);
             await this.storage.deleteUserSigner(memberId);
 
@@ -101,7 +100,7 @@ export class FarcasterService {
           }
 
           // Handle rate limiting
-          if (isRateLimitError(statusError)) {
+          if (isNeynarRateLimit(statusError)) {
             const retryAfter = getRetryAfter(statusError);
             throw new RateLimitError(
               `Too many requests to Neynar API. Please wait ${retryAfter} seconds before trying again.`,
@@ -156,7 +155,7 @@ export class FarcasterService {
         message: 'Sponsored signer created and registered - approval required via QR code or mobile app',
       };
     } catch (signerError) {
-      if (isRateLimitError(signerError)) {
+      if (isNeynarRateLimit(signerError)) {
         const retryAfter = getRetryAfter(signerError);
         throw new RateLimitError(
           `Too many signer creation requests. Please wait ${retryAfter} seconds before trying again.`,
@@ -277,26 +276,19 @@ export class FarcasterService {
   }
 }
 
-export class SignerNotFoundError extends Error {
+export class SignerNotFoundError extends NotFoundError {
   constructor(message: string) {
     super(message);
     this.name = 'SignerNotFoundError';
   }
 }
 
-export class StaleSignerError extends Error {
+export class StaleSignerError extends NotFoundError {
   constructor(message: string) {
     super(message);
     this.name = 'StaleSignerError';
   }
 }
 
-export class RateLimitError extends Error {
-  constructor(
-    message: string,
-    public retryAfter: number,
-  ) {
-    super(message);
-    this.name = 'RateLimitError';
-  }
-}
+// Re-export shared RateLimitError for backward compatibility with route imports
+export { RateLimitError } from '../lib/errors';

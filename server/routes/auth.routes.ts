@@ -9,6 +9,7 @@ import {
   enrichSingleMember,
 } from '../services/ProfileEnrichmentService';
 import { parseIntParam, handleServiceError } from '../lib/routeHelpers';
+import { TIMING } from '@shared/constants';
 import type { PrivyLinkedAccount } from '@shared/types';
 
 const router = Router();
@@ -301,7 +302,7 @@ router.post('/auth/request-email-verification', privyAuthMiddleware, async (req:
       farcasterFid: req.member.farcasterFid || 0, // Legacy field, use 0 if no FID
       email,
       verificationCode: code,
-      expiresAt: new Date(getCurrentUTC().getTime() + 10 * 60 * 1000), // 10 minutes
+      expiresAt: new Date(getCurrentUTC().getTime() + TIMING.EMAIL_CODE_EXPIRY_MINUTES * 60 * 1000),
     });
 
     // Send verification email

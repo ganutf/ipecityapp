@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import { config } from 'dotenv';
 import logger, { logUtils } from '../logger';
 import { getServerChainConfig } from '@shared/chainConfig';
+import { EAS_CONSTANTS } from '@shared/constants';
 
 // Load environment variables
 config();
@@ -10,8 +11,8 @@ config();
 const chainConfig = getServerChainConfig();
 const EAS_CONTRACT_ADDRESS = chainConfig.easContractAddress;
 
-const SCHEMA_UID = "0x118aa1ac273ffa930b8b880a1d59da273de0c0dab6303deca9827e45dd20cc1d";
-const COMMUNITY_UID = "0x4f28a3bf558485216079bbf254c63c6b29a5917b0cc2117baf5d0b8cff146417";
+const SCHEMA_UID = EAS_CONSTANTS.SCHEMA_UID;
+const COMMUNITY_UID = EAS_CONSTANTS.COMMUNITY_UID;
 
 // Schema fields: bytes32 communityUid,uint8 pulseType,string memberOnchainID,uint16 pulseNumber,uint64 executedAt,string actionsExecuted
 const SCHEMA_STRING = "bytes32 communityUid,uint8 pulseType,string memberOnchainID,uint16 pulseNumber,uint64 executedAt,string actionsExecuted";

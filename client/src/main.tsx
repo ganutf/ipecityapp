@@ -4,18 +4,19 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-// Suppress WebSocket connection errors that cause popup overlays
+// Suppress WebSocket/WalletConnect errors that cause popup overlays
 window.addEventListener('unhandledrejection', (event) => {
   const error = event.reason;
   if (error && typeof error === 'object') {
-    // Suppress WebSocket and WalletConnect connection errors
     if (error.message && (
       error.message.includes('WebSocket connection closed') ||
       error.message.includes('Unauthorized: invalid key') ||
       error.message.includes('Connection interrupted while trying to subscribe')
     )) {
       event.preventDefault();
-      // Silently suppress known WebSocket/WalletConnect errors
+      if (import.meta.env.DEV) {
+        console.debug('[Suppressed WalletConnect error]', error.message);
+      }
     }
   }
 });

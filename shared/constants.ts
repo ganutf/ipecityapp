@@ -173,7 +173,7 @@ export const TIMING = {
   MAX_RETRIES: 3,
 
   // Email verification
-  EMAIL_CODE_EXPIRY_MINUTES: 15,
+  EMAIL_CODE_EXPIRY_MINUTES: 10,
   EMAIL_CODE_LENGTH: 6,
 
   // Passport verification
@@ -195,6 +195,26 @@ export const RATE_LIMITS = {
   // Attestation
   ATTESTATION_REQUESTS_PER_MINUTE: 10,
   BULK_ATTESTATION_REQUESTS_PER_MINUTE: 2,
+} as const;
+
+// ============================================
+// BLOCKCHAIN CONSTANTS
+// ============================================
+
+export const BLOCKCHAIN = {
+  BASE_MAINNET_CHAIN_ID: 8453,
+  BASE_SEPOLIA_CHAIN_ID: 84532,
+} as const;
+
+// ============================================
+// EAS (Ethereum Attestation Service) CONSTANTS
+// ============================================
+
+export const EAS_CONSTANTS = {
+  SCHEMA_UID: "0x118aa1ac273ffa930b8b880a1d59da273de0c0dab6303deca9827e45dd20cc1d",
+  COMMUNITY_UID: "0x4f28a3bf558485216079bbf254c63c6b29a5917b0cc2117baf5d0b8cff146417",
+  ATTESTATION_TIMEOUT_MS: 45000,
+  BATCH_SIZE: 10,
 } as const;
 
 // ============================================

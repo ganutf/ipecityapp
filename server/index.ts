@@ -71,8 +71,13 @@ const allowedOrigins = isProduction
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      if (isProduction) {
+        logger.warn('CORS blocked request with no origin');
+        return callback(new Error('Origin header required'));
+      }
+      return callback(null, true);
+    }
 
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);

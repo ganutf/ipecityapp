@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
+import { BLOCKCHAIN } from './constants';
 import { z } from "zod";
 
 // Session storage table.
@@ -46,7 +47,7 @@ export const members = pgTable("members", {
   privyId: varchar("privy_id", { length: 255 }).unique(),
   // Auth V2: Link to auth_users table (nullable for migration period)
   userId: varchar("user_id", { length: 36 }).references(() => authUsers.id),
-  // Legacy: Farcaster FID (now nullable for new auth flow)
+  // Operational source of truth for Farcaster FID (nullable — not all members have Farcaster)
   farcasterFid: integer("farcaster_fid").unique(),
   walletAddress: varchar("wallet_address", { length: 42 }),
   
@@ -146,7 +147,7 @@ export const attestations = pgTable("attestations", {
 export const userSigners = pgTable("user_signers", {
   id: serial("id").primaryKey(),
   memberId: integer("member_id").references(() => members.id).notNull(),
-  farcasterFid: integer("farcaster_fid").notNull(), // Keep for external API compatibility
+  farcasterFid: integer("farcaster_fid").notNull(), // Denormalized for Neynar API calls (avoids joins)
   signerUuid: varchar("signer_uuid").notNull(),
   publicKey: varchar("public_key"),
   status: varchar("status"), // "pending_approval", "approved", "revoked", etc.
@@ -251,7 +252,7 @@ export const smartWallets = pgTable("smart_wallets", {
   userId: varchar("user_id", { length: 36 }).references(() => authUsers.id).notNull(),
   walletAddress: varchar("wallet_address", { length: 42 }).notNull().unique(),
   walletType: varchar("wallet_type", { length: 20 }).notNull(), // 'coinbase' | 'safe'
-  chainId: integer("chain_id").default(8453), // Base mainnet
+  chainId: integer("chain_id").default(BLOCKCHAIN.BASE_MAINNET_CHAIN_ID),
   passkeyId: integer("passkey_id").references(() => passkeys.id),
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -261,7 +262,7 @@ export const smartWallets = pgTable("smart_wallets", {
 export const farcasterAccounts = pgTable("farcaster_accounts", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 36 }).references(() => authUsers.id).notNull(),
-  farcasterFid: integer("farcaster_fid").notNull().unique(),
+  farcasterFid: integer("farcaster_fid").notNull().unique(), // V2 auth linkage (references authUsers, not members)
   username: varchar("username", { length: 255 }),
   custodyAddress: varchar("custody_address", { length: 42 }),
   imported: boolean("imported").default(false), // true if linked from existing account
@@ -302,14 +303,14 @@ export const farcasterAccountsRelations = relations(farcasterAccounts, ({ one })
 }));
 
 // ============================================
-// LEGACY TABLES (kept for backward compatibility)
+// VERIFICATION TABLES
 // ============================================
 
 // Email verification table
 export const emailVerifications = pgTable("email_verifications", {
   id: serial("id").primaryKey(),
   memberId: integer("member_id").references(() => members.id).notNull(),
-  farcasterFid: integer("farcaster_fid").notNull(), // Keep for external API compatibility
+  farcasterFid: integer("farcaster_fid").notNull(), // Snapshot of member's FID at time of verification
   email: varchar("email").notNull(),
   verificationCode: varchar("verification_code", { length: 6 }).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
@@ -321,7 +322,7 @@ export const emailVerifications = pgTable("email_verifications", {
 export const passportVerifications = pgTable("passport_verifications", {
   id: serial("id").primaryKey(),
   memberId: integer("member_id").references(() => members.id).notNull(),
-  farcasterFid: integer("farcaster_fid").notNull(), // Keep for external API compatibility
+  farcasterFid: integer("farcaster_fid").notNull(), // Snapshot of member's FID at time of verification
   ipePassport: varchar("ipe_passport").notNull(),
   verificationToken: varchar("verification_token").unique().notNull(),
   challengeMessage: text("challenge_message").notNull(),

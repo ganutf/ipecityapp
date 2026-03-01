@@ -8,6 +8,7 @@ import type { Attestation, Member, Pulse, PulseExecution } from '@shared/schema'
 import { getCurrentUTC, calculatePulseEndTimeUTC } from '@shared/pulseUtils';
 import { withTimeout } from '../lib/rateLimiter';
 import { ForbiddenError, NotFoundError } from '../lib/errors';
+import { EAS_CONSTANTS } from '@shared/constants';
 import logger from '../logger';
 
 interface BulkAttestationResult {
@@ -250,7 +251,7 @@ export class AttestationService {
               : Math.floor(getCurrentUTC().getTime() / 1000),
             actionsExecuted: JSON.stringify(attestationData.execution.actions),
           }),
-          45000,
+          EAS_CONSTANTS.ATTESTATION_TIMEOUT_MS,
           'EAS Attestation Creation',
         );
 
@@ -385,7 +386,7 @@ export class AttestationService {
             : Math.floor(getCurrentUTC().getTime() / 1000),
           actionsExecuted: JSON.stringify(executionData.execution.actions),
         }),
-        45000,
+        EAS_CONSTANTS.ATTESTATION_TIMEOUT_MS,
         'EAS Attestation Creation',
       );
 

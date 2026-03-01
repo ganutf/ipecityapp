@@ -49,6 +49,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, asc, isNull, isNotNull, inArray, sql } from "drizzle-orm";
+import { EAS_CONSTANTS } from "@shared/constants";
 import logger from "./logger";
 
 export interface IStorage {
@@ -220,8 +221,7 @@ export class DatabaseStorage implements IStorage {
     const successful: Attestation[] = [];
     const failed: { error: string; data: InsertAttestation }[] = [];
     
-    // Process in batches of 10 to avoid overwhelming the database
-    const batchSize = 10;
+    const batchSize = EAS_CONSTANTS.BATCH_SIZE;
     for (let i = 0; i < attestationDataList.length; i += batchSize) {
       const batch = attestationDataList.slice(i, i + batchSize);
       

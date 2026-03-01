@@ -241,23 +241,41 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 
 ---
 
-## Remaining Items (Not in 5-Phase Plan)
+## Post-Phase Fixes
 
-These items were identified in the audit but not included in the implementation phases. They remain as future improvement opportunities:
+### CRITICAL #1: Test Suite — COMPLETED (`1de3baa`)
+- [x] Install Vitest, create `vitest.config.ts`
+- [x] Add `npm run test` / `npm run test:watch` scripts
+- [x] 82 tests across 4 files:
+  - `server/lib/__tests__/errors.test.ts` (28 tests) — AppError, type guards, status/message extraction
+  - `shared/__tests__/pulseUtils.test.ts` (20 tests) — timing, execution status, end time
+  - `client/src/lib/__tests__/dateUtils.test.ts` (16 tests) — formatting, validation
+  - `client/src/lib/__tests__/pulseUtils.test.ts` (18 tests) — card colors, badges, parsing
+
+### CRITICAL #4: Wallet Uniqueness Race Condition — COMPLETED (`ef24a6d`)
+- [x] `updateMemberWalletAtomic()` — PATCH wallet endpoint uses DB transaction
+- [x] `submitApplicationAtomic()` — application submit checks username + wallet atomically
+- [x] Both methods in `server/storage.ts`, called from `server/routes/auth.routes.ts`
+
+---
+
+## Remaining Items
+
+These items were identified in the audit but not yet addressed. They remain as future improvement opportunities:
 
 | # | Issue | Priority | Status |
 |---|-------|----------|--------|
-| 1 | No test suite (Vitest) | CRITICAL | DONE — 82 tests across 4 files |
-| 4 | Wallet address uniqueness race condition | CRITICAL | DONE — atomic transactions in storage |
-| 5 | Business logic in route handlers → extract services | HIGH |
-| 7 | Incomplete V1→V2 API migration | HIGH |
-| 12 | PostTool state race conditions | HIGH |
-| 13 | Missing input validation on endpoints | HIGH |
-| 15 | Duplicated server code patterns | MEDIUM |
-| 19 | Redundant wallet tracking (members vs member_wallets) | MEDIUM |
-| 24 | Massive component files (split PostTool, etc.) | MEDIUM |
-| 25 | Legacy tables audit (emailVerifications, passportVerifications) | MEDIUM |
-| 26 | Hardcoded magic numbers → constants | MEDIUM |
-| 27 | CORS allows null origin | MEDIUM |
-| 28 | Farcaster FID in multiple tables | MEDIUM |
-| 31 | WebSocket error suppression | LOW |
+| 5 | Business logic in route handlers → extract services | HIGH | Open |
+| 7 | Incomplete V1→V2 API migration | HIGH | Open |
+| 12 | PostTool state race conditions | HIGH | Open |
+| 13 | Missing input validation on endpoints | HIGH | Open |
+| 15 | Duplicated server code patterns | MEDIUM | Open |
+| 19 | Redundant wallet tracking (members vs member_wallets) | MEDIUM | Open |
+| 24 | Massive component files (split PostTool, etc.) | MEDIUM | Open |
+| 25 | Legacy tables audit (emailVerifications, passportVerifications) | MEDIUM | Open |
+| 26 | Hardcoded magic numbers → constants | MEDIUM | Open |
+| 27 | CORS allows null origin | MEDIUM | Open |
+| 28 | Farcaster FID in multiple tables | MEDIUM | Open |
+| 31 | WebSocket error suppression | LOW | Open |
+
+### Overall Progress: 21/31 issues resolved (68%)

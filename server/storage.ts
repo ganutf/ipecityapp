@@ -182,6 +182,10 @@ export interface IStorage {
   getMemberWalletByAddress(walletAddress: string): Promise<MemberWallet | undefined>;
   linkMemberWallet(data: { memberId: number; walletAddress: string; walletType: string; label?: string }): Promise<MemberWallet>;
   unlinkMemberWallet(memberId: number, walletAddress: string): Promise<boolean>;
+
+  // Transactional Operations
+  updateMemberWalletAtomic(memberId: number, walletAddress: string): Promise<Member>;
+  submitApplicationAtomic(memberId: number, data: UpdateMember): Promise<Member>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1124,6 +1128,60 @@ export class DatabaseStorage implements IStorage {
       ))
       .returning();
     return result.length > 0;
+  }
+
+  async updateMemberWalletAtomic(memberId: number, walletAddress: string): Promise<Member> {
+    const normalizedAddress = walletAddress.toLowerCase();
+
+    return await db.transaction(async (tx) => {
+      // Check ownership inside the transaction (serializable read)
+      const [existingWallet] = await tx.select().from(memberWallets)
+        .where(eq(memberWallets.walletAddress, normalizedAddress));
+
+      if (existingWallet && existingWallet.memberId !== memberId) {
+        throw new Error('WALLET_ALREADY_LINKED');
+      }
+
+      const [updatedMember] = await tx
+        .update(members)
+        .set({ walletAddress: normalizedAddress, updatedAt: new Date() })
+        .where(eq(members.id, memberId))
+        .returning();
+
+      return updatedMember;
+    });
+  }
+
+  async submitApplicationAtomic(memberId: number, data: UpdateMember): Promise<Member> {
+    return await db.transaction(async (tx) => {
+      // Check username uniqueness inside the transaction
+      if (data.ipeUsername) {
+        const [existingUsername] = await tx.select().from(members)
+          .where(eq(members.ipeUsername, data.ipeUsername));
+        if (existingUsername && existingUsername.id !== memberId) {
+          throw new Error('USERNAME_TAKEN');
+        }
+      }
+
+      // Check wallet uniqueness inside the transaction
+      if (data.walletAddress) {
+        const normalizedAddress = data.walletAddress.toLowerCase();
+        const [existingWallet] = await tx.select().from(memberWallets)
+          .where(eq(memberWallets.walletAddress, normalizedAddress));
+        if (existingWallet && existingWallet.memberId !== memberId) {
+          throw new Error('WALLET_ALREADY_LINKED');
+        }
+        data.walletAddress = normalizedAddress;
+      }
+
+      const [updatedMember] = await tx
+        .update(members)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(members.id, memberId))
+        .returning();
+
+      return updatedMember;
+    });
   }
 }
 

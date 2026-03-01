@@ -456,22 +456,8 @@ router.post('/auth/application/submit', privyAuthMiddleware, async (req: PrivyAu
       return res.status(400).json({ error: 'Username is required' });
     }
 
-    // Check if username is available
-    const existingMember = await storage.getMemberByIpeUsername(ipeUsername);
-    if (existingMember && existingMember.id !== memberId) {
-      return res.status(400).json({ error: 'Username is already taken' });
-    }
-
-    // Check if wallet is already linked to another member
-    if (walletAddress) {
-      const existingWallet = await storage.getMemberWalletByAddress(walletAddress);
-      if (existingWallet && existingWallet.memberId !== memberId) {
-        return res.status(409).json({ error: 'This wallet is already linked to another account' });
-      }
-    }
-
-    // Update member with application data
-    const updatedMember = await storage.updateMember(memberId, {
+    // Atomic check-and-update to prevent race conditions on username and wallet
+    const updatedMember = await storage.submitApplicationAtomic(memberId, {
       ipeUsername,
       bio,
       twitter,
@@ -494,6 +480,12 @@ router.post('/auth/application/submit', privyAuthMiddleware, async (req: PrivyAu
       member: updatedMember,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'USERNAME_TAKEN') {
+      return res.status(400).json({ error: 'Username is already taken' });
+    }
+    if (error instanceof Error && error.message === 'WALLET_ALREADY_LINKED') {
+      return res.status(409).json({ error: 'This wallet is already linked to another account' });
+    }
     logger.error('Application submit error', {
       error: error instanceof Error ? error.message : String(error),
     });
@@ -678,15 +670,8 @@ router.patch('/members/:memberId/wallet', privyAuthMiddleware, async (req: Privy
       return res.status(400).json({ error: 'Invalid wallet address format' });
     }
 
-    // Check if this wallet is already linked to another member
-    const existingWallet = await storage.getMemberWalletByAddress(walletAddress);
-    if (existingWallet && existingWallet.memberId !== memberId) {
-      return res.status(409).json({ error: 'This wallet is already linked to another account' });
-    }
-
-    const updatedMember = await storage.updateMember(memberId, {
-      walletAddress,
-    });
+    // Atomic check-and-update to prevent race conditions
+    const updatedMember = await storage.updateMemberWalletAtomic(memberId, walletAddress);
 
     logger.info('Wallet address updated', { memberId, walletAddress });
 
@@ -696,6 +681,9 @@ router.patch('/members/:memberId/wallet', privyAuthMiddleware, async (req: Privy
       member: updatedMember,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'WALLET_ALREADY_LINKED') {
+      return res.status(409).json({ error: 'This wallet is already linked to another account' });
+    }
     logger.error('Wallet update error', {
       error: error instanceof Error ? error.message : String(error),
     });

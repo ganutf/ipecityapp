@@ -3,7 +3,8 @@
  * Core business logic is imported from shared utilities for consistency
  */
 
-import { convertUTCToUserTimezone, getCurrentUTC } from './dateUtils';
+import { convertUTCToUserTimezone, getCurrentUTC, formatTimeDifference } from './dateUtils';
+import type { Pulse } from '@shared/schema';
 
 // Import shared business logic
 import { 
@@ -201,4 +202,23 @@ export function getPulseLocalTimes(
   const localEndTime = convertUTCToUserTimezone(utcEnd, userTimeZone);
   
   return { localStartTime, localEndTime };
+}
+
+/**
+ * Get timing info string for an active pulse (for display in PostTool header).
+ */
+export function getActivePulseTimingInfo(pulse: Pulse, currentTime: Date = new Date()): string {
+  const startTime = new Date(pulse.datetimeStart);
+  const endTime = new Date(startTime.getTime() + (pulse.interval || 24) * 60 * 60 * 1000);
+  const timeRemaining = formatTimeDifference(endTime.getTime() - currentTime.getTime());
+
+  const startDateStr = startTime.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  return `Started ${startDateStr} • ${timeRemaining} remaining`;
 }

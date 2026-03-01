@@ -320,6 +320,24 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 - [x] Added optimistic updates via `onMutate`/`onError`/`onSettled` in `recordExecutionMutation`
 - [x] Removed all manual `setExecutionStatus()` calls — single source of truth is React Query cache
 
+### Issues #19 & #24: Wallet Sync + PostTool Extraction
+
+**Wallet Sync Fix (Issue #19):**
+- [x] Added `syncPassportToMemberWallets()` private helper to `DatabaseStorage` — ensures passport wallet always has a `member_wallets` row
+- [x] Patched `updateMemberWalletAtomic()` — calls sync after updating `members.walletAddress`
+- [x] Patched `submitApplicationAtomic()` — calls sync after setting wallet in application
+- [x] Wrapped `createMemberFromPrivy()` in transaction — syncs wallet on member creation
+- [x] Added storage-level guard in `unlinkMemberWallet()` — prevents unlinking passport wallet
+- [x] Refactored Privy wallet sync in `auth.routes.ts` — uses `updateMemberWalletAtomic` instead of generic `updateMember` for wallet changes
+
+**PostTool Component Extraction (Issue #24):**
+- [x] Created `client/src/components/pulse/` directory (follows `profile/` subdirectory pattern)
+- [x] Extracted `usePostToolLogic.ts` — custom hook with all state, effects, mutations, handlers (465 lines)
+- [x] Extracted `CastDisplay.tsx` — Farcaster cast rendering with action buttons (159 lines)
+- [x] Created `PostTool.tsx` — main component using hook + CastDisplay (158 lines)
+- [x] Moved `getActivePulseTimingInfo()` to `client/src/lib/pulseUtils.ts`
+- [x] `pulse-dashboard.tsx` reduced from 1,122 → 405 lines
+
 ---
 
 ## Remaining Items
@@ -333,12 +351,12 @@ These items were identified in the audit but not yet addressed. They remain as f
 | 12 | PostTool state race conditions | HIGH | **Resolved** |
 | 13 | Missing input validation on endpoints | HIGH | **Resolved** |
 | 15 | Duplicated server code patterns | MEDIUM | **Partially resolved** |
-| 19 | Redundant wallet tracking (members vs member_wallets) | MEDIUM | Open |
-| 24 | Massive component files (split PostTool, etc.) | MEDIUM | Partially resolved (routes.ts done) |
+| 19 | Redundant wallet tracking (members vs member_wallets) | MEDIUM | **Resolved** |
+| 24 | Massive component files (split PostTool, etc.) | MEDIUM | **Resolved** |
 | 25 | Legacy tables audit (emailVerifications, passportVerifications) | MEDIUM | Open |
 | 26 | Hardcoded magic numbers → constants | MEDIUM | Open |
 | 27 | CORS allows null origin | MEDIUM | Open |
 | 28 | Farcaster FID in multiple tables | MEDIUM | Open |
 | 31 | WebSocket error suppression | LOW | Open |
 
-### Overall Progress: 26/31 issues resolved (84%)
+### Overall Progress: 28/31 issues resolved (90%)

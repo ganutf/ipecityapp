@@ -42,6 +42,7 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 - **Location**: server/routes.ts (1700+ lines) — signer state machine (lines 215-460), attestation batch (lines 860-1025), member promotion (lines 1535-1648)
 - **Problem**: Routes contain raw DB queries, complex business logic, and external API calls. PulseService exists but most logic bypasses it.
 - **Fix**: Extract into dedicated services: `SignerService`, `AttestationService`, `MemberService`, `ENSSubdomainService`
+- **Status**: [x] Fixed — Extracted 5 services: `FarcasterService`, `AttestationService`, `MemberAdminService`, `ExecutionService`, `PassportService`. routes.ts reduced from 1728 to ~96 lines.
 
 ### 6. Inconsistent API Call Patterns (Client)
 - **Location**: api.ts, queryClient.ts, various pages
@@ -57,6 +58,7 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 - **Location**: server/routes.ts (V1, FID-based) vs server/routes/auth.routes.ts (V2, Privy)
 - **Problem**: Only auth endpoints migrated to V2. Pulses, attestations, community endpoints still use V1 with FID-based auth. Dual auth middleware creates confusion.
 - **Fix**: Plan and execute migration of remaining endpoints; deprecate V1.
+- **Status**: [x] Fixed — Created 7 V2 route files (admin, pulse, pulseType, execution, attestation, farcaster, passport). All frontend callers migrated to V2. V1 routes removed.
 
 ### 8. Missing Error Boundaries (Client)
 - **Location**: App.tsx
@@ -257,6 +259,38 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 - [x] `submitApplicationAtomic()` — application submit checks username + wallet atomically
 - [x] Both methods in `server/storage.ts`, called from `server/routes/auth.routes.ts`
 
+### Issues #5 & #7: Service Extraction + V1→V2 Migration — COMPLETED
+
+**Service Extraction (Issue #5):**
+- [x] Created `server/services/FarcasterService.ts` — signer state machine, cast/reaction operations
+- [x] Created `server/services/AttestationService.ts` — EAS attestation creation (bulk/single)
+- [x] Created `server/services/MemberAdminService.ts` — member approval/denial/type updates
+- [x] Created `server/services/ExecutionService.ts` — pulse execution recording/retrieval
+- [x] Created `server/services/PassportService.ts` — username availability, ENS lookup
+- [x] Added `getExecutionWithMemberAndPulse()` to storage layer
+- [x] `server/routes.ts` reduced from 1728 lines to ~96 lines (health check + QR code only)
+
+**V2 Route Files (Issue #7):**
+- [x] `server/routes/admin.routes.ts` — `/api/v2/admin` (5 endpoints)
+- [x] `server/routes/pulse.routes.ts` — `/api/v2/pulses` (6 endpoints)
+- [x] `server/routes/pulseType.routes.ts` — `/api/v2/pulse-types` (2 endpoints)
+- [x] `server/routes/execution.routes.ts` — `/api/v2/executions` (3 endpoints)
+- [x] `server/routes/attestation.routes.ts` — `/api/v2/attestations` (4 endpoints)
+- [x] `server/routes/farcaster.routes.ts` — `/api/v2/farcaster` (6 endpoints)
+- [x] `server/routes/passport.routes.ts` — `/api/v2/passport` (2 endpoints)
+
+**V2 Middleware:**
+- [x] `requireAdminV2` — checks `req.member.memberType === 'admin'`
+- [x] `requireOwnershipV2(idParamName)` — checks `req.member.id` against params/body
+- [x] `auditLoggerV2(action)` — structured audit logging
+
+**Frontend Migration:**
+- [x] All pages and components migrated to V2 endpoints
+- [x] `queryKeys.ts` updated to V2 paths
+- [x] Removed `memberCheck` query pattern — replaced with `useAuth()` context
+- [x] All raw `fetch()` calls replaced with `authenticatedGet`/`authenticatedPost`
+- [x] V1 routes fully removed
+
 ---
 
 ## Remaining Items
@@ -265,17 +299,17 @@ These items were identified in the audit but not yet addressed. They remain as f
 
 | # | Issue | Priority | Status |
 |---|-------|----------|--------|
-| 5 | Business logic in route handlers → extract services | HIGH | Open |
-| 7 | Incomplete V1→V2 API migration | HIGH | Open |
+| 5 | Business logic in route handlers → extract services | HIGH | **Resolved** |
+| 7 | Incomplete V1→V2 API migration | HIGH | **Resolved** |
 | 12 | PostTool state race conditions | HIGH | Open |
 | 13 | Missing input validation on endpoints | HIGH | Open |
 | 15 | Duplicated server code patterns | MEDIUM | Open |
 | 19 | Redundant wallet tracking (members vs member_wallets) | MEDIUM | Open |
-| 24 | Massive component files (split PostTool, etc.) | MEDIUM | Open |
+| 24 | Massive component files (split PostTool, etc.) | MEDIUM | Partially resolved (routes.ts done) |
 | 25 | Legacy tables audit (emailVerifications, passportVerifications) | MEDIUM | Open |
 | 26 | Hardcoded magic numbers → constants | MEDIUM | Open |
 | 27 | CORS allows null origin | MEDIUM | Open |
 | 28 | Farcaster FID in multiple tables | MEDIUM | Open |
 | 31 | WebSocket error suppression | LOW | Open |
 
-### Overall Progress: 21/31 issues resolved (68%)
+### Overall Progress: 23/31 issues resolved (74%)

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
-import type { PulsesResponse, MemberCheckResponse, SignerResponse, ExecutionDetailsResponse } from "@shared/types";
+import type { PulsesResponse, SignerResponse, ExecutionDetailsResponse } from "@shared/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { authenticatedGet } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
@@ -34,7 +34,9 @@ const getActivePulseTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) 
 export default function PulseDashboard() {
   const {
     isAuthenticated,
+    member,
     memberId,
+    isMember,
     isLoading: authLoading,
   } = useAuth();
   const [, setLocation] = useLocation();
@@ -50,35 +52,22 @@ export default function PulseDashboard() {
   // Tab state for pulse organization
   const [activeTab, setActiveTab] = useState("upcoming");
 
-  const viewerMemberId = memberId ?? undefined;
   const queryClient = useQueryClient();
 
-  // Only proceed with queries if we have a valid FID
-  const hasValidFid =
-    !!viewerMemberId && typeof viewerMemberId === "number" && !isNaN(viewerMemberId);
-
-  // Check if user is approved member
-  const { data: memberCheck } = useQuery<MemberCheckResponse>({
-    queryKey: queryKeys.members.check(viewerMemberId),
-    enabled: Boolean(isAuthenticated && hasValidFid && !authLoading),
-    retry: 2, // Limit retries
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
-  });
-
-  // Check if user is admin based on memberType
-  const isAdmin = memberCheck?.member?.memberType === 'admin';
+  // Check if user is admin based on memberType from auth context
+  const isAdmin = member?.memberType === 'admin';
 
   const {
     data: signerData,
     isLoading: signerLoading,
     refetch: refetchSigner,
   } = useQuery<SignerResponse>({
-    queryKey: queryKeys.signers.byMember(viewerMemberId),
+    queryKey: queryKeys.signers.byMember(memberId),
+    queryFn: () => authenticatedGet("/api/v2/farcaster/signer"),
     enabled: Boolean(
       isAuthenticated &&
-      !!viewerMemberId &&
-      memberCheck?.isMember &&
+      !!memberId &&
+      isMember &&
       !authLoading,
     ),
     staleTime: 1000, // Keep data fresh
@@ -101,8 +90,9 @@ export default function PulseDashboard() {
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery<PulsesResponse>({
     queryKey: queryKeys.pulses.list(),
+    queryFn: () => authenticatedGet("/api/v2/pulses"),
     enabled: Boolean(
-      isAuthenticated && memberCheck?.isMember && !authLoading,
+      isAuthenticated && isMember && !authLoading,
     ),
     retry: 2, // Limit retries
     staleTime: 2 * 60 * 1000, // 2 minutes for more dynamic data
@@ -111,12 +101,11 @@ export default function PulseDashboard() {
 
   // Get user's executions with detailed information including attestations
   const { data: executionsData, isLoading: executionsLoading, error: executionsError } = useQuery<ExecutionDetailsResponse>({
-    queryKey: queryKeys.executions.details(memberCheck?.member?.id),
-    queryFn: () => authenticatedGet(`/api/executions/${memberCheck?.member?.id}/details`, viewerMemberId),
+    queryKey: queryKeys.executions.details(memberId),
+    queryFn: () => authenticatedGet(`/api/v2/executions/${memberId}/details`),
     enabled: Boolean(
       isAuthenticated &&
-      hasValidFid &&
-      memberCheck?.member?.id &&
+      !!memberId &&
       !authLoading,
     ),
     retry: (failureCount, error) => {
@@ -199,8 +188,8 @@ export default function PulseDashboard() {
   if (
     authLoading ||
     (isAuthenticated &&
-      hasValidFid &&
-      (!memberCheck || pulsesLoading || executionsLoading))
+      isMember &&
+      (pulsesLoading || executionsLoading))
   ) {
     return (
       <div className="max-w-2xl mx-auto p-6">
@@ -239,7 +228,7 @@ export default function PulseDashboard() {
           <div className="w-full max-w-lg">
             <PostTool
               pulse={activePulse}
-              member={memberCheck!.member!}
+              member={member!}
               signerUuid={signerUuid}
             />
           </div>
@@ -554,24 +543,11 @@ function PostTool({
         throw new Error("User not authenticated");
       }
 
-      const response = await fetch("/api/executions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-farcaster-fid": memberId.toString(),
-        },
-        body: JSON.stringify({
-          pulseId: pulse.id,
-          actions,
-        }),
+      const { authenticatedPost } = await import("@/lib/api");
+      return authenticatedPost("/api/v2/executions", {
+        pulseId: pulse.id,
+        actions,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to record execution");
-      }
-
-      return response.json();
     },
     onSuccess: () => {
       // Invalidate all related cache keys for pulse execution data
@@ -635,7 +611,7 @@ function PostTool({
   ): Promise<boolean> {
     try {
       const quoteRes = await fetch(
-        `/api/neynar/cast/${castHash}/quotes/${memberIdParam}`,
+        `/api/v2/farcaster/cast/${castHash}/quotes`,
       );
       if (quoteRes.ok) {
         const { hasQuoted } = await quoteRes.json();
@@ -744,7 +720,7 @@ function PostTool({
 
     try {
       const res = await fetch(
-        `/api/neynar/cast/${encodeURIComponent(pulse.urlEmbed)}/${memberId}?type=url`,
+        `/api/v2/farcaster/cast/${encodeURIComponent(pulse.urlEmbed)}?type=url`,
       );
 
       if (!res.ok) {
@@ -806,56 +782,26 @@ function PostTool({
       const signer_uuid = signerUuid;
 
       if (type === "like") {
-        const response = await fetch("/api/neynar/reaction", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-farcaster-fid": memberId.toString(),
-          },
-          body: JSON.stringify({
-            signer_uuid: signer_uuid,
-            reaction_type: "like",
-            target: castData.hash,
-          }),
+        const { authenticatedPost: authPost } = await import("@/lib/api");
+        await authPost("/api/v2/farcaster/reaction", {
+          signer_uuid: signer_uuid,
+          reaction_type: "like",
+          target: castData.hash,
         });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(`Like failed: ${errorData.message || "API Error"}`);
-        }
       } else if (type === "recast") {
-        const response = await fetch("/api/neynar/cast", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-farcaster-fid": memberId.toString(),
-          },
-          body: JSON.stringify({
-            signer_uuid: signer_uuid,
-            text: "",
-            embeds: [
-              {
-                cast_id: {
-                  hash: castData.hash,
-                  fid: castData.author.fid,
-                },
+        const { authenticatedPost: authPost } = await import("@/lib/api");
+        await authPost("/api/v2/farcaster/cast", {
+          signer_uuid: signer_uuid,
+          text: "",
+          embeds: [
+            {
+              cast_id: {
+                hash: castData.hash,
+                fid: castData.author.fid,
               },
-            ],
-          }),
+            },
+          ],
         });
-
-        const responseData = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            throw new Error(
-              "API authentication failed. Please check your Neynar API key configuration.",
-            );
-          }
-          throw new Error(
-            `Recast failed: ${responseData.message || "API Error"}`,
-          );
-        }
       }
 
       if (type === "like") {

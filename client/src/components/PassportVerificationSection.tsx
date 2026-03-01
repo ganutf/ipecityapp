@@ -185,7 +185,7 @@ export function PassportVerificationSection({
           // Verify domain is actually associated with the wallet
           if (address) {
             try {
-              const response = await fetch(`/api/ens/lookup/${address}`);
+              const response = await fetch(`/api/v2/passport/ens/lookup/${address}`);
               const data = await response.json();
 
               if (data.ensName === ensName) {

@@ -143,7 +143,7 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
   const createAllAttestationsMutation = useMutation({
     mutationFn: async () => {
       try {
-        const result = await authenticatedPost(`/api/admin/pulse/${pulse.id}/attestations/create-all`, {}, profile?.fid);
+        const result = await authenticatedPost(`/api/v2/attestations/pulse/${pulse.id}/create-all`, {});
         return result;
       } catch (error) {
         console.error(`[FRONTEND] Bulk attestation error:`, error);
@@ -167,7 +167,7 @@ export function PulseExecutionsTable({ pulse, executions, profile, onRefresh, is
   // Mutation for creating individual attestation
   const createAttestationMutation = useMutation({
     mutationFn: async (executionId: number) => {
-      return authenticatedPost(`/api/admin/attestations/create/${executionId}`, {}, profile?.fid);
+      return authenticatedPost(`/api/v2/attestations/${executionId}`, {});
     },
     onSuccess: (data) => {
       toast({ title: "Success", description: data.message });

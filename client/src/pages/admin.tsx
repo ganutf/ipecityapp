@@ -57,21 +57,21 @@ export default function AdminPage() {
   // Fetch pulse types
   const { data: pulseTypesData, isLoading: pulseTypesLoading } = useQuery<PulseTypesResponse>({
     queryKey: queryKeys.pulseTypes.list(),
-    queryFn: () => authenticatedGet("/api/pulse-types"),
+    queryFn: () => authenticatedGet("/api/v2/pulse-types"),
     enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Fetch all pulses - must be called before any returns
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery<PulsesResponse>({
     queryKey: queryKeys.pulses.list(),
-    queryFn: () => authenticatedGet("/api/pulses"),
+    queryFn: () => authenticatedGet("/api/v2/pulses"),
     enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Fetch all members
   const { data: membersData, isLoading: membersLoading } = useQuery<MembersResponse>({
     queryKey: queryKeys.members.list(),
-    queryFn: () => authenticatedGet("/api/members"),
+    queryFn: () => authenticatedGet("/api/v2/admin/members"),
     enabled: Boolean(isAuthenticated && isAdmin),
   });
 
@@ -86,7 +86,7 @@ export default function AdminPage() {
         datetimeStart: utcDateString
       };
       
-      return authenticatedPost("/api/pulses", pulseWithUTC);
+      return authenticatedPost("/api/v2/pulses", pulseWithUTC);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pulses.list() });
@@ -101,7 +101,7 @@ export default function AdminPage() {
 
   const approveMemberMutation = useMutation({
     mutationFn: async (data: { memberId: number; ipeUsername?: string; userWalletAddress?: string; memberType?: MemberType }) => {
-      return authenticatedPost("/api/admin/approve-member", {
+      return authenticatedPost("/api/v2/admin/approve-member", {
         memberId: data.memberId,
         ipeUsername: data.ipeUsername,
         userWalletAddress: data.userWalletAddress,
@@ -119,7 +119,7 @@ export default function AdminPage() {
 
   const denyMemberMutation = useMutation({
     mutationFn: async (memberId: number) => {
-      return authenticatedPost("/api/admin/deny-member", { memberId });
+      return authenticatedPost("/api/v2/admin/deny-member", { memberId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.members.list() });
@@ -132,7 +132,7 @@ export default function AdminPage() {
 
   const updateMemberTypeMutation = useMutation({
     mutationFn: async ({ memberId, memberType }: { memberId: number; memberType: MemberType }) => {
-      return authenticatedPatch(`/api/admin/update-member-type`, { memberId, memberType });
+      return authenticatedPatch(`/api/v2/admin/update-member-type`, { memberId, memberType });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.members.list() });

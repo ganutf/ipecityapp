@@ -32,7 +32,7 @@ export function FarcasterPostEmbed({
 
       try {
         const res = await fetch(
-          `/api/neynar/cast/${encodeURIComponent(castUrl)}/${viewerFid}?type=url`,
+          `/api/v2/farcaster/cast/${encodeURIComponent(castUrl)}?type=url`,
         );
 
         if (!res.ok) {

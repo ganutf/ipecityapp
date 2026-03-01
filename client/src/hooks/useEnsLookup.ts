@@ -16,7 +16,7 @@ export function useEnsLookup(address: string | undefined) {
         return { ensName: null, ensNames: [], source: 'justaname', error: 'No address provided' };
       }
       
-      return apiRequest(`/api/ens/lookup/${address}`, {
+      return apiRequest(`/api/v2/passport/ens/lookup/${address}`, {
         method: 'GET',
       });
     },

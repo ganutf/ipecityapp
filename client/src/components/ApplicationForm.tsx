@@ -106,7 +106,7 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
     const checkAvailability = async () => {
       try {
         setUsernameStatus("checking");
-        const response = await fetch(`/api/passport/availability/${watchedUsername}`);
+        const response = await fetch(`/api/v2/passport/availability/${watchedUsername}`);
         const data = await response.json();
         setUsernameStatus(data.available ? "available" : "taken");
       } catch (error) {

@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 import { Smartphone, ExternalLink, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { authenticatedGet } from "@/lib/api";
 import type { SignerResponse } from "@shared/types";
 
 export default function SignerApprovalPage() {
@@ -26,8 +27,9 @@ export default function SignerApprovalPage() {
 
   // Get signer data
   const { data: signerData, refetch: refetchSigner, error: signerError } = useQuery<SignerResponse>({
-    queryKey: queryKeys.signers.byMember(member?.farcasterFid),
-    enabled: Boolean(member?.farcasterFid),
+    queryKey: queryKeys.signers.byMember(member?.id),
+    queryFn: () => authenticatedGet("/api/v2/farcaster/signer"),
+    enabled: Boolean(member?.id),
     refetchInterval: (query) => {
       // Stop polling if there's a rate limit error
       if (query?.state?.error && query.state.error instanceof Error && query.state.error.message.includes('429')) {
@@ -85,9 +87,9 @@ export default function SignerApprovalPage() {
   // Auto-redirect when signer is approved
   useEffect(() => {
     if (signerData?.status === 'approved') {
-      // Invalidate member status cache to trigger server auto-promotion check
+      // Invalidate auth cache to refresh member status
       queryClient.invalidateQueries({
-        queryKey: queryKeys.members.check(member?.farcasterFid),
+        queryKey: queryKeys.auth.all,
       });
       
       // Small delay to allow cache invalidation and status update

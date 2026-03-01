@@ -51,15 +51,15 @@ export default function PulseDetailPage() {
   // Fetch pulse types for admin editing
   const { data: pulseTypesData } = useQuery<PulseTypesResponse>({
     queryKey: queryKeys.pulseTypes.list(),
-    queryFn: () => authenticatedGet("/api/pulse-types", farcasterFid),
+    queryFn: () => authenticatedGet("/api/v2/pulse-types"),
     enabled: Boolean(isAuthenticated && isAdmin && farcasterFid),
   });
 
   // Fetch pulse execution data - now accessible to all authenticated users
   const { data: pulseData, isLoading: pulseLoading, error: pulseError, refetch } = useQuery({
-    queryKey: queryKeys.pulses.executions(pulseId, farcasterFid), // Include profile.fid in query key
-    queryFn: () => authenticatedGet(`/api/pulse/${pulseId}/executions`, farcasterFid),
-    enabled: Boolean(isAuthenticated && farcasterFid && pulseId && !isLoading),
+    queryKey: queryKeys.pulses.executions(pulseId),
+    queryFn: () => authenticatedGet(`/api/v2/pulses/${pulseId}/executions`),
+    enabled: Boolean(isAuthenticated && pulseId && !isLoading),
     retry: (failureCount, error) => {
       // Retry up to 3 times for network/auth issues, but not for 404s
       if (error?.message?.includes('404') || error?.message?.includes('not found')) {
@@ -75,10 +75,10 @@ export default function PulseDetailPage() {
     mutationFn: async (data: { urlEmbed: string; datetimeStart: string; interval: number; description: string; points: number; pulseTypeId: number }) => {
       const utcDateString = convertDateTimeInputToUTC(data.datetimeStart, timezoneInfo.timeZone);
       const dataWithUTC = { ...data, datetimeStart: utcDateString };
-      return authenticatedPatch(`/api/pulses/${pulseId}`, dataWithUTC, farcasterFid);
+      return authenticatedPatch(`/api/v2/pulses/${pulseId}`, dataWithUTC);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.pulses.executions(pulseId, farcasterFid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pulses.executions(pulseId) });
       setIsEditing(false);
       toast({ title: "Success", description: "Pulse updated successfully" });
     },
@@ -89,7 +89,7 @@ export default function PulseDetailPage() {
 
   const deletePulseMutation = useMutation({
     mutationFn: async () => {
-      return authenticatedDelete(`/api/pulses/${pulseId}`, farcasterFid);
+      return authenticatedDelete(`/api/v2/pulses/${pulseId}`);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Pulse deleted successfully" });

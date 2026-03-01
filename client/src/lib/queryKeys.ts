@@ -16,9 +16,8 @@ export const queryKeys = {
 
   // Members
   members: {
-    all: ['/api/members'] as const,
-    list: () => ['/api/members'] as const,
-    check: (id?: number | string | null) => [`/api/members/check/${id}`] as const,
+    all: ['/api/v2/admin/members'] as const,
+    list: () => ['/api/v2/admin/members'] as const,
     community: () => ['/api/v2/community/members'] as const,
     communityDetail: (id: string) => [`/api/v2/community/members/${id}`] as const,
     wallets: (memberId?: number) => ['member-wallets', memberId] as const,
@@ -26,29 +25,29 @@ export const queryKeys = {
 
   // Pulses
   pulses: {
-    all: ['/api/pulses'] as const,
-    list: () => ['/api/pulses'] as const,
-    executions: (pulseId: number | string, viewerFid?: number) =>
-      [`/api/pulse/${pulseId}/executions`, viewerFid] as const,
+    all: ['/api/v2/pulses'] as const,
+    list: () => ['/api/v2/pulses'] as const,
+    executions: (pulseId: number | string) =>
+      [`/api/v2/pulses/${pulseId}/executions`] as const,
   },
 
   // Pulse types
   pulseTypes: {
-    all: ['/api/pulse-types'] as const,
-    list: () => ['/api/pulse-types'] as const,
+    all: ['/api/v2/pulse-types'] as const,
+    list: () => ['/api/v2/pulse-types'] as const,
   },
 
   // Executions
   executions: {
-    all: ['/api/executions'] as const,
-    details: (memberId?: number | null) => [`/api/executions/${memberId}/details`] as const,
+    all: ['/api/v2/executions'] as const,
+    details: (memberId?: number | null) => [`/api/v2/executions/${memberId}/details`] as const,
     byMember: (memberId?: number | null) => [`/api/v2/executions/${memberId}`] as const,
   },
 
   // Signers
   signers: {
-    all: ['/api/neynar/signer'] as const,
-    byMember: (memberIdOrFid?: number | null) => [`/api/neynar/signer/${memberIdOrFid}`] as const,
+    all: ['/api/v2/farcaster/signer'] as const,
+    byMember: (memberId?: number | null) => ['/api/v2/farcaster/signer', memberId] as const,
   },
 
   // ENS
@@ -59,5 +58,6 @@ export const queryKeys = {
   // Passport
   passport: {
     verify: (token?: string) => ['/api/passport/verify', token] as const,
+    availability: (username?: string) => ['/api/v2/passport/availability', username] as const,
   },
 } as const;

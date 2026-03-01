@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { Smartphone, ExternalLink, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import type { SignerResponse } from "@shared/types";
 
 export default function SignerApprovalPage() {
   const { isAuthenticated, isLoading: authLoading, member, memberId } = useAuth();
@@ -24,12 +25,12 @@ export default function SignerApprovalPage() {
   }, [authLoading, isAuthenticated, member, setLocation]);
 
   // Get signer data
-  const { data: signerData, refetch: refetchSigner, error: signerError } = useQuery<{ status?: string; signer_uuid?: string; signer_approval_url?: string }>({
+  const { data: signerData, refetch: refetchSigner, error: signerError } = useQuery<SignerResponse>({
     queryKey: [`/api/neynar/signer/${member?.farcasterFid}`],
     enabled: Boolean(member?.farcasterFid),
     refetchInterval: (query) => {
       // Stop polling if there's a rate limit error
-      if (query?.state?.error && (query.state.error as any)?.response?.status === 429) {
+      if (query?.state?.error && query.state.error instanceof Error && query.state.error.message.includes('429')) {
         return false;
       }
       return 3000; // Check every 3 seconds for approval
@@ -42,7 +43,7 @@ export default function SignerApprovalPage() {
   // Generate QR code
   useEffect(() => {
     const generateQR = async () => {
-      const approvalUrl = (signerData as any)?.signer_approval_url;
+      const approvalUrl = signerData?.signer_approval_url;
       
       console.log('QR Code Generation Debug:', {
         signerData,
@@ -98,7 +99,7 @@ export default function SignerApprovalPage() {
 
   // Auto-redirect when signer is approved
   useEffect(() => {
-    if ((signerData as any)?.status === 'approved') {
+    if (signerData?.status === 'approved') {
       // Invalidate member status cache to trigger server auto-promotion check
       queryClient.invalidateQueries({
         queryKey: [`/api/members/check/${member?.farcasterFid}`],
@@ -109,7 +110,7 @@ export default function SignerApprovalPage() {
         setLocation('/id-verification');
       }, 1000);
     }
-  }, [(signerData as any)?.status, setLocation, queryClient, member?.farcasterFid]);
+  }, [signerData?.status, setLocation, queryClient, member?.farcasterFid]);
 
 
 
@@ -133,9 +134,9 @@ export default function SignerApprovalPage() {
 
   // Handle rate limit and other API errors
   if (signerError) {
-    const errorResponse = (signerError as any)?.response;
-    
-    if (errorResponse?.status === 429) {
+    const is429 = signerError instanceof Error && signerError.message.includes('429');
+
+    if (is429) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="container mx-auto max-w-md px-4">
@@ -148,7 +149,7 @@ export default function SignerApprovalPage() {
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-muted-foreground mb-4">
-                  Please wait {errorResponse.data?.retryAfter || 60} seconds before trying again.
+                  Please wait 60 seconds before trying again.
                 </p>
                 <Button onClick={() => window.location.reload()} variant="outline">
                   Refresh Page
@@ -160,7 +161,8 @@ export default function SignerApprovalPage() {
       );
     }
     
-    if (errorResponse?.status === 404 && errorResponse.data?.action === "refresh_required") {
+    const is404 = signerError instanceof Error && signerError.message.includes('404');
+    if (is404) {
       return (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="container mx-auto max-w-md px-4">
@@ -173,7 +175,7 @@ export default function SignerApprovalPage() {
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-muted-foreground mb-4">
-                  {errorResponse.data?.message}
+                  {signerError.message}
                 </p>
                 <Button onClick={() => window.location.reload()}>
                   Refresh Page
@@ -186,7 +188,7 @@ export default function SignerApprovalPage() {
     }
   }
 
-  if ((signerData as any)?.status === "approved") {
+  if (signerData?.status === "approved") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="container mx-auto max-w-md px-4">
@@ -249,7 +251,7 @@ export default function SignerApprovalPage() {
               )}
               
               {/* Loading State */}
-              {!qrCodeUrl && !qrCodeError && (signerData as any)?.signer_approval_url && (
+              {!qrCodeUrl && !qrCodeError && signerData?.signer_approval_url && (
                 <div className="bg-gray-50 p-4 rounded-lg border">
                   <div className="animate-pulse flex items-center justify-center h-48 w-48 mx-auto bg-gray-200 rounded">
                     <span className="text-gray-400 text-sm">Loading QR Code...</span>
@@ -266,10 +268,10 @@ export default function SignerApprovalPage() {
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              {(signerData as any)?.signer_approval_url && (
+              {signerData?.signer_approval_url && (
                 <Button
                   className="w-full"
-                  onClick={() => window.open((signerData as any).signer_approval_url, '_blank')}
+                  onClick={() => window.open(signerData!.signer_approval_url, '_blank')}
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Approve in Farcaster

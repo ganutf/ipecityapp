@@ -1457,7 +1457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update member type using memberId
       const updatedMember = await storage.updateMember(existingMember.id, {
-        memberType: memberType as any
+        memberType
       });
 
       logger.info(`Updated member type for member ${existingMember.id} to ${memberType}`);
@@ -1574,7 +1574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         member &&
         member.emailVerified &&
         member.ipePassport &&
-        (member as any).status !== "active_member"
+        member.status !== "active_member"
       ) {
         try {
           member = await storage.updateMemberStatus(member.id, "active_member");
@@ -1607,7 +1607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const response = {
         isMember: !!member,
-        status: (member as any)?.status || "pending_id_verification",
+        status: member?.status || "pending_id_verification",
         member: memberWithStats || null,
       };
 

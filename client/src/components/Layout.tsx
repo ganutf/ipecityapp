@@ -14,7 +14,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
   // IPE balance from backend (passport wallet only)
-  const ipeBalance = (member as any)?.ipeBalance || '0';
+  const ipeBalance = member?.ipeBalance || '0';
 
   // Check if user is admin based on memberType
   const isAdmin = member?.memberType === 'admin';
@@ -89,7 +89,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
 
               <span className="text-sm text-gray-600">
-                Hello, {(member as any)?.ipeUsername || member?.email?.split('@')[0] || 'User'}
+                Hello, {member?.ipeUsername || member?.email?.split('@')[0] || 'User'}
               </span>
 
               <DropdownMenu>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
+import type { PulsesResponse, MemberCheckResponse, SignerResponse, ExecutionDetailsResponse } from "@shared/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { authenticatedGet } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
@@ -14,8 +15,8 @@ import { FormattedPostText } from "@/components/FormattedPostText";
 import { getCardAccentColor, hasUserExecuted, extractExecutionStatus, getPulseTimingInfo } from "@/lib/pulseUtils";
 
 const getActivePulseTimingInfo = (pulse: Pulse, currentTime: Date = new Date()) => {
-  const startTime = new Date((pulse as any).datetimeStart);
-  const endTime = new Date(startTime.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
+  const startTime = new Date(pulse.datetimeStart);
+  const endTime = new Date(startTime.getTime() + (pulse.interval || 24) * 60 * 60 * 1000);
   const timeRemaining = formatTimeDifference(endTime.getTime() - currentTime.getTime());
 
   const startDateStr = startTime.toLocaleString("en-US", {
@@ -56,7 +57,7 @@ export default function PulseDashboard() {
     !!viewerMemberId && typeof viewerMemberId === "number" && !isNaN(viewerMemberId);
 
   // Check if user is approved member
-  const { data: memberCheck } = useQuery({
+  const { data: memberCheck } = useQuery<MemberCheckResponse>({
     queryKey: [`/api/members/check/${viewerMemberId}`],
     enabled: Boolean(isAuthenticated && hasValidFid && !authLoading),
     retry: 2, // Limit retries
@@ -65,42 +66,42 @@ export default function PulseDashboard() {
   });
 
   // Check if user is admin based on memberType
-  const isAdmin = (memberCheck as any)?.member?.memberType === 'admin';
+  const isAdmin = memberCheck?.member?.memberType === 'admin';
 
   const {
     data: signerData,
     isLoading: signerLoading,
     refetch: refetchSigner,
-  } = useQuery({
+  } = useQuery<SignerResponse>({
     queryKey: [`/api/neynar/signer/${viewerMemberId}`],
     enabled: Boolean(
       isAuthenticated &&
       !!viewerMemberId &&
-      (memberCheck as any)?.isMember &&
+      memberCheck?.isMember &&
       !authLoading,
     ),
     staleTime: 1000, // Keep data fresh
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Poll every 2 seconds if signer is pending approval, otherwise don't poll
       const needsPolling =
-        (data as any)?.status === "pending_approval" ||
-        (data as any)?.status === "generated";
+        query.state.data?.status === "pending_approval" ||
+        query.state.data?.status === "generated";
       return needsPolling ? 2000 : false;
     },
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
-  const signerUuid = (signerData as any)?.signer_uuid || null;
-  const signerStatus = (signerData as any)?.status || "pending_approval";
-  const approvalUrl = (signerData as any)?.signer_approval_url;
+  const signerUuid = signerData?.signer_uuid || null;
+  const signerStatus = signerData?.status || "pending_approval";
+  const approvalUrl = signerData?.signer_approval_url;
 
   // QR code generation is now handled by the dedicated /signer-approval page
 
   // Get all pulses
-  const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
+  const { data: pulsesData, isLoading: pulsesLoading } = useQuery<PulsesResponse>({
     queryKey: ["/api/pulses"],
     enabled: Boolean(
-      isAuthenticated && (memberCheck as any)?.isMember && !authLoading,
+      isAuthenticated && memberCheck?.isMember && !authLoading,
     ),
     retry: 2, // Limit retries
     staleTime: 2 * 60 * 1000, // 2 minutes for more dynamic data
@@ -108,13 +109,13 @@ export default function PulseDashboard() {
   });
 
   // Get user's executions with detailed information including attestations
-  const { data: executionsData, isLoading: executionsLoading, error: executionsError } = useQuery({
-    queryKey: [`/api/executions/${(memberCheck as any)?.member?.id}/details`],
-    queryFn: () => authenticatedGet(`/api/executions/${(memberCheck as any)?.member?.id}/details`, viewerMemberId),
+  const { data: executionsData, isLoading: executionsLoading, error: executionsError } = useQuery<ExecutionDetailsResponse>({
+    queryKey: [`/api/executions/${memberCheck?.member?.id}/details`],
+    queryFn: () => authenticatedGet(`/api/executions/${memberCheck?.member?.id}/details`, viewerMemberId),
     enabled: Boolean(
       isAuthenticated &&
       hasValidFid &&
-      (memberCheck as any)?.member?.id &&
+      memberCheck?.member?.id &&
       !authLoading,
     ),
     retry: (failureCount, error) => {
@@ -133,7 +134,7 @@ export default function PulseDashboard() {
   });
 
   // Helper functions for date comparison
-  const isToday = (date: string) => {
+  const isToday = (date: string | Date) => {
     const today = new Date();
     const pulseDate = new Date(date);
 
@@ -144,7 +145,7 @@ export default function PulseDashboard() {
     return todayStr === pulseDateStr;
   };
 
-  const isPastDate = (date: string) => {
+  const isPastDate = (date: string | Date) => {
     const today = new Date();
     const pulseDate = new Date(date);
 
@@ -156,8 +157,8 @@ export default function PulseDashboard() {
   };
 
   // Calculate total points earned from all executions
-  const totalPoints = (executionsData as any)?.executionDetails?.reduce(
-    (total: number, detail: any) => total + (detail.execution ? detail.pointsEarned : 0),
+  const totalPoints = executionsData?.executionDetails?.reduce(
+    (total: number, detail) => total + (detail.execution ? detail.pointsEarned : 0),
     0
   ) || 0;
 
@@ -166,10 +167,10 @@ export default function PulseDashboard() {
   };
 
   // Find today's active pulse
-  const activePulse = (pulsesData as any)?.pulses?.find((pulse: Pulse) => {
+  const activePulse = pulsesData?.pulses?.find((pulse: Pulse) => {
     const now = new Date();
-    const pulseStart = new Date((pulse as any).datetimeStart);
-    const pulseEnd = new Date(pulseStart.getTime() + ((pulse as any).interval || 24) * 60 * 60 * 1000);
+    const pulseStart = new Date(pulse.datetimeStart);
+    const pulseEnd = new Date(pulseStart.getTime() + (pulse.interval || 24) * 60 * 60 * 1000);
     return now >= pulseStart && now <= pulseEnd;
   });
 
@@ -237,7 +238,7 @@ export default function PulseDashboard() {
           <div className="w-full max-w-lg">
             <PostTool
               pulse={activePulse}
-              member={(memberCheck as any)?.member}
+              member={memberCheck!.member!}
               signerUuid={signerUuid}
             />
           </div>
@@ -256,7 +257,7 @@ export default function PulseDashboard() {
       )}
 
       {/* Pulse Tabs Section */}
-      {(pulsesData as any)?.pulses?.length > 0 && (
+      {pulsesData?.pulses?.length && pulsesData.pulses.length > 0 && (
         <Card className="w-full">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -280,9 +281,9 @@ export default function PulseDashboard() {
                 <TabsTrigger value="upcoming" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Upcoming ({(() => {
-                    const upcomingPulses = (pulsesData as any).pulses.filter((pulse: Pulse) => {
+                    const upcomingPulses = pulsesData!.pulses.filter((pulse: Pulse) => {
                       const now = new Date();
-                      const pulseStart = new Date((pulse as any).datetimeStart);
+                      const pulseStart = new Date(pulse.datetimeStart);
                       return pulseStart > now;
                     });
                     return upcomingPulses.length;
@@ -291,8 +292,8 @@ export default function PulseDashboard() {
                 <TabsTrigger value="past" className="flex items-center gap-2">
                   <History className="h-4 w-4" />
                   Past ({(() => {
-                    const pastPulses = (pulsesData as any).pulses.filter((pulse: Pulse) =>
-                      !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart)
+                    const pastPulses = pulsesData!.pulses.filter((pulse: Pulse) =>
+                      !isToday(pulse.datetimeStart) && isPastDate(pulse.datetimeStart)
                     );
                     return pastPulses.length;
                   })()})
@@ -300,8 +301,8 @@ export default function PulseDashboard() {
                 <TabsTrigger value="completed" className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
                   My Completed ({(() => {
-                    const completedPulses = (pulsesData as any).pulses.filter((pulse: Pulse) => {
-                      const isPast = !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart);
+                    const completedPulses = pulsesData!.pulses.filter((pulse: Pulse) => {
+                      const isPast = !isToday(pulse.datetimeStart) && isPastDate(pulse.datetimeStart);
                       const executionStatus = getUserExecutionStatus(pulse.id);
                       return isPast && hasUserExecuted(executionStatus);
                     });
@@ -312,14 +313,14 @@ export default function PulseDashboard() {
 
               <TabsContent value="upcoming" className="mt-6">
                 {(() => {
-                  const upcomingPulses = (pulsesData as any).pulses
+                  const upcomingPulses = pulsesData!.pulses
                     .filter((pulse: Pulse) => {
                       const now = new Date();
-                      const pulseStart = new Date((pulse as any).datetimeStart);
+                      const pulseStart = new Date(pulse.datetimeStart);
                       return pulseStart > now;
                     })
                     .sort((a: Pulse, b: Pulse) =>
-                      new Date((a as any).datetimeStart).getTime() - new Date((b as any).datetimeStart).getTime()
+                      new Date(a.datetimeStart).getTime() - new Date(b.datetimeStart).getTime()
                     );
 
                   if (upcomingPulses.length === 0) {
@@ -349,11 +350,11 @@ export default function PulseDashboard() {
 
               <TabsContent value="past" className="mt-6">
                 {(() => {
-                  const pastPulses = (pulsesData as any).pulses
+                  const pastPulses = pulsesData!.pulses
                     .filter((pulse: Pulse) =>
-                      !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart)
+                      !isToday(pulse.datetimeStart) && isPastDate(pulse.datetimeStart)
                     )
-                    .sort((a: Pulse, b: Pulse) => (b as any).datetimeStart.localeCompare((a as any).datetimeStart));
+                    .sort((a: Pulse, b: Pulse) => new Date(b.datetimeStart).getTime() - new Date(a.datetimeStart).getTime());
 
                   if (pastPulses.length === 0) {
                     return (
@@ -387,13 +388,13 @@ export default function PulseDashboard() {
 
               <TabsContent value="completed" className="mt-6">
                 {(() => {
-                  const completedPulses = (pulsesData as any).pulses
+                  const completedPulses = pulsesData!.pulses
                     .filter((pulse: Pulse) => {
-                      const isPast = !isToday((pulse as any).datetimeStart) && isPastDate((pulse as any).datetimeStart);
+                      const isPast = !isToday(pulse.datetimeStart) && isPastDate(pulse.datetimeStart);
                       const executionStatus = getUserExecutionStatus(pulse.id);
                       return isPast && hasUserExecuted(executionStatus);
                     })
-                    .sort((a: Pulse, b: Pulse) => (b as any).datetimeStart.localeCompare((a as any).datetimeStart));
+                    .sort((a: Pulse, b: Pulse) => new Date(b.datetimeStart).getTime() - new Date(a.datetimeStart).getTime());
 
                   if (completedPulses.length === 0) {
                     return (
@@ -729,7 +730,7 @@ function PostTool({
   }
 
   async function handleCheck() {
-    if (!(pulse as any).urlEmbed || !memberId) return;
+    if (!pulse.urlEmbed || !memberId) return;
 
     // Check circuit breaker
     if (checkCircuitBreaker()) {
@@ -742,7 +743,7 @@ function PostTool({
 
     try {
       const res = await fetch(
-        `/api/neynar/cast/${encodeURIComponent((pulse as any).urlEmbed)}/${memberId}?type=url`,
+        `/api/neynar/cast/${encodeURIComponent(pulse.urlEmbed)}/${memberId}?type=url`,
       );
 
       if (!res.ok) {
@@ -905,7 +906,7 @@ function PostTool({
 
   // Auto-load the current pulse
   useEffect(() => {
-    if ((pulse as any).urlEmbed && memberId && !isCircuitOpen) {
+    if (pulse.urlEmbed && memberId && !isCircuitOpen) {
       // Add a delay to prevent rapid successive calls
       const timeoutId = setTimeout(() => {
         handleCheck();
@@ -913,7 +914,7 @@ function PostTool({
 
       return () => clearTimeout(timeoutId);
     }
-  }, [(pulse as any).urlEmbed, memberId]);
+  }, [pulse.urlEmbed, memberId]);
 
   const handleHeaderClick = () => {
     setLocation(`/pulse/${pulse.id}`);

@@ -48,7 +48,7 @@ export const members = pgTable("members", {
   userId: varchar("user_id", { length: 36 }).references(() => authUsers.id),
   // Legacy: Farcaster FID (now nullable for new auth flow)
   farcasterFid: integer("farcaster_fid").unique(),
-  walletAddress: varchar("wallet_address", { length: 255 }),
+  walletAddress: varchar("wallet_address", { length: 42 }),
   
   // State machine fields - restricted by database CHECK constraint
   // Valid values: pending_id_verification, pending_application_review, approved_application, denied_application, active_member

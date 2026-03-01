@@ -1,10 +1,13 @@
 import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
+import logger from "../logger";
 
-// Initialize with placeholder - will be updated when first used
-let neynarClient: NeynarAPIClient;
+let neynarClient: NeynarAPIClient | null = null;
 
-// Initialize client with proper API key
-async function initializeNeynarClient() {
+/**
+ * Initialize and return the Neynar API client (lazy singleton).
+ * Throws if NEYNAR_API_KEY is not set.
+ */
+export async function initializeNeynarClient(): Promise<NeynarAPIClient> {
   if (!neynarClient) {
     const apiKey = process.env.NEYNAR_API_KEY;
     if (!apiKey || apiKey === "NEYNAR_API_DOCS") {
@@ -18,45 +21,54 @@ async function initializeNeynarClient() {
       })
     );
 
-    console.log("Neynar client initialized with API key:", apiKey.substring(0, 8) + "...");
+    logger.info("Neynar client initialized");
   }
   return neynarClient;
 }
 
-export { initializeNeynarClient };
-
-// Legacy export - will initialize if needed
+/**
+ * Get the initialized Neynar client.
+ * Each method lazily initializes the client on first use and delegates
+ * directly to the SDK — no `as any` casts needed.
+ */
 export const neynar = {
-  async createSigner(...args: any[]) {
+  async createSigner() {
     const client = await initializeNeynarClient();
-    return (client.createSigner as any)(...args);
+    return client.createSigner();
   },
-  async registerSignedKey(...args: any[]) {
+
+  async registerSignedKey(...args: Parameters<NeynarAPIClient["registerSignedKey"]>) {
     const client = await initializeNeynarClient();
-    return (client.registerSignedKey as any)(...args);
+    return client.registerSignedKey(...args);
   },
-  async lookupSigner(...args: any[]) {
+
+  async lookupSigner(...args: Parameters<NeynarAPIClient["lookupSigner"]>) {
     const client = await initializeNeynarClient();
-    return (client.lookupSigner as any)(...args);
+    return client.lookupSigner(...args);
   },
-  async fetchBulkUsers(...args: any[]) {
+
+  async fetchBulkUsers(...args: Parameters<NeynarAPIClient["fetchBulkUsers"]>) {
     const client = await initializeNeynarClient();
-    return (client.fetchBulkUsers as any)(...args);
+    return client.fetchBulkUsers(...args);
   },
-  async lookupUserByCustodyAddress(...args: any[]) {
+
+  async lookupUserByCustodyAddress(...args: Parameters<NeynarAPIClient["lookupUserByCustodyAddress"]>) {
     const client = await initializeNeynarClient();
-    return (client.lookupUserByCustodyAddress as any)(...args);
+    return client.lookupUserByCustodyAddress(...args);
   },
-  async lookupCastByHashOrWarpcastUrl(...args: any[]) {
+
+  async lookupCastByHashOrWarpcastUrl(...args: Parameters<NeynarAPIClient["lookupCastByHashOrWarpcastUrl"]>) {
     const client = await initializeNeynarClient();
-    return (client.lookupCastByHashOrWarpcastUrl as any)(...args);
+    return client.lookupCastByHashOrWarpcastUrl(...args);
   },
-  async publishReaction(...args: any[]) {
+
+  async publishReaction(...args: Parameters<NeynarAPIClient["publishReaction"]>) {
     const client = await initializeNeynarClient();
-    return (client.publishReaction as any)(...args);
+    return client.publishReaction(...args);
   },
-  async publishCast(...args: any[]) {
+
+  async publishCast(...args: Parameters<NeynarAPIClient["publishCast"]>) {
     const client = await initializeNeynarClient();
-    return (client.publishCast as any)(...args);
-  }
+    return client.publishCast(...args);
+  },
 };

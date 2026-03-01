@@ -4,6 +4,7 @@ import { storage } from '../storage';
 import logger from '../logger';
 import { PulseService } from '../services/PulseService';
 import { neynar } from '../lib/neynarClient';
+import type { PrivyLinkedAccount } from '@shared/types';
 
 const router = Router();
 
@@ -82,29 +83,22 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
           // Parse identity token - no extra API call needed!
           const privyUserData = await privy.users().get({ id_token: idToken });
 
+          const linkedAccounts = (privyUserData.linked_accounts ?? []) as PrivyLinkedAccount[];
           logger.debug('Parsed identity token', {
             privyUserId: privyUserData.id,
-            linkedAccounts: privyUserData.linked_accounts?.map((a: any) => ({ type: a.type, address: a.address })),
+            linkedAccounts: linkedAccounts.map(a => ({ type: a.type, address: a.address })),
           });
 
           // Extract email from linked accounts
-          const emailAccount = privyUserData.linked_accounts?.find(
-            (account: any) => account.type === 'email'
-          );
-          privyEmail = (emailAccount as any)?.address;
+          const emailAccount = linkedAccounts.find(account => account.type === 'email');
+          privyEmail = emailAccount?.address;
 
           // Extract wallet from linked accounts - prefer external wallets
           // (matches client-side useActiveWallet which prefers external over embedded)
-          const walletAccounts = privyUserData.linked_accounts?.filter(
-            (account: any) => account.type === 'wallet'
-          ) ?? [];
-          const externalWallet = walletAccounts.find(
-            (account: any) => account.wallet_client_type !== 'privy'
-          );
-          const embeddedWallet = walletAccounts.find(
-            (account: any) => account.wallet_client_type === 'privy'
-          );
-          privyWallet = (externalWallet as any ?? embeddedWallet as any)?.address;
+          const walletAccounts = linkedAccounts.filter(account => account.type === 'wallet');
+          const externalWallet = walletAccounts.find(account => account.wallet_client_type !== 'privy');
+          const embeddedWallet = walletAccounts.find(account => account.wallet_client_type === 'privy');
+          privyWallet = (externalWallet ?? embeddedWallet)?.address;
         }
       } catch (parseError) {
         logger.warn('Could not parse identity token', {
@@ -1081,7 +1075,7 @@ router.get('/community/members/:memberId', privyAuthMiddleware, async (req: Priv
       try {
         const userResponse = await neynar.fetchBulkUsers({ fids: [member.farcasterFid] });
         if (userResponse.users && userResponse.users.length > 0) {
-          const user = userResponse.users[0] as any;
+          const user = userResponse.users[0] as { display_name?: string; username?: string; pfp_url?: string; profile?: { bio?: { text?: string } } };
           profileData = {
             displayName: user.display_name,
             username: user.username,

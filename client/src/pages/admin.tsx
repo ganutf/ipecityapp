@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Pulse, PulseType, Member, MemberType } from "@shared/schema";
+import type { PulsesResponse, PulseTypesResponse, MembersResponse, MemberWithStats } from "@shared/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ export default function AdminPage() {
   });
 
 
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [selectedMember, setSelectedMember] = useState<MemberWithStats | null>(null);
   const [selectedMemberType, setSelectedMemberType] = useState<MemberType>('architect');
   const [isEditingMemberType, setIsEditingMemberType] = useState(false);
   const [editMemberType, setEditMemberType] = useState<MemberType>('architect');
@@ -53,21 +54,21 @@ export default function AdminPage() {
   // Member type configuration
 
   // Fetch pulse types
-  const { data: pulseTypesData, isLoading: pulseTypesLoading } = useQuery({
+  const { data: pulseTypesData, isLoading: pulseTypesLoading } = useQuery<PulseTypesResponse>({
     queryKey: ["/api/pulse-types"],
     queryFn: () => authenticatedGet("/api/pulse-types"),
     enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Fetch all pulses - must be called before any returns
-  const { data: pulsesData, isLoading: pulsesLoading } = useQuery({
+  const { data: pulsesData, isLoading: pulsesLoading } = useQuery<PulsesResponse>({
     queryKey: ["/api/pulses"],
     queryFn: () => authenticatedGet("/api/pulses"),
     enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Fetch all members
-  const { data: membersData, isLoading: membersLoading } = useQuery({
+  const { data: membersData, isLoading: membersLoading } = useQuery<MembersResponse>({
     queryKey: ["/api/members"],
     queryFn: () => authenticatedGet("/api/members"),
     enabled: Boolean(isAuthenticated && isAdmin),
@@ -225,7 +226,7 @@ export default function AdminPage() {
                   <SelectValue placeholder="Select pulse type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(pulseTypesData as any)?.pulseTypes?.map((type: PulseType) => (
+                  {pulseTypesData?.pulseTypes?.map((type: PulseType) => (
                     <SelectItem key={type.id} value={type.id.toString()}>
                       {type.name}
                     </SelectItem>
@@ -336,7 +337,7 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {(pulsesData as any)?.pulses?.map((pulse: Pulse) => (
+              {pulsesData?.pulses?.map((pulse: Pulse) => (
                 <PulseCard
                   key={pulse.id}
                   pulse={pulse}
@@ -383,10 +384,10 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {(membersData as any)?.members?.map((member: Member) => {
-                    const memberStatus = (member as any).status || 'unknown';
-                    const claimSubdomain = member.ipePassport || ((member as any).ipeUsername ? `${(member as any).ipeUsername}.ipecity.eth` : null);
-                    const hasPendingApplication = memberStatus === 'pending_application_review' && (member as any).ipeUsername;
+                  {membersData?.members?.map((member: MemberWithStats) => {
+                    const memberStatus = member.status || 'unknown';
+                    const claimSubdomain = member.ipePassport || (member.ipeUsername ? `${member.ipeUsername}.ipecity.eth` : null);
+                    const hasPendingApplication = memberStatus === 'pending_application_review' && member.ipeUsername;
                     const needsApproval = hasPendingApplication;
                     
                     return (
@@ -395,7 +396,7 @@ export default function AdminPage() {
                           <div className="flex items-center space-x-2">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {(member as any).ipeUsername || member.email || `Member #${member.id}`}
+                                {member.ipeUsername || member.email || `Member #${member.id}`}
                               </div>
                               <div className="text-sm text-gray-500">
                                 {member.email || (member.farcasterFid ? `FID: ${member.farcasterFid}` : '')}
@@ -489,30 +490,30 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Username</label>
-                  <p className="text-sm">{(selectedMember as any).ipeUsername || 'Not provided'}</p>
+                  <p className="text-sm">{selectedMember.ipeUsername || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Status</label>
                   <p className="text-sm">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      (selectedMember as any).status === 'active_member'
+                      selectedMember.status === 'active_member'
                         ? 'bg-green-100 text-green-800'
-                        : (selectedMember as any).status === 'pending_application_review'
+                        : selectedMember.status === 'pending_application_review'
                           ? 'bg-orange-100 text-orange-800'
-                          : (selectedMember as any).status === 'pending_claim'
+                          : selectedMember.status === 'pending_claim'
                             ? 'bg-yellow-100 text-yellow-800'
                             : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {(selectedMember as any).status === 'active_member' ? 'Active Member' :
-                       (selectedMember as any).status === 'pending_application_review' ? 'Pending Review' :
-                       (selectedMember as any).status === 'pending_claim' ? 'Pending Claim' :
+                      {selectedMember.status === 'active_member' ? 'Active Member' :
+                       selectedMember.status === 'pending_application_review' ? 'Pending Review' :
+                       selectedMember.status === 'pending_claim' ? 'Pending Claim' :
                        'Pending Signer'}
                     </span>
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Member Type</label>
-                  {(selectedMember as any).status === 'pending_application_review' || (selectedMember as any).status === 'pending_claim' ? (
+                  {selectedMember.status === 'pending_application_review' || selectedMember.status === 'pending_claim' ? (
                     // For pending applications - always editable
                     <Select 
                       value={selectedMemberType} 
@@ -602,7 +603,7 @@ export default function AdminPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Passport Claim</label>
                   <p className="text-sm">
-                    {selectedMember.ipePassport || ((selectedMember as any).ipeUsername ? `${(selectedMember as any).ipeUsername}.ipecity.eth` : 'Not claimed')}
+                    {selectedMember.ipePassport || (selectedMember.ipeUsername ? `${selectedMember.ipeUsername}.ipecity.eth` : 'Not claimed')}
                   </p>
                 </div>
 
@@ -613,8 +614,8 @@ export default function AdminPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-500">Registration Date</label>
                   <p className="text-sm">
-                    {(selectedMember as any).createdAt ? 
-                      new Date((selectedMember as any).createdAt).toLocaleString("en-US", {
+                    {selectedMember.createdAt ?
+                      new Date(selectedMember.createdAt).toLocaleString("en-US", {
                         month: "short",
                         day: "numeric",
                         hour: "numeric",
@@ -627,25 +628,18 @@ export default function AdminPage() {
                 </div>
               </div>
               
-              {(selectedMember as any).bio && (
+              {selectedMember.bio && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Bio</label>
-                  <p className="text-sm mt-1">{(selectedMember as any).bio}</p>
+                  <p className="text-sm mt-1">{selectedMember.bio}</p>
                 </div>
               )}
-              
-              {(selectedMember as any).socials && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Social Links</label>
-                  <p className="text-sm mt-1">{(selectedMember as any).socials}</p>
-                </div>
-              )}
-              
-              {(selectedMember as any).profileTags && (selectedMember as any).profileTags.length > 0 && (
+
+              {selectedMember.profileTags && selectedMember.profileTags.length > 0 && (
                 <div>
                   <label className="text-sm font-medium text-gray-500">Profile Tags</label>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {(selectedMember as any).profileTags.map((tag: string, index: number) => (
+                    {selectedMember.profileTags.map((tag: string, index: number) => (
                       <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                         {tag}
                       </span>
@@ -655,15 +649,15 @@ export default function AdminPage() {
               )}
 
               {/* Action buttons for pending applications */}
-              {((selectedMember as any).status === 'pending_application_review' || (selectedMember as any).status === 'pending_claim') &&
-               (selectedMember as any).ipeUsername && (
+              {(selectedMember.status === 'pending_application_review' || selectedMember.status === 'pending_claim') &&
+               selectedMember.ipeUsername && (
                 <div className="flex space-x-2 pt-4 border-t">
                   <Button
                     onClick={(e) => {
                       e.stopPropagation();
                       approveMemberMutation.mutate({
                         memberId: selectedMember.id,
-                        ipeUsername: (selectedMember as any).ipeUsername,
+                        ipeUsername: selectedMember.ipeUsername || undefined,
                         userWalletAddress: selectedMember.walletAddress || undefined,
                         memberType: selectedMemberType
                       });

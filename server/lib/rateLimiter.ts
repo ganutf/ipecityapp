@@ -31,7 +31,8 @@ class RateLimiter {
 
   private getKey(req: Request): string {
     // Use user ID if authenticated, otherwise fall back to IP
-    const userId = (req as any).user?.fid || (req as any).user?.id;
+    const user = (req as Request & { user?: { fid?: number; id?: number } }).user;
+    const userId = user?.fid || user?.id;
     return userId ? `user:${userId}` : `ip:${req.ip}`;
   }
 

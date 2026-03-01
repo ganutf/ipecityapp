@@ -18,6 +18,7 @@ import { useTimezone } from "@/contexts/TimezoneContext";
 import { cn } from "@/lib/utils";
 import { getCardAccentColor, getStatusBadge } from "@/lib/pulseUtils";
 import type { PulseType } from "@shared/schema";
+import type { PulseTypesResponse } from "@shared/types";
 import { useToast } from "@/hooks/use-toast";
 
 export default function PulseDetailPage() {
@@ -47,7 +48,7 @@ export default function PulseDetailPage() {
   const isAdmin = member?.memberType === 'admin';
 
   // Fetch pulse types for admin editing
-  const { data: pulseTypesData } = useQuery({
+  const { data: pulseTypesData } = useQuery<PulseTypesResponse>({
     queryKey: ["/api/pulse-types"],
     queryFn: () => authenticatedGet("/api/pulse-types", farcasterFid),
     enabled: Boolean(isAuthenticated && isAdmin && farcasterFid),
@@ -205,7 +206,7 @@ export default function PulseDetailPage() {
       interval: pulse.interval || 24,
       description: pulse.description || "",
       points: pulse.points || 1,
-      pulseTypeId: (pulse as any).pulseTypeId || 1,
+      pulseTypeId: pulse.pulseTypeId || 1,
     });
     setIsEditing(true);
   };
@@ -378,7 +379,7 @@ export default function PulseDetailPage() {
                       <SelectValue placeholder="Select pulse type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(pulseTypesData as any)?.pulseTypes?.map((type: PulseType) => (
+                      {pulseTypesData?.pulseTypes?.map((type: PulseType) => (
                         <SelectItem key={type.id} value={type.id.toString()}>
                           {type.name}
                         </SelectItem>

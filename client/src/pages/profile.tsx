@@ -135,8 +135,8 @@ export default function Profile2() {
       memberType: member.memberType,
       profileCompleted: !!member.bio, // Considered completed if bio is filled
       walletAddress: member.walletAddress || undefined,
-      totalPoints: (member as any).totalPoints,
-      pulseStreak: (member as any).pulseStreak,
+      totalPoints: member.totalPoints,
+      pulseStreak: member.pulseStreak,
       createdAt: member.createdAt?.toString(),
     },
   } : undefined;

@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { usePrivy, useIdentityToken } from '@privy-io/react-auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Member } from '@shared/schema';
 import { setApiAccessToken } from '@/lib/api';
+import type { AuthMeResponse, MemberWithStats } from '@shared/types';
 
 // Check if Privy is configured
 const PRIVY_ENABLED = !!import.meta.env.VITE_PRIVY_APP_ID;
@@ -21,7 +21,7 @@ interface AuthContextValue {
   isPrivyEnabled: boolean;
 
   // Member state
-  member: Member | null;
+  member: MemberWithStats | null;
   memberId: number | null;  // Primary identifier for all API calls
   isMember: boolean;
   memberStatus: string | null;
@@ -118,7 +118,7 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     data: memberData,
     isLoading: memberLoading,
     refetch: refetchMember,
-  } = useQuery({
+  } = useQuery<AuthMeResponse | null>({
     queryKey: ['/api/v2/auth/me', accessToken, identityToken],
     queryFn: async () => {
       if (!accessToken) return null;

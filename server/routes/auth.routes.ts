@@ -162,26 +162,26 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
         updates.emailVerified = true; // Privy already verified it
       }
 
-      // Sync wallet if member doesn't have one yet (only if not owned by another member)
-      if (!member.walletAddress && privyWallet) {
-        const existingWallet = await storage.getMemberWalletByAddress(privyWallet);
-        if (!existingWallet || existingWallet.memberId === member.id) {
-          logger.info('Syncing wallet from Privy to existing member', {
-            memberId: member.id,
-            wallet: privyWallet,
-          });
-          updates.walletAddress = privyWallet;
-        } else {
-          logger.warn('Skipping wallet sync - wallet belongs to another member', {
-            memberId: member.id,
-            wallet: privyWallet,
-            ownerMemberId: existingWallet.memberId,
-          });
-        }
-      }
-
+      // Apply non-wallet updates first
       if (Object.keys(updates).length > 0) {
         member = await storage.updateMember(member.id, updates);
+      }
+
+      // Sync wallet through atomic method (ensures member_wallets row is created)
+      if (!member.walletAddress && privyWallet) {
+        try {
+          member = await storage.updateMemberWalletAtomic(member.id, privyWallet);
+          logger.info('Synced wallet from Privy to existing member', {
+            memberId: member.id,
+            wallet: privyWallet,
+          });
+        } catch (err) {
+          logger.warn('Skipping wallet sync - wallet may belong to another member', {
+            memberId: member.id,
+            wallet: privyWallet,
+            reason: err instanceof Error ? err.message : String(err),
+          });
+        }
       }
     }
 
@@ -773,11 +773,11 @@ router.delete('/members/:memberId/wallets/:walletAddress', privyAuthMiddleware, 
     logger.info('Wallet unlinked', { memberId, walletAddress: walletAddress.toLowerCase() });
 
     res.json({ success: true });
-  } catch (error) {
-    logger.error('Unlink wallet error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    res.status(500).json({ error: 'Failed to unlink wallet' });
+  } catch (err) {
+    if (err instanceof Error && err.message === 'CANNOT_UNLINK_PASSPORT_WALLET') {
+      return res.status(400).json({ error: 'Cannot unlink your passport wallet' });
+    }
+    handleServiceError(err, res, 'Failed to unlink wallet');
   }
 });
 

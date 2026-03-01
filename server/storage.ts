@@ -1093,15 +1093,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string): Promise<Member> {
-    const [member] = await db.insert(members).values({
-      privyId,
-      email,
-      walletAddress,
-      status: 'pending_id_verification', // Start with email/passport verification
-      emailVerified: !!email, // If email provided, Privy already verified it
-      memberType: 'pending',
-    }).returning();
-    return member;
+    return await db.transaction(async (tx) => {
+      const [member] = await tx.insert(members).values({
+        privyId,
+        email,
+        walletAddress: walletAddress?.toLowerCase(),
+        status: 'pending_id_verification', // Start with email/passport verification
+        emailVerified: !!email, // If email provided, Privy already verified it
+        memberType: 'pending',
+      }).returning();
+
+      // Ensure passport wallet exists in member_wallets
+      if (walletAddress) {
+        await this.syncPassportToMemberWallets(tx, member.id, walletAddress);
+      }
+
+      return member;
+    });
   }
 
   // Member Wallets
@@ -1138,13 +1146,53 @@ export class DatabaseStorage implements IStorage {
   }
 
   async unlinkMemberWallet(memberId: number, walletAddress: string): Promise<boolean> {
+    const normalizedAddress = walletAddress.toLowerCase();
+
+    // Prevent unlinking the passport wallet at storage level
+    const [member] = await db.select({ walletAddress: members.walletAddress })
+      .from(members).where(eq(members.id, memberId));
+    if (member?.walletAddress?.toLowerCase() === normalizedAddress) {
+      throw new Error('CANNOT_UNLINK_PASSPORT_WALLET');
+    }
+
     const result = await db.delete(memberWallets)
       .where(and(
         eq(memberWallets.memberId, memberId),
-        eq(memberWallets.walletAddress, walletAddress.toLowerCase()),
+        eq(memberWallets.walletAddress, normalizedAddress),
       ))
       .returning();
     return result.length > 0;
+  }
+
+  /**
+   * Ensures the passport wallet has a corresponding row in member_wallets.
+   * Must be called within an existing database transaction.
+   */
+  private async syncPassportToMemberWallets(
+    tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+    memberId: number,
+    walletAddress: string,
+  ): Promise<void> {
+    const normalizedAddress = walletAddress.toLowerCase();
+
+    const [existing] = await tx.select().from(memberWallets)
+      .where(and(
+        eq(memberWallets.memberId, memberId),
+        eq(memberWallets.walletAddress, normalizedAddress),
+      ));
+    if (existing) return;
+
+    const [otherOwner] = await tx.select().from(memberWallets)
+      .where(eq(memberWallets.walletAddress, normalizedAddress));
+    if (otherOwner && otherOwner.memberId !== memberId) {
+      throw new Error('WALLET_ALREADY_LINKED');
+    }
+
+    await tx.insert(memberWallets).values({
+      memberId,
+      walletAddress: normalizedAddress,
+      walletType: 'external',
+    });
   }
 
   async updateMemberWalletAtomic(memberId: number, walletAddress: string): Promise<Member> {
@@ -1164,6 +1212,9 @@ export class DatabaseStorage implements IStorage {
         .set({ walletAddress: normalizedAddress, updatedAt: new Date() })
         .where(eq(members.id, memberId))
         .returning();
+
+      // Ensure passport wallet exists in member_wallets
+      await this.syncPassportToMemberWallets(tx, memberId, normalizedAddress);
 
       return updatedMember;
     });
@@ -1196,6 +1247,11 @@ export class DatabaseStorage implements IStorage {
         .set({ ...data, updatedAt: new Date() })
         .where(eq(members.id, memberId))
         .returning();
+
+      // Ensure passport wallet exists in member_wallets
+      if (data.walletAddress) {
+        await this.syncPassportToMemberWallets(tx, memberId, data.walletAddress);
+      }
 
       return updatedMember;
     });

@@ -661,7 +661,30 @@ export type InsertAttestation = z.infer<typeof insertAttestationSchema>;
 export type MemberWallet = typeof memberWallets.$inferSelect;
 export type InsertMemberWallet = typeof memberWallets.$inferInsert;
 
+// ============================================
+// ADMIN V2 VALIDATION SCHEMAS
+// ============================================
+
+export const approveMemberSchema = z.object({
+  memberId: z.number().int().positive(),
+  ipeUsername: secureUsernameSchema,
+  userWalletAddress: secureWalletAddressSchema.optional(),
+  memberType: memberTypeEnum.optional(),
+});
+
+export const denyMemberSchema = z.object({
+  memberId: z.number().int().positive(),
+});
+
+export const updateMemberTypeSchema = z.object({
+  memberId: z.number().int().positive(),
+  memberType: memberTypeEnum,
+});
+
 // Request types
+export type ApproveMemberRequest = z.infer<typeof approveMemberSchema>;
+export type DenyMemberRequest = z.infer<typeof denyMemberSchema>;
+export type UpdateMemberTypeRequest = z.infer<typeof updateMemberTypeSchema>;
 export type EmailVerificationRequest = z.infer<typeof emailVerificationRequestSchema>;
 export type EmailVerificationByMemberIdRequest = z.infer<typeof emailVerificationRequestByMemberIdSchema>;
 export type ApplicationByMemberId = z.infer<typeof applicationByMemberIdSchema>;

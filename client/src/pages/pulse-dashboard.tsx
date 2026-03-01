@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import type { Pulse, Member } from "@shared/schema";
@@ -468,24 +468,11 @@ function PostTool({
     );
   }
 
-  // Helper function to get execution status for this component
-  const getUserExecutionStatus = (pulseId: number) => {
-    return extractExecutionStatus(executionsData, pulseId);
-  };
-
-  // Track execution status for pulse actions - initialize with current status
-  const currentExecutionStatus = getUserExecutionStatus(pulse.id);
-  const [executionStatus, setExecutionStatus] = useState<{
-    liked: boolean;
-    shared: boolean;
-    abstained: boolean;
-  }>(currentExecutionStatus);
-
-  // Update execution status when data changes
-  useEffect(() => {
-    const status = getUserExecutionStatus(pulse.id);
-    setExecutionStatus(status);
-  }, [executionsData, pulse.id]);
+  // Derive execution status from query data — single source of truth (no local state copy)
+  const executionStatus = useMemo(
+    () => extractExecutionStatus(executionsData, pulse.id),
+    [executionsData, pulse.id],
+  );
 
   const [checking, setChecking] = useState(false);
   const [stats, setStats] = useState<null | {
@@ -536,7 +523,9 @@ function PostTool({
     };
   }, [isCircuitOpen, lastFailureTime]);
 
-  // Record pulse execution mutation
+  // Record pulse execution mutation with optimistic updates.
+  // Instead of dual state (useState + useEffect sync), we optimistically patch the
+  // query cache so useMemo-derived `executionStatus` updates instantly.
   const recordExecutionMutation = useMutation({
     mutationFn: async ({ actions }: { actions: { liked: boolean; shared: boolean; abstained: boolean } }) => {
       if (!memberId) {
@@ -549,12 +538,49 @@ function PostTool({
         actions,
       });
     },
-    onSuccess: () => {
-      // Invalidate all related cache keys for pulse execution data
+    onMutate: async ({ actions }) => {
+      // Cancel in-flight refetches so they don't overwrite our optimistic update
+      const queryKey = queryKeys.executions.byMember(memberId);
+      await queryClient.cancelQueries({ queryKey });
+
+      // Snapshot previous value for rollback
+      const previousData = queryClient.getQueryData(queryKey);
+
+      // Optimistically patch cache: find or create execution entry for this pulse
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old?.executions) return old;
+        const exists = old.executions.some((e: any) => e.pulseId === pulse.id);
+        if (exists) {
+          return {
+            ...old,
+            executions: old.executions.map((e: any) =>
+              e.pulseId === pulse.id ? { ...e, actions } : e,
+            ),
+          };
+        }
+        // New execution — append optimistic entry
+        return {
+          ...old,
+          executions: [...old.executions, { pulseId: pulse.id, actions }],
+        };
+      });
+
+      return { previousData };
+    },
+    onError: (_err, _vars, context) => {
+      // Rollback to previous cache state
+      if (context?.previousData) {
+        queryClient.setQueryData(
+          queryKeys.executions.byMember(memberId),
+          context.previousData,
+        );
+      }
+    },
+    onSettled: () => {
+      // Always refetch to reconcile with server truth
       queryClient.invalidateQueries({ queryKey: queryKeys.executions.details(member?.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.executions.byMember(memberId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.pulses.list() });
-      // Also invalidate the specific pulse execution endpoint
       queryClient.invalidateQueries({ queryKey: queryKeys.pulses.executions(pulse.id) });
     },
   });
@@ -586,11 +612,8 @@ function PostTool({
         };
       }
 
-      // Record the execution in database
+      // Record the execution in database (optimistic update handles UI instantly)
       await recordExecutionMutation.mutateAsync({ actions: newActions });
-
-      // Update local state
-      setExecutionStatus(newActions);
 
       const actionName = action === 'share' ? 'shared' : action === 'like' ? 'liked' : 'abstained';
       setSuccessMessage(`Pulse ${actionName} successfully!`);
@@ -650,13 +673,10 @@ function PostTool({
       return;
     }
 
-    // Get fresh execution status directly from data source
-    const freshExecutionStatus = getUserExecutionStatus(pulse.id);
-
-    // Compare with current database execution status (use fresh data)
-    const dbLiked = freshExecutionStatus.liked;
-    const dbShared = freshExecutionStatus.shared;
-    const dbAbstained = freshExecutionStatus.abstained;
+    // Compare with current execution status (derived from query cache)
+    const dbLiked = executionStatus.liked;
+    const dbShared = executionStatus.shared;
+    const dbAbstained = executionStatus.abstained;
 
     // Determine what the database should be based on Farcaster
     const shouldHaveExecution = farcasterLiked || farcasterShared;
@@ -689,10 +709,9 @@ function PostTool({
     // Only update if different from current state
     if (needsUpdate && targetActions) {
       try {
-        // Reuse existing mutation and action handling
+        // Reuse existing mutation (optimistic update handles UI)
         await recordExecutionMutation.mutateAsync({ actions: targetActions });
-        setExecutionStatus(targetActions);
-        
+
         const hasAnyAction = targetActions.liked || targetActions.shared || targetActions.abstained;
         if (hasAnyAction) {
           setSuccessMessage("Pulse status synchronized with Farcaster");

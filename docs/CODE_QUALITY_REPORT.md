@@ -94,11 +94,13 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 - **Location**: pulse-dashboard.tsx — PostTool (lines 485-630)
 - **Problem**: `executionStatus` local state + `executionsData` query + manual sync between them. Risk of UI showing stale/wrong state.
 - **Fix**: Use React Query mutations for state changes; derive UI state from query data only.
+- **Status**: [x] Fixed — Replaced dual state with `useMemo` derived from query cache + optimistic updates via `onMutate`/`onError`/`onSettled`
 
 ### 13. Missing Input Validation on Several Endpoints
 - **Location**: server/routes.ts — e.g., `/api/qrcode` (line 88) accepts raw URL without validation
 - **Problem**: `validateRequest` middleware exists but isn't applied to all endpoints.
 - **Fix**: Add validation schemas to all POST/PATCH endpoints.
+- **Status**: [x] Fixed — Added `approveMemberSchema`, `denyMemberSchema`, `updateMemberTypeSchema` to shared/schema.ts. Wired `validateRequest` to admin.routes.ts (3 endpoints) and pulse.routes.ts PATCH.
 
 ---
 
@@ -116,6 +118,7 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 | Member profile enrichment | auth.routes.ts lines 981-1044 (3 copies) | Extract `enrichMembersWithProfiles()` |
 | Ownership middleware | auth.ts `requireOwnership` + `requireOwnershipByFid` | Consolidate into single polymorphic middleware |
 | Pending attestation queries | storage.ts `getPendingAttestations` + `getPendingAttestationsByPulse` | Extract shared WHERE clause builder |
+- **Status**: [x] Partially fixed — Consolidated 8 duplicate error classes into `server/lib/errors.ts`, created `parseIntParam` + `handleServiceError` in `server/lib/routeHelpers.ts` (replaced 16+ parseInt patterns across 6 route files), created `ProfileEnrichmentService` (eliminated ~150 lines of duplicated profile+balance enrichment from 3 endpoints in auth.routes.ts), deleted unused V1 auth middleware (`server/middleware/auth.ts`).
 
 ### 16. Neynar Client Type Safety
 - **Location**: server/lib/neynarClient.ts — lines 30-60
@@ -291,6 +294,32 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 - [x] All raw `fetch()` calls replaced with `authenticatedGet`/`authenticatedPost`
 - [x] V1 routes fully removed
 
+### Issues #12, #13, #15: Race Conditions, Validation, Code Dedup
+
+**Error Consolidation + Route Helpers (Issue #15):**
+- [x] Added shared error classes to `server/lib/errors.ts`: `NotFoundError`, `ValidationError`, `ForbiddenError`, `RateLimitError`
+- [x] Created `server/lib/routeHelpers.ts` with `parseIntParam()` and `handleServiceError()`
+- [x] Updated all services to import shared errors (removed 8 duplicate class definitions)
+- [x] Applied `parseIntParam` + `handleServiceError` across 6 route files
+- [x] Deleted unused V1 auth middleware (`server/middleware/auth.ts`)
+- [x] Added 12 new tests for error classes and route helpers (99 total)
+
+**ProfileEnrichmentService (Issue #15):**
+- [x] Created `server/services/ProfileEnrichmentService.ts`
+- [x] `fetchBalance()` / `fetchBalances()` — IPE balance fetching
+- [x] `fetchFarcasterProfile()` / `fetchBulkFarcasterProfiles()` — Neynar profile fetching
+- [x] `enrichSingleMember()` / `enrichBulkMembers()` — merge profile + balance onto member objects
+- [x] Refactored 3 endpoints in `auth.routes.ts` to use the service
+
+**Input Validation (Issue #13):**
+- [x] Added `approveMemberSchema`, `denyMemberSchema`, `updateMemberTypeSchema` to `shared/schema.ts`
+- [x] Wired `validateRequest()` to admin.routes.ts (3 endpoints) and pulse.routes.ts PATCH
+
+**PostTool Race Conditions (Issue #12):**
+- [x] Replaced `useState` + `useEffect` sync with `useMemo` derived from query cache
+- [x] Added optimistic updates via `onMutate`/`onError`/`onSettled` in `recordExecutionMutation`
+- [x] Removed all manual `setExecutionStatus()` calls — single source of truth is React Query cache
+
 ---
 
 ## Remaining Items
@@ -301,9 +330,9 @@ These items were identified in the audit but not yet addressed. They remain as f
 |---|-------|----------|--------|
 | 5 | Business logic in route handlers → extract services | HIGH | **Resolved** |
 | 7 | Incomplete V1→V2 API migration | HIGH | **Resolved** |
-| 12 | PostTool state race conditions | HIGH | Open |
-| 13 | Missing input validation on endpoints | HIGH | Open |
-| 15 | Duplicated server code patterns | MEDIUM | Open |
+| 12 | PostTool state race conditions | HIGH | **Resolved** |
+| 13 | Missing input validation on endpoints | HIGH | **Resolved** |
+| 15 | Duplicated server code patterns | MEDIUM | **Partially resolved** |
 | 19 | Redundant wallet tracking (members vs member_wallets) | MEDIUM | Open |
 | 24 | Massive component files (split PostTool, etc.) | MEDIUM | Partially resolved (routes.ts done) |
 | 25 | Legacy tables audit (emailVerifications, passportVerifications) | MEDIUM | Open |
@@ -312,4 +341,4 @@ These items were identified in the audit but not yet addressed. They remain as f
 | 28 | Farcaster FID in multiple tables | MEDIUM | Open |
 | 31 | WebSocket error suppression | LOW | Open |
 
-### Overall Progress: 23/31 issues resolved (74%)
+### Overall Progress: 26/31 issues resolved (84%)

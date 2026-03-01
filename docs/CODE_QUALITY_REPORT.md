@@ -194,6 +194,7 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 ### 29. Accessibility Gaps
 - Clickable table rows in community.tsx without keyboard support or ARIA labels
 - Div with `role="button"` in pulse-dashboard.tsx instead of semantic `<button>`
+- **Status**: [x] Fixed in Phase 5 (community table keyboard nav + ARIA labels)
 
 ### 30. Unused Imports
 - `queryClient` imported but unused in profile.tsx:84
@@ -203,3 +204,58 @@ Full-codebase audit across server, client, schema, and architecture. Found **~90
 ### 31. WebSocket Error Suppression
 - **Location**: main.tsx — lines 8-21
 - **Problem**: Global `unhandledrejection` handler hides WebSocket errors, could mask real bugs.
+
+---
+
+## Implementation Plan — Status
+
+### Phase 1: Safety Net — COMPLETED (`736cf67`)
+- [x] Remove all `@ts-ignore` — created typed `ApiError` class in `server/lib/errors.ts`
+- [x] Validate required env vars at server startup — created `server/lib/validateEnv.ts`
+- [x] Add React Error Boundary — created `client/src/components/ErrorBoundary.tsx`, wrapped routes in App.tsx
+
+### Phase 2: Type Safety — COMPLETED (`57c5134`)
+- [x] Define API response interfaces in `shared/types.ts`; eliminate `as any` from client pages
+- [x] Type Privy linked account objects in `server/routes/auth.routes.ts`
+- [x] Type Neynar SDK responses in `server/lib/neynarClient.ts`
+- [x] Standardize error typing in server catch blocks — replace `err: any` with typed catches
+- [x] Fix wallet address varchar(255) → varchar(42) in members table
+
+### Phase 3: Code Cleanup — COMPLETED (`8462d53`)
+- [x] Remove 68+ console.log statements from client production code
+- [x] Remove unused imports and dead code
+- [x] Fix misleading comments (timezone, outdated references)
+- [x] Add missing database indexes to schema (requires manual `npm run db:push`)
+
+### Phase 4: Architecture — COMPLETED (`51d7445`)
+- [x] Consolidate client API layer — standardize on `authenticatedGet`/`authenticatedPost`
+- [x] Create query key factory in `client/src/lib/queryKeys.ts`
+- [x] Standardize API response envelope
+- [x] Replace all inline query keys across 12 files
+
+### Phase 5: Polish — COMPLETED (`fa714b9`)
+- [x] Add React.memo to list-rendered components (PulseCard)
+- [x] Accessibility improvements (keyboard navigation, ARIA labels on community table)
+
+---
+
+## Remaining Items (Not in 5-Phase Plan)
+
+These items were identified in the audit but not included in the implementation phases. They remain as future improvement opportunities:
+
+| # | Issue | Priority |
+|---|-------|----------|
+| 1 | No test suite (Vitest) | CRITICAL |
+| 4 | Wallet address uniqueness race condition | CRITICAL |
+| 5 | Business logic in route handlers → extract services | HIGH |
+| 7 | Incomplete V1→V2 API migration | HIGH |
+| 12 | PostTool state race conditions | HIGH |
+| 13 | Missing input validation on endpoints | HIGH |
+| 15 | Duplicated server code patterns | MEDIUM |
+| 19 | Redundant wallet tracking (members vs member_wallets) | MEDIUM |
+| 24 | Massive component files (split PostTool, etc.) | MEDIUM |
+| 25 | Legacy tables audit (emailVerifications, passportVerifications) | MEDIUM |
+| 26 | Hardcoded magic numbers → constants | MEDIUM |
+| 27 | CORS allows null origin | MEDIUM |
+| 28 | Farcaster FID in multiple tables | MEDIUM |
+| 31 | WebSocket error suppression | LOW |

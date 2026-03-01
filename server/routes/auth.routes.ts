@@ -3,7 +3,12 @@ import { privyAuthMiddleware, optionalPrivyAuthMiddleware, PrivyAuthRequest } fr
 import { storage } from '../storage';
 import logger from '../logger';
 import { PulseService } from '../services/PulseService';
-import { neynar } from '../lib/neynarClient';
+import {
+  fetchBalance,
+  enrichBulkMembers,
+  enrichSingleMember,
+} from '../services/ProfileEnrichmentService';
+import { parseIntParam, handleServiceError } from '../lib/routeHelpers';
 import type { PrivyLinkedAccount } from '@shared/types';
 
 const router = Router();
@@ -196,24 +201,11 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
     }
 
     // Fetch IPE balance from backend cache (passport wallet only)
-    let ipeBalance = '0';
-    let ipeBalanceRaw = '0';
-    if (member.walletAddress) {
-      try {
-        const { getCachedBalances } = await import('../services/balanceCache');
-        const balanceMap = await getCachedBalances([member.walletAddress]);
-        const balanceData = balanceMap[member.walletAddress.toLowerCase()];
-        if (balanceData) {
-          ipeBalance = balanceData.balance;
-          ipeBalanceRaw = balanceData.balanceRaw;
-        }
-      } catch (balanceError) {
-        logger.warn('Failed to fetch balance in /me', {
-          memberId: member.id,
-          error: balanceError instanceof Error ? balanceError.message : String(balanceError),
-        });
-      }
-    }
+    const balanceData = member.walletAddress
+      ? await fetchBalance(member.walletAddress)
+      : null;
+    const ipeBalance = balanceData?.balance || '0';
+    const ipeBalanceRaw = balanceData?.balanceRaw || '0';
 
     res.json({
       isMember: true,
@@ -400,11 +392,7 @@ router.post('/auth/verify-email', privyAuthMiddleware, async (req: PrivyAuthRequ
  */
 router.get('/members/:memberId', privyAuthMiddleware, async (req: PrivyAuthRequest, res: Response) => {
   try {
-    const memberId = parseInt(req.params.memberId);
-
-    if (isNaN(memberId)) {
-      return res.status(400).json({ error: 'Invalid memberId' });
-    }
+    const memberId = parseIntParam(req, 'memberId');
 
     const member = await storage.getMember(memberId);
     if (!member) {
@@ -413,8 +401,6 @@ router.get('/members/:memberId', privyAuthMiddleware, async (req: PrivyAuthReque
 
     // Calculate stats
     let totalPoints = 0;
-    let pulseStreak = 0;
-
     try {
       totalPoints = await storage.calculateTotalPoints(memberId);
     } catch (statsError) {
@@ -428,14 +414,11 @@ router.get('/members/:memberId', privyAuthMiddleware, async (req: PrivyAuthReque
       member: {
         ...member,
         totalPoints,
-        pulseStreak,
+        pulseStreak: 0,
       },
     });
-  } catch (error) {
-    logger.error('Get member error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    res.status(500).json({ error: 'Failed to get member' });
+  } catch (err) {
+    handleServiceError(err, res, 'Failed to get member');
   }
 });
 
@@ -503,11 +486,7 @@ router.patch('/members/:memberId/profile', privyAuthMiddleware, async (req: Priv
       return res.status(401).json({ error: 'Not authenticated or member not found' });
     }
 
-    const memberId = parseInt(req.params.memberId);
-
-    if (isNaN(memberId)) {
-      return res.status(400).json({ error: 'Invalid memberId' });
-    }
+    const memberId = parseIntParam(req, 'memberId');
 
     // Ensure user can only update their own profile
     if (req.member.id !== memberId) {
@@ -558,8 +537,6 @@ router.post('/auth/passport/verify', privyAuthMiddleware, async (req: PrivyAuthR
 
     // Import viem for signature verification
     const { verifyMessage } = await import('viem');
-    const { mainnet } = await import('viem/chains');
-
     // Verify the signature
     const isValid = await verifyMessage({
       address: walletAddress as `0x${string}`,
@@ -653,11 +630,7 @@ router.patch('/members/:memberId/wallet', privyAuthMiddleware, async (req: Privy
       return res.status(401).json({ error: 'Not authenticated or member not found' });
     }
 
-    const memberId = parseInt(req.params.memberId);
-
-    if (isNaN(memberId)) {
-      return res.status(400).json({ error: 'Invalid memberId' });
-    }
+    const memberId = parseIntParam(req, 'memberId');
 
     // Ensure user can only update their own wallet
     if (req.member.id !== memberId) {
@@ -701,10 +674,7 @@ router.get('/members/:memberId/wallets', privyAuthMiddleware, async (req: PrivyA
       return res.status(401).json({ error: 'Not authenticated or member not found' });
     }
 
-    const memberId = parseInt(req.params.memberId);
-    if (isNaN(memberId)) {
-      return res.status(400).json({ error: 'Invalid memberId' });
-    }
+    const memberId = parseIntParam(req, 'memberId');
 
     // Only own wallets or admin
     if (req.member.id !== memberId && req.member.memberType !== 'admin') {
@@ -731,10 +701,7 @@ router.post('/members/:memberId/wallets', privyAuthMiddleware, async (req: Privy
       return res.status(401).json({ error: 'Not authenticated or member not found' });
     }
 
-    const memberId = parseInt(req.params.memberId);
-    if (isNaN(memberId)) {
-      return res.status(400).json({ error: 'Invalid memberId' });
-    }
+    const memberId = parseIntParam(req, 'memberId');
 
     if (req.member.id !== memberId) {
       return res.status(403).json({ error: 'Cannot link wallets to another user' });
@@ -781,10 +748,7 @@ router.delete('/members/:memberId/wallets/:walletAddress', privyAuthMiddleware, 
       return res.status(401).json({ error: 'Not authenticated or member not found' });
     }
 
-    const memberId = parseInt(req.params.memberId);
-    if (isNaN(memberId)) {
-      return res.status(400).json({ error: 'Invalid memberId' });
-    }
+    const memberId = parseIntParam(req, 'memberId');
 
     if (req.member.id !== memberId) {
       return res.status(403).json({ error: 'Cannot unlink wallets from another user' });
@@ -827,7 +791,7 @@ router.post('/members/:memberId/upgrade-to-active', privyAuthMiddleware, async (
       return res.status(401).json({ error: 'Not authenticated or member not found' });
     }
 
-    const memberId = parseInt(req.params.memberId);
+    const memberId = parseIntParam(req, 'memberId');
 
     // Verify ownership - user can only upgrade their own account
     if (req.member.id !== memberId) {
@@ -941,91 +905,9 @@ router.get('/community/members', privyAuthMiddleware, async (req: PrivyAuthReque
     const members = await storage.getActiveMembersWithStats(pulseService);
     logger.debug('Retrieved members count', { count: members.length });
 
-    // Fetch cached IPE balances for all members
-    let balanceMap: { [address: string]: any } = {};
-    const addresses = members
-      .map(m => m.walletAddress)
-      .filter((addr): addr is string => Boolean(addr));
+    const enrichedMembers = await enrichBulkMembers(members);
 
-    if (addresses.length > 0) {
-      try {
-        const { getCachedBalances } = await import('../services/balanceCache');
-        balanceMap = await getCachedBalances(addresses);
-        logger.debug('Fetched cached balances', { count: Object.keys(balanceMap).length });
-      } catch (balanceError) {
-        logger.warn('Failed to fetch cached balances', {
-          error: balanceError instanceof Error ? balanceError.message : String(balanceError),
-        });
-      }
-    }
-
-    // Fetch Farcaster profile data for members with FIDs
-    let membersWithProfiles = members;
-    const membersWithFids = members.filter(m => m.farcasterFid && m.farcasterFid > 0);
-
-    if (membersWithFids.length > 0) {
-      try {
-        const fids = membersWithFids.map(m => m.farcasterFid!);
-        const userResponse = await neynar.fetchBulkUsers({ fids });
-
-        if (userResponse.users && userResponse.users.length > 0) {
-          const profileMap = new Map();
-          userResponse.users.forEach((user: any) => {
-            profileMap.set(user.fid, {
-              displayName: user.display_name,
-              username: user.username,
-              pfpUrl: user.pfp_url,
-              bio: user.profile?.bio?.text,
-            });
-          });
-
-          // Merge profile data and balance data with member data
-          membersWithProfiles = members.map(member => {
-            const profile = member.farcasterFid ? profileMap.get(member.farcasterFid) : null;
-            const balance = member.walletAddress ? balanceMap[member.walletAddress.toLowerCase()] : null;
-
-            return {
-              ...member,
-              displayName: profile?.displayName || member.ipeUsername || `Member ${member.id}`,
-              username: profile?.username || member.ipeUsername,
-              pfpUrl: profile?.pfpUrl,
-              bio: profile?.bio || member.bio,
-              ipeBalance: balance?.balance || '0',
-              ipeBalanceRaw: balance?.balanceRaw || '0',
-            };
-          });
-        }
-      } catch (profileError) {
-        logger.warn('Failed to fetch Farcaster profiles', {
-          error: profileError instanceof Error ? profileError.message : String(profileError),
-        });
-        // Continue with member data, just add balance info
-        membersWithProfiles = members.map(member => {
-          const balance = member.walletAddress ? balanceMap[member.walletAddress.toLowerCase()] : null;
-          return {
-            ...member,
-            displayName: member.ipeUsername || `Member ${member.id}`,
-            username: member.ipeUsername,
-            ipeBalance: balance?.balance || '0',
-            ipeBalanceRaw: balance?.balanceRaw || '0',
-          };
-        });
-      }
-    } else {
-      // No members with Farcaster FIDs, just add balance info
-      membersWithProfiles = members.map(member => {
-        const balance = member.walletAddress ? balanceMap[member.walletAddress.toLowerCase()] : null;
-        return {
-          ...member,
-          displayName: member.ipeUsername || `Member ${member.id}`,
-          username: member.ipeUsername,
-          ipeBalance: balance?.balance || '0',
-          ipeBalanceRaw: balance?.balanceRaw || '0',
-        };
-      });
-    }
-
-    res.json({ members: membersWithProfiles });
+    res.json({ members: enrichedMembers });
   } catch (error) {
     logger.error('Get community members error', {
       error: error instanceof Error ? error.message : String(error),
@@ -1044,10 +926,7 @@ router.get('/community/members/:memberId', privyAuthMiddleware, async (req: Priv
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const memberId = parseInt(req.params.memberId);
-    if (isNaN(memberId)) {
-      return res.status(400).json({ error: 'Invalid member ID' });
-    }
+    const memberId = parseIntParam(req, 'memberId');
 
     const member = await storage.getMember(memberId);
     if (!member) {
@@ -1057,62 +936,11 @@ router.get('/community/members/:memberId', privyAuthMiddleware, async (req: Priv
     const totalPoints = await storage.calculateTotalPoints(memberId);
     const pulseStreak = await pulseService.calculateMemberStreak(memberId);
 
-    // Fetch Farcaster profile if FID exists
-    let profileData = null;
-    if (member.farcasterFid && member.farcasterFid > 0) {
-      try {
-        const userResponse = await neynar.fetchBulkUsers({ fids: [member.farcasterFid] });
-        if (userResponse.users && userResponse.users.length > 0) {
-          const user = userResponse.users[0] as { display_name?: string; username?: string; pfp_url?: string; profile?: { bio?: { text?: string } } };
-          profileData = {
-            displayName: user.display_name,
-            username: user.username,
-            pfpUrl: user.pfp_url,
-            bio: user.profile?.bio?.text,
-          };
-        }
-      } catch (profileError) {
-        logger.warn('Failed to fetch Farcaster profile', {
-          memberId,
-          fid: member.farcasterFid,
-          error: profileError instanceof Error ? profileError.message : String(profileError),
-        });
-      }
-    }
+    const enrichedMember = await enrichSingleMember(member, { totalPoints, pulseStreak });
 
-    // Fetch IPE balance if wallet exists
-    let balanceData = null;
-    if (member.walletAddress) {
-      try {
-        const { getCachedBalances } = await import('../services/balanceCache');
-        const balanceMap = await getCachedBalances([member.walletAddress]);
-        balanceData = balanceMap[member.walletAddress.toLowerCase()];
-      } catch (balanceError) {
-        logger.warn('Failed to fetch balance', {
-          memberId,
-          error: balanceError instanceof Error ? balanceError.message : String(balanceError),
-        });
-      }
-    }
-
-    const memberWithProfile = {
-      ...member,
-      totalPoints,
-      pulseStreak,
-      displayName: profileData?.displayName || member.ipeUsername || `Member ${member.id}`,
-      username: profileData?.username || member.ipeUsername,
-      pfpUrl: profileData?.pfpUrl,
-      bio: profileData?.bio || member.bio,
-      ipeBalance: balanceData?.balance || '0',
-      ipeBalanceRaw: balanceData?.balanceRaw || '0',
-    };
-
-    res.json({ member: memberWithProfile });
-  } catch (error) {
-    logger.error('Get community member details error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    res.status(500).json({ error: 'Failed to fetch member details' });
+    res.json({ member: enrichedMember });
+  } catch (err) {
+    handleServiceError(err, res, 'Failed to fetch member details');
   }
 });
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -142,7 +143,7 @@ export function PassportVerificationSection({
         description: `Your ${selectedDomain} domain has been verified.`,
       });
       if (queryClient) {
-        queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.all });
       }
       onVerificationComplete?.();
     },
@@ -216,7 +217,7 @@ export function PassportVerificationSection({
         description: `${memberData.member.ipeUsername}.ipecity.eth is now yours.`,
       });
       if (queryClient) {
-        queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.all });
       }
       onVerificationComplete?.();
     },
@@ -483,7 +484,7 @@ export function PassportVerificationSection({
             setShowApplicationForm(false);
             refreshMember();
             if (queryClient) {
-              queryClient.invalidateQueries({ queryKey: ["/api/members/check"] });
+              queryClient.invalidateQueries({ queryKey: queryKeys.members.all });
             }
           }}
         />

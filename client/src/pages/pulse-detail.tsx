@@ -3,6 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { authenticatedGet, authenticatedPatch, authenticatedDelete } from "@/lib/api";
+import { queryKeys } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,14 +50,14 @@ export default function PulseDetailPage() {
 
   // Fetch pulse types for admin editing
   const { data: pulseTypesData } = useQuery<PulseTypesResponse>({
-    queryKey: ["/api/pulse-types"],
+    queryKey: queryKeys.pulseTypes.list(),
     queryFn: () => authenticatedGet("/api/pulse-types", farcasterFid),
     enabled: Boolean(isAuthenticated && isAdmin && farcasterFid),
   });
 
   // Fetch pulse execution data - now accessible to all authenticated users
   const { data: pulseData, isLoading: pulseLoading, error: pulseError, refetch } = useQuery({
-    queryKey: [`/api/pulse/${pulseId}/executions`, farcasterFid], // Include profile.fid in query key
+    queryKey: queryKeys.pulses.executions(pulseId, farcasterFid), // Include profile.fid in query key
     queryFn: () => authenticatedGet(`/api/pulse/${pulseId}/executions`, farcasterFid),
     enabled: Boolean(isAuthenticated && farcasterFid && pulseId && !isLoading),
     retry: (failureCount, error) => {
@@ -77,7 +78,7 @@ export default function PulseDetailPage() {
       return authenticatedPatch(`/api/pulses/${pulseId}`, dataWithUTC, farcasterFid);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/pulse/${pulseId}/executions`, farcasterFid] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pulses.executions(pulseId, farcasterFid) });
       setIsEditing(false);
       toast({ title: "Success", description: "Pulse updated successfully" });
     },

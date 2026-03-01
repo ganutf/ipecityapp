@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useWallets, useLinkAccount } from "@privy-io/react-auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export function WalletsCard({ memberId, passportWalletAddress, ipePassport }: Wa
 
   // Fetch wallets from our DB
   const { data: dbWallets = [] } = useQuery<MemberWallet[]>({
-    queryKey: ['member-wallets', memberId],
+    queryKey: queryKeys.members.wallets(memberId),
     queryFn: async () => {
       const res = await authenticatedGet(`/api/v2/members/${memberId}/wallets`);
       return res.wallets;
@@ -141,7 +142,7 @@ export function WalletsCard({ memberId, passportWalletAddress, ipePassport }: Wa
         walletType: walletClientType === 'privy' ? 'privy_embedded' : 'external',
         label: walletClientType !== 'privy' ? formatWalletType(walletClientType) : undefined,
       });
-      queryClient.invalidateQueries({ queryKey: ['member-wallets', memberId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.wallets(memberId) });
     } catch (err: any) {
       const message = err?.message || '';
       if (message.includes('409') || message.includes('already linked')) {
@@ -175,7 +176,7 @@ export function WalletsCard({ memberId, passportWalletAddress, ipePassport }: Wa
   const handleRemove = async (row: WalletRow) => {
     try {
       await authenticatedDelete(`/api/v2/members/${memberId}/wallets/${row.address}`);
-      queryClient.invalidateQueries({ queryKey: ['member-wallets', memberId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.wallets(memberId) });
 
       // Also unlink from Privy
       const privyWallet = wallets.find(w => w.address.toLowerCase() === row.address.toLowerCase());

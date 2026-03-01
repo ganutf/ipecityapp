@@ -1,6 +1,7 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { queryKeys } from "@/lib/queryKeys";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { StatsCards } from "@/components/profile/StatsCards";
@@ -42,7 +43,7 @@ export default function MemberDetails() {
 
   // Fetch member details using Privy auth
   const { data: memberData, isLoading, error } = useQuery<MemberDetailsData>({
-    queryKey: [`/api/v2/community/members/${id}`],
+    queryKey: queryKeys.members.communityDetail(id!),
     queryFn: async () => {
       const token = await getAccessToken();
       const response = await fetch(`/api/v2/community/members/${id}`, {

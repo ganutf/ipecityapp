@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { usePrivy, useIdentityToken } from '@privy-io/react-auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { setApiAccessToken } from '@/lib/api';
+import { queryKeys } from '@/lib/queryKeys';
 import type { AuthMeResponse, MemberWithStats } from '@shared/types';
 
 // Check if Privy is configured
@@ -119,7 +120,7 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     isLoading: memberLoading,
     refetch: refetchMember,
   } = useQuery<AuthMeResponse | null>({
-    queryKey: ['/api/v2/auth/me', accessToken, identityToken],
+    queryKey: queryKeys.auth.me(accessToken, identityToken),
     queryFn: async () => {
       if (!accessToken) return null;
 

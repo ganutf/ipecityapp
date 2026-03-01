@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -25,7 +26,7 @@ export default function SignerApprovalPage() {
 
   // Get signer data
   const { data: signerData, refetch: refetchSigner, error: signerError } = useQuery<SignerResponse>({
-    queryKey: [`/api/neynar/signer/${member?.farcasterFid}`],
+    queryKey: queryKeys.signers.byMember(member?.farcasterFid),
     enabled: Boolean(member?.farcasterFid),
     refetchInterval: (query) => {
       // Stop polling if there's a rate limit error
@@ -86,7 +87,7 @@ export default function SignerApprovalPage() {
     if (signerData?.status === 'approved') {
       // Invalidate member status cache to trigger server auto-promotion check
       queryClient.invalidateQueries({
-        queryKey: [`/api/members/check/${member?.farcasterFid}`],
+        queryKey: queryKeys.members.check(member?.farcasterFid),
       });
       
       // Small delay to allow cache invalidation and status update

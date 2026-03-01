@@ -4,6 +4,7 @@ import type { Pulse, PulseType, Member, MemberType } from "@shared/schema";
 import type { PulsesResponse, PulseTypesResponse, MembersResponse, MemberWithStats } from "@shared/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { queryKeys } from "@/lib/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,21 +56,21 @@ export default function AdminPage() {
 
   // Fetch pulse types
   const { data: pulseTypesData, isLoading: pulseTypesLoading } = useQuery<PulseTypesResponse>({
-    queryKey: ["/api/pulse-types"],
+    queryKey: queryKeys.pulseTypes.list(),
     queryFn: () => authenticatedGet("/api/pulse-types"),
     enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Fetch all pulses - must be called before any returns
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery<PulsesResponse>({
-    queryKey: ["/api/pulses"],
+    queryKey: queryKeys.pulses.list(),
     queryFn: () => authenticatedGet("/api/pulses"),
     enabled: Boolean(isAuthenticated && isAdmin),
   });
 
   // Fetch all members
   const { data: membersData, isLoading: membersLoading } = useQuery<MembersResponse>({
-    queryKey: ["/api/members"],
+    queryKey: queryKeys.members.list(),
     queryFn: () => authenticatedGet("/api/members"),
     enabled: Boolean(isAuthenticated && isAdmin),
   });
@@ -88,7 +89,7 @@ export default function AdminPage() {
       return authenticatedPost("/api/pulses", pulseWithUTC);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pulses.list() });
       setNewPulse({ urlEmbed: "", datetimeStart: "", interval: 24, description: "", points: 1, pulseTypeId: 1 });
       toast({ title: "Success", description: "Pulse created successfully" });
     },
@@ -108,7 +109,7 @@ export default function AdminPage() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.list() });
       toast({ title: "Success", description: "Member approved and subdomain reserved" });
     },
     onError: (error: Error) => {
@@ -121,7 +122,7 @@ export default function AdminPage() {
       return authenticatedPost("/api/admin/deny-member", { memberId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.list() });
       toast({ title: "Success", description: "Member denied successfully" });
     },
     onError: (error: Error) => {
@@ -134,7 +135,7 @@ export default function AdminPage() {
       return authenticatedPatch(`/api/admin/update-member-type`, { memberId, memberType });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.members.list() });
       setIsEditingMemberType(false);
       toast({ title: "Success", description: "Member type updated successfully" });
     },

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { queryKeys } from "@/lib/queryKeys";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Search, Trophy, Target, SortAsc, SortDesc, Coins } from "lucide-react";
 import { getMemberTypeInfo } from "@/lib/memberTypeConfig";
@@ -155,7 +156,7 @@ export default function Community() {
 
   // Fetch community members using Privy auth
   const { data: membersData, isLoading: membersLoading, error } = useQuery<{ members: CommunityMember[] }>({
-    queryKey: ["/api/v2/community/members"],
+    queryKey: queryKeys.members.community(),
     queryFn: async () => {
       const token = await getAccessToken();
       const response = await fetch("/api/v2/community/members", {

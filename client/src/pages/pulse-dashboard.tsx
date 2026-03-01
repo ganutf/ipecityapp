@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authenticatedGet } from "@/lib/api";
 import { getEasScanUrl } from "@/lib/easUtils";
 import { formatTimeDifference } from "@/lib/dateUtils";
+import { queryKeys } from "@/lib/queryKeys";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, History, CheckCircle2, Users, Trophy, Heart, Repeat, Ban, X, ArrowRight, CheckCircle, XCircle, Target } from "lucide-react";
@@ -58,7 +59,7 @@ export default function PulseDashboard() {
 
   // Check if user is approved member
   const { data: memberCheck } = useQuery<MemberCheckResponse>({
-    queryKey: [`/api/members/check/${viewerMemberId}`],
+    queryKey: queryKeys.members.check(viewerMemberId),
     enabled: Boolean(isAuthenticated && hasValidFid && !authLoading),
     retry: 2, // Limit retries
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -73,7 +74,7 @@ export default function PulseDashboard() {
     isLoading: signerLoading,
     refetch: refetchSigner,
   } = useQuery<SignerResponse>({
-    queryKey: [`/api/neynar/signer/${viewerMemberId}`],
+    queryKey: queryKeys.signers.byMember(viewerMemberId),
     enabled: Boolean(
       isAuthenticated &&
       !!viewerMemberId &&
@@ -99,7 +100,7 @@ export default function PulseDashboard() {
 
   // Get all pulses
   const { data: pulsesData, isLoading: pulsesLoading } = useQuery<PulsesResponse>({
-    queryKey: ["/api/pulses"],
+    queryKey: queryKeys.pulses.list(),
     enabled: Boolean(
       isAuthenticated && memberCheck?.isMember && !authLoading,
     ),
@@ -110,7 +111,7 @@ export default function PulseDashboard() {
 
   // Get user's executions with detailed information including attestations
   const { data: executionsData, isLoading: executionsLoading, error: executionsError } = useQuery<ExecutionDetailsResponse>({
-    queryKey: [`/api/executions/${memberCheck?.member?.id}/details`],
+    queryKey: queryKeys.executions.details(memberCheck?.member?.id),
     queryFn: () => authenticatedGet(`/api/executions/${memberCheck?.member?.id}/details`, viewerMemberId),
     enabled: Boolean(
       isAuthenticated &&
@@ -449,7 +450,7 @@ function PostTool({
 
   // Get user's executions for this component
   const { data: executionsData, error: componentExecutionsError } = useQuery({
-    queryKey: [`/api/v2/executions/${memberId}`],
+    queryKey: queryKeys.executions.byMember(memberId),
     queryFn: () => authenticatedGet(`/api/v2/executions/${memberId}`),
     enabled: Boolean(memberId),
     retry: (failureCount, error) => {
@@ -574,11 +575,11 @@ function PostTool({
     },
     onSuccess: () => {
       // Invalidate all related cache keys for pulse execution data
-      queryClient.invalidateQueries({ queryKey: [`/api/executions/${member?.id}/details`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/v2/executions/${memberId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pulses"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.executions.details(member?.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.executions.byMember(memberId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pulses.list() });
       // Also invalidate the specific pulse execution endpoint
-      queryClient.invalidateQueries({ queryKey: [`/api/pulse/${pulse.id}/executions`] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pulses.executions(pulse.id) });
     },
   });
 

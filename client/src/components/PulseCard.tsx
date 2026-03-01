@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ interface PulseCardProps {
   isAdmin?: boolean;
 }
 
-export function PulseCard({
+export const PulseCard = memo(function PulseCard({
   pulse,
   executionStatus,
   showExecutionStatus = false,
@@ -212,4 +213,4 @@ export function PulseCard({
       </CardContent>
     </Card>
   );
-}
+});

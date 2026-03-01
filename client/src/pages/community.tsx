@@ -75,7 +75,14 @@ function MemberRow({
   };
 
   return (
-    <tr className="border-b border-gray-200 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setLocation(`/member/${member.id}`)}>
+    <tr
+      className="border-b border-gray-200 hover:bg-slate-50 transition-colors cursor-pointer"
+      onClick={() => setLocation(`/member/${member.id}`)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLocation(`/member/${member.id}`); } }}
+      tabIndex={0}
+      role="link"
+      aria-label={`View ${member.displayName || member.username || 'member'} profile`}
+    >
         {showRank && (
           <td className="px-4 py-4 text-center align-middle">
             {getRankBadge(member.rank)}

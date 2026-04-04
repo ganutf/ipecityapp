@@ -1,26 +1,31 @@
-# Ipe City Pulse
+# IpêCity Platform
 
-A community engagement tracking platform for Ipe City members. Admins create daily "pulses" (engagement tasks) with Farcaster posts, and members complete like/recast actions tracked on-chain via EAS attestations.
+A community engagement platform for IpêCity members. Admins create daily "pulses" — engagement tasks linked to Farcaster posts — and members complete like/recast actions tracked on-chain via EAS attestations on Base L2.
 
 ## Features
 
-- **Privy Authentication**: Email, passkey, and wallet-based login
-- **Member Onboarding**: Email verification, wallet connection, ENS passport (ipecity.eth subdomain)
-- **Pulse System**: Daily engagement tasks with Farcaster post interactions
-- **Admin Dashboard**: Pulse creation, member application review, approval workflow
-- **ENS Integration**: Automated subdomain reservation and acceptance via JustaName SDK
-- **EAS Attestations**: On-chain rewards on Base L2 for pulse completion
-- **Community Page**: Member directory with profiles and engagement stats
+- **Privy Authentication** — Email, passkey, and wallet-based login with automatic member creation
+- **Member Onboarding** — Multi-step verification: email, wallet connection, ENS passport (ipecity.eth subdomain)
+- **Pulse System** — Daily engagement tasks with Farcaster post interactions and real-time status tracking
+- **Admin Dashboard** — Pulse creation/editing, member application review, approval workflow
+- **ENS Integration** — Automated subdomain reservation and acceptance via JustaName SDK
+- **EAS Attestations** — On-chain rewards on Base L2 for pulse completion using a dedicated wallet
+- **Community Directory** — Member profiles with engagement stats, search, and filtering
+- **Farcaster Integration** — Sponsored signers for transaction-less cast interactions via Neynar SDK
 
 ## Tech Stack
 
-- **Frontend**: React 18 + TypeScript + Vite
-- **Backend**: Express.js + TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Styling**: Tailwind CSS + shadcn/ui
-- **Authentication**: Privy (email + passkey + wallet)
-- **Blockchain**: Ethereum mainnet (ENS), Base L2 (EAS attestations)
-- **Farcaster**: Neynar SDK for post interactions and sponsored signers
+| Layer      | Technology                                         |
+| ---------- | -------------------------------------------------- |
+| Frontend   | React 18, TypeScript, Vite                         |
+| Backend    | Express.js, TypeScript                             |
+| Database   | PostgreSQL, Drizzle ORM                            |
+| Styling    | Tailwind CSS, shadcn/ui                            |
+| Auth       | Privy (email + passkey + wallet)                   |
+| Blockchain | Ethereum mainnet (ENS), Base L2 (EAS attestations) |
+| Farcaster  | Neynar SDK (casts, sponsored signers)              |
+| ENS        | JustaName SDK (subdomain management)               |
+| Routing    | Wouter (lightweight client-side routing)           |
 
 ## Getting Started
 
@@ -29,73 +34,184 @@ A community engagement tracking platform for Ipe City members. Admins create dai
 - Node.js 20+
 - PostgreSQL database
 
-### Environment Variables
-
-Create a `.env` file:
-
-```env
-DATABASE_URL=postgresql://...
-NEYNAR_API_KEY=your_neynar_api_key
-JUSTANAME_API_KEY=your_justaname_api_key
-FARCASTER_DEVELOPER_MNEMONIC=your_mnemonic
-EAS_ATTESTATION_MNEMONIC=your_eas_mnemonic
-SESSION_SECRET=your_session_secret
-VITE_PRIVY_APP_ID=your_privy_app_id
-PRIVY_APP_ID=your_privy_app_id
-PRIVY_APP_SECRET=your_privy_app_secret
-VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_id
-EMAIL_TEST_MODE=true  # Set false for production
-```
-
 ### Installation
 
 ```bash
+git clone https://github.com/ganutf/ipecityapp.git
+cd ipecityapp
 npm install
-npm run db:push    # Push schema to database
-npm run dev        # Start development server
 ```
 
-### Commands
+### Environment Setup
+
+Copy the example env file and fill in your values:
 
 ```bash
-npm run dev              # Start dev server (client + server)
-npm run build            # Build production bundle
-npm run start            # Start production server
-npm run check            # TypeScript type checking
-npm run db:push          # Push schema changes to database
-npm run wallet:attestation  # Get EAS attestation wallet address
+cp .env.example .env
 ```
+
+Required variables:
+
+| Variable                                       | Description                               |
+| ---------------------------------------------- | ----------------------------------------- |
+| `DATABASE_URL`                                 | PostgreSQL connection string              |
+| `PRIVY_APP_ID` / `VITE_PRIVY_APP_ID`           | Privy application ID                      |
+| `PRIVY_APP_SECRET`                             | Privy app secret (server only)            |
+| `NEYNAR_API_KEY`                               | Neynar API key for Farcaster              |
+| `JUSTANAME_API_KEY` / `VITE_JUSTANAME_API_KEY` | JustaName API key for ENS subdomains      |
+| `FARCASTER_DEVELOPER_MNEMONIC`                 | Mnemonic for sponsoring Farcaster signers |
+| `EAS_ATTESTATION_MNEMONIC`                     | Separate mnemonic for EAS attestations    |
+| `SESSION_SECRET`                               | Session encryption secret                 |
+| `VITE_WALLETCONNECT_PROJECT_ID`                | WalletConnect project ID                  |
+| `RESEND_API_KEY`                               | Email service (Resend)                    |
+| `EMAIL_TEST_MODE`                              | Set `true` for development (logs emails)  |
+
+See [.env.example](.env.example) for the full list including EAS chain config and RPC URLs.
+
+### Database Setup
+
+```bash
+npm run db:push    # Push schema to database (interactive)
+```
+
+### Development
+
+```bash
+npm run dev        # Start dev server (client + server on port 5000)
+```
+
+### Production
+
+```bash
+npm run build      # Build production bundles
+npm run start      # Start production server
+```
+
+## Commands
+
+### Core
+
+| Command             | Description                      |
+| ------------------- | -------------------------------- |
+| `npm run dev`       | Start development server         |
+| `npm run build`     | Build production bundle          |
+| `npm run start`     | Start production server          |
+| `npm run check`     | TypeScript type checking         |
+| `npm run db:push`   | Push schema changes to database  |
+| `npm run db:studio` | Open Drizzle Studio database GUI |
+
+### Admin & Utilities
+
+| Command                        | Description                                    |
+| ------------------------------ | ---------------------------------------------- |
+| `npm run admin:create`         | Create an admin user                           |
+| `npm run admin:list`           | List all admins                                |
+| `npm run member:delete`        | Delete a member                                |
+| `npm run wallet:attestation`   | Get EAS attestation wallet address for funding |
+| `npm run attestations:create`  | Batch create attestations                      |
+| `npm run populate:pulse-types` | Seed pulse type definitions                    |
 
 ## Architecture
 
 ```
-client/src/           # React frontend
-├── components/       # UI components
-├── pages/            # Route pages
-├── hooks/            # Custom React hooks
-├── contexts/         # Auth context
-└── lib/              # Utilities
+client/src/               # React frontend
+├── components/           # UI components (pulse/, profile/, ui/)
+├── pages/                # Route pages
+├── hooks/                # Custom React hooks
+├── contexts/             # Auth & timezone contexts
+└── lib/                  # API helpers, query keys, utilities
 
-server/               # Express backend
-├── routes/           # API route modules
-├── middleware/        # Auth, validation middleware
-├── services/         # Business logic services
-├── lib/              # Server utilities
-└── scripts/          # Admin scripts
+server/                   # Express backend
+├── routes/               # V2 API route modules (8 files)
+├── services/             # Business logic services (7 services)
+├── middleware/            # Auth (Privy), validation (Zod)
+├── lib/                  # Error classes, route helpers, utilities
+├── jobs/                 # Background jobs (balance updater)
+└── scripts/              # Admin & migration scripts
 
 shared/
-├── schema.ts         # Database schema (Drizzle)
-└── constants.ts      # Shared constants
+├── schema.ts             # Database schema & validation (Drizzle + Zod)
+├── constants.ts          # Member types, statuses, limits, blockchain config
+└── types.ts              # Shared TypeScript interfaces
 ```
+
+### API Routes
+
+All API endpoints are under `/api/v2/`:
+
+| Module      | Prefix         | Description                       |
+| ----------- | -------------- | --------------------------------- |
+| Auth        | `/auth`        | Login, profile, wallet linking    |
+| Admin       | `/admin`       | Member approval, pulse management |
+| Pulse       | `/pulse`       | Pulse CRUD operations             |
+| Pulse Type  | `/pulse-type`  | Pulse type definitions            |
+| Execution   | `/execution`   | Pulse execution tracking          |
+| Attestation | `/attestation` | EAS on-chain attestations         |
+| Farcaster   | `/farcaster`   | Cast interactions, signers        |
+| Passport    | `/passport`    | ENS passport management           |
+
+### Services
+
+| Service                    | Responsibility                                  |
+| -------------------------- | ----------------------------------------------- |
+| `AttestationService`       | EAS on-chain attestation creation on Base L2    |
+| `ExecutionService`         | Pulse execution (like/recast) tracking          |
+| `FarcasterService`         | Cast data fetching, sponsored signer management |
+| `MemberAdminService`       | Admin approval workflows, subdomain reservation |
+| `PassportService`          | ENS passport verification and acceptance        |
+| `ProfileEnrichmentService` | Member profile + balance data enrichment        |
+| `PulseService`             | Pulse business logic and status management      |
 
 ## Member Status Flow
 
 ```
-Login (Privy) → pending_id_verification → [verify email + connect wallet]
-  → Submit application → pending_application_review
-  → Admin approves → approved_application (subdomain reserved)
-  → Accept passport → active_member
+Privy Login
+  │
+  ▼
+pending_id_verification ──→ [verify email + connect wallet]
+  │
+  ▼
+pending_application_review ──→ [submit application or verify ENS passport]
+  │
+  ├──→ denied_application
+  │
+  ▼
+approved_application ──→ [admin approves + subdomain reserved]
+  │
+  ▼
+active_member ──→ [user accepts ENS passport]
 ```
+
+Member types: `pending`, `architect`, `explorer`, `admin`, `org_team`, `core_team`
+
+## Wallet Separation
+
+The system uses two separate wallets for security isolation:
+
+1. **Farcaster Developer Wallet** (`FARCASTER_DEVELOPER_MNEMONIC`) — Sponsors Farcaster signers
+2. **EAS Attestation Wallet** (`EAS_ATTESTATION_MNEMONIC`) — Creates on-chain attestations on Base L2
+
+To get the attestation wallet address for funding:
+
+```bash
+npm run wallet:attestation
+```
+
+## Database
+
+PostgreSQL with Drizzle ORM. Key tables:
+
+| Table              | Purpose                                                       |
+| ------------------ | ------------------------------------------------------------- |
+| `members`          | Core member data (Privy ID, wallet, status, passport)         |
+| `member_wallets`   | All linked wallets per member (source of truth for ownership) |
+| `pulses`           | Daily engagement tasks created by admins                      |
+| `pulse_types`      | Pulse category definitions                                    |
+| `pulse_executions` | Like/recast completion tracking                               |
+| `attestations`     | EAS attestation records                                       |
+| `user_signers`     | Farcaster signer state per member                             |
+
+Schema is defined in `shared/schema.ts` with Zod validation schemas for all inputs.
 
 ## License
 

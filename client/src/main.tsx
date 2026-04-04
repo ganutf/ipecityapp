@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-// Using App with Privy authentication (RainbowKit removed)
 import App from "./App";
+import "@farcaster/auth-kit/styles.css";
 import "./index.css";
 
 // Suppress WebSocket/WalletConnect errors that cause popup overlays

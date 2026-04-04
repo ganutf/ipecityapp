@@ -50,8 +50,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  // Full-screen landing page — bypass Layout header entirely
+  if (location === '/' && !isAuthenticated) {
+    return <>{children}</>;
+  }
+
   return (
-    <main className="font-sans min-h-screen bg-gray-50 flex flex-col items-center p-6">
+    <main className="font-body min-h-screen bg-gray-50 flex flex-col items-center p-6">
       <header className="w-full max-w-4xl flex items-center justify-between mb-12">
         <Link href="/" className="text-2xl font-bold text-gray-900 hover:text-purple-600 transition-colors">
           Ipê City

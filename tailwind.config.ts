@@ -5,12 +5,24 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        display: ['Chakra Petch', 'sans-serif'],
+        body: ['DM Sans', 'sans-serif'],
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
+        ipe: {
+          navy: '#002642',
+          blue: '#3AA5FF',
+          lime: '#A2D729',
+          yellow: '#FFB600',
+          white: '#EFF2F1',
+          black: '#000000',
+        },
         background: "var(--background)",
         foreground: "var(--foreground)",
         card: {

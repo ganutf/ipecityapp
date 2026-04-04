@@ -63,6 +63,7 @@ export interface IStorage {
   // Members - Primary methods using memberId
   getMember(memberId: number): Promise<Member | undefined>;
   getMemberByEmail(email: string): Promise<Member | undefined>;
+  getMemberByWalletAddress(walletAddress: string): Promise<Member | undefined>;
   getMemberByIpePassport(passport: string): Promise<Member | undefined>;
   createMember(member: InsertMember): Promise<Member>;
   updateMember(memberId: number, member: UpdateMember): Promise<Member>;
@@ -279,6 +280,11 @@ export class DatabaseStorage implements IStorage {
 
   async getMemberByEmail(email: string): Promise<Member | undefined> {
     const [member] = await db.select().from(members).where(eq(members.email, email));
+    return member;
+  }
+
+  async getMemberByWalletAddress(walletAddress: string): Promise<Member | undefined> {
+    const [member] = await db.select().from(members).where(eq(members.walletAddress, walletAddress.toLowerCase()));
     return member;
   }
 

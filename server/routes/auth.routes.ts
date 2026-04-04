@@ -11,6 +11,7 @@ import {
 import { parseIntParam, handleServiceError } from '../lib/routeHelpers';
 import { TIMING } from '@shared/constants';
 import type { PrivyLinkedAccount } from '@shared/types';
+import type { Member } from '@shared/schema';
 
 const router = Router();
 
@@ -30,18 +31,31 @@ router.post('/auth/login', privyAuthMiddleware, async (req: PrivyAuthRequest, re
     const { id: privyId } = req.privyUser;
     const { email, walletAddress } = req.body;
 
-    // Check if member already exists
+    // Check if member already exists by Privy ID
     let member = await storage.getMemberByPrivyId(privyId);
 
     if (!member) {
-      // Create new member from Privy data
-      logger.info('Creating new member from Privy', {
-        privyId,
-        email,
-        walletAddress,
-      });
+      // Try linking to existing member by email or wallet (handles migrated users)
+      if (email) {
+        member = await storage.getMemberByEmail(email);
+      }
+      if (!member && walletAddress) {
+        member = await storage.getMemberByWalletAddress(walletAddress);
+      }
 
-      member = await storage.createMemberFromPrivy(privyId, email, walletAddress);
+      if (member) {
+        // Link Privy ID to existing member
+        member = await storage.updateMember(member.id, { privyId });
+        logger.info('Privy account linked to existing member via /login', {
+          memberId: member.id, privyId, email,
+        });
+      } else {
+        // Create new member from Privy data
+        logger.info('Creating new member from Privy', {
+          privyId, email, walletAddress,
+        });
+        member = await storage.createMemberFromPrivy(privyId, email, walletAddress);
+      }
     }
 
     res.json({
@@ -115,40 +129,78 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
     }
 
     if (!member) {
-      // User is authenticated but not a member yet - auto-create
-      logger.info('Auto-creating member for Privy user', {
-        privyId: req.privyUser.id,
-        email: privyEmail,
-        wallet: privyWallet,
-      });
+      // No member found by privyId — try linking to existing member by email or wallet
+      // This handles migrated users who don't have a privy_id yet
+      let existingMember: Member | undefined;
 
-      try {
-        member = await storage.createMemberFromPrivy(
-          req.privyUser.id,
-          privyEmail,
-          privyWallet
-        );
-        logger.info('Member auto-created successfully', {
+      if (privyEmail) {
+        existingMember = await storage.getMemberByEmail(privyEmail);
+        if (existingMember) {
+          logger.info('Found existing member by email, linking Privy account', {
+            memberId: existingMember.id,
+            email: privyEmail,
+            privyId: req.privyUser.id,
+          });
+        }
+      }
+
+      if (!existingMember && privyWallet) {
+        // Check member_wallets table for wallet ownership
+        const walletOwner = await storage.getMemberByWalletAddress(privyWallet);
+        if (walletOwner) {
+          existingMember = walletOwner;
+          logger.info('Found existing member by wallet, linking Privy account', {
+            memberId: existingMember.id,
+            wallet: privyWallet,
+            privyId: req.privyUser.id,
+          });
+        }
+      }
+
+      if (existingMember) {
+        // Link Privy ID to existing member
+        member = await storage.updateMember(existingMember.id, {
+          privyId: req.privyUser.id,
+        });
+        logger.info('Privy account linked to existing member', {
           memberId: member.id,
           privyId: req.privyUser.id,
         });
-      } catch (createError) {
-        logger.error('Failed to auto-create member', {
+      } else {
+        // No existing member found — auto-create new one
+        logger.info('Auto-creating member for Privy user', {
           privyId: req.privyUser.id,
-          error: createError instanceof Error ? createError.message : String(createError),
+          email: privyEmail,
+          wallet: privyWallet,
         });
-        // Return without member if creation fails
-        return res.json({
-          isMember: false,
-          status: null,
-          member: null,
-          memberId: null,
-          privyUser: {
-            id: req.privyUser.id,
-            email: privyEmail,
-            wallet: privyWallet,
-          },
-        });
+
+        try {
+          member = await storage.createMemberFromPrivy(
+            req.privyUser.id,
+            privyEmail,
+            privyWallet
+          );
+          logger.info('Member auto-created successfully', {
+            memberId: member.id,
+            privyId: req.privyUser.id,
+          });
+        } catch (createError) {
+          logger.error('Failed to auto-create member', {
+            privyId: req.privyUser.id,
+            error: createError instanceof Error ? createError.message : String(createError),
+          });
+          return res.json({
+            isMember: false,
+            status: null,
+            member: null,
+            memberId: null,
+            privyUser: {
+              id: req.privyUser.id,
+              email: privyEmail,
+              wallet: privyWallet,
+            },
+          });
+        }
       }
     } else {
       // Member exists - sync missing data from Privy

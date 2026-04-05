@@ -1,9 +1,16 @@
-import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
+import { createRequire } from "node:module";
+import type { EAS as EASClass, SchemaEncoder as SchemaEncoderClass } from "@ethereum-attestation-service/eas-sdk";
 import { ethers } from "ethers";
 import { config } from 'dotenv';
 import logger, { logUtils } from '../logger';
 import { getServerChainConfig } from '@shared/chainConfig';
 import { EAS_CONSTANTS } from '@shared/constants';
+
+const require = createRequire(import.meta.url);
+const { EAS, SchemaEncoder } = require("@ethereum-attestation-service/eas-sdk") as {
+  EAS: typeof EASClass;
+  SchemaEncoder: typeof SchemaEncoderClass;
+};
 
 // Load environment variables
 config();

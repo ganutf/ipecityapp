@@ -87,6 +87,23 @@ npm run build      # Build production bundles
 npm run start      # Start production server
 ```
 
+### Coolify Deployment (Simplest Path)
+
+For Coolify, this app works best as a **single Nixpacks service**:
+
+- **Build Command:** `npm ci && npm run build`
+- **Start Command:** `npm run start`
+- **Port:** `5000`
+
+Notes:
+- The app serves API + frontend from one process on port `5000`.
+- Configure all secrets as Coolify environment variables (recommended).
+- You can use `nixpacks.toml` defaults, but prefer `npm ci` for reproducible builds.
+
+### Hosting Platform Note
+
+If Coolify feels heavy operationally, prefer a **Node-friendly PaaS** (Railway/Render/Fly.io) before considering a Vercel migration. This codebase currently runs as a long-lived Express process with in-process background jobs, which is usually a better fit for always-on services than serverless-first platforms.
+
 ## Commands
 
 ### Core

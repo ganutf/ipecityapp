@@ -1,4 +1,5 @@
-import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
+import pkg from "@ethereum-attestation-service/eas-sdk";
+const { EAS, SchemaEncoder } = pkg;
 import { ethers } from "ethers";
 import { config } from 'dotenv';
 import logger, { logUtils } from '../logger';

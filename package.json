@@ -5,8 +5,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire as _cr } from 'module'; import { fileURLToPath as _fp } from 'url'; import { dirname as _dn } from 'path'; const require = _cr(import.meta.url); const __filename = _fp(import.meta.url); const __dirname = _dn(__filename);\" --external:bufferutil --external:utf-8-validate --external:keccak --external:secp256k1 --external:pg-native --external:canvas --external:lightningcss --external:@babel/preset-typescript --external:jsdom",
-    "start": "NODE_ENV=production node dist/index.js",
+    "build": "vite build",
+    "start": "NODE_ENV=production tsx server/index.ts",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
@@ -113,7 +113,8 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0"
+    "zod-validation-error": "^3.4.0",
+    "tsx": "^4.19.1"
   },
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.2.7",
@@ -139,7 +140,6 @@
     "nanoid": "^3.3.11",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",
-    "tsx": "^4.19.1",
     "typescript": "5.6.3",
     "vite": "^5.4.14",
     "vitest": "^4.0.18"

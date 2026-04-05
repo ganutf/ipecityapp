@@ -64,17 +64,15 @@ const frontendUrl = process.env.FRONTEND_URL || 'https://pulse.ipecity.org';
 const allowedOrigins = isProduction
   ? [
     frontendUrl,
-    'https://ipecity.replit.app' // Add Replit domain
+    'https://app.ipe.city',
+    'https://ipecity.replit.app'
   ]
   : ['http://localhost:5000', 'http://127.0.0.1:5000']; // Development domains
 
 app.use(cors({
   origin: (origin, callback) => {
+    // No origin = page navigations, server-to-server, same-origin requests — always allow
     if (!origin) {
-      if (isProduction) {
-        logger.warn('CORS blocked request with no origin');
-        return callback(new Error('Origin header required'));
-      }
       return callback(null, true);
     }
 

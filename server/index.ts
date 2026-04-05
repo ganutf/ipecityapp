@@ -59,7 +59,7 @@ if (isProduction) {
 }
 
 // Security headers and CORS configuration
-const frontendUrl = process.env.FRONTEND_URL || 'https://pulse.ipecity.org';
+const frontendUrl = process.env.FRONTEND_URL || 'https://app.ipe.city';
 
 const allowedOrigins = isProduction
   ? [

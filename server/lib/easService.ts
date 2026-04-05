@@ -1,9 +1,4 @@
-// Type-only import (erased at build time, no runtime resolution)
-import type { EAS as EASType, SchemaEncoder as SchemaEncoderType } from "@ethereum-attestation-service/eas-sdk";
-// Runtime import via CJS require — EAS SDK's ESM entry point is broken in Node.js 20
-import { createRequire } from "module";
-const _require = createRequire(import.meta.url);
-const { EAS, SchemaEncoder } = _require("@ethereum-attestation-service/eas-sdk");
+import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 import { ethers } from "ethers";
 import { config } from 'dotenv';
 import logger, { logUtils } from '../logger';
@@ -36,10 +31,10 @@ export interface AttestationResult {
 }
 
 class EASService {
-  private eas!: EASType;
+  private eas!: EAS;
   private provider!: ethers.JsonRpcProvider;
   private signer!: ethers.Wallet;
-  private schemaEncoder!: SchemaEncoderType;
+  private schemaEncoder!: SchemaEncoder;
   private initialized = false;
 
   private async initialize() {

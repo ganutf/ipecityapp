@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { authenticatedPost } from "@/lib/api";
 import { CheckCircle, AlertCircle } from "lucide-react";
 
 interface EmailVerificationSectionProps {
@@ -43,12 +43,8 @@ export function EmailVerificationSection({
   // Send verification email
   const sendVerificationMutation = useMutation({
     mutationFn: async (emailAddress: string) => {
-      return apiRequest(`/api/auth/request-email-verification`, {
-        method: "POST",
-        body: JSON.stringify({
-          farcasterFid,
-          email: emailAddress,
-        }),
+      return authenticatedPost('/api/v2/auth/request-email-verification', {
+        email: emailAddress,
       });
     },
     onSuccess: () => {
@@ -73,12 +69,8 @@ export function EmailVerificationSection({
   // Confirm verification code
   const confirmVerificationMutation = useMutation({
     mutationFn: async (code: string) => {
-      return apiRequest(`/api/auth/confirm-email`, {
-        method: "POST",
-        body: JSON.stringify({
-          farcasterFid,
-          code,
-        }),
+      return authenticatedPost('/api/v2/auth/verify-email', {
+        code,
       });
     },
     onSuccess: () => {

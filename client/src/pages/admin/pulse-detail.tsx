@@ -1,6 +1,6 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { usePersistentAuth } from "@/hooks/use-persistent-auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { authenticatedGet } from "@/lib/api";
 import { getPulseTimingInfo } from "@/lib/pulseUtils";
 import { Button } from "@/components/ui/button";
@@ -10,24 +10,17 @@ import { PulseExecutionsTable } from "@/components/PulseExecutionsTable";
 export default function PulseDetailPage() {
   const params = useParams();
   const [, setLocation] = useLocation();
-  const { isAuthenticated, profile, isLoading } = usePersistentAuth();
-  
+  const { isAuthenticated, member, isLoading } = useAuth();
+
   const pulseId = parseInt(params.id || '0');
 
-  // Check current user's member data to determine admin status
-  const { data: currentMemberData } = useQuery({
-    queryKey: [`/api/members/check/${profile?.fid}`],
-    enabled: Boolean(profile?.fid),
-  });
-
-  // Check if user is admin based on memberType
-  const isAdmin = (currentMemberData as any)?.member?.memberType === 'admin';
+  const isAdmin = member?.memberType === 'admin';
 
   // Fetch pulse execution data
   const { data: pulseData, isLoading: pulseLoading, refetch } = useQuery({
-    queryKey: [`/api/pulse/${pulseId}/executions`],
-    queryFn: () => authenticatedGet(`/api/pulse/${pulseId}/executions`, profile?.fid),
-    enabled: Boolean(isAuthenticated && isAdmin && profile?.fid && pulseId),
+    queryKey: [`/api/v2/pulses/${pulseId}/executions`],
+    queryFn: () => authenticatedGet(`/api/v2/pulses/${pulseId}/executions`),
+    enabled: Boolean(isAuthenticated && isAdmin && pulseId),
   });
 
   // Show loading while auth is initializing
@@ -85,12 +78,6 @@ export default function PulseDetailPage() {
       minute: '2-digit',
       timeZoneName: 'short'
     });
-  };
-
-  const getEndDateTime = (startDateTime: string, intervalHours: number) => {
-    const start = new Date(startDateTime);
-    const end = new Date(start.getTime() + intervalHours * 60 * 60 * 1000);
-    return end;
   };
 
   const getPulseTimingStatus = () => {
@@ -200,7 +187,6 @@ export default function PulseDetailPage() {
         <PulseExecutionsTable
           pulse={pulse}
           executions={executions}
-          profile={profile}
           onRefresh={() => refetch()}
         />
       </div>

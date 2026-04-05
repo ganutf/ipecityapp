@@ -54,7 +54,7 @@ interface Pulse {
 interface PulseExecutionsTableProps {
   pulse: Pulse;
   executions: PulseExecution[];
-  profile: any;
+  profile?: any;
   onRefresh: () => void;
   isAdmin?: boolean;
 }

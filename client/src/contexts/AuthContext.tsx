@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { usePrivy, useIdentityToken } from '@privy-io/react-auth';
+import { usePrivy, useIdentityToken, useWallets } from '@privy-io/react-auth';
+import { useDisconnect } from 'wagmi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { setApiAccessToken } from '@/lib/api';
 import { queryKeys } from '@/lib/queryKeys';
@@ -94,6 +95,8 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
 
   // Get identity token (contains full user profile including email)
   const { identityToken } = useIdentityToken();
+  const { wallets } = useWallets();
+  const { disconnect: disconnectWagmi } = useDisconnect();
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
@@ -154,6 +157,23 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
   } : null;
 
   const handleLogout = async () => {
+    // Disconnect all wallets from Privy before logout
+    // Prevents stale wallet connections from persisting across sessions
+    for (const wallet of wallets) {
+      try {
+        wallet.disconnect();
+      } catch {
+        // Some wallets don't support programmatic disconnect
+      }
+    }
+
+    // Disconnect wagmi connectors as safety net
+    try {
+      disconnectWagmi();
+    } catch {
+      // Ignore if no active connection
+    }
+
     await privyLogout();
     setAccessToken(null);
     setApiAccessToken(null);

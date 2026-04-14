@@ -51,6 +51,7 @@ import { db } from "./db";
 import { eq, and, or, desc, asc, isNull, isNotNull, inArray, sql } from "drizzle-orm";
 import { EAS_CONSTANTS } from "@shared/constants";
 import logger from "./logger";
+import { isPulseActive, getCurrentUTC } from "@shared/pulseUtils";
 
 export interface IStorage {
   // Database Transactions
@@ -343,29 +344,94 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveMembersWithStats(pulseService?: { calculateMemberStreak(memberId: number): Promise<number> }): Promise<Array<Member & { totalPoints: number; pulseStreak: number }>> {
-    // Get all active members
+    // Query 1: get all active members
     const activeMembers = await db
       .select()
       .from(members)
       .where(eq(members.status, 'active_member'))
       .orderBy(desc(members.createdAt));
 
-    // Calculate stats for each member
-    const membersWithStats = await Promise.all(
-      activeMembers.map(async (member) => {
-        const totalPoints = await this.calculateTotalPoints(member.id);
-        const pulseStreak = pulseService 
-          ? await pulseService.calculateMemberStreak(member.id)
-          : await this.calculatePulseStreak(member.id);
-        return {
-          ...member,
-          totalPoints,
-          pulseStreak,
-        };
+    if (activeMembers.length === 0) return [];
+
+    const memberIds = activeMembers.map(m => m.id);
+
+    // Query 2: total points for ALL members in one grouped query (replaces N individual queries)
+    const pointsRows = await db
+      .select({
+        memberId: pulseExecutions.memberId,
+        totalPoints: sql<number>`COALESCE(SUM(${pulses.points}), 0)::int`,
       })
+      .from(pulseExecutions)
+      .innerJoin(pulses, eq(pulseExecutions.pulseId, pulses.id))
+      .where(inArray(pulseExecutions.memberId, memberIds))
+      .groupBy(pulseExecutions.memberId);
+
+    const pointsMap = new Map<number, number>(
+      pointsRows.map(r => [r.memberId!, r.totalPoints])
     );
 
-    return membersWithStats;
+    // Queries 3 & 4: batch-load all pulse/execution data for streak calculation
+    // (replaces N individual getPulsesWithExecutionStatus queries)
+    const [allPulseRows, allExecutionRows] = await Promise.all([
+      db
+        .select({
+          pulseId: pulses.id,
+          datetimeStart: pulses.datetimeStart,
+          interval: pulses.interval,
+        })
+        .from(pulses)
+        .orderBy(desc(pulses.datetimeStart)),
+      db
+        .select({
+          pulseId: pulseExecutions.pulseId,
+          memberId: pulseExecutions.memberId,
+        })
+        .from(pulseExecutions)
+        .where(inArray(pulseExecutions.memberId, memberIds)),
+    ]);
+
+    // Build per-member execution set: memberId -> Set<pulseId>
+    const executionsByMember = new Map<number, Set<number>>();
+    for (const row of allExecutionRows) {
+      if (!executionsByMember.has(row.memberId)) {
+        executionsByMember.set(row.memberId, new Set());
+      }
+      executionsByMember.get(row.memberId)!.add(row.pulseId);
+    }
+
+    // Compute streak in-memory using the same logic as PulseService.calculateMemberStreak
+    const currentTime = getCurrentUTC();
+    const computeStreak = (memberId: number): number => {
+      const executed = executionsByMember.get(memberId) ?? new Set<number>();
+      let streak = 0;
+
+      for (let i = 0; i < allPulseRows.length; i++) {
+        const p = allPulseRows[i];
+        if (!p.datetimeStart || p.interval <= 0) continue;
+
+        const isExecuted = executed.has(p.pulseId);
+        const active = isPulseActive(p.datetimeStart, p.interval, currentTime);
+
+        // Most recent pulse is active but not yet executed — skip without breaking streak
+        if (i === 0 && active && !isExecuted) continue;
+
+        if (isExecuted) {
+          streak++;
+        } else if (!active) {
+          // Ended pulse not executed — streak is broken
+          break;
+        }
+        // Active pulse that is executed: counted above; active + not executed: already handled by i===0 skip
+      }
+
+      return streak;
+    };
+
+    return activeMembers.map(member => ({
+      ...member,
+      totalPoints: pointsMap.get(member.id) ?? 0,
+      pulseStreak: computeStreak(member.id),
+    }));
   }
 
   async getMemberWithStats(memberId: number, pulseService?: { calculateMemberStreak(memberId: number): Promise<number> }): Promise<(Member & { totalPoints: number; pulseStreak: number }) | undefined> {

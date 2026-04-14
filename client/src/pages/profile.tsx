@@ -388,7 +388,6 @@ export default function Profile2() {
                 <div>
                   <EmailVerificationSection
                     memberId={memberId || 0}
-                    farcasterFid={member?.farcasterFid || undefined}
                     currentEmail={memberData?.member?.email}
                     isVerified={memberData?.member?.emailVerified || false}
                     allowChange={true}

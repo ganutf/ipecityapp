@@ -22,13 +22,28 @@ import { mainnet } from "viem/chains";
 import { ApplicationForm } from "@/components/ApplicationForm";
 import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users } from "lucide-react";
 
+interface PassportMemberData {
+  isMember: boolean;
+  status?: string;
+  member?: {
+    id: number;
+    email?: string | null;
+    status: string;
+    ipeUsername?: string | null;
+    walletAddress?: string | null;
+    memberType: string;
+    ipePassport?: string | null;
+  };
+}
+
 interface PassportVerificationSectionProps {
   memberId: number;
   currentPassport?: string;
   isVerified?: boolean;
   onVerificationComplete?: () => void;
-  memberData: any;
+  memberData: PassportMemberData;
   context?: 'profile' | 'id-verification';
+  variant?: 'default' | 'wizard';
 }
 
 export function PassportVerificationSection({
@@ -38,6 +53,7 @@ export function PassportVerificationSection({
   onVerificationComplete,
   memberData,
   context = 'profile',
+  variant = 'default',
 }: PassportVerificationSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -214,7 +230,7 @@ export function PassportVerificationSection({
 
       toast({
         title: message,
-        description: `${memberData.member.ipeUsername}.ipecity.eth is now yours.`,
+        description: `${memberData.member?.ipeUsername}.ipecity.eth is now yours.`,
       });
       if (queryClient) {
         queryClient.invalidateQueries({ queryKey: queryKeys.members.all });
@@ -245,6 +261,27 @@ export function PassportVerificationSection({
   };
 
   const handleAcceptSubdomain = () => {
+    const requiredWallet = memberData.member?.walletAddress?.toLowerCase();
+    const connectedWallet = address?.toLowerCase();
+
+    if (!connectedWallet) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to accept your passport.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (requiredWallet && connectedWallet !== requiredWallet) {
+      toast({
+        title: "Wrong wallet connected",
+        description: `Please connect the wallet registered for this passport: ${requiredWallet.slice(0, 6)}...${requiredWallet.slice(-4)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     acceptSubdomainMutation.mutate();
   };
 
@@ -262,14 +299,14 @@ export function PassportVerificationSection({
       case "approved_application":
         return {
           title: "Accept Your Passport",
-          description: `Your subdomain ${memberData.member.ipeUsername}.ipecity.eth has been reserved and is ready to accept.`,
+          description: `Your subdomain ${memberData.member?.ipeUsername}.ipecity.eth has been reserved and is ready to accept.`,
           icon: <Globe className="h-5 w-5 text-blue-500" />,
           color: "blue",
         };
       case "active_member":
         return {
           title: "Verified Member",
-          description: `Welcome! You have access as a ${memberData.member.memberType}.`,
+          description: `Welcome! You have access as a ${memberData.member?.memberType}.`,
           icon: <CheckCircle className="h-5 w-5 text-green-500" />,
           color: "green",
         };
@@ -284,198 +321,206 @@ export function PassportVerificationSection({
   };
 
   const statusDisplay = getStatusDisplay();
+  const isWizard = variant === 'wizard';
 
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {statusDisplay.icon}
-            Ipê Passport Verification
-          </CardTitle>
-          <CardDescription>{statusDisplay.description}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Wallet Connection */}
-          {!isConnected && (
+  const bodyContent = (
+    <div className="space-y-4">
+      {/* Wallet Connection - hidden in wizard mode (already completed) */}
+      {!isWizard && !isConnected && (
+        <div className="text-center">
+          <Button onClick={() => connectWallet()} className="w-full">
+            <Wallet className="mr-2 h-4 w-4" />
+            Connect Wallet
+          </Button>
+        </div>
+      )}
+
+      {/* ENS Domain Check */}
+      {isConnected && (
+        <div className="space-y-3">
+          {/* Wallet info row - compact in wizard mode */}
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <p className="font-medium text-sm">{context === 'id-verification' ? 'Connected Wallet' : 'Associated Wallet'}</p>
+              <p className="text-sm text-gray-600">{address?.slice(0, 6)}...{address?.slice(-4)}</p>
+            </div>
+            <div className="text-right">
+              {ensLoading ? (
+                <p className="text-sm text-gray-500">Looking up ENS domain...</p>
+              ) : ensNames.length > 1 ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-green-600">{ensNames.length} domains found</p>
+                  <p className="text-xs text-gray-500">Selected: {selectedDomain}</p>
+                </div>
+              ) : ensNames.length === 1 ? (
+                <p className="text-sm font-medium text-green-600">{ensNames[0]}</p>
+              ) : (
+                <p className="text-sm text-gray-500">No Ipe City domain</p>
+              )}
+            </div>
+          </div>
+
+          {/* Disconnect External Wallet Button - hidden in wizard mode */}
+          {!isWizard && isExternalWallet && disconnectExternalWallet && (
             <div className="text-center">
-              <Button onClick={() => connectWallet()} className="w-full">
-                <Wallet className="mr-2 h-4 w-4" />
-                Connect Wallet
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  disconnectExternalWallet();
+                  setWalletConnectedForVerification(false);
+                  setVerificationStatus("idle");
+                }}
+              >
+                Disconnect Wallet
               </Button>
             </div>
           )}
 
-          {/* ENS Domain Check */}
-          {isConnected && (
+          {/* Show domain verification button if Ipe City domain is found */}
+          {isConnected && address && !ensLoading && hasIpeCityDomain &&
+            memberData?.member?.status !== "approved_application" &&
+            memberData?.member?.status !== "active_member" && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">{context === 'id-verification' ? 'Connected Wallet' : 'Associated Wallet'}</p>
-                  <p className="text-sm text-gray-600">{address?.slice(0, 6)}...{address?.slice(-4)}</p>
-                </div>
-                <div className="text-right">
-                  {ensLoading ? (
-                    <p className="text-sm text-gray-500">Looking up ENS domain...</p>
-                  ) : ensNames.length > 1 ? (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-green-600">{ensNames.length} domains found</p>
-                      <p className="text-xs text-gray-500">Selected: {selectedDomain}</p>
-                    </div>
-                  ) : ensNames.length === 1 ? (
-                    <p className="text-sm font-medium text-green-600">{ensNames[0]}</p>
-                  ) : (
-                    <p className="text-sm text-gray-500">No Ipê City domain</p>
-                  )}
-                </div>
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-800 font-medium">
+                  {ensNames.length > 1 ? 'Multiple Ipe City Domains Found!' : 'Ipe City Domain Detected!'}
+                </p>
+                <p className="text-sm text-green-700">
+                  {ensNames.length > 1
+                    ? 'Choose which domain to verify with:'
+                    : `${selectedDomain} detected! Sign a message to verify ownership.`
+                  }
+                </p>
               </div>
 
-              {/* Disconnect External Wallet Button */}
-              {isExternalWallet && disconnectExternalWallet && (
-                <div className="text-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      disconnectExternalWallet();
-                      setWalletConnectedForVerification(false);
-                      setVerificationStatus("idle");
-                    }}
-                  >
-                    Disconnect Wallet
-                  </Button>
+              {/* Domain Selection UI */}
+              {ensNames.length > 1 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">Select domain to verify:</p>
+                  <div className="space-y-2">
+                    {ensNames.map((domain) => (
+                      <label key={domain} className="flex items-center space-x-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="selectedDomain"
+                          value={domain}
+                          checked={selectedDomain === domain}
+                          onChange={(e) => setSelectedDomain(e.target.value)}
+                          className="text-green-600 focus:ring-green-500"
+                        />
+                        <span className="text-sm font-medium text-gray-900">{domain}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Show domain verification button if Ipê City domain is found (but not if approved/active - those have their own UI) */}
-              {isConnected && address && !ensLoading && hasIpeCityDomain &&
-                memberData?.member?.status !== "approved_application" &&
-                memberData?.member?.status !== "active_member" && (
-                <div className="space-y-3">
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800 font-medium">
-                      {ensNames.length > 1 ? 'Multiple Ipê City Domains Found!' : 'Ipê City Domain Detected!'}
-                    </p>
-                    <p className="text-sm text-green-700">
-                      {ensNames.length > 1 
-                        ? 'Choose which domain to verify with:'
-                        : `${selectedDomain} detected! Sign a message to verify ownership and activate your membership.`
-                      }
-                    </p>
-                  </div>
-                  
-                  {/* Domain Selection UI */}
-                  {ensNames.length > 1 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700">Select domain to verify:</p>
-                      <div className="space-y-2">
-                        {ensNames.map((domain) => (
-                          <label key={domain} className="flex items-center space-x-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="selectedDomain"
-                              value={domain}
-                              checked={selectedDomain === domain}
-                              onChange={(e) => setSelectedDomain(e.target.value)}
-                              className="text-green-600 focus:ring-green-500"
-                            />
-                            <span className="text-sm font-medium text-gray-900">{domain}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <Button
-                    onClick={handleVerifyPassport}
-                    disabled={verifyPassportMutation.isPending || !selectedDomain}
-                    className="w-full"
-                  >
-                    <Wallet className="mr-2 h-4 w-4" />
-                    {verifyPassportMutation.isPending ? "Signing..." : `Sign & Activate with ${selectedDomain}`}
-                  </Button>
-                </div>
-              )}
+              <Button
+                onClick={handleVerifyPassport}
+                disabled={verifyPassportMutation.isPending || !selectedDomain}
+                className="w-full"
+              >
+                <Wallet className="mr-2 h-4 w-4" />
+                {verifyPassportMutation.isPending ? "Signing..." : `Sign & Activate with ${selectedDomain}`}
+              </Button>
+            </div>
+          )}
 
-              {/* Show application button only if NO Ipê City domain is found AND not approved */}
-              {isConnected && address && !ensLoading && hasIpeCityDomain === false &&
-                memberData?.member?.status !== "approved_application" &&
-                memberData?.member?.status !== "active_member" &&
-                memberData?.member?.status !== "pending_application_review" && (
-                  <div className="space-y-4">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-blue-800 font-medium">No Ipê City Domain Found</p>
-                      <p className="text-sm text-blue-700">
-                        Submit an application to claim a new subdomain and join the community.
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => setShowApplicationForm(true)}
-                      className="w-full"
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      Submit Application
-                    </Button>
-                  </div>
+          {/* Show application button only if NO Ipe City domain is found AND not approved */}
+          {isConnected && address && !ensLoading && hasIpeCityDomain === false &&
+            memberData?.member?.status !== "approved_application" &&
+            memberData?.member?.status !== "active_member" &&
+            memberData?.member?.status !== "pending_application_review" && (
+              <div className="space-y-4">
+                <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg">
+                  <p className="text-sky-800 font-medium">No Ipe City Domain Found</p>
+                  <p className="text-sm text-sky-700">
+                    Submit an application to claim a new subdomain and join the community.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setShowApplicationForm(true)}
+                  className="w-full"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Submit Application
+                </Button>
+              </div>
+            )}
+
+          {/* Pending Application Status */}
+          {memberData?.member?.status === "pending_application_review" && (
+            <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg text-center">
+              <Clock className="h-8 w-8 text-sky-500 mx-auto mb-2" />
+              <p className="font-medium text-sky-800">Application Under Review</p>
+              <p className="text-sm text-sky-700">
+                Your application for <strong>{memberData.member?.ipeUsername}.ipecity.eth</strong> is being reviewed by admins.
+              </p>
+            </div>
+          )}
+
+          {/* Approved Application - Accept Passport */}
+          {memberData?.member?.status === "approved_application" && (
+            <div className="space-y-3">
+              <div className="p-3 bg-lime-50 border border-lime-200 rounded-lg">
+                <p className="text-lime-800 font-medium">Passport Ready!</p>
+                <p className="text-sm text-lime-700">
+                  Your subdomain <strong>{memberData.member?.ipeUsername}.ipecity.eth</strong> has been reserved and is ready to accept.
+                </p>
+              </div>
+              <Button
+                onClick={handleAcceptSubdomain}
+                disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
+                className="w-full"
+              >
+                {(acceptSubdomainMutation.isPending || isAcceptSubnamePending) ? (
+                  "Accepting..."
+                ) : (
+                  "Accept Your Passport"
                 )}
+              </Button>
+            </div>
+          )}
 
-              {/* Pending Application Status */}
-              {memberData?.member?.status === "pending_application_review" && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                  <Clock className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                  <p className="font-medium text-blue-800">Application Under Review</p>
-                  <p className="text-sm text-blue-700">
-                    Your application for <strong>{memberData.member.ipeUsername}.ipecity.eth</strong> is being reviewed by admins.
-                  </p>
-                </div>
-              )}
-
-
-
-              {/* Approved Application - Accept Passport */}
-              {memberData?.member?.status === "approved_application" && (
-                <div className="space-y-3">
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-blue-800 font-medium">Passport Ready! 🎉</p>
-                    <p className="text-sm text-blue-700">
-                      Your subdomain <strong>{memberData.member.ipeUsername}.ipecity.eth</strong> has been reserved and is ready to accept.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleAcceptSubdomain}
-                    disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
-                    className="w-full"
-                  >
-                    {(acceptSubdomainMutation.isPending || isAcceptSubnamePending) ? (
-                      "Accepting..."
-                    ) : (
-                      "Accept Your Passport"
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {/* Active Member */}
-              {memberData?.member?.status === "active_member" && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
-                  <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                  <p className="font-medium text-green-800">Welcome to Ipê City!</p>
-                  <p className="text-sm text-green-700">
-                    You are verified as a <strong>{memberData.member.memberType}</strong> member.
-                  </p>
-                  {memberData.member.ipePassport && (
-                    <p className="text-sm text-green-700 mt-1">
-                      Domain: <strong>{memberData.member.ipePassport}</strong>
-                    </p>
-                  )}
-                </div>
+          {/* Active Member */}
+          {memberData?.member?.status === "active_member" && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+              <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+              <p className="font-medium text-green-800">Welcome to Ipe City!</p>
+              <p className="text-sm text-green-700">
+                You are verified as a <strong>{memberData.member?.memberType}</strong> member.
+              </p>
+              {memberData.member?.ipePassport && (
+                <p className="text-sm text-green-700 mt-1">
+                  Domain: <strong>{memberData.member.ipePassport}</strong>
+                </p>
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
+    </div>
+  );
 
-      {/* Application Form Modal - Only show if not approved */}
+  return (
+    <div className="space-y-6">
+      {isWizard ? (
+        bodyContent
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {statusDisplay.icon}
+              Ipe Passport Verification
+            </CardTitle>
+            <CardDescription>{statusDisplay.description}</CardDescription>
+          </CardHeader>
+          <CardContent>{bodyContent}</CardContent>
+        </Card>
+      )}
+
+      {/* Application Form - Only show if not approved */}
       {showApplicationForm && memberData?.member?.status !== "approved_application" && memberData?.member?.status !== "active_member" && (
         <ApplicationForm
           memberData={memberData}

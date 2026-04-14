@@ -9,7 +9,7 @@ import { authenticatedPost } from "@/lib/api";
 import { CheckCircle, AlertCircle } from "lucide-react";
 
 interface EmailVerificationSectionProps {
-  farcasterFid: number;
+  memberId: number;
   currentEmail?: string;
   isVerified?: boolean;
   onVerificationComplete?: () => void;
@@ -17,7 +17,7 @@ interface EmailVerificationSectionProps {
 }
 
 export function EmailVerificationSection({
-  farcasterFid,
+  memberId,
   currentEmail,
   isVerified = false,
   onVerificationComplete,

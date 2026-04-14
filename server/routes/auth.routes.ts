@@ -35,22 +35,32 @@ router.post('/auth/login', privyAuthMiddleware, async (req: PrivyAuthRequest, re
     let member = await storage.getMemberByPrivyId(privyId);
 
     if (!member) {
-      // Try linking to existing member by email or wallet (handles migrated users)
+      // Try linking to existing member by email or wallet — ONLY if they have no privyId yet
+      // (migration case: old FID-based members who haven't been linked to Privy)
+      let existingMember: Member | undefined;
       if (email) {
-        member = await storage.getMemberByEmail(email);
+        existingMember = await storage.getMemberByEmail(email);
       }
-      if (!member && walletAddress) {
-        member = await storage.getMemberByWalletAddress(walletAddress);
+      if (!existingMember && walletAddress) {
+        existingMember = await storage.getMemberByWalletAddress(walletAddress);
       }
 
-      if (member) {
-        // Link Privy ID to existing member
-        member = await storage.updateMember(member.id, { privyId });
-        logger.info('Privy account linked to existing member via /login', {
+      if (existingMember && !existingMember.privyId) {
+        // Safe to link — this member was never associated with a Privy account
+        member = await storage.updateMember(existingMember.id, { privyId });
+        logger.info('Privy account linked to migrated member via /login', {
           memberId: member.id, privyId, email,
         });
+      } else if (existingMember && existingMember.privyId !== privyId) {
+        // Member already belongs to a different Privy account — do NOT hijack
+        logger.warn('Login attempted with email/wallet belonging to another Privy account', {
+          existingMemberId: existingMember.id,
+          existingPrivyId: existingMember.privyId,
+          newPrivyId: privyId,
+        });
+        member = await storage.createMemberFromPrivy(privyId, email, walletAddress);
       } else {
-        // Create new member from Privy data
+        // No existing member found — create new one
         logger.info('Creating new member from Privy', {
           privyId, email, walletAddress,
         });
@@ -130,43 +140,41 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
 
     if (!member) {
       // No member found by privyId — try linking to existing member by email or wallet
-      // This handles migrated users who don't have a privy_id yet
+      // ONLY if the member has no privyId yet (migration case)
       let existingMember: Member | undefined;
 
       if (privyEmail) {
         existingMember = await storage.getMemberByEmail(privyEmail);
-        if (existingMember) {
-          logger.info('Found existing member by email, linking Privy account', {
-            memberId: existingMember.id,
-            email: privyEmail,
-            privyId: req.privyUser.id,
-          });
-        }
       }
 
       if (!existingMember && privyWallet) {
-        // Check member_wallets table for wallet ownership
         const walletOwner = await storage.getMemberByWalletAddress(privyWallet);
         if (walletOwner) {
           existingMember = walletOwner;
-          logger.info('Found existing member by wallet, linking Privy account', {
-            memberId: existingMember.id,
-            wallet: privyWallet,
-            privyId: req.privyUser.id,
-          });
         }
       }
 
-      if (existingMember) {
-        // Link Privy ID to existing member
+      if (existingMember && !existingMember.privyId) {
+        // Safe to link — migrated member with no Privy account yet
         member = await storage.updateMember(existingMember.id, {
           privyId: req.privyUser.id,
         });
-        logger.info('Privy account linked to existing member', {
+        logger.info('Privy account linked to migrated member', {
           memberId: member.id,
           privyId: req.privyUser.id,
+          matchedBy: privyEmail ? 'email' : 'wallet',
         });
-      } else {
+      } else if (existingMember && existingMember.privyId !== req.privyUser.id) {
+        // Member already belongs to a different Privy account — do NOT hijack
+        logger.warn('Auth/me: email/wallet matches member owned by different Privy account', {
+          existingMemberId: existingMember.id,
+          existingPrivyId: existingMember.privyId,
+          newPrivyId: req.privyUser.id,
+        });
+        existingMember = undefined; // Force new member creation below
+      }
+
+      if (!existingMember || !member) {
         // No existing member found — auto-create new one
         logger.info('Auto-creating member for Privy user', {
           privyId: req.privyUser.id,

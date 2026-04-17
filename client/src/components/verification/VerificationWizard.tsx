@@ -5,7 +5,6 @@ import { Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveWallet } from "@/hooks/useActiveWallet";
-import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { WizardProgressBar, type WizardStep, type StepId } from "./WizardProgressBar";
 import { WalletStep } from "./WalletStep";
 import { EmailStep } from "./EmailStep";
@@ -29,8 +28,7 @@ const slideVariants = {
 
 function useVerificationSteps(
   member: ReturnType<typeof useAuth>["member"],
-  isWalletConnected: boolean,
-  hasSubdomainFromEns: boolean
+  isWalletConnected: boolean
 ) {
   const steps: WizardStep[] = useMemo(
     () => [
@@ -47,13 +45,14 @@ function useVerificationSteps(
       {
         id: "passport" as StepId,
         label: "Passport",
-        isComplete:
-          !!member?.ipePassport ||
-          member?.status === "active_member" ||
-          hasSubdomainFromEns,
+        // Must reflect server truth — ipePassport/ENS domain alone isn't enough.
+        // Only active_member is a terminal state. Earlier states (pending review,
+        // approved waiting for accept, or having an unverified ENS) still need
+        // action inside the passport step.
+        isComplete: member?.status === "active_member",
       },
     ],
-    [member?.walletAddress, member?.emailVerified, member?.ipePassport, member?.status, isWalletConnected, hasSubdomainFromEns]
+    [member?.walletAddress, member?.emailVerified, member?.status, isWalletConnected]
   );
 
   const currentStepIndex = steps.findIndex((s) => !s.isComplete);
@@ -83,15 +82,12 @@ export function VerificationWizard() {
   const address = activeWallet?.address as `0x${string}` | undefined;
   const isConnected = !!activeWallet;
 
-  const walletForLookup = address || member?.walletAddress;
-  const { ensNames } = useEnsLookup(walletForLookup || "");
-  const hasSubdomainFromEns = ensNames && ensNames.length > 0;
-
   const { steps, activeStep, allComplete, completedCount } =
-    useVerificationSteps(member, isConnected, hasSubdomainFromEns);
+    useVerificationSteps(member, isConnected);
 
   const prevStepRef = useRef(activeStep);
   const directionRef = useRef(1);
+  const attemptedWalletSaveRef = useRef<string | null>(null);
 
   // Track direction for animation
   useEffect(() => {
@@ -118,40 +114,40 @@ export function VerificationWizard() {
     }
   }, [memberStatus, setLocation]);
 
-  // Save wallet address when connected via Privy
+  // Save wallet address when connected via Privy — once per address.
+  // Tracked via ref so a failed attempt (e.g. 409 if wallet belongs to another
+  // member) doesn't retry every render. A new wallet resets the attempt.
   useEffect(() => {
-    const saveWalletAddress = async () => {
-      if (
-        isConnected &&
-        address &&
-        memberId &&
-        address.toLowerCase() !== member?.walletAddress?.toLowerCase()
-      ) {
-        try {
-          const token = await getAccessToken();
-          if (!token) return;
-          const response = await fetch(`/api/v2/members/${memberId}/wallet`, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ walletAddress: address }),
-          });
-          if (response.ok) {
-            refreshMember();
-          }
-        } catch {
-          // Wallet save failed silently
+    if (!isConnected || !address || !memberId) return;
+    const addrLower = address.toLowerCase();
+    if (addrLower === member?.walletAddress?.toLowerCase()) return;
+    if (attemptedWalletSaveRef.current === addrLower) return;
+    attemptedWalletSaveRef.current = addrLower;
+
+    (async () => {
+      try {
+        const token = await getAccessToken();
+        if (!token) return;
+        const response = await fetch(`/api/v2/members/${memberId}/wallet`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ walletAddress: address }),
+        });
+        if (response.ok) {
+          refreshMember();
         }
+      } catch {
+        // Wallet save failed silently
       }
-    };
-    saveWalletAddress();
+    })();
   }, [isConnected, address, memberId, member?.walletAddress, refreshMember, getAccessToken]);
 
   if (isMemberLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="w-full min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 mx-auto mb-3" />
           <p className="text-sm text-gray-500">Loading...</p>
@@ -162,11 +158,11 @@ export function VerificationWizard() {
 
   const stepLabel =
     activeStep === "complete"
-      ? "Complete"
-      : `Step ${completedCount + 1} of ${steps.length}`;
+      ? "All steps complete"
+      : `${completedCount} of ${steps.length} complete`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="w-full min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto max-w-xl px-4 py-10 space-y-8">
         {/* Header */}
         <div className="text-center space-y-1">

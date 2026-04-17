@@ -123,14 +123,13 @@ export async function sendApprovalEmail(email: string, ipePassport: string): Pro
     to: email,
     from: fromEmail,
     subject: 'Welcome to Ipê City Pulse!',
-    text: `Your registration has been approved! Your Ipê passport is: ${ipePassport}`,
+    text: `Your application has been approved. Your Ipê passport ${ipePassport} is now live on Ethereum and owned by your wallet — no further action needed. You can sign in and start participating in pulses.`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Welcome to Ipê City Pulse!</h2>
-        <p>Congratulations! Your registration has been approved.</p>
-        <p>Your Ipê passport is:</p>
+        <p>Your application has been approved and your Ipê passport is live on Ethereum:</p>
         <h3 style="color: #8B5CF6;">${ipePassport}</h3>
-        <p>You can now access the platform and participate in daily pulse activities.</p>
+        <p>The subdomain is already on-chain and owned by your wallet — you don't need to sign anything. Just log in to access the platform and start participating in daily pulses.</p>
       </div>
     `
   });

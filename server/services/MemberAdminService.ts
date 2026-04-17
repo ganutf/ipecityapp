@@ -34,11 +34,12 @@ export class MemberAdminService {
   }
 
   /**
-   * Approve a member application.
+   * Approve a member application — atomic.
    *
    * Creates the ENS subdomain on-chain (admin pays gas) and sets the member
-   * directly to active_member. If ENS creation fails, falls back to
-   * approved_application so the admin can retry.
+   * directly to active_member. If ENS creation fails, the whole operation
+   * fails: the member stays in pending_application_review, no email is sent,
+   * and the admin can retry by clicking Approve again.
    */
   async approveMember(params: ApproveMemberParams): Promise<Member> {
     const { memberId, ipeUsername, userWalletAddress, memberType } = params;
@@ -60,41 +61,13 @@ export class MemberAdminService {
     const passportName = `${ipeUsername}.ipecity.eth`;
     const resolvedMemberType = memberType ?? (member.memberType !== 'pending' ? member.memberType : 'explorer');
 
-    // Attempt to create ENS subdomain on-chain (admin pays gas)
-    let ensTxHash: string;
-    try {
-      const ensService = getEnsSubdomainService();
-      ensTxHash = await ensService.createSubdomain(ipeUsername, walletAddress);
-      logger.info(`ENS subdomain created: ${passportName} tx=${ensTxHash}`, { memberId });
-    } catch (ensError) {
-      // ENS creation failed — save approved_application state so admin can retry
-      logger.error(`ENS subdomain creation failed for ${passportName}`, {
-        memberId,
-        error: ensError instanceof Error ? ensError.message : String(ensError),
-      });
+    // Create ENS subdomain on-chain (admin pays gas). If this fails, throw —
+    // the member row is NOT mutated, so the admin can retry cleanly.
+    const ensService = getEnsSubdomainService();
+    const ensTxHash = await ensService.createSubdomain(ipeUsername, walletAddress);
+    logger.info(`ENS subdomain created: ${passportName} tx=${ensTxHash}`, { memberId });
 
-      const pendingMember = await this.storage.updateMember(memberId, {
-        status: 'approved_application',
-        ipeUsername,
-        ipePassport: passportName,
-        memberType: resolvedMemberType,
-      });
-
-      // Still send approval email — member knows they're approved even if ENS is pending
-      if (pendingMember.email) {
-        await sendApprovalEmail(pendingMember.email, passportName).catch((e) =>
-          logger.error('Failed to send approval email', { memberId, error: e }),
-        );
-      }
-
-      throw new Error(
-        `Member approved (approved_application) but ENS subdomain creation failed — retry to activate: ${
-          ensError instanceof Error ? ensError.message : String(ensError)
-        }`,
-      );
-    }
-
-    // ENS succeeded — go directly to active_member
+    // ENS succeeded — activate the member and send the welcome email.
     const updatedMember = await this.storage.updateMember(memberId, {
       status: 'active_member',
       ipeUsername,

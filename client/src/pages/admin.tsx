@@ -110,7 +110,7 @@ export default function AdminPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.members.list() });
-      toast({ title: "Success", description: "Member approved and subdomain reserved" });
+      toast({ title: "Success", description: "Member approved — passport created on-chain" });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -666,7 +666,7 @@ export default function AdminPage() {
                     disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
                     className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
                   >
-                    {approveMemberMutation.isPending ? "Reserving..." : "Approve & Reserve"}
+                    {approveMemberMutation.isPending ? "Approving…" : "Approve Application"}
                   </Button>
                   <Button
                     variant="destructive"

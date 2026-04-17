@@ -596,29 +596,62 @@ router.post('/auth/passport/verify', privyAuthMiddleware, async (req: PrivyAuthR
       return res.status(400).json({ error: 'Missing required fields: ensName, walletAddress, message, signature' });
     }
 
-    // Import viem for signature verification
+    const normalizedWallet = walletAddress.toLowerCase();
+
+    // 1. Verify the signature proves the signer controls walletAddress
     const { verifyMessage } = await import('viem');
-    // Verify the signature
     const isValid = await verifyMessage({
       address: walletAddress as `0x${string}`,
       message,
       signature: signature as `0x${string}`,
     });
-
     if (!isValid) {
       return res.status(400).json({ error: 'Invalid signature' });
     }
 
-    // Update member with passport info and activate membership
-    const updatedMember = await storage.updateMember(memberId, {
+    // 2. Ownership: the wallet must be free or already linked to this member.
+    //    Prevents signing with a wallet that belongs to someone else to hijack
+    //    their passport.
+    const existingWallet = await storage.getMemberWalletByAddress(normalizedWallet);
+    if (existingWallet && existingWallet.memberId !== memberId) {
+      return res.status(409).json({
+        error: 'This wallet is already linked to another member account',
+      });
+    }
+
+    // 3. On-chain check: the wallet must actually own the claimed ENS name.
+    //    lookupEnsName resolves DB first (fast path) then viem reverse records.
+    const { lookupEnsName } = await import('../lib/ensLookup');
+    const ensLookup = await lookupEnsName(normalizedWallet);
+    if (!ensLookup.ensNames || !ensLookup.ensNames.includes(ensName)) {
+      return res.status(400).json({
+        error: 'This wallet does not resolve to the claimed ENS name',
+      });
+    }
+
+    // 4. Uniqueness: the ENS passport must not already be claimed by another member.
+    const passportOwner = await storage.getMemberByIpePassport(ensName);
+    if (passportOwner && passportOwner.id !== memberId) {
+      return res.status(409).json({
+        error: 'This passport is already assigned to another member',
+      });
+    }
+
+    // 5. Link the wallet to this member (atomic, idempotent) so the member row
+    //    reflects ownership going forward.
+    let updatedMember = await storage.updateMemberWalletAtomic(memberId, normalizedWallet);
+
+    // 6. Record the passport + activate
+    updatedMember = await storage.updateMember(memberId, {
       ipePassport: ensName,
+      passportVerified: true,
       status: 'active_member',
     });
 
     logger.info('Passport verified via signature', {
       memberId,
       ensName,
-      walletAddress,
+      walletAddress: normalizedWallet,
     });
 
     res.json({
@@ -628,56 +661,13 @@ router.post('/auth/passport/verify', privyAuthMiddleware, async (req: PrivyAuthR
       member: updatedMember,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'WALLET_ALREADY_LINKED') {
+      return res.status(409).json({ error: 'This wallet is already linked to another member account' });
+    }
     logger.error('Passport verify error', {
       error: error instanceof Error ? error.message : String(error),
     });
     res.status(500).json({ error: 'Failed to verify passport' });
-  }
-});
-
-/**
- * POST /api/v2/auth/passport/accept
- * Accept subdomain and activate membership using memberId (Privy flow)
- */
-router.post('/auth/passport/accept', privyAuthMiddleware, async (req: PrivyAuthRequest, res: Response) => {
-  try {
-    if (!req.privyUser || !req.member) {
-      return res.status(401).json({ error: 'Not authenticated or member not found' });
-    }
-
-    const memberId = req.member.id;
-    const member = req.member;
-
-    if (!member.ipeUsername) {
-      return res.status(400).json({ error: 'No subdomain reserved for this member' });
-    }
-
-    if (member.status !== 'approved_application') {
-      return res.status(400).json({ error: 'Member must be in approved_application status to accept passport' });
-    }
-
-    // Update member to active status with passport
-    const updatedMember = await storage.updateMember(memberId, {
-      ipePassport: `${member.ipeUsername}.ipecity.eth`,
-      status: 'active_member',
-    });
-
-    logger.info('Passport accepted, member activated', {
-      memberId,
-      ipePassport: updatedMember.ipePassport,
-    });
-
-    res.json({
-      success: true,
-      memberId,
-      message: 'Passport accepted, membership activated',
-      member: updatedMember,
-    });
-  } catch (error) {
-    logger.error('Passport accept error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    res.status(500).json({ error: 'Failed to accept passport' });
   }
 });
 
@@ -839,74 +829,6 @@ router.delete('/members/:memberId/wallets/:walletAddress', privyAuthMiddleware, 
       return res.status(400).json({ error: 'Cannot unlink your passport wallet' });
     }
     handleServiceError(err, res, 'Failed to unlink wallet');
-  }
-});
-
-/**
- * POST /api/v2/members/:memberId/upgrade-to-active
- * Upgrade member to active status when subdomain is found
- */
-router.post('/members/:memberId/upgrade-to-active', privyAuthMiddleware, async (req: PrivyAuthRequest, res: Response) => {
-  try {
-    if (!req.privyUser || !req.member) {
-      return res.status(401).json({ error: 'Not authenticated or member not found' });
-    }
-
-    const memberId = parseIntParam(req, 'memberId');
-
-    // Verify ownership - user can only upgrade their own account
-    if (req.member.id !== memberId) {
-      return res.status(403).json({ error: 'Forbidden: Cannot upgrade another member' });
-    }
-
-    // Check if member has a wallet address
-    if (!req.member.walletAddress) {
-      return res.status(400).json({ error: 'No wallet address connected' });
-    }
-
-    // Import ENS lookup to verify domain ownership
-    const { lookupEnsName } = await import('../lib/ensLookup');
-
-    // Verify the wallet owns ipecity.eth domains
-    const lookupResult = await lookupEnsName(req.member.walletAddress);
-    if (!lookupResult.ensNames || lookupResult.ensNames.length === 0) {
-      return res.status(400).json({ error: 'No ipecity.eth domain found for this wallet' });
-    }
-
-    // Use selectedDomain from request body if provided, otherwise use first found
-    const { selectedDomain } = req.body || {};
-    let subdomain: string;
-
-    if (selectedDomain) {
-      // Validate the selected domain is actually owned by this wallet
-      if (!lookupResult.ensNames.includes(selectedDomain)) {
-        return res.status(400).json({ error: `Domain ${selectedDomain} is not associated with this wallet` });
-      }
-      subdomain = selectedDomain;
-    } else {
-      subdomain = lookupResult.ensNames[0];
-    }
-
-    // Determine member type: ipecity.eth parent domain = admin
-    const memberType = subdomain === 'ipecity.eth' ? 'admin' : 'explorer';
-
-    // Upgrade member to active
-    const updated = await storage.upgradeMemberToActive(memberId, subdomain, memberType);
-
-    logger.info('Member upgraded to active', {
-      memberId,
-      ipePassport: subdomain,
-    });
-
-    res.json({
-      success: true,
-      member: updated,
-    });
-  } catch (error) {
-    logger.error('Upgrade to active error', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    res.status(500).json({ error: 'Failed to upgrade member' });
   }
 });
 

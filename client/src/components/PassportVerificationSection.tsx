@@ -19,7 +19,7 @@ import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { useAuth } from "@/contexts/AuthContext";
 import { mainnet } from "viem/chains";
 import { ApplicationForm } from "@/components/ApplicationForm";
-import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users, ShieldOff } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users, ShieldOff, Loader2 } from "lucide-react";
 
 interface PassportMemberData {
   isMember: boolean;
@@ -78,7 +78,7 @@ export function PassportVerificationSection({
 
   // Hide application form if user gets approved
   useEffect(() => {
-    if (memberData?.member?.status === "approved_application" || memberData?.member?.status === "active_member") {
+    if (memberData?.member?.status === "active_member") {
       setShowApplicationForm(false);
     }
   }, [memberData?.member?.status]);
@@ -92,6 +92,20 @@ export function PassportVerificationSection({
 
   // Check if current wallet has Ipê City domain - explicit boolean
   const hasIpeCityDomain = ensNames.length > 0;
+
+  // Detect wallet mismatch: wagmi has a wallet connected but the member has
+  // either no wallet linked or a different one. This happens when the connected
+  // wallet is already linked to a different member (backend refuses to relink).
+  // In that case we must NOT offer to sign — signing with a wallet that belongs
+  // to another account would be an attempt to hijack their passport.
+  const memberWallet = memberData?.member?.walletAddress?.toLowerCase();
+  const connectedWallet = address?.toLowerCase();
+  const walletMismatch = Boolean(
+    isConnected && connectedWallet && memberWallet && connectedWallet !== memberWallet
+  );
+  const walletUnlinked = Boolean(
+    isConnected && connectedWallet && !memberWallet
+  );
 
 
 
@@ -169,33 +183,6 @@ export function PassportVerificationSection({
     },
   });
 
-  // Accept/confirm passport mutation.
-  // The ENS subdomain is already created on-chain by the admin — no user gas needed.
-  // This call just confirms the member has acknowledged their approved status in the DB.
-  const acceptSubdomainMutation = useMutation({
-    mutationFn: async () => {
-      return authenticatedPost("/api/v2/auth/passport/accept", { memberId });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Passport activated!",
-        description: `${memberData.member?.ipePassport} is now active.`,
-      });
-      refreshMember();
-      if (queryClient) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.members.all });
-      }
-      onVerificationComplete?.();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to confirm passport",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleVerifyPassport = () => {
     if (!address) {
       toast({
@@ -210,12 +197,6 @@ export function PassportVerificationSection({
     verifyPassportMutation.mutate(address);
   };
 
-  const handleAcceptSubdomain = () => {
-    // No wallet signature needed — admin already created the subdomain on-chain.
-    // This just confirms in the DB.
-    acceptSubdomainMutation.mutate();
-  };
-
   const getStatusDisplay = () => {
     const status = memberData?.member?.status;
 
@@ -226,13 +207,6 @@ export function PassportVerificationSection({
           description: "Your application is pending admin approval.",
           icon: <Clock className="h-5 w-5 text-blue-500" />,
           color: "blue",
-        };
-      case "approved_application":
-        return {
-          title: "Passport Being Activated",
-          description: `Your passport ${memberData.member?.ipeUsername}.ipecity.eth is being registered on-chain by IpêCity.`,
-          icon: <Clock className="h-5 w-5 text-lime-500" />,
-          color: "lime",
         };
       case "active_member":
         return {
@@ -284,7 +258,10 @@ export function PassportVerificationSection({
             </div>
             <div className="text-right">
               {ensLoading ? (
-                <p className="text-sm text-gray-500">Looking up ENS domain...</p>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Looking up ENS domain…</span>
+                </div>
               ) : ensNames.length > 1 ? (
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-green-600">{ensNames.length} domains found</p>
@@ -297,6 +274,14 @@ export function PassportVerificationSection({
               )}
             </div>
           </div>
+
+          {/* ENS Loading State — show while resolving the wallet's domains */}
+          {ensLoading && (
+            <div className="flex flex-col items-center justify-center py-8 space-y-3">
+              <Loader2 className="h-6 w-6 text-slate-400 animate-spin" />
+              <p className="text-sm text-gray-500">Checking ENS subdomains for this wallet…</p>
+            </div>
+          )}
 
           {/* Disconnect External Wallet Button - hidden in wizard mode */}
           {!isWizard && isExternalWallet && disconnectExternalWallet && (
@@ -315,9 +300,37 @@ export function PassportVerificationSection({
             </div>
           )}
 
-          {/* Show domain verification button if Ipe City domain is found */}
+          {/* Wallet conflict warning — the connected wallet is either linked
+              to another member (walletUnlinked + has ENS) or doesn't match the
+              member's own linked wallet (walletMismatch). Block sign/verify. */}
+          {isConnected && !ensLoading && (walletMismatch || (walletUnlinked && hasIpeCityDomain)) && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg space-y-2">
+              <p className="text-red-800 font-medium flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                {walletMismatch ? "Wrong wallet connected" : "Wallet linked to another account"}
+              </p>
+              <p className="text-sm text-red-700">
+                {walletMismatch
+                  ? `This account is linked to ${memberWallet?.slice(0, 6)}…${memberWallet?.slice(-4)}. Connect that wallet to continue.`
+                  : "The wallet currently connected is already linked to a different member. You can't verify a passport with a wallet that isn't yours."}
+              </p>
+              {isExternalWallet && disconnectExternalWallet && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={disconnectExternalWallet}
+                  className="mt-2"
+                >
+                  Disconnect Wallet
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Show domain verification button if Ipe City domain is found AND
+              the wallet actually belongs to this member (no mismatch). */}
           {isConnected && address && !ensLoading && hasIpeCityDomain &&
-            memberData?.member?.status !== "approved_application" &&
+            !walletMismatch && !walletUnlinked &&
             memberData?.member?.status !== "active_member" && (
             <div className="space-y-3">
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -365,9 +378,10 @@ export function PassportVerificationSection({
             </div>
           )}
 
-          {/* Show application button only if NO Ipe City domain is found AND not approved */}
+          {/* Show application button only if NO Ipe City domain is found AND
+              the wallet isn't a mismatch and isn't linked elsewhere. */}
           {isConnected && address && !ensLoading && hasIpeCityDomain === false &&
-            memberData?.member?.status !== "approved_application" &&
+            !walletMismatch && !walletUnlinked &&
             memberData?.member?.status !== "active_member" &&
             memberData?.member?.status !== "pending_application_review" && (
               <div className="space-y-4">
@@ -395,26 +409,6 @@ export function PassportVerificationSection({
               <p className="text-sm text-sky-700">
                 Your application for <strong>{memberData.member?.ipeUsername}.ipecity.eth</strong> is being reviewed by admins.
               </p>
-            </div>
-          )}
-
-          {/* Approved Application — ENS creation in progress (admin handles on-chain, no user gas) */}
-          {memberData?.member?.status === "approved_application" && (
-            <div className="space-y-3">
-              <div className="p-3 bg-lime-50 border border-lime-200 rounded-lg">
-                <p className="text-lime-800 font-medium">Passport Being Created</p>
-                <p className="text-sm text-lime-700">
-                  IpêCity is registering <strong>{memberData.member?.ipePassport}</strong> on-chain for you.
-                  This is free — you don't need to sign anything.
-                </p>
-              </div>
-              <Button
-                onClick={handleAcceptSubdomain}
-                disabled={acceptSubdomainMutation.isPending}
-                className="w-full bg-lime-400 text-slate-900 hover:bg-lime-500"
-              >
-                {acceptSubdomainMutation.isPending ? "Confirming..." : "Confirm Passport Activation"}
-              </Button>
             </div>
           )}
 
@@ -468,7 +462,7 @@ export function PassportVerificationSection({
       )}
 
       {/* Application Form - Only show if not approved */}
-      {showApplicationForm && memberData?.member?.status !== "approved_application" && memberData?.member?.status !== "active_member" && (
+      {showApplicationForm && memberData?.member?.status !== "active_member" && (
         <ApplicationForm
           memberData={memberData}
           memberId={memberId}

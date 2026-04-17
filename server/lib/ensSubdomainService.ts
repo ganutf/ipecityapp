@@ -271,6 +271,20 @@ export class EnsSubdomainService {
     });
   }
 
+  /**
+   * Get the current NameWrapper token owner of the parent domain (ipecity.eth).
+   * Used to resolve who the root admin is — whoever owns ipecity.eth on-chain
+   * should automatically be promoted to admin on first login.
+   */
+  async getParentOwner(): Promise<Address> {
+    return await this.publicClient.readContract({
+      address: NAME_WRAPPER_ADDRESS,
+      abi: NAME_WRAPPER_ABI,
+      functionName: 'ownerOf',
+      args: [BigInt(PARENT_NODE)],
+    });
+  }
+
   getAdminAddress(): Address {
     return this.adminAddress;
   }

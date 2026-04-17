@@ -246,6 +246,19 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
       }
     }
 
+    // Root admin sync: if this member's wallet owns ipecity.eth on-chain and
+    // they're not already admin, promote them. Promote-only — never demotes.
+    // Swallows RPC failures so /auth/me keeps working if mainnet is flaky.
+    try {
+      const { syncRootAdminIfNeeded } = await import('../lib/rootAdminSync');
+      member = await syncRootAdminIfNeeded(storage, member);
+    } catch (rootAdminError) {
+      logger.warn('Root admin sync failed (non-fatal)', {
+        memberId: member.id,
+        error: rootAdminError instanceof Error ? rootAdminError.message : String(rootAdminError),
+      });
+    }
+
     // Calculate stats if member exists
     let totalPoints = 0;
     let pulseStreak = 0;

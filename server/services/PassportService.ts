@@ -1,10 +1,10 @@
 /**
  * PassportService - username availability and ENS lookup
- * Extracted from server/routes.ts (lines ~1627-1710)
  */
 
 import type { IStorage } from '../storage';
 import { lookupEnsName } from '../lib/ensLookup';
+import { getEnsSubdomainService } from '../lib/ensSubdomainService';
 import logger from '../logger';
 
 interface AvailabilityResult {
@@ -15,15 +15,12 @@ interface AvailabilityResult {
 interface EnsLookupResult {
   ensName: string | null;
   ensNames: string[];
-  source: 'justaname' | 'onchain';
+  source: 'database' | 'onchain' | null;
   error: string | null;
 }
 
 export class PassportService {
-  constructor(
-    private storage: IStorage,
-    private justaNameApiKey: string,
-  ) {}
+  constructor(private storage: IStorage) {}
 
   async checkUsernameAvailability(username: string): Promise<AvailabilityResult> {
     if (!username || username.length < 3) {
@@ -42,25 +39,18 @@ export class PassportService {
       return { available: false, reason: 'This username is already taken' };
     }
 
-    // Check blockchain availability via JustaName
-    const response = await fetch(
-      `https://api.justaname.id/ens/v1/subname/available?subname=${sanitizedUsername}.ipecity.eth&chainId=1`,
-      {
-        headers: { 'X-API-KEY': this.justaNameApiKey },
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(`JustaName API error: ${response.status}`);
+    // Check on-chain availability via ENS NameWrapper
+    try {
+      const ensService = getEnsSubdomainService();
+      const exists = await ensService.subdomainExists(sanitizedUsername);
+      if (exists) {
+        return { available: false, reason: 'This subdomain is already registered on-chain' };
+      }
+    } catch (error) {
+      logger.warn('On-chain ENS availability check failed, relying on DB check only:', error);
     }
 
-    const responseData = await response.json();
-    const isAvailable = responseData.result.data.isAvailable;
-
-    return {
-      available: isAvailable,
-      reason: !isAvailable ? 'This subdomain is already registered on-chain' : undefined,
-    };
+    return { available: true };
   }
 
   async lookupEns(address: string): Promise<EnsLookupResult> {
@@ -68,7 +58,7 @@ export class PassportService {
       return {
         ensName: null,
         ensNames: [],
-        source: 'justaname',
+        source: null,
         error: 'Address parameter is required',
       };
     }

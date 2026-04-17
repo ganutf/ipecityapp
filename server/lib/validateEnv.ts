@@ -22,8 +22,10 @@ const envVars: EnvVarConfig[] = [
   // EAS Attestations
   { name: 'EAS_ATTESTATION_MNEMONIC', required: true, sensitive: true },
 
+  // ENS Subdomain Management (ipecity.eth controller wallet)
+  { name: 'ENS_ADMIN_MNEMONIC', required: true, sensitive: true },
+
   // Optional services
-  { name: 'JUSTANAME_API_KEY', required: false, sensitive: true },
   { name: 'RESEND_API_KEY', required: false, sensitive: true },
   { name: 'EMAIL_TEST_MODE', required: false },
 ];

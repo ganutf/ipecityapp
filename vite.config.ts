@@ -33,16 +33,23 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    // Pre-bundle heavy Web3 dependencies to prevent esbuild crashes
+    // Pre-bundle heavy Web3 dependencies to prevent esbuild crashes in WSL dev.
+    // Previously `@justaname.id/react` pulled these in transitively — now listed explicitly.
     include: [
       '@privy-io/react-auth',
       '@privy-io/wagmi',
       'wagmi',
       'viem',
       'viem/chains',
+      'viem/siwe',
       '@tanstack/react-query',
       'wouter',
-      '@justaname.id/react',
+      '@coinbase/wallet-sdk',
+      '@walletconnect/ethereum-provider',
+      '@walletconnect/universal-provider',
+      '@base-org/account',
+      '@simplewebauthn/browser',
+      'siwe',
     ],
     // Increase esbuild workers for better stability
     esbuildOptions: {

@@ -90,3 +90,9 @@ backup-*
 # Test files
 client/src/TestApp.tsx
 client/src/pages/test-home.tsx
+
+# Claude Code local config
+.claude/
+
+# Script run artifacts
+server/scripts/output/

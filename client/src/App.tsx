@@ -8,7 +8,6 @@ import { AuthKitProvider } from "@farcaster/auth-kit";
 import { createConfig, WagmiProvider } from "@privy-io/wagmi";
 import { mainnet, base } from "viem/chains";
 import { http } from "wagmi";
-import { JustaNameProvider } from "@justaname.id/react";
 import {
   AuthGuard
 } from "@/components/AuthGuard";
@@ -45,26 +44,6 @@ const wagmiConfig = createConfig({
   },
 });
 
-const justaNameConfig = {
-  networks: [
-    {
-      chainId: mainnet.id,
-      providerUrl: "https://eth.blockrazor.xyz",
-    },
-  ],
-  ensDomains: [
-    {
-      apiKey: import.meta.env.VITE_JUSTANAME_API_KEY,
-      chainId: mainnet.id,
-      ensDomain: "ipecity.eth",
-    },
-  ],
-  config: {
-    domain: window.location.origin,
-    origin: window.location.origin,
-    subnameChallengeTtl: 600000,
-  },
-};
 
 function Router() {
   return (
@@ -106,16 +85,14 @@ function App() {
         <WagmiProvider config={wagmiConfig}>
           <AuthProvider>
             <AuthKitProvider config={authKitConfig}>
-              <JustaNameProvider config={justaNameConfig}>
-                <TimezoneProvider>
-                  <TooltipProvider>
-                    <Toaster />
-                    <ErrorBoundary>
-                      <Router />
-                    </ErrorBoundary>
-                  </TooltipProvider>
-                </TimezoneProvider>
-              </JustaNameProvider>
+              <TimezoneProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <ErrorBoundary>
+                    <Router />
+                  </ErrorBoundary>
+                </TooltipProvider>
+              </TimezoneProvider>
             </AuthKitProvider>
           </AuthProvider>
         </WagmiProvider>

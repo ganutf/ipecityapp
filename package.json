@@ -25,6 +25,7 @@
     "test-streak:compare": "tsx server/scripts/test-streak-calculation.ts",
     "test-active:status": "tsx server/scripts/test-active-pulse-status.ts",
     "onboarding": "tsx server/scripts/test-onboarding.ts",
+    "migrate:justaname-to-ens": "tsx server/scripts/migrate-justaname-to-ens.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "production:check": "bash scripts/production-check.sh",
@@ -37,8 +38,6 @@
     "@farcaster/hub-nodejs": "^0.15.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
-    "@justaname.id/react": "^0.3.202",
-    "@justaname.id/sdk": "^0.2.199",
     "@neondatabase/serverless": "^0.10.4",
     "@neynar/nodejs-sdk": "^2.46.0",
     "@noble/secp256k1": "^2.3.0",
@@ -106,6 +105,7 @@
     "siwe": "^3.0.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.19.1",
     "vaul": "^1.1.2",
     "viem": "^2.31.4",
     "wagmi": "^2.15.6",
@@ -113,8 +113,7 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0",
-    "tsx": "^4.19.1"
+    "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.2.7",

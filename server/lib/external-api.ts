@@ -9,7 +9,6 @@ import { z } from 'zod';
 
 // Allowlisted external API endpoints
 const ALLOWED_DOMAINS = [
-  'api.justaname.id',
   'api.neynar.com'
 ];
 
@@ -241,80 +240,6 @@ export class SecureHttpClient {
 }
 
 /**
- * JustaName API client with SSRF protection
- */
-export class JustaNameClient {
-  private httpClient: SecureHttpClient;
-  private apiKey: string;
-  
-  constructor(apiKey?: string) {
-    this.httpClient = SecureHttpClient.getInstance();
-    this.apiKey = apiKey || process.env.JUSTANAME_API_KEY || '';
-  }
-  
-  /**
-   * Check subdomain availability
-   */
-  async checkSubdomainAvailability(username: string): Promise<{ available: boolean; username: string }> {
-    // Validate username input
-    const usernameSchema = z.string()
-      .min(3, "Username too short")
-      .max(20, "Username too long")
-      .regex(/^[a-z0-9]+$/, "Invalid username format");
-    
-    const validatedUsername = usernameSchema.parse(username.toLowerCase());
-    
-    try {
-      const response = await this.httpClient.get(
-        'https://api.justaname.id/ens/v1/subname/available',
-        {
-          subname: `${validatedUsername}.ipecity.eth`,
-          chainId: '1'
-        }
-      );
-      
-      return {
-        available: response.result?.data?.isAvailable || false,
-        username: validatedUsername
-      };
-    } catch (error) {
-      console.error('JustaName availability check failed:', error);
-      throw new Error('Failed to check subdomain availability');
-    }
-  }
-  
-  /**
-   * Reserve subdomain
-   */
-  async reserveSubdomain(username: string, walletAddress: string): Promise<any> {
-    // Validate inputs
-    const usernameSchema = z.string().regex(/^[a-z0-9]+$/);
-    const addressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
-    
-    const validatedUsername = usernameSchema.parse(username);
-    const validatedAddress = addressSchema.parse(walletAddress);
-    
-    try {
-      return await this.httpClient.post(
-        'https://api.justaname.id/ens/v1/subname/reserve',
-        {
-          username: validatedUsername,
-          ensDomain: 'ipecity.eth',
-          chainId: 1,
-          ethAddress: validatedAddress
-        },
-        {
-          'x-api-key': this.apiKey
-        }
-      );
-    } catch (error) {
-      console.error('JustaName subdomain reservation failed:', error);
-      throw new Error('Failed to reserve subdomain');
-    }
-  }
-}
-
-/**
  * Neynar API client with SSRF protection
  */
 export class SecureNeynarClient {
@@ -359,6 +284,5 @@ export class SecureNeynarClient {
 }
 
 // Export singleton instances
-export const justaNameClient = new JustaNameClient();
 export const secureNeynarClient = new SecureNeynarClient();
 export const secureHttpClient = SecureHttpClient.getInstance();

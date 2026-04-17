@@ -17,10 +17,9 @@ import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { createSiweMessage } from "viem/siwe";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAcceptSubname } from "@justaname.id/react";
 import { mainnet } from "viem/chains";
 import { ApplicationForm } from "@/components/ApplicationForm";
-import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users } from "lucide-react";
+import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users, ShieldOff } from "lucide-react";
 
 interface PassportMemberData {
   isMember: boolean;
@@ -90,9 +89,6 @@ export function PassportVerificationSection({
       setSelectedDomain(ensNames[0]);
     }
   }, [ensNames, selectedDomain]);
-
-  // JustaName accept hook for subdomain acceptance
-  const { acceptSubname, isAcceptSubnamePending } = useAcceptSubname();
 
   // Check if current wallet has Ipê City domain - explicit boolean
   const hasIpeCityDomain = ensNames.length > 0;
@@ -173,65 +169,19 @@ export function PassportVerificationSection({
     },
   });
 
-  // Accept subdomain mutation (for pending acceptances)
-  const acceptSubdomainMutation = useMutation<{ success: boolean; alreadyAccepted?: boolean } | any>({
-    mutationFn: async (): Promise<{ success: boolean; alreadyAccepted?: boolean } | any> => {
-      if (!memberData?.member?.ipeUsername) {
-        throw new Error("No subdomain to accept");
-      }
-
-      const ensName = `${memberData.member.ipeUsername}.ipecity.eth`;
-
-      try {
-        // Use JustaName SDK to accept the subdomain
-        const result = await acceptSubname({
-          ens: ensName,
-        });
-
-        // Update backend status to active_member (uses v2 endpoint with memberId)
-        await authenticatedPost("/api/v2/auth/passport/accept", { memberId });
-
-        return result;
-      } catch (error: any) {
-        // Handle 409 Conflict as success (subdomain already accepted)
-        if (error?.response?.status === 409 ||
-          error?.message?.includes('SubdomainAlreadyAcceptedException') ||
-          error?.message?.includes('already accepted')) {
-
-          // Verify domain is actually associated with the wallet
-          if (address) {
-            try {
-              const response = await fetch(`/api/v2/passport/ens/lookup/${address}`);
-              const data = await response.json();
-
-              if (data.ensName === ensName) {
-                // Domain is verified as belonging to wallet, update backend
-                await authenticatedPost("/api/v2/auth/passport/accept", { memberId });
-                return { success: true, alreadyAccepted: true };
-              }
-            } catch (lookupError) {
-              // ENS lookup failed — fall through to backend update
-            }
-          }
-
-          // If verification fails, still update backend but note the conflict
-          await authenticatedPost("/api/v2/auth/passport/accept", { memberId });
-          return { success: true, alreadyAccepted: true };
-        }
-
-        // Re-throw other errors
-        throw error;
-      }
+  // Accept/confirm passport mutation.
+  // The ENS subdomain is already created on-chain by the admin — no user gas needed.
+  // This call just confirms the member has acknowledged their approved status in the DB.
+  const acceptSubdomainMutation = useMutation({
+    mutationFn: async () => {
+      return authenticatedPost("/api/v2/auth/passport/accept", { memberId });
     },
-    onSuccess: (result) => {
-      const message = result?.alreadyAccepted
-        ? "Subdomain was already accepted!"
-        : "Subdomain accepted successfully!";
-
+    onSuccess: () => {
       toast({
-        title: message,
-        description: `${memberData.member?.ipeUsername}.ipecity.eth is now yours.`,
+        title: "Passport activated!",
+        description: `${memberData.member?.ipePassport} is now active.`,
       });
+      refreshMember();
       if (queryClient) {
         queryClient.invalidateQueries({ queryKey: queryKeys.members.all });
       }
@@ -239,7 +189,7 @@ export function PassportVerificationSection({
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to accept subdomain",
+        title: "Failed to confirm passport",
         description: error.message,
         variant: "destructive",
       });
@@ -261,27 +211,8 @@ export function PassportVerificationSection({
   };
 
   const handleAcceptSubdomain = () => {
-    const requiredWallet = memberData.member?.walletAddress?.toLowerCase();
-    const connectedWallet = address?.toLowerCase();
-
-    if (!connectedWallet) {
-      toast({
-        title: "Wallet not connected",
-        description: "Please connect your wallet to accept your passport.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (requiredWallet && connectedWallet !== requiredWallet) {
-      toast({
-        title: "Wrong wallet connected",
-        description: `Please connect the wallet registered for this passport: ${requiredWallet.slice(0, 6)}...${requiredWallet.slice(-4)}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
+    // No wallet signature needed — admin already created the subdomain on-chain.
+    // This just confirms in the DB.
     acceptSubdomainMutation.mutate();
   };
 
@@ -298,10 +229,10 @@ export function PassportVerificationSection({
         };
       case "approved_application":
         return {
-          title: "Accept Your Passport",
-          description: `Your subdomain ${memberData.member?.ipeUsername}.ipecity.eth has been reserved and is ready to accept.`,
-          icon: <Globe className="h-5 w-5 text-blue-500" />,
-          color: "blue",
+          title: "Passport Being Activated",
+          description: `Your passport ${memberData.member?.ipeUsername}.ipecity.eth is being registered on-chain by IpêCity.`,
+          icon: <Clock className="h-5 w-5 text-lime-500" />,
+          color: "lime",
         };
       case "active_member":
         return {
@@ -309,6 +240,13 @@ export function PassportVerificationSection({
           description: `Welcome! You have access as a ${memberData.member?.memberType}.`,
           icon: <CheckCircle className="h-5 w-5 text-green-500" />,
           color: "green",
+        };
+      case "passport_revoked":
+        return {
+          title: "Passport Suspended",
+          description: "Your passport has been suspended. Contact the IpêCity team to reinstate.",
+          icon: <ShieldOff className="h-5 w-5 text-red-500" />,
+          color: "red",
         };
       default:
         return {
@@ -460,26 +398,35 @@ export function PassportVerificationSection({
             </div>
           )}
 
-          {/* Approved Application - Accept Passport */}
+          {/* Approved Application — ENS creation in progress (admin handles on-chain, no user gas) */}
           {memberData?.member?.status === "approved_application" && (
             <div className="space-y-3">
               <div className="p-3 bg-lime-50 border border-lime-200 rounded-lg">
-                <p className="text-lime-800 font-medium">Passport Ready!</p>
+                <p className="text-lime-800 font-medium">Passport Being Created</p>
                 <p className="text-sm text-lime-700">
-                  Your subdomain <strong>{memberData.member?.ipeUsername}.ipecity.eth</strong> has been reserved and is ready to accept.
+                  IpêCity is registering <strong>{memberData.member?.ipePassport}</strong> on-chain for you.
+                  This is free — you don't need to sign anything.
                 </p>
               </div>
               <Button
                 onClick={handleAcceptSubdomain}
-                disabled={acceptSubdomainMutation.isPending || isAcceptSubnamePending}
-                className="w-full"
+                disabled={acceptSubdomainMutation.isPending}
+                className="w-full bg-lime-400 text-slate-900 hover:bg-lime-500"
               >
-                {(acceptSubdomainMutation.isPending || isAcceptSubnamePending) ? (
-                  "Accepting..."
-                ) : (
-                  "Accept Your Passport"
-                )}
+                {acceptSubdomainMutation.isPending ? "Confirming..." : "Confirm Passport Activation"}
               </Button>
+            </div>
+          )}
+
+          {/* Passport Revoked */}
+          {memberData?.member?.status === "passport_revoked" && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-center">
+              <ShieldOff className="h-8 w-8 text-red-500 mx-auto mb-2" />
+              <p className="font-medium text-red-800">Passport Suspended</p>
+              <p className="text-sm text-red-700">
+                Your <strong>{memberData.member?.ipePassport}</strong> passport has been suspended.
+                Please contact the IpêCity team to reinstate your membership.
+              </p>
             </div>
           )}
 

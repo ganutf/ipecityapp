@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 interface EnsLookupResult {
   ensName: string | null;
   ensNames: string[];
-  source: 'justaname' | 'onchain';
+  source: 'database' | 'onchain' | null;
   error: string | null;
 }
 
@@ -13,9 +13,9 @@ export function useEnsLookup(address: string | undefined) {
     queryKey: ['ens-lookup', address],
     queryFn: async (): Promise<EnsLookupResult> => {
       if (!address) {
-        return { ensName: null, ensNames: [], source: 'justaname', error: 'No address provided' };
+        return { ensName: null, ensNames: [], source: null, error: 'No address provided' };
       }
-      
+
       return apiRequest(`/api/v2/passport/ens/lookup/${address}`, {
         method: 'GET',
       });
@@ -28,7 +28,7 @@ export function useEnsLookup(address: string | undefined) {
   return {
     ensName: query.data?.ensName || null,
     ensNames: query.data?.ensNames || [],
-    source: query.data?.source || 'justaname',
+    source: query.data?.source || null,
     isLoading: query.isLoading,
     error: query.error || query.data?.error || null,
     refetch: query.refetch,

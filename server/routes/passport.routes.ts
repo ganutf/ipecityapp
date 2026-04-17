@@ -10,10 +10,7 @@ import logger from '../logger';
 
 const router = Router();
 
-const passportService = new PassportService(
-  storage,
-  process.env.JUSTANAME_API_KEY || '',
-);
+const passportService = new PassportService(storage);
 
 /** GET /api/v2/passport/availability/:username */
 router.get('/availability/:username', async (req, res) => {
@@ -40,7 +37,7 @@ router.get('/ens/lookup/:address', async (req, res) => {
     logger.error('ENS lookup route error:', err);
     res.status(500).json({
       ensName: null,
-      source: 'justaname',
+      source: null,
       error: 'Internal server error',
     });
   }

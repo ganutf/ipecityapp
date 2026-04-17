@@ -7,15 +7,18 @@
  * Usage: tsx server/scripts/list-admins.ts
  */
 
+import 'dotenv/config';
 import { storage } from '../storage';
-import { db } from '../db';
+import { initializeDatabase, getDatabase } from '../db';
 
 async function listAdmins() {
   console.log('🔍 Ipê City Pulse - Admin User List');
   console.log('===================================\n');
 
   try {
-    // Test database connection
+    // Initialize database connection (script context — not booted by server)
+    await initializeDatabase();
+    const { db } = getDatabase();
     await db.execute('SELECT 1 as test');
     console.log('✅ Database connection successful\n');
 
@@ -36,10 +39,13 @@ async function listAdmins() {
     
     adminUsers.forEach((admin, index) => {
       console.log(`${index + 1}. Admin User`);
-      console.log(`   FID: ${admin.farcasterFid}`);
+      console.log(`   Member ID: ${admin.id}`);
+      console.log(`   FID: ${admin.farcasterFid ?? 'Not set'}`);
       console.log(`   Status: ${admin.status}`);
       console.log(`   Email: ${admin.email || 'Not set'}`);
+      console.log(`   Wallet: ${admin.walletAddress || 'Not set'}`);
       console.log(`   ENS Passport: ${admin.ipePassport || 'Not set'}`);
+      console.log(`   Privy ID: ${admin.privyId || 'Not set'}`);
       console.log(`   Created: ${admin.createdAt}`);
       console.log(`   Last Updated: ${admin.updatedAt || 'Never'}`);
       console.log('');

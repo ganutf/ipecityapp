@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLinkAccount } from "@privy-io/react-auth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +83,29 @@ export default function Profile2() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  // Link email via Privy so wallet-first users can also log in with email.
+  // Privy opens its own OTP modal; on success we refresh /auth/me which
+  // syncs the new email/emailVerified flags onto the member row.
+  const { linkEmail } = useLinkAccount({
+    onSuccess: ({ linkMethod }) => {
+      if (linkMethod !== "email") return;
+      refreshMember();
+      toast({
+        title: "Email linked",
+        description: "You can now sign in with this email too.",
+      });
+    },
+    onError: (errorCode) => {
+      // PrivyErrorCode is a string enum. 'exited_link_flow' / user cancel → silent.
+      if (typeof errorCode === "string" && errorCode.includes("exited")) return;
+      toast({
+        title: "Link email failed",
+        description: String(errorCode),
+        variant: "destructive",
+      });
+    },
+  });
 
   // Authentication check - redirect to home if not authenticated
   // Wait for auth to stabilize before making redirect decisions
@@ -477,25 +501,43 @@ export default function Profile2() {
                 {/* Email Display */}
                 <div className="flex items-center space-x-2">
                   <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-700">
-                    {memberData?.member?.email || "No email provided"}
-                  </span>
-                  {memberData?.member?.emailVerified ? (
-                    <Badge
-                      variant="secondary"
-                      className="bg-green-100 text-green-800"
-                    >
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Verified
-                    </Badge>
+                  {memberData?.member?.email ? (
+                    <>
+                      <span className="text-sm text-gray-700">
+                        {memberData.member.email}
+                      </span>
+                      {memberData.member.emailVerified ? (
+                        <Badge
+                          variant="secondary"
+                          className="bg-green-100 text-green-800"
+                        >
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="bg-yellow-100 text-yellow-800"
+                        >
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Unverified
+                        </Badge>
+                      )}
+                    </>
                   ) : (
-                    <Badge
-                      variant="secondary"
-                      className="bg-yellow-100 text-yellow-800"
-                    >
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                      Unverified
-                    </Badge>
+                    <>
+                      <span className="text-sm text-gray-500">
+                        No email linked
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => linkEmail()}
+                        className="h-7 px-2 text-xs text-sky-600 hover:text-sky-700"
+                      >
+                        Link email
+                      </Button>
+                    </>
                   )}
                 </div>
 

@@ -48,7 +48,7 @@ import {
   type MemberWallet,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, desc, asc, isNull, isNotNull, inArray, sql } from "drizzle-orm";
+import { eq, and, or, desc, asc, isNull, isNotNull, inArray, lt, sql } from "drizzle-orm";
 import { EAS_CONSTANTS } from "@shared/constants";
 import logger from "./logger";
 import { isPulseActive, getCurrentUTC } from "@shared/pulseUtils";
@@ -89,8 +89,14 @@ export interface IStorage {
   acceptSubdomain(memberId: number): Promise<Member>;
   denyApplication(memberId: number): Promise<Member>;
   denyMember(memberId: number): Promise<Member>;
-  
-  
+
+  // Passport Lifecycle (on-chain management)
+  setMembershipExpiry(memberId: number, expiresAt: Date | null): Promise<Member>;
+  revokePassport(memberId: number): Promise<Member>;
+  reinstatePassport(memberId: number, expiresAt?: Date): Promise<Member>;
+  getExpiredActivePassports(): Promise<Member[]>;
+
+
   // Email Verification
   createEmailVerification(verification: InsertEmailVerification): Promise<EmailVerification>;
   getEmailVerification(memberId: number, code: string): Promise<EmailVerification | undefined>;
@@ -588,15 +594,71 @@ export class DatabaseStorage implements IStorage {
   async denyMember(memberId: number): Promise<Member> {
     const [member] = await db
       .update(members)
-      .set({ 
+      .set({
         status: 'denied_member',
-        updatedAt: new Date() 
+        updatedAt: new Date()
       })
       .where(eq(members.id, memberId))
       .returning();
     return member;
   }
-  
+
+  // ============================================
+  // PASSPORT LIFECYCLE (on-chain management)
+  // ============================================
+
+  async setMembershipExpiry(memberId: number, expiresAt: Date | null): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({ membershipExpiresAt: expiresAt, updatedAt: new Date() })
+      .where(eq(members.id, memberId))
+      .returning();
+    if (!member) throw new Error(`Member ${memberId} not found`);
+    return member;
+  }
+
+  async revokePassport(memberId: number): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({
+        status: 'passport_revoked',
+        passportRevokedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(members.id, memberId))
+      .returning();
+    if (!member) throw new Error(`Member ${memberId} not found`);
+    return member;
+  }
+
+  async reinstatePassport(memberId: number, expiresAt?: Date): Promise<Member> {
+    const [member] = await db
+      .update(members)
+      .set({
+        status: 'active_member',
+        passportRevokedAt: null,
+        membershipExpiresAt: expiresAt ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(members.id, memberId))
+      .returning();
+    if (!member) throw new Error(`Member ${memberId} not found`);
+    return member;
+  }
+
+  async getExpiredActivePassports(): Promise<Member[]> {
+    return await db
+      .select()
+      .from(members)
+      .where(
+        and(
+          eq(members.status, 'active_member'),
+          isNotNull(members.membershipExpiresAt),
+          lt(members.membershipExpiresAt, new Date()),
+        )
+      );
+  }
+
 
   // Email Verification
   async createEmailVerification(verificationData: InsertEmailVerification): Promise<EmailVerification> {

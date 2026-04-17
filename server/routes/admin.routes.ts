@@ -1,9 +1,10 @@
 /**
- * V2 Admin Routes — member management (approval, denial, type updates)
+ * V2 Admin Routes — member management (approval, denial, type updates, passport lifecycle)
  * Mounted at /api/v2/admin
  */
 
 import { Router, Response } from 'express';
+import { z } from 'zod';
 import {
   privyAuthMiddleware,
   requireAdminV2,
@@ -18,10 +19,29 @@ import { approveMemberSchema, denyMemberSchema, updateMemberTypeSchema } from '@
 
 const router = Router();
 
-const memberAdminService = new MemberAdminService(
-  storage,
-  process.env.JUSTANAME_API_KEY || '',
-);
+const memberAdminService = new MemberAdminService(storage);
+
+// ============================================
+// PASSPORT LIFECYCLE SCHEMAS
+// ============================================
+
+const revokePassportSchema = z.object({
+  memberId: z.number().int().positive(),
+});
+
+const reinstatePassportSchema = z.object({
+  memberId: z.number().int().positive(),
+  expiresAt: z.string().datetime({ message: 'Must be a valid ISO 8601 datetime' }).optional(),
+});
+
+const membershipExpirySchema = z.object({
+  memberId: z.number().int().positive(),
+  expiresAt: z.string().datetime({ message: 'Must be a valid ISO 8601 datetime' }).nullable(),
+});
+
+// ============================================
+// EXISTING ROUTES
+// ============================================
 
 /** GET /api/v2/admin/members */
 router.get(
@@ -110,6 +130,77 @@ router.patch(
       res.json({ success: true, member });
     } catch (err) {
       handleServiceError(err, res, 'Failed to update member type');
+    }
+  },
+);
+
+// ============================================
+// PASSPORT LIFECYCLE ROUTES
+// ============================================
+
+/**
+ * POST /api/v2/admin/revoke-passport
+ * Revoke an active member's passport — reclaims ENS subdomain, status → passport_revoked.
+ */
+router.post(
+  '/revoke-passport',
+  privyAuthMiddleware,
+  requireAdminV2,
+  auditLoggerV2('REVOKE_PASSPORT'),
+  validateRequest(revokePassportSchema),
+  async (req: PrivyAuthRequest, res: Response) => {
+    try {
+      const { memberId } = req.body;
+      const member = await memberAdminService.revokePassport(memberId);
+      res.json({ success: true, member });
+    } catch (err) {
+      handleServiceError(err, res, 'Failed to revoke passport');
+    }
+  },
+);
+
+/**
+ * POST /api/v2/admin/reinstate-passport
+ * Reinstate a revoked member's passport — re-creates ENS subdomain, status → active_member.
+ * Optionally sets a new membership expiry date.
+ */
+router.post(
+  '/reinstate-passport',
+  privyAuthMiddleware,
+  requireAdminV2,
+  auditLoggerV2('REINSTATE_PASSPORT'),
+  validateRequest(reinstatePassportSchema),
+  async (req: PrivyAuthRequest, res: Response) => {
+    try {
+      const { memberId, expiresAt } = req.body;
+      const expiryDate = expiresAt ? new Date(expiresAt) : undefined;
+      const member = await memberAdminService.reinstatePassport(memberId, expiryDate);
+      res.json({ success: true, member });
+    } catch (err) {
+      handleServiceError(err, res, 'Failed to reinstate passport');
+    }
+  },
+);
+
+/**
+ * PATCH /api/v2/admin/membership-expiry
+ * Set or clear the membership expiry date for a member.
+ * Pass expiresAt: null to make membership permanent.
+ */
+router.patch(
+  '/membership-expiry',
+  privyAuthMiddleware,
+  requireAdminV2,
+  auditLoggerV2('SET_MEMBERSHIP_EXPIRY'),
+  validateRequest(membershipExpirySchema),
+  async (req: PrivyAuthRequest, res: Response) => {
+    try {
+      const { memberId, expiresAt } = req.body;
+      const expiryDate = expiresAt ? new Date(expiresAt) : null;
+      const member = await memberAdminService.setMembershipExpiry(memberId, expiryDate);
+      res.json({ success: true, member });
+    } catch (err) {
+      handleServiceError(err, res, 'Failed to set membership expiry');
     }
   },
 );

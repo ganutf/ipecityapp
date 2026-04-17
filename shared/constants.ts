@@ -31,6 +31,7 @@ export const MEMBER_STATUSES = [
   'approved_application',
   'denied_application',
   'active_member',
+  'passport_revoked', // Suspended: passport revoked (non-payment or admin action), eligible for reinstatement
 ] as const;
 
 export type MemberStatus = (typeof MEMBER_STATUSES)[number];

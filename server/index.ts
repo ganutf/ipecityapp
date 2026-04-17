@@ -201,6 +201,17 @@ app.use((req, res, next) => {
           error: error instanceof Error ? error.message : String(error)
         });
       }
+
+      // Start passport expiry background job
+      try {
+        const { startPassportExpiryJob } = await import('./jobs/passportExpiryJob');
+        startPassportExpiryJob();
+        logger.info('Passport expiry background job started successfully');
+      } catch (error) {
+        logger.error('Failed to start passport expiry job:', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
     });
 
     // Graceful shutdown handling
@@ -211,6 +222,8 @@ app.use((req, res, next) => {
       try {
         const { stopBalanceUpdater } = await import('./jobs/balanceUpdater');
         stopBalanceUpdater();
+        const { stopPassportExpiryJob } = await import('./jobs/passportExpiryJob');
+        stopPassportExpiryJob();
         logger.info('Background jobs stopped');
       } catch (error) {
         logger.error(`Error stopping background jobs: ${error}`);

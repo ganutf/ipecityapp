@@ -78,10 +78,15 @@ export const members = pgTable("members", {
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+
+  // Passport lifecycle (on-chain management)
+  membershipExpiresAt: timestamp("membership_expires_at"), // null = no expiry; set = auto-revoke when past
+  passportRevokedAt: timestamp("passport_revoked_at"),     // null = not revoked; set = audit timestamp
 }, (table) => [
   index("idx_members_email").on(table.email),
   index("idx_members_ipe_username").on(table.ipeUsername),
   index("idx_members_status").on(table.status),
+  index("idx_members_membership_expires_at").on(table.membershipExpiresAt),
 ]);
 
 // Member wallets table - tracks all wallets linked by each member

@@ -31,7 +31,7 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requireAuth = false, requireApproval = false }: AuthGuardProps) {
-  const { isAuthenticated, isLoading, isMember, memberStatus } = useAuth();
+  const { isAuthenticated, isLoading, isMember, memberStatus, accountConflict, logout } = useAuth();
   const [, setLocation] = useLocation();
 
   /**
@@ -119,6 +119,27 @@ export function AuthGuard({ children, requireAuth = false, requireApproval = fal
 
     // Allow access for unauthenticated users if authentication is not required
   }, [isAuthenticated, isLoading, isMember, memberStatus, requireAuth, setLocation]);
+
+  if (accountConflict) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 px-6">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-sm border-l-4 border-l-amber-500 p-8 space-y-6">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Account conflict</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              {accountConflict.message}
+            </p>
+          </div>
+          <button
+            onClick={() => logout()}
+            className="w-full inline-flex items-center justify-center h-11 px-4 bg-slate-900 hover:bg-slate-900/90 text-white font-medium rounded-md transition-colors"
+          >
+            Log out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading state while determining authentication status
   if (isLoading) {

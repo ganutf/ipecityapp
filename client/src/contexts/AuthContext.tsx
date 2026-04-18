@@ -15,6 +15,11 @@ interface AuthUser {
   wallet?: string;
 }
 
+interface AccountConflict {
+  message: string;
+  conflictBy: 'email' | 'wallet';
+}
+
 interface AuthContextValue {
   // Privy state
   privyUser: AuthUser | null;
@@ -28,6 +33,9 @@ interface AuthContextValue {
   isMember: boolean;
   memberStatus: string | null;
   isMemberLoading: boolean;
+
+  // Conflict state (409 from /auth/me when email/wallet matches a different Privy account)
+  accountConflict: AccountConflict | null;
 
   // Combined state
   isAuthenticated: boolean;
@@ -66,6 +74,7 @@ function AuthProviderWithoutPrivy({ children }: AuthProviderProps) {
     isMember: false,
     memberStatus: null,
     isMemberLoading: false,
+    accountConflict: null,
     isAuthenticated: false,
     isLoading: false,
     login: () => console.warn('Privy not configured'),
@@ -99,6 +108,7 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
   const { disconnect: disconnectWagmi } = useDisconnect();
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [accountConflict, setAccountConflict] = useState<AccountConflict | null>(null);
 
   // Get access token when authenticated and sync to api.ts
   useEffect(() => {
@@ -137,11 +147,23 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
 
       if (!response.ok) {
         if (response.status === 401) {
+          setAccountConflict(null);
           return null;
+        }
+        if (response.status === 409) {
+          const body = await response.json().catch(() => ({}));
+          if (body?.error === 'ACCOUNT_CONFLICT') {
+            setAccountConflict({
+              message: body.message || 'Account conflict',
+              conflictBy: body.conflictBy === 'wallet' ? 'wallet' : 'email',
+            });
+            return null;
+          }
         }
         throw new Error('Failed to fetch member data');
       }
 
+      setAccountConflict(null);
       return response.json();
     },
     enabled: !!accessToken,
@@ -177,6 +199,7 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     await privyLogout();
     setAccessToken(null);
     setApiAccessToken(null);
+    setAccountConflict(null);
     queryClient.clear();
   };
 
@@ -190,8 +213,9 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     isMember: !!memberData?.isMember,
     memberStatus: memberData?.status || null,
     isMemberLoading: memberLoading,
-    isAuthenticated: privyAuthenticated && !!authUser,
-    isLoading: !privyReady || (privyAuthenticated && memberLoading),
+    accountConflict,
+    isAuthenticated: privyAuthenticated && !!authUser && !accountConflict,
+    isLoading: !privyReady || (privyAuthenticated && memberLoading && !accountConflict),
     login: privyLogin,
     logout: handleLogout,
     refreshMember: refetchMember,

@@ -52,13 +52,18 @@ router.post('/auth/login', privyAuthMiddleware, async (req: PrivyAuthRequest, re
           memberId: member.id, privyId, email,
         });
       } else if (existingMember && existingMember.privyId !== privyId) {
-        // Member already belongs to a different Privy account — do NOT hijack
         logger.warn('Login attempted with email/wallet belonging to another Privy account', {
           existingMemberId: existingMember.id,
           existingPrivyId: existingMember.privyId,
           newPrivyId: privyId,
         });
-        member = await storage.createMemberFromPrivy(privyId, email, walletAddress);
+        return res.status(409).json({
+          error: 'ACCOUNT_CONFLICT',
+          message: email && existingMember.email === email
+            ? 'This email is already linked to another account. Log out and sign in with the original method, or contact an admin.'
+            : 'This wallet is already linked to another account. Log out and sign in with the original method, or contact an admin.',
+          conflictBy: email && existingMember.email === email ? 'email' : 'wallet',
+        });
       } else {
         // No existing member found — create new one
         logger.info('Creating new member from Privy', {
@@ -165,13 +170,22 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
           matchedBy: privyEmail ? 'email' : 'wallet',
         });
       } else if (existingMember && existingMember.privyId !== req.privyUser.id) {
-        // Member already belongs to a different Privy account — do NOT hijack
+        // Member already belongs to a different Privy account — refuse to
+        // silently create a duplicate. User must resolve on the Privy side
+        // (re-link the correct account) before we let them in.
         logger.warn('Auth/me: email/wallet matches member owned by different Privy account', {
           existingMemberId: existingMember.id,
           existingPrivyId: existingMember.privyId,
           newPrivyId: req.privyUser.id,
+          matchedBy: privyEmail && existingMember.email === privyEmail ? 'email' : 'wallet',
         });
-        existingMember = undefined; // Force new member creation below
+        return res.status(409).json({
+          error: 'ACCOUNT_CONFLICT',
+          message: privyEmail && existingMember.email === privyEmail
+            ? 'This email is already linked to another account. Log out and sign in with the original method, or contact an admin.'
+            : 'This wallet is already linked to another account. Log out and sign in with the original method, or contact an admin.',
+          conflictBy: privyEmail && existingMember.email === privyEmail ? 'email' : 'wallet',
+        });
       }
 
       if (!existingMember || !member) {

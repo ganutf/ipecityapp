@@ -23,26 +23,40 @@ import type { Member } from '@shared/schema';
 import logger from '../logger';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const RPC_TIMEOUT_MS = 3000;
+const NEGATIVE_CACHE_TTL_MS = 60 * 1000;
 
 let cachedOwner: string | null = null;
 let cachedAt = 0;
+let lastFailureAt = 0;
 
 /**
  * Get the on-chain owner of ipecity.eth, with an in-memory TTL cache.
  * Returns null on RPC failure (caller should treat as "can't verify now").
+ * Hard-bounded by RPC_TIMEOUT_MS so a slow/hung RPC can't block login.
+ * A brief negative cache suppresses repeat calls after a failure.
  */
 async function getCachedParentOwner(): Promise<string | null> {
   const now = Date.now();
   if (cachedOwner && now - cachedAt < CACHE_TTL_MS) {
     return cachedOwner;
   }
+  if (now - lastFailureAt < NEGATIVE_CACHE_TTL_MS) {
+    return null;
+  }
   try {
     const ens = getEnsSubdomainService();
-    const owner = await ens.getParentOwner();
+    const owner = await Promise.race<string>([
+      ens.getParentOwner(),
+      new Promise<string>((_, reject) =>
+        setTimeout(() => reject(new Error(`RPC timeout after ${RPC_TIMEOUT_MS}ms`)), RPC_TIMEOUT_MS),
+      ),
+    ]);
     cachedOwner = owner.toLowerCase();
     cachedAt = now;
     return cachedOwner;
   } catch (err) {
+    lastFailureAt = now;
     logger.warn('Root admin check: failed to read ipecity.eth owner on-chain', {
       error: err instanceof Error ? err.message : String(err),
     });

@@ -483,10 +483,8 @@ export default function AdminPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    {selectedMember.farcasterFid ? 'Farcaster FID' : 'Member ID'}
-                  </label>
-                  <p className="text-sm">{selectedMember.farcasterFid || `#${selectedMember.id}`}</p>
+                  <label className="text-sm font-medium text-gray-500">Member ID</label>
+                  <p className="text-sm">#{selectedMember.id}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Username</label>

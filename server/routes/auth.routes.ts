@@ -189,6 +189,27 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
       }
 
       if (!existingMember || !member) {
+        // Guard against ghost rows: if neither email nor wallet is known yet
+        // (identity token not delivered / not yet linked), defer creation.
+        // The client re-queries /auth/me once it has identity data, at which
+        // point we'll have something real to anchor the new member on.
+        if (!privyEmail && !privyWallet) {
+          logger.info('Deferring member creation until email or wallet is linked', {
+            privyId: req.privyUser.id,
+          });
+          return res.json({
+            isMember: false,
+            status: null,
+            member: null,
+            memberId: null,
+            privyUser: {
+              id: req.privyUser.id,
+              email: privyEmail,
+              wallet: privyWallet,
+            },
+          });
+        }
+
         // No existing member found — auto-create new one
         logger.info('Auto-creating member for Privy user', {
           privyId: req.privyUser.id,

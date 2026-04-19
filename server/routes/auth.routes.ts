@@ -647,12 +647,14 @@ router.post('/auth/passport/verify', privyAuthMiddleware, async (req: PrivyAuthR
     }
 
     // 3. On-chain check: the wallet must actually own the claimed ENS name.
-    //    lookupEnsName resolves DB first (fast path) then viem reverse records.
-    const { lookupEnsName } = await import('../lib/ensLookup');
-    const ensLookup = await lookupEnsName(normalizedWallet);
-    if (!ensLookup.ensNames || !ensLookup.ensNames.includes(ensName)) {
+    //    Reads NameWrapper.ownerOf directly — deterministic and not subject to
+    //    subgraph indexing lag that the enumeration step may have.
+    const { getEnsSubdomainService } = await import('../lib/ensSubdomainService');
+    const ensService = getEnsSubdomainService();
+    const ownsName = await ensService.verifyOnchainOwnership(ensName, normalizedWallet);
+    if (!ownsName) {
       return res.status(400).json({
-        error: 'This wallet does not resolve to the claimed ENS name',
+        error: 'This wallet does not own the claimed ENS name on-chain',
       });
     }
 

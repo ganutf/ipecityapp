@@ -15,7 +15,7 @@ interface AvailabilityResult {
 interface EnsLookupResult {
   ensName: string | null;
   ensNames: string[];
-  source: 'database' | 'onchain' | null;
+  source: 'database' | 'subgraph' | null;
   error: string | null;
 }
 

@@ -26,15 +26,36 @@
 import {
   createPublicClient,
   createWalletClient,
+  fallback,
   http,
   namehash,
   zeroAddress,
   type Hash,
   type Address,
+  type Transport,
 } from 'viem';
 import { mainnet } from 'viem/chains';
 import { mnemonicToAccount } from 'viem/accounts';
 import logger from '../logger';
+
+// Public Ethereum mainnet fallbacks. Used by viem's `fallback` transport so
+// a single flaky provider can't wedge the read path. Primary (ETHEREUM_RPC_URL)
+// is tried first; on failure viem auto-rotates to the next.
+const PUBLIC_RPC_FALLBACKS = [
+  'https://rpc.ankr.com/eth',
+  'https://ethereum.publicnode.com',
+  'https://cloudflare-eth.com',
+] as const;
+
+const RPC_TIMEOUT_MS = 3000;
+
+function createMainnetTransport(): Transport {
+  const primary = process.env.ETHEREUM_RPC_URL;
+  const urls = [primary, ...PUBLIC_RPC_FALLBACKS].filter(Boolean) as string[];
+  return fallback(
+    urls.map(url => http(url, { timeout: RPC_TIMEOUT_MS })),
+  );
+}
 
 // ============================================
 // CONTRACT ADDRESSES (Ethereum Mainnet)
@@ -127,20 +148,48 @@ export class EnsSubdomainService {
     const account = mnemonicToAccount(mnemonic);
     this.adminAddress = account.address;
 
-    const rpcUrl = process.env.ETHEREUM_RPC_URL;
-
     this.publicClient = createPublicClient({
       chain: mainnet,
-      transport: http(rpcUrl),
+      transport: createMainnetTransport(),
     });
 
     this.walletClient = createWalletClient({
       account,
       chain: mainnet,
-      transport: http(rpcUrl),
+      transport: createMainnetTransport(),
     });
 
     logger.info(`[ENS] Admin wallet: ${this.adminAddress}`);
+  }
+
+  /**
+   * Verify that a wallet currently owns a specific `*.ipecity.eth` name on-chain.
+   * Reads NameWrapper.ownerOf(namehash(name)) — deterministic and not subject
+   * to subgraph indexing lag. Safe to use at passport-verify time.
+   *
+   * Returns false on any read error (conservative — treat "can't prove" as "no").
+   */
+  async verifyOnchainOwnership(name: string, wallet: string): Promise<boolean> {
+    if (!name.endsWith(`.${PARENT_DOMAIN}`) && name !== PARENT_DOMAIN) {
+      return false;
+    }
+    try {
+      const node = namehash(name);
+      const owner = await this.publicClient.readContract({
+        address: NAME_WRAPPER_ADDRESS,
+        abi: NAME_WRAPPER_ABI,
+        functionName: 'ownerOf',
+        args: [BigInt(node)],
+      });
+      return owner.toLowerCase() === wallet.toLowerCase();
+    } catch (err) {
+      logger.warn('On-chain ownership verification failed', {
+        name,
+        wallet,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return false;
+    }
   }
 
   /**

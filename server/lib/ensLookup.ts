@@ -1,30 +1,27 @@
 /**
- * ENS Lookup
+ * ENS Lookup — determines the `*.ipecity.eth` passport(s) a wallet owns.
  *
- * Since IpêCity now controls all *.ipecity.eth subdomains directly via the ENS Registry,
- * the database is the authoritative source for ipecity.eth subdomain → member mappings.
+ * Strategy:
+ *   1. DB pre-check — if this wallet is already linked to a member with an
+ *      `ipePassport`, return that (authoritative, no remote call).
+ *   2. ENS subgraph — enumerate every `*.ipecity.eth` the wallet currently
+ *      owns (including the `ipecity.eth` root) via TheGraph. Required because
+ *      ENS NFTs aren't enumerable on-chain and reverse resolution returns
+ *      only the wallet's primary name.
  *
- * Lookup strategy:
- *   1. Check DB for ipecity.eth subdomain linked to this wallet (fast, authoritative)
- *   2. Fallback: viem reverse ENS resolution for any other ENS name the wallet may have
+ * Returns an empty list on subgraph failure; callers treat that as "no
+ * passport detected" and route users to the application flow.
  */
 
-import { createPublicClient, http, type Address } from 'viem';
-import { mainnet } from 'viem/chains';
 import { storage } from '../storage';
-import logger from '../logger';
+import { fetchIpecitySubdomainsOwnedBy } from './ensSubgraph';
 
 interface EnsLookupResult {
   ensName: string | null;
   ensNames: string[];
-  source: 'database' | 'onchain' | null;
+  source: 'database' | 'subgraph' | null;
   error: string | null;
 }
-
-const publicClient = createPublicClient({
-  chain: mainnet,
-  transport: http(),
-});
 
 export async function lookupEnsName(address: string): Promise<EnsLookupResult> {
   if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
@@ -36,65 +33,43 @@ export async function lookupEnsName(address: string): Promise<EnsLookupResult> {
     };
   }
 
-  try {
-    // 1. Check DB — we now own all *.ipecity.eth subdomains, so DB is authoritative
-    const member = await storage.getMemberByWalletAddress(address.toLowerCase());
-    if (member?.ipePassport) {
+  const normalized = address.toLowerCase();
+
+  // 1. DB pre-check. If this wallet is already linked to a member with a
+  //    passport, that record is authoritative — skip the remote call.
+  const member = await storage.getMemberByWalletAddress(normalized);
+  if (member?.ipePassport) {
+    return {
+      ensName: member.ipePassport,
+      ensNames: [member.ipePassport],
+      source: 'database',
+      error: null,
+    };
+  }
+
+  const walletRecord = await storage.getMemberWalletByAddress(normalized);
+  if (walletRecord) {
+    const memberByWallet = await storage.getMember(walletRecord.memberId);
+    if (memberByWallet?.ipePassport) {
       return {
-        ensName: member.ipePassport,
-        ensNames: [member.ipePassport],
+        ensName: memberByWallet.ipePassport,
+        ensNames: [memberByWallet.ipePassport],
         source: 'database',
         error: null,
       };
     }
-
-    // Also check member_wallets table in case this is a linked wallet (not the passport wallet)
-    const walletRecord = await storage.getMemberWalletByAddress(address.toLowerCase());
-    if (walletRecord) {
-      const memberByWallet = await storage.getMember(walletRecord.memberId);
-      if (memberByWallet?.ipePassport) {
-        return {
-          ensName: memberByWallet.ipePassport,
-          ensNames: [memberByWallet.ipePassport],
-          source: 'database',
-          error: null,
-        };
-      }
-    }
-
-    // 2. Fallback: viem reverse ENS resolution (for wallets with other ENS names)
-    try {
-      const ensName = await publicClient.getEnsName({ address: address as Address });
-      if (ensName) {
-        return {
-          ensName,
-          ensNames: [ensName],
-          source: 'onchain',
-          error: null,
-        };
-      }
-    } catch (ensError) {
-      logger.warn(`ENS reverse lookup failed for ${address}`, {
-        error: ensError instanceof Error ? ensError.message : String(ensError),
-      });
-    }
-
-    return {
-      ensName: null,
-      ensNames: [],
-      source: null,
-      error: null,
-    };
-  } catch (error) {
-    logger.error('ENS lookup error', {
-      address,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return {
-      ensName: null,
-      ensNames: [],
-      source: null,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-    };
   }
+
+  // 2. Subgraph enumeration for new users. Handles the common case where a
+  //    wallet owns an *.ipecity.eth that isn't in our DB yet (e.g. transferred
+  //    between wallets), and correctly includes the `ipecity.eth` root for
+  //    the admin wallet.
+  const names = await fetchIpecitySubdomainsOwnedBy(normalized);
+
+  return {
+    ensName: names[0] ?? null,
+    ensNames: names,
+    source: names.length > 0 ? 'subgraph' : null,
+    error: null,
+  };
 }

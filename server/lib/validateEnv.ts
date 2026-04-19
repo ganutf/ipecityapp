@@ -28,6 +28,10 @@ const envVars: EnvVarConfig[] = [
   // Optional services
   { name: 'RESEND_API_KEY', required: false, sensitive: true },
   { name: 'EMAIL_TEST_MODE', required: false },
+
+  // ENS Subgraph (TheGraph) — optional; lookup degrades to "no domain" if missing
+  { name: 'THEGRAPH_API_KEY', required: false, sensitive: true },
+  { name: 'THEGRAPH_ENS_SUBGRAPH_ID', required: false },
 ];
 
 /**

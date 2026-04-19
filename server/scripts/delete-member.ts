@@ -2,16 +2,18 @@
 
 /**
  * Member Deletion Script
- * 
+ *
  * This script safely deletes a member and all related data from the system.
- * Usage: tsx server/scripts/delete-member.ts <FID>
- * 
+ * Usage: tsx server/scripts/delete-member.ts <memberId>
+ *
+ * NOTE: This script deletes DB rows only. If the member has an on-chain
+ * `*.ipecity.eth` passport, revoke it via the admin flow first — this
+ * script does not touch ENS.
+ *
  * Security Features:
- * - Multiple confirmation prompts
  * - Displays member details before deletion
  * - Logs all deletion operations for audit trail
  * - Cascading deletion of related data
- * - Rollback support in case of errors
  */
 
 import 'dotenv/config';
@@ -19,27 +21,26 @@ import { storage } from '../storage';
 import { initializeDatabase, getDatabase } from '../db';
 import { initializeKeyManager } from '../lib/keyManagement';
 
-const MEMBER_FID = process.argv[2];
+const MEMBER_ID_ARG = process.argv[2];
 
 async function deleteMember() {
   console.log('🗑️  Ipê Platform - Member Deletion Script');
   console.log('==========================================\n');
 
-  // Validate FID argument
-  if (!MEMBER_FID) {
-    console.error('❌ Error: FID is required');
-    console.log('Usage: tsx server/scripts/delete-member.ts <FID>');
-    console.log('Example: tsx server/scripts/delete-member.ts 12345');
+  if (!MEMBER_ID_ARG) {
+    console.error('❌ Error: member ID is required');
+    console.log('Usage: tsx server/scripts/delete-member.ts <memberId>');
+    console.log('Example: tsx server/scripts/delete-member.ts 42');
     process.exit(1);
   }
 
-  const fid = parseInt(MEMBER_FID);
-  if (isNaN(fid)) {
-    console.error('❌ Error: FID must be a valid number');
+  const memberId = parseInt(MEMBER_ID_ARG);
+  if (isNaN(memberId)) {
+    console.error('❌ Error: member ID must be a valid number');
     process.exit(1);
   }
 
-  console.log(`🔍 Looking up member with FID: ${fid}`);
+  console.log(`🔍 Looking up member with ID: ${memberId}`);
 
   try {
     // Initialize key manager first (for secure storage)
@@ -60,18 +61,19 @@ async function deleteMember() {
     console.log('✅ Database connection successful');
 
     // Check if member exists
-    const member = await storage.getMemberByFarcasterFid(fid);
+    const member = await storage.getMember(memberId);
 
     if (!member) {
       console.log('❌ Member not found in system');
-      console.log(`No member exists with FID: ${fid}`);
+      console.log(`No member exists with ID: ${memberId}`);
       process.exit(1);
     }
 
     // Display member details
     console.log('\n📋 MEMBER DETAILS');
     console.log('==================');
-    console.log(`FID: ${member.farcasterFid}`);
+    console.log(`ID: ${member.id}`);
+    console.log(`FID: ${member.farcasterFid ?? 'Not set'}`);
     console.log(`Status: ${member.status}`);
     console.log(`Member Type: ${member.memberType}`);
     console.log(`Email: ${member.email || 'Not set'}`);
@@ -96,7 +98,8 @@ async function deleteMember() {
     console.log('\n🔐 PROCEEDING WITH DELETION');
     console.log('============================');
     console.log(`PERMANENTLY DELETING member:`);
-    console.log(`• FID: ${member.farcasterFid}`);
+    console.log(`• ID: ${member.id}`);
+    console.log(`• FID: ${member.farcasterFid ?? 'Not set'}`);
     console.log(`• Email: ${member.email || 'Not set'}`);
     console.log(`• Status: ${member.status}`);
     console.log(`• Member Type: ${member.memberType}`);
@@ -115,7 +118,8 @@ async function deleteMember() {
     console.log('============');
     console.log(`Timestamp: ${timestamp}`);
     console.log(`Action: DELETE_MEMBER`);
-    console.log(`Target FID: ${fid}`);
+    console.log(`Target ID: ${memberId}`);
+    console.log(`Target FID: ${member.farcasterFid ?? 'Not set'}`);
     console.log(`Previous Status: ${member.status}`);
     console.log(`Previous Member Type: ${member.memberType}`);
     console.log(`Had Email: ${member.email ? 'Yes' : 'No'}`);
@@ -123,7 +127,7 @@ async function deleteMember() {
 
     console.log('\n✅ DELETION COMPLETED SUCCESSFULLY');
     console.log('==================================');
-    console.log(`Member with FID ${fid} has been permanently deleted`);
+    console.log(`Member with ID ${memberId} has been permanently deleted`);
     console.log('All related data has been cleaned up');
 
     console.log('\n📝 SECURITY REMINDER');
@@ -135,7 +139,7 @@ async function deleteMember() {
     console.error('\n❌ Error deleting member:', error);
     console.error('\nTroubleshooting:');
     console.error('• Check database connection');
-    console.error('• Verify FID is valid');
+    console.error('• Verify member ID is valid');
     console.error('• Check database permissions');
     console.error('• Ensure no foreign key constraints are preventing deletion');
     process.exit(1);

@@ -103,11 +103,11 @@ export async function sendVerificationEmail(email: string, code: string): Promis
   return sendEmail({
     to: email,
     from: fromEmail,
-    subject: 'Ipê City Pulse - Email Verification',
+    subject: 'Ipê Platform - Email Verification',
     text: `Your verification code is: ${code}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Ipê City Pulse - Email Verification</h2>
+        <h2>Ipê Platform - Email Verification</h2>
         <p>Your verification code is:</p>
         <h1 style="color: #8B5CF6; font-size: 32px; letter-spacing: 4px;">${code}</h1>
         <p>This code will expire in 10 minutes.</p>
@@ -118,18 +118,20 @@ export async function sendVerificationEmail(email: string, code: string): Promis
 
 export async function sendApprovalEmail(email: string, ipePassport: string): Promise<boolean> {
   const fromEmail = 'team@updates.ipe.city';
+  const platformUrl = process.env.FRONTEND_URL || 'https://app.ipe.city';
 
   return sendEmail({
     to: email,
     from: fromEmail,
-    subject: 'Welcome to Ipê City Pulse!',
-    text: `Your application has been approved. Your Ipê passport ${ipePassport} is now live on Ethereum and owned by your wallet — no further action needed. You can sign in and start participating in pulses.`,
+    subject: 'Welcome to the Ipê Platform!',
+    text: `Your application has been approved. Your Ipê passport ${ipePassport} is now live on Ethereum and owned by your wallet — no further action needed. Sign in to the platform: ${platformUrl}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Welcome to Ipê City Pulse!</h2>
+        <h2>Welcome to the Ipê Platform!</h2>
         <p>Your application has been approved and your Ipê passport is live on Ethereum:</p>
         <h3 style="color: #8B5CF6;">${ipePassport}</h3>
-        <p>The subdomain is already on-chain and owned by your wallet — you don't need to sign anything. Just log in to access the platform and start participating in daily pulses.</p>
+        <p>The subdomain is already on-chain and owned by your wallet — you don't need to sign anything.</p>
+        <p><a href="${platformUrl}" style="display: inline-block; background-color: #8B5CF6; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Sign in to the platform</a></p>
       </div>
     `
   });
@@ -141,12 +143,12 @@ export async function sendDenialEmail(email: string): Promise<boolean> {
   return sendEmail({
     to: email,
     from: fromEmail,
-    subject: 'Ipê City Pulse Registration Update',
-    text: 'Your registration for Ipê City Pulse was not approved at this time.',
+    subject: 'Ipê Platform Registration Update',
+    text: 'Your registration for the Ipê Platform was not approved at this time.',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Ipê City Pulse Registration Update</h2>
-        <p>Thank you for your interest in Ipê City Pulse.</p>
+        <h2>Ipê Platform Registration Update</h2>
+        <p>Thank you for your interest in the Ipê Platform.</p>
         <p>Your registration was not approved at this time.</p>
         <p>If you have any questions, please contact our support team.</p>
       </div>

@@ -21,7 +21,7 @@ import { initializeKeyManager } from '../lib/keyManagement';
 const ADMIN_FID = process.argv[2];
 
 async function createAdmin() {
-  console.log('🚀 Ipê City Pulse - Admin Bootstrap Script');
+  console.log('🚀 Ipê Platform - Admin Bootstrap Script');
   console.log('==========================================\n');
 
   // Validate FID argument

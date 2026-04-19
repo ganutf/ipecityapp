@@ -22,7 +22,7 @@ import { initializeKeyManager } from '../lib/keyManagement';
 const MEMBER_FID = process.argv[2];
 
 async function deleteMember() {
-  console.log('🗑️  Ipê City Pulse - Member Deletion Script');
+  console.log('🗑️  Ipê Platform - Member Deletion Script');
   console.log('==========================================\n');
 
   // Validate FID argument

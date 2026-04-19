@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Attestation Creation Script for Ipê City Pulse
+ * Attestation Creation Script for Ipê Platform
  * 
  * This script processes completed pulse executions and creates EAS attestations
  * for members who have verified passports. It runs after the 24-hour pulse window closes.

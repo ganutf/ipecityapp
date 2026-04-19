@@ -1,5 +1,5 @@
 /**
- * Secure Cryptographic Operations for Ipê City Pulse
+ * Secure Cryptographic Operations for Ipê Platform
  * 
  * This module provides secure signature verification for both EOA wallets
  * and smart contract wallets, implementing industry-standard cryptographic

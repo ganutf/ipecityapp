@@ -12,7 +12,7 @@ import { storage } from '../storage';
 import { initializeDatabase, getDatabase } from '../db';
 
 async function listAdmins() {
-  console.log('🔍 Ipê City Pulse - Admin User List');
+  console.log('🔍 Ipê Platform - Admin User List');
   console.log('===================================\n');
 
   try {

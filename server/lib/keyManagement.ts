@@ -1,5 +1,5 @@
 /**
- * Secure Key Management System for Ipê City Pulse
+ * Secure Key Management System for Ipê Platform
  * 
  * This module provides secure storage and access for cryptographic keys,
  * replacing plaintext environment variable storage with encrypted key management.

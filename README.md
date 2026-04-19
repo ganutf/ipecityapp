@@ -1,17 +1,25 @@
-# IpêCity Platform
+# Ipê Platform
 
-A community engagement platform for IpêCity members. Admins create daily "pulses" — engagement tasks linked to Farcaster posts — and members complete like/recast actions tracked on-chain via EAS attestations on Base L2.
+Ipê Platform is where the Ipê City community manages their passports, events, tokens, reputation, opportunities, and collaborations.
 
-## Features
+## What you can do
 
-- **Privy Authentication** — Email, passkey, and wallet-based login with automatic member creation
-- **Member Onboarding** — Multi-step verification: email, wallet connection, ENS passport (ipecity.eth subdomain)
-- **Pulse System** — Daily engagement tasks with Farcaster post interactions and real-time status tracking
-- **Admin Dashboard** — Pulse creation/editing, member application review, approval workflow
-- **ENS Integration** — Automated subdomain reservation and acceptance via JustaName SDK
-- **EAS Attestations** — On-chain rewards on Base L2 for pulse completion using a dedicated wallet
-- **Community Directory** — Member profiles with engagement stats, search, and filtering
-- **Farcaster Integration** — Sponsored signers for transaction-less cast interactions via Neynar SDK
+- **Passport** — Claim and manage your `*.ipecity.eth` subdomain as your on-chain community ID.
+- **Events** — Discover and RSVP to community gatherings.
+- **Tokens** — Track your $IPE balance and participate in token-gated experiences.
+- **Reputation** — Build on-chain reputation through verified contributions and engagement.
+- **Opportunities** — Find bounties, roles, and ways to contribute.
+- **Collaborations** — Connect with other members on projects and initiatives.
+
+## Platform features
+
+- **Authentication (Privy)** — Email, passkey, and wallet-based login with automatic member creation.
+- **Member onboarding** — Email verification, wallet connection, and passport activation.
+- **Passport issuance** — Admin-approved `*.ipecity.eth` subdomains minted on-chain via the ENS NameWrapper (IpêCity pays gas; member signs nothing).
+- **Community directory** — Member profiles with reputation stats, search, and filtering.
+- **Engagement tracking (Pulses)** — Daily engagement tasks with Farcaster post interactions.
+- **On-chain rewards (EAS)** — Attestations on Base L2 for verified contributions.
+- **Admin dashboard** — Application review, approval workflow, passport revocation.
 
 ## Tech Stack
 
@@ -22,9 +30,9 @@ A community engagement platform for IpêCity members. Admins create daily "pulse
 | Database   | PostgreSQL, Drizzle ORM                            |
 | Styling    | Tailwind CSS, shadcn/ui                            |
 | Auth       | Privy (email + passkey + wallet)                   |
-| Blockchain | Ethereum mainnet (ENS), Base L2 (EAS attestations) |
+| Blockchain | Ethereum mainnet (ENS NameWrapper), Base L2 (EAS)  |
 | Farcaster  | Neynar SDK (casts, sponsored signers)              |
-| ENS        | JustaName SDK (subdomain management)               |
+| ENS Index  | TheGraph ENS subgraph                              |
 | Routing    | Wouter (lightweight client-side routing)           |
 
 ## Getting Started
@@ -52,19 +60,21 @@ cp .env.example .env
 
 Required variables:
 
-| Variable                                       | Description                               |
-| ---------------------------------------------- | ----------------------------------------- |
-| `DATABASE_URL`                                 | PostgreSQL connection string              |
-| `PRIVY_APP_ID` / `VITE_PRIVY_APP_ID`           | Privy application ID                      |
-| `PRIVY_APP_SECRET`                             | Privy app secret (server only)            |
-| `NEYNAR_API_KEY`                               | Neynar API key for Farcaster              |
-| `JUSTANAME_API_KEY` / `VITE_JUSTANAME_API_KEY` | JustaName API key for ENS subdomains      |
-| `FARCASTER_DEVELOPER_MNEMONIC`                 | Mnemonic for sponsoring Farcaster signers |
-| `EAS_ATTESTATION_MNEMONIC`                     | Separate mnemonic for EAS attestations    |
-| `SESSION_SECRET`                               | Session encryption secret                 |
-| `VITE_WALLETCONNECT_PROJECT_ID`                | WalletConnect project ID                  |
-| `RESEND_API_KEY`                               | Email service (Resend)                    |
-| `EMAIL_TEST_MODE`                              | Set `true` for development (logs emails)  |
+| Variable                             | Description                                |
+| ------------------------------------ | ------------------------------------------ |
+| `DATABASE_URL`                       | PostgreSQL connection string               |
+| `PRIVY_APP_ID` / `VITE_PRIVY_APP_ID` | Privy application ID                       |
+| `PRIVY_APP_SECRET`                   | Privy app secret (server only)             |
+| `NEYNAR_API_KEY`                     | Neynar API key for Farcaster               |
+| `FARCASTER_DEVELOPER_MNEMONIC`       | Mnemonic for sponsoring Farcaster signers  |
+| `EAS_ATTESTATION_MNEMONIC`           | Separate mnemonic for EAS attestations     |
+| `ENS_ADMIN_MNEMONIC`                 | Wallet approved to manage `ipecity.eth`    |
+| `SESSION_SECRET`                     | Session encryption secret                  |
+| `VITE_WALLETCONNECT_PROJECT_ID`      | WalletConnect project ID                   |
+| `RESEND_API_KEY`                     | Email service (Resend)                     |
+| `THEGRAPH_API_KEY`                   | TheGraph API key for ENS subgraph lookups  |
+| `FRONTEND_URL`                       | Public URL (e.g. `https://app.ipe.city`)   |
+| `EMAIL_TEST_MODE`                    | Set `true` for dev (logs emails, no send)  |
 
 See [.env.example](.env.example) for the full list including EAS chain config and RPC URLs.
 
@@ -109,7 +119,6 @@ npm run start      # Start production server
 | `npm run member:delete`        | Delete a member                                |
 | `npm run wallet:attestation`   | Get EAS attestation wallet address for funding |
 | `npm run attestations:create`  | Batch create attestations                      |
-| `npm run populate:pulse-types` | Seed pulse type definitions                    |
 
 ## Architecture
 
@@ -122,12 +131,12 @@ client/src/               # React frontend
 └── lib/                  # API helpers, query keys, utilities
 
 server/                   # Express backend
-├── routes/               # V2 API route modules (8 files)
-├── services/             # Business logic services (7 services)
-├── middleware/            # Auth (Privy), validation (Zod)
-├── lib/                  # Error classes, route helpers, utilities
-├── jobs/                 # Background jobs (balance updater)
-└── scripts/              # Admin & migration scripts
+├── routes/               # V2 API route modules
+├── services/             # Business logic
+├── middleware/           # Auth (Privy), validation (Zod)
+├── lib/                  # Errors, RPC, ENS lookup, email
+├── jobs/                 # Background jobs (balance updater, passport expiry)
+└── scripts/              # Admin & maintenance scripts
 
 shared/
 ├── schema.ts             # Database schema & validation (Drizzle + Zod)
@@ -155,46 +164,23 @@ All API endpoints are under `/api/v2/`:
 | Service                    | Responsibility                                  |
 | -------------------------- | ----------------------------------------------- |
 | `AttestationService`       | EAS on-chain attestation creation on Base L2    |
-| `ExecutionService`         | Pulse execution (like/recast) tracking          |
+| `ExecutionService`         | Engagement execution (like/recast) tracking    |
 | `FarcasterService`         | Cast data fetching, sponsored signer management |
-| `MemberAdminService`       | Admin approval workflows, subdomain reservation |
-| `PassportService`          | ENS passport verification and acceptance        |
+| `MemberAdminService`       | Admin approval + on-chain passport issuance     |
+| `PassportService`          | ENS passport verification and lookup            |
 | `ProfileEnrichmentService` | Member profile + balance data enrichment        |
 | `PulseService`             | Pulse business logic and status management      |
 
-## Member Status Flow
-
-```
-Privy Login
-  │
-  ▼
-pending_id_verification ──→ [verify email + connect wallet]
-  │
-  ▼
-pending_application_review ──→ [submit application or verify ENS passport]
-  │
-  ├──→ denied_application
-  │
-  ▼
-approved_application ──→ [admin approves + subdomain reserved]
-  │
-  ▼
-active_member ──→ [user accepts ENS passport]
-```
-
-Member types: `pending`, `architect`, `explorer`, `admin`, `org_team`, `core_team`
-
 ## Wallet Separation
 
-The system uses two separate wallets for security isolation:
+The system uses separate wallets for security isolation:
 
-1. **Farcaster Developer Wallet** (`FARCASTER_DEVELOPER_MNEMONIC`) — Sponsors Farcaster signers
-2. **EAS Attestation Wallet** (`EAS_ATTESTATION_MNEMONIC`) — Creates on-chain attestations on Base L2
-
-To get the attestation wallet address for funding:
+1. **ENS Admin Wallet** (`ENS_ADMIN_MNEMONIC`) — Approved operator for `ipecity.eth`; issues/revokes subdomains.
+2. **Farcaster Developer Wallet** (`FARCASTER_DEVELOPER_MNEMONIC`) — Sponsors Farcaster signers.
+3. **EAS Attestation Wallet** (`EAS_ATTESTATION_MNEMONIC`) — Creates on-chain attestations on Base L2.
 
 ```bash
-npm run wallet:attestation
+npm run wallet:attestation   # Get EAS attestation wallet address
 ```
 
 ## Database
@@ -205,9 +191,9 @@ PostgreSQL with Drizzle ORM. Key tables:
 | ------------------ | ------------------------------------------------------------- |
 | `members`          | Core member data (Privy ID, wallet, status, passport)         |
 | `member_wallets`   | All linked wallets per member (source of truth for ownership) |
-| `pulses`           | Daily engagement tasks created by admins                      |
-| `pulse_types`      | Pulse category definitions                                    |
-| `pulse_executions` | Like/recast completion tracking                               |
+| `pulses`           | Engagement tasks created by admins                            |
+| `pulse_types`      | Engagement category definitions                               |
+| `pulse_executions` | Engagement completion tracking                                |
 | `attestations`     | EAS attestation records                                       |
 | `user_signers`     | Farcaster signer state per member                             |
 

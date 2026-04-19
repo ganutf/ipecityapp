@@ -78,9 +78,8 @@ export default function HomePage() {
               </div>
 
               <p className="font-body text-base sm:text-lg text-ipe-navy/50 leading-relaxed max-w-lg">
-                Here you connect with the community, get access to our physical spaces,
-                collect onchain attestation for contributions, learn about emerging
-                technologies and unlock earn opportunities.
+                Manage your passport, events, tokens, reputation, opportunities, and
+                collaborations — all in one place.
               </p>
 
               {/* CTA */}

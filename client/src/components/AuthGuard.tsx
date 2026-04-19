@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 /**
  * AuthGuard Component - Authentication and Authorization Router
  *
- * This component manages the complete user authentication flow for the Ipê City Pulse application.
+ * This component manages the complete user authentication flow for the Ipê Platform.
  * It uses Privy for authentication and handles multi-step verification.
  *
  * AUTHENTICATION FLOW (Privy):

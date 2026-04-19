@@ -26,7 +26,7 @@ interface VerificationResult {
 }
 
 async function verifyMemberAddresses() {
-  console.log('🔍 Ipê City Pulse - Member Address Verification');
+  console.log('🔍 Ipê Platform - Member Address Verification');
   console.log('================================================\n');
 
   try {

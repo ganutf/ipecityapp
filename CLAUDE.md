@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Product
+
+**Ipê Platform** — where the Ipê City community manages their passports, events, tokens, reputation, opportunities, and collaborations. The platform issues on-chain `*.ipecity.eth` passports and provides engagement tracking, on-chain rewards, and a community directory.
+
+Legacy name: "Ipê City Pulse" (deprecated — use "Ipê Platform"). The repo directory `ipecity-pulse` and the internal logger service name `ipecity-pulse` are kept for continuity of logs/deployments and should **not** be renamed.
+
 ## Development Commands
 
 ### Development Server
@@ -34,8 +40,8 @@ npm run wallet:attestation  # Get EAS attestation wallet address for funding
 - **Database**: PostgreSQL with Drizzle ORM
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **Authentication**: Privy (email + passkey + wallet) with Bearer token auth
-- **Blockchain**: Ethereum mainnet via Wagmi + RainbowKit, Base L2 for EAS attestations
-- **ENS**: JustaName SDK for subdomain management (client-side)
+- **Blockchain**: Ethereum mainnet (ENS NameWrapper) via viem + Wagmi, Base L2 for EAS attestations
+- **ENS**: Direct on-chain issuance via `ipecity.eth` NameWrapper; enumeration via TheGraph ENS subgraph
 - **Farcaster**: Neynar SDK for post interactions (optional integration)
 
 ### Project Structure
@@ -48,14 +54,12 @@ client/src/           # React frontend
 └── lib/             # Utility functions (api.ts, queryClient.ts, dateUtils.ts)
 
 server/              # Express.js backend
-├── routes.ts        # V1 API endpoints
-├── routes/          # V2 API route modules
-│   └── auth.routes.ts  # Privy auth endpoints (/api/v2/auth/*)
+├── routes/          # V2 API route modules (auth, admin, pulse, passport, etc.)
 ├── middleware/       # Auth middleware (privyAuth.ts), validation
-├── services/        # Business logic (PulseService, justanamePassport)
+├── services/        # Business logic (MemberAdminService, PassportService, PulseService, ...)
 ├── db.ts            # Database connection setup
 ├── storage.ts       # Database query layer
-└── lib/             # Server utilities
+└── lib/             # Server utilities (ensLookup, ensSubgraph, ensSubdomainService, email, ...)
 
 shared/
 ├── schema.ts        # Database schema (Drizzle ORM)
@@ -63,11 +67,12 @@ shared/
 ```
 
 ### Key Features
-- **Member Management**: Multi-stage verification (email → wallet → passport/application)
-- **Pulse System**: Daily engagement tracking with Farcaster post interactions
-- **ENS Integration**: Automated subdomain reservation and acceptance via JustaName SDK
-- **EAS Attestations**: On-chain rewards on Base L2 for pulse completion
-- **Farcaster Integration**: Sponsored signers, cast interactions (optional)
+- **Passport (core)**: On-chain `*.ipecity.eth` subdomain issued via ENS NameWrapper after admin approval. IpêCity pays gas; members sign nothing.
+- **Member Management**: Multi-stage onboarding (email → wallet → passport or application) with admin review.
+- **Community Directory**: Member profiles, reputation stats, search, and filtering.
+- **Engagement Tracking (Pulses)**: One of many features — daily tasks tied to Farcaster post interactions.
+- **EAS Attestations**: On-chain rewards on Base L2 for verified contributions.
+- **Farcaster Integration**: Sponsored signers and cast interactions (optional).
 
 ### Database Schema
 The system uses a state machine approach for member progression:
@@ -86,7 +91,7 @@ Key tables:
 3. Connect wallet (external preferred over Privy embedded)
 4. Email verification (auto-verified if Privy email login)
 5. ENS passport check or application submission
-6. Admin approval with subdomain reservation → user accepts → `active_member`
+6. Admin approval mints the on-chain subdomain and activates the member directly → `active_member` (no separate accept step)
 
 ### Auth Architecture
 - **Frontend**: `useAuth()` context calls `/api/v2/auth/me`, stores member state
@@ -117,7 +122,7 @@ Required for development:
 - Admin privileges are determined by `memberType = 'admin'` in the database
 - Multiple admins can be created using the `server/scripts/create-admin.ts` script
 - Admin can create/edit pulses and approve member applications
-- Admin approval triggers automatic subdomain reservation
+- Admin approval mints the `*.ipecity.eth` subdomain on-chain and activates the member atomically
 
 ### Testing and Deployment
 - Health check endpoint at `/health`

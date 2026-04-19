@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Key Migration Script for Ipê City Pulse
+ * Key Migration Script for Ipê Platform
  * 
  * This script migrates sensitive environment variables to encrypted storage
  * and provides a secure way to manage cryptographic keys.
@@ -63,7 +63,7 @@ function loadMasterPassword(): string | null {
  * Main migration function
  */
 async function main() {
-  console.log('🔐 Starting secure key migration for Ipê City Pulse...\n');
+  console.log('🔐 Starting secure key migration for Ipê Platform...\n');
   logger.info('Starting key migration process');
 
   try {

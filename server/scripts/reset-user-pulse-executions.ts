@@ -15,7 +15,7 @@ import { initializeKeyManager } from '../lib/keyManagement';
 const MEMBER_FID = process.argv[2];
 
 async function resetUserPulseExecutions() {
-  console.log('🔄 Ipê City Pulse - Reset User Pulse Executions');
+  console.log('🔄 Ipê Platform - Reset User Pulse Executions');
   console.log('===============================================\n');
 
   // Validate FID argument

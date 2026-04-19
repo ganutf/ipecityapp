@@ -255,53 +255,74 @@ export class EnsSubdomainService {
   /**
    * Revoke a member's passport subdomain.
    *
-   * Reclaims the subnode from the member and clears the resolver in one tx.
-   * Works because admin is an approved operator of the parent ipecity.eth node —
-   * the parent always wins regardless of who currently owns the subdomain.
-   * The subdomain node still exists on-chain but resolves to nothing.
+   * Two transactions (both paid by IpêCity):
+   *   1. NameWrapper.setSubnodeRecord — reclaim ownership to admin and clear
+   *      the registry's resolver pointer. This is the authoritative revoke.
+   *   2. PublicResolver.setAddr(node, 0x0) — wipe the stored addr record so
+   *      direct calls to PublicResolver.addr() no longer return the ex-
+   *      member's wallet. Admin is authorised because step 1 made admin the
+   *      subnode owner. Best-effort — a failure here is logged but does not
+   *      reverse the revocation.
    *
-   * IpêCity pays gas.
+   * Without step 2 the resolver keeps an orphan record forever, which is
+   * how deleted subnames can still appear "taken" to direct-resolver queries.
    *
-   * @returns Transaction hash
+   * @returns Transaction hash of the reclaim tx
    */
   async revokeSubdomain(username: string): Promise<Hash> {
+    const subnodeHash = namehash(`${username}.${PARENT_DOMAIN}`);
     logger.info(`[ENS] Revoking subdomain: ${username}.${PARENT_DOMAIN}`);
 
-    // setSubnodeRecord with adminAddress + zeroAddress resolver:
-    //   - reclaims ownership (admin takes back the node)
-    //   - clears resolver (name no longer resolves to anything)
-    const txHash = await this.walletClient.writeContract({
+    const reclaimTxHash = await this.walletClient.writeContract({
       address: NAME_WRAPPER_ADDRESS,
       abi: NAME_WRAPPER_ABI,
       functionName: 'setSubnodeRecord',
       args: [PARENT_NODE, username, this.adminAddress, zeroAddress, BigInt(0), 0, MAX_EXPIRY],
     });
+    await this.publicClient.waitForTransactionReceipt({ hash: reclaimTxHash });
+    logger.info(`[ENS] Revocation confirmed: ${reclaimTxHash}`);
 
-    await this.publicClient.waitForTransactionReceipt({ hash: txHash });
-    logger.info(`[ENS] Revocation confirmed: ${txHash}`);
+    try {
+      const clearAddrTxHash = await this.walletClient.writeContract({
+        address: PUBLIC_RESOLVER_ADDRESS,
+        abi: PUBLIC_RESOLVER_ABI,
+        functionName: 'setAddr',
+        args: [subnodeHash, zeroAddress],
+      });
+      await this.publicClient.waitForTransactionReceipt({ hash: clearAddrTxHash });
+      logger.info(`[ENS] Resolver addr cleared: ${clearAddrTxHash}`);
+    } catch (err) {
+      logger.warn('[ENS] Failed to clear resolver addr record (revocation still effective)', {
+        username,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
 
-    return txHash;
+    return reclaimTxHash;
   }
 
   /**
-   * Check if a subdomain currently resolves to any non-zero address.
+   * Check if a subdomain is currently owned (registered) on-chain.
+   *
+   * Reads NameWrapper.ownerOf(namehash) — the authoritative owner of wrapped
+   * ENS subnames. Zero means the subname is free (never minted, or deleted
+   * via NameWrapper). Must NOT fall back to PublicResolver.addr(), which
+   * stores stale records that persist after the subname is burned.
    */
   async subdomainExists(username: string): Promise<boolean> {
     const subnodeHash = namehash(`${username}.${PARENT_DOMAIN}`);
 
     try {
-      const resolvedAddress = await this.publicClient.readContract({
-        address: PUBLIC_RESOLVER_ADDRESS,
-        abi: PUBLIC_RESOLVER_ABI,
-        functionName: 'addr',
-        args: [subnodeHash],
+      const owner = await this.publicClient.readContract({
+        address: NAME_WRAPPER_ADDRESS,
+        abi: NAME_WRAPPER_ABI,
+        functionName: 'ownerOf',
+        args: [BigInt(subnodeHash)],
       });
-
-      return (
-        resolvedAddress !== zeroAddress &&
-        resolvedAddress !== '0x0000000000000000000000000000000000000000'
-      );
+      return owner !== zeroAddress;
     } catch {
+      // A revert on ownerOf typically means the token doesn't exist (never
+      // wrapped or already burned). Treat that as "not registered".
       return false;
     }
   }

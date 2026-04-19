@@ -500,14 +500,23 @@ export default function AdminPage() {
                         ? 'bg-green-100 text-green-800'
                         : selectedMember.status === 'pending_application_review'
                           ? 'bg-orange-100 text-orange-800'
-                          : selectedMember.status === 'pending_claim'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-800'
+                          : selectedMember.status === 'approved_application'
+                            ? 'bg-blue-100 text-blue-800'
+                            : selectedMember.status === 'denied_application'
+                              ? 'bg-red-100 text-red-800'
+                              : selectedMember.status === 'pending_id_verification'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : selectedMember.status === 'passport_revoked'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-gray-100 text-gray-800'
                     }`}>
                       {selectedMember.status === 'active_member' ? 'Active Member' :
                        selectedMember.status === 'pending_application_review' ? 'Pending Review' :
-                       selectedMember.status === 'pending_claim' ? 'Pending Claim' :
-                       'Pending Signer'}
+                       selectedMember.status === 'approved_application' ? 'Approved Application' :
+                       selectedMember.status === 'denied_application' ? 'Denied Application' :
+                       selectedMember.status === 'pending_id_verification' ? 'Pending Verification' :
+                       selectedMember.status === 'passport_revoked' ? 'Passport Revoked' :
+                       selectedMember.status}
                     </span>
                   </p>
                 </div>

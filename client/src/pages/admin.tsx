@@ -425,7 +425,13 @@ export default function AdminPage() {
                                 {member.ipeUsername || member.email || `Member #${member.id}`}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {member.email || `ID: ${member.id}`}
+                                <span>ID: {member.id}</span>
+                                {member.email && (
+                                  <>
+                                    <span className="mx-1.5 text-gray-300">·</span>
+                                    <span>{member.email}</span>
+                                  </>
+                                )}
                               </div>
                             </div>
                             <Eye className="h-4 w-4 text-gray-400" />

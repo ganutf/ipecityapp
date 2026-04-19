@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil, Save, X, Eye, Clock, Globe, Wallet } from "lucide-react";
+import { Pencil, Save, X, Eye, Clock, Globe, Wallet, Loader2 } from "lucide-react";
 import { getMemberTypeInfo } from "@/lib/memberTypeConfig";
 import { useConnectWallet } from "@privy-io/react-auth";
 import { useActiveWallet } from "@/hooks/useActiveWallet";
@@ -48,6 +48,8 @@ export default function AdminPage() {
   const [selectedMemberType, setSelectedMemberType] = useState<MemberType>('architect');
   const [isEditingMemberType, setIsEditingMemberType] = useState(false);
   const [editMemberType, setEditMemberType] = useState<MemberType>('architect');
+  const [approvingMemberIds, setApprovingMemberIds] = useState<Set<number>>(new Set());
+  const [denyingMemberIds, setDenyingMemberIds] = useState<Set<number>>(new Set());
 
   // Check if user is admin based on memberType from auth context
   const isAdmin = member?.memberType === 'admin';
@@ -108,12 +110,23 @@ export default function AdminPage() {
         memberType: data.memberType
       });
     },
-    onSuccess: () => {
+    onMutate: (variables) => {
+      setApprovingMemberIds(prev => new Set(prev).add(variables.memberId));
+    },
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.members.list() });
       toast({ title: "Success", description: "Member approved — passport created on-chain" });
+      setSelectedMember(prev => prev?.id === variables.memberId ? null : prev);
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+    onSettled: (_data, _error, variables) => {
+      setApprovingMemberIds(prev => {
+        const next = new Set(prev);
+        next.delete(variables.memberId);
+        return next;
+      });
     },
   });
 
@@ -121,12 +134,23 @@ export default function AdminPage() {
     mutationFn: async (memberId: number) => {
       return authenticatedPost("/api/v2/admin/deny-member", { memberId });
     },
-    onSuccess: () => {
+    onMutate: (memberId) => {
+      setDenyingMemberIds(prev => new Set(prev).add(memberId));
+    },
+    onSuccess: (_data, memberId) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.members.list() });
       toast({ title: "Success", description: "Member denied successfully" });
+      setSelectedMember(prev => prev?.id === memberId ? null : prev);
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+    onSettled: (_data, _error, memberId) => {
+      setDenyingMemberIds(prev => {
+        const next = new Set(prev);
+        next.delete(memberId);
+        return next;
+      });
     },
   });
 
@@ -445,7 +469,15 @@ export default function AdminPage() {
                           ) : '-'}
                         </td>
                         <td className="py-2" onClick={(e) => e.stopPropagation()}>
-                          {needsApproval ? (
+                          {approvingMemberIds.has(member.id) ? (
+                            <span className="inline-flex items-center text-xs text-gray-600">
+                              <Loader2 className="h-3 w-3 mr-2 animate-spin" /> Approving…
+                            </span>
+                          ) : denyingMemberIds.has(member.id) ? (
+                            <span className="inline-flex items-center text-xs text-gray-600">
+                              <Loader2 className="h-3 w-3 mr-2 animate-spin" /> Denying…
+                            </span>
+                          ) : needsApproval ? (
                             <Button
                               size="sm"
                               variant="outline"
@@ -657,37 +689,61 @@ export default function AdminPage() {
 
               {/* Action buttons for pending applications */}
               {(selectedMember.status === 'pending_application_review' || selectedMember.status === 'pending_claim') &&
-               selectedMember.ipeUsername && (
-                <div className="flex space-x-2 pt-4 border-t">
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      approveMemberMutation.mutate({
-                        memberId: selectedMember.id,
-                        ipeUsername: selectedMember.ipeUsername || undefined,
-                        userWalletAddress: selectedMember.walletAddress || undefined,
-                        memberType: selectedMemberType
-                      });
-                      setSelectedMember(null);
-                    }}
-                    disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
-                  >
-                    {approveMemberMutation.isPending ? "Approving…" : "Approve Application"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      denyMemberMutation.mutate(selectedMember.id);
-                      setSelectedMember(null);
-                    }}
-                    disabled={approveMemberMutation.isPending || denyMemberMutation.isPending}
-                  >
-                    {denyMemberMutation.isPending ? "..." : "Deny"}
-                  </Button>
+               selectedMember.ipeUsername && (() => {
+                const isApproving = approvingMemberIds.has(selectedMember.id);
+                const isDenying = denyingMemberIds.has(selectedMember.id);
+                const isBusy = isApproving || isDenying;
+                return (
+                <div className="pt-4 border-t space-y-3">
+                  {isApproving && (
+                    <p className="text-xs text-gray-600">
+                      Minting passport on-chain — this can take up to 2 minutes. You can close this window and review other applications in the meantime.
+                    </p>
+                  )}
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        approveMemberMutation.mutate({
+                          memberId: selectedMember.id,
+                          ipeUsername: selectedMember.ipeUsername || undefined,
+                          userWalletAddress: selectedMember.walletAddress || undefined,
+                          memberType: selectedMemberType
+                        });
+                      }}
+                      disabled={isBusy}
+                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+                    >
+                      {isApproving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Approving…
+                        </>
+                      ) : (
+                        "Approve Application"
+                      )}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        denyMemberMutation.mutate(selectedMember.id);
+                      }}
+                      disabled={isBusy}
+                    >
+                      {isDenying ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Denying…
+                        </>
+                      ) : (
+                        "Deny"
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              )}
+                );
+              })()}
             </div>
           </DialogContent>
         </Dialog>

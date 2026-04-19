@@ -187,7 +187,7 @@ export interface IStorage {
   // Privy Auth
   getMemberByPrivyId(privyId: string): Promise<Member | undefined>;
   getMemberByIpeUsername(ipeUsername: string): Promise<Member | undefined>;
-  createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string): Promise<Member>;
+  createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string, walletType?: 'external' | 'privy_embedded'): Promise<Member>;
 
   // Member Wallets
   getMemberWallets(memberId: number): Promise<MemberWallet[]>;
@@ -1226,20 +1226,38 @@ export class DatabaseStorage implements IStorage {
     return member;
   }
 
-  async createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string): Promise<Member> {
+  async createMemberFromPrivy(privyId: string, email?: string, walletAddress?: string, walletType?: 'external' | 'privy_embedded'): Promise<Member> {
     return await db.transaction(async (tx) => {
+      // Defer passport assignment whenever the user signed up via email — even
+      // if Privy already has an external wallet linked from a prior session.
+      // The id-verification wizard makes the choice explicit (Use app wallet
+      // vs Link self-custody wallet). Wallet-first signups (no email) keep
+      // the wallet as their passport since that *is* their identity.
+      const deferPassport = !!email;
+      const passportAddress = deferPassport ? null : walletAddress?.toLowerCase();
+
       const [member] = await tx.insert(members).values({
         privyId,
         email,
-        walletAddress: walletAddress?.toLowerCase(),
-        status: 'pending_id_verification', // Start with email/passport verification
-        emailVerified: !!email, // If email provided, Privy already verified it
+        walletAddress: passportAddress,
+        status: 'pending_id_verification',
+        emailVerified: !!email,
         memberType: 'pending',
       }).returning();
 
-      // Ensure passport wallet exists in member_wallets
       if (walletAddress) {
-        await this.syncPassportToMemberWallets(tx, member.id, walletAddress);
+        if (deferPassport) {
+          // Register the wallet so the UI can show it, but do not mark it as
+          // passport. Bypass syncPassportToMemberWallets (which hardcodes
+          // walletType: 'external') so the type reflects reality.
+          await tx.insert(memberWallets).values({
+            memberId: member.id,
+            walletAddress: walletAddress.toLowerCase(),
+            walletType: walletType ?? 'external',
+          });
+        } else {
+          await this.syncPassportToMemberWallets(tx, member.id, walletAddress);
+        }
       }
 
       return member;

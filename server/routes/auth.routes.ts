@@ -103,6 +103,7 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
     // Identity token is sent by client in 'privy-id-token' header
     let privyEmail: string | undefined;
     let privyWallet: string | undefined;
+    let privyWalletType: 'external' | 'privy_embedded' | undefined;
 
     const idToken = req.headers['privy-id-token'] as string | undefined;
     logger.debug('Identity token check', {
@@ -129,11 +130,19 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
           privyEmail = emailAccount?.address;
 
           // Extract wallet from linked accounts - prefer external wallets
-          // (matches client-side useActiveWallet which prefers external over embedded)
+          // (matches client-side useActiveWallet which prefers external over embedded).
+          // We preserve the chosen wallet's type because the caller uses it to
+          // decide whether to auto-promote the wallet to passport.
           const walletAccounts = linkedAccounts.filter(account => account.type === 'wallet');
           const externalWallet = walletAccounts.find(account => account.wallet_client_type !== 'privy');
           const embeddedWallet = walletAccounts.find(account => account.wallet_client_type === 'privy');
-          privyWallet = (externalWallet ?? embeddedWallet)?.address;
+          if (externalWallet) {
+            privyWallet = externalWallet.address;
+            privyWalletType = 'external';
+          } else if (embeddedWallet) {
+            privyWallet = embeddedWallet.address;
+            privyWalletType = 'privy_embedded';
+          }
         }
       } catch (parseError) {
         logger.warn('Could not parse identity token', {
@@ -221,7 +230,8 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
           member = await storage.createMemberFromPrivy(
             req.privyUser.id,
             privyEmail,
-            privyWallet
+            privyWallet,
+            privyWalletType
           );
           logger.info('Member auto-created successfully', {
             memberId: member.id,
@@ -263,18 +273,23 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
         member = await storage.updateMember(member.id, updates);
       }
 
-      // Sync wallet through atomic method (ensures member_wallets row is created)
-      if (!member.walletAddress && privyWallet) {
+      // Sync wallet state from Privy: idempotently record any wallet Privy
+      // reports against this member. Passport assignment is *not* automatic —
+      // the user makes that choice explicitly in the id-verification wizard.
+      // Auto-promotion here would silently re-attach a previously-linked
+      // external wallet on every login, defeating the explicit-choice flow.
+      if (privyWallet && privyWalletType) {
         try {
-          member = await storage.updateMemberWalletAtomic(member.id, privyWallet);
-          logger.info('Synced wallet from Privy to existing member', {
+          await storage.linkMemberWallet({
             memberId: member.id,
-            wallet: privyWallet,
+            walletAddress: privyWallet,
+            walletType: privyWalletType,
           });
         } catch (err) {
-          logger.warn('Skipping wallet sync - wallet may belong to another member', {
+          logger.warn('Skipping wallet link - may belong to another member', {
             memberId: member.id,
             wallet: privyWallet,
+            walletType: privyWalletType,
             reason: err instanceof Error ? err.message : String(err),
           });
         }

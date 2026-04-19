@@ -1,10 +1,9 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { WizardProgressBar, type WizardStep, type StepId } from "./WizardProgressBar";
 import { WalletStep } from "./WalletStep";
 import { EmailStep } from "./EmailStep";
@@ -26,44 +25,41 @@ const slideVariants = {
   }),
 };
 
+const STEP_LABELS: Record<StepId, string> = {
+  wallet: "Wallet",
+  email: "Email",
+  passport: "Passport",
+};
+
 function useVerificationSteps(
   member: ReturnType<typeof useAuth>["member"],
-  isWalletConnected: boolean
+  stepOrder: StepId[]
 ) {
-  const steps: WizardStep[] = useMemo(
-    () => [
-      {
-        id: "wallet" as StepId,
-        label: "Wallet",
-        isComplete: !!member?.walletAddress || isWalletConnected,
-      },
-      {
-        id: "email" as StepId,
-        label: "Email",
-        isComplete: !!member?.emailVerified,
-      },
-      {
-        id: "passport" as StepId,
-        label: "Passport",
-        // Must reflect server truth — ipePassport/ENS domain alone isn't enough.
-        // Only active_member is a terminal state. Earlier states (pending review,
-        // approved waiting for accept, or having an unverified ENS) still need
-        // action inside the passport step.
-        isComplete: member?.status === "active_member",
-      },
-    ],
-    [member?.walletAddress, member?.emailVerified, member?.status, isWalletConnected]
-  );
+  const steps: WizardStep[] = useMemo(() => {
+    const completionById: Record<StepId, boolean> = {
+      wallet: !!member?.walletAddress,
+      email: !!member?.emailVerified,
+      // Only active_member is a terminal state. Earlier states (pending review,
+      // approved but not yet ENS-verified) still need action in the passport step.
+      passport: member?.status === "active_member",
+    };
+
+    return stepOrder.map((id) => ({
+      id,
+      label: STEP_LABELS[id],
+      isComplete: completionById[id],
+    }));
+  }, [member?.walletAddress, member?.emailVerified, member?.status, stepOrder]);
 
   const currentStepIndex = steps.findIndex((s) => !s.isComplete);
   const allComplete = currentStepIndex === -1;
-  const activeStep: StepId | "complete" = allComplete
+  const naturalActiveStep: StepId | "complete" = allComplete
     ? "complete"
     : steps[currentStepIndex].id;
 
   const completedCount = steps.filter((s) => s.isComplete).length;
 
-  return { steps, activeStep, allComplete, completedCount };
+  return { steps, naturalActiveStep, allComplete, completedCount };
 }
 
 export function VerificationWizard() {
@@ -74,29 +70,66 @@ export function VerificationWizard() {
     memberStatus,
     isAuthenticated,
     refreshMember,
-    getAccessToken,
   } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { activeWallet } = useActiveWallet();
-  const address = activeWallet?.address as `0x${string}` | undefined;
-  const isConnected = !!activeWallet;
+  // Freeze step order at first render where we have enough signal to detect
+  // signup method. For email signups the wallet step is still pending, so we
+  // want to surface it as step 2 after the already-done email step.
+  const [stepOrder, setStepOrder] = useState<StepId[] | null>(null);
+  useEffect(() => {
+    if (stepOrder || isMemberLoading || !member) return;
+    if (member.emailVerified && !member.walletAddress) {
+      setStepOrder(["email", "wallet", "passport"]);
+    } else {
+      setStepOrder(["wallet", "email", "passport"]);
+    }
+  }, [stepOrder, member, isMemberLoading]);
 
-  const { steps, activeStep, allComplete, completedCount } =
-    useVerificationSteps(member, isConnected);
+  const effectiveOrder = stepOrder ?? ["wallet", "email", "passport"];
+
+  const { steps, naturalActiveStep, allComplete, completedCount } =
+    useVerificationSteps(member, effectiveOrder);
+
+  // User-selected step override via progress-bar click. Null means follow the
+  // natural progression (first-incomplete step).
+  const [selectedStep, setSelectedStep] = useState<StepId | null>(null);
+
+  // Drop the override once the user progresses past the step they clicked
+  // into, so the wizard doesn't get stuck on a stale override after the
+  // underlying state advances (e.g. after they finish editing and come back).
+  useEffect(() => {
+    if (!selectedStep) return;
+    const selectedIdx = steps.findIndex((s) => s.id === selectedStep);
+    const naturalIdx = steps.findIndex((s) => !s.isComplete);
+    const effectiveNaturalIdx = naturalIdx === -1 ? steps.length : naturalIdx;
+    if (selectedIdx < 0 || selectedIdx > effectiveNaturalIdx) {
+      setSelectedStep(null);
+    }
+  }, [selectedStep, steps]);
+
+  const activeStep: StepId | "complete" = selectedStep ?? naturalActiveStep;
+
+  const handleStepClick = (id: StepId) => {
+    const idx = steps.findIndex((s) => s.id === id);
+    const naturalIdx = steps.findIndex((s) => !s.isComplete);
+    const effectiveNaturalIdx = naturalIdx === -1 ? steps.length - 1 : naturalIdx;
+    if (idx < 0 || idx > effectiveNaturalIdx) return;
+    // Clicking the natural step returns to auto-follow mode.
+    setSelectedStep(idx === effectiveNaturalIdx && naturalIdx !== -1 ? null : id);
+  };
 
   const prevStepRef = useRef(activeStep);
   const directionRef = useRef(1);
-  const attemptedWalletSaveRef = useRef<string | null>(null);
 
   // Track direction for animation
   useEffect(() => {
-    const stepOrder: (StepId | "complete")[] = ["wallet", "email", "passport", "complete"];
-    const prevIndex = stepOrder.indexOf(prevStepRef.current);
-    const currentIndex = stepOrder.indexOf(activeStep);
+    const stepOrderForAnimation: (StepId | "complete")[] = [...effectiveOrder, "complete"];
+    const prevIndex = stepOrderForAnimation.indexOf(prevStepRef.current);
+    const currentIndex = stepOrderForAnimation.indexOf(activeStep);
     directionRef.current = currentIndex >= prevIndex ? 1 : -1;
     prevStepRef.current = activeStep;
-  }, [activeStep]);
+  }, [activeStep, effectiveOrder]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -113,37 +146,6 @@ export function VerificationWizard() {
       return () => clearTimeout(timer);
     }
   }, [memberStatus, setLocation]);
-
-  // Save wallet address when connected via Privy — once per address.
-  // Tracked via ref so a failed attempt (e.g. 409 if wallet belongs to another
-  // member) doesn't retry every render. A new wallet resets the attempt.
-  useEffect(() => {
-    if (!isConnected || !address || !memberId) return;
-    const addrLower = address.toLowerCase();
-    if (addrLower === member?.walletAddress?.toLowerCase()) return;
-    if (attemptedWalletSaveRef.current === addrLower) return;
-    attemptedWalletSaveRef.current = addrLower;
-
-    (async () => {
-      try {
-        const token = await getAccessToken();
-        if (!token) return;
-        const response = await fetch(`/api/v2/members/${memberId}/wallet`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ walletAddress: address }),
-        });
-        if (response.ok) {
-          refreshMember();
-        }
-      } catch {
-        // Wallet save failed silently
-      }
-    })();
-  }, [isConnected, address, memberId, member?.walletAddress, refreshMember, getAccessToken]);
 
   if (isMemberLoading) {
     return (
@@ -174,7 +176,11 @@ export function VerificationWizard() {
         </div>
 
         {/* Progress Bar */}
-        <WizardProgressBar steps={steps} activeStepId={activeStep} />
+        <WizardProgressBar
+          steps={steps}
+          activeStepId={activeStep}
+          onStepClick={handleStepClick}
+        />
 
         {/* Step Content */}
         <Card className="bg-white shadow-sm border-0 shadow-gray-200/60">

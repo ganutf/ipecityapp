@@ -195,7 +195,9 @@ export function VerificationWizard() {
                 exit="exit"
                 transition={{ duration: 0.25, ease: "easeInOut" }}
               >
-                {activeStep === "wallet" && <WalletStep />}
+                {activeStep === "wallet" && (
+                  <WalletStep onContinue={() => setSelectedStep(null)} />
+                )}
                 {activeStep === "email" && (
                   <EmailStep onComplete={refreshMember} />
                 )}

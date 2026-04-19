@@ -13,10 +13,12 @@ import {
   authenticatedPatch,
 } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 interface WalletListProps {
   memberId: number;
   passportWalletAddress: string | null;
+  onContinue?: () => void;
 }
 
 interface MemberWallet {
@@ -35,25 +37,24 @@ interface WalletRow {
   isPassport: boolean;
 }
 
-export function WalletList({ memberId, passportWalletAddress }: WalletListProps) {
+export function WalletList({
+  memberId,
+  passportWalletAddress,
+  onContinue,
+}: WalletListProps) {
   const { wallets } = useWallets();
   const { toast } = useToast();
   const { refreshMember } = useAuth();
   const queryClient = useQueryClient();
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
-  const [isSettingAppWallet, setIsSettingAppWallet] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Track latest passport state in a ref so the onSuccess callback (which is
-  // captured once by Privy) can read the live value without restarting the
-  // hook on every render.
-  const passportRef = useRef<string | null>(passportWalletAddress);
-  passportRef.current = passportWalletAddress;
   const memberIdRef = useRef(memberId);
   memberIdRef.current = memberId;
 
   const { linkWallet } = useLinkAccount({
     onSuccess: async ({ linkedAccount }) => {
-      // Only handle wallet links here; email/social links route elsewhere.
       if (linkedAccount.type !== "wallet") return;
       const address = linkedAccount.address;
       const isEmbedded = linkedAccount.walletClientType === "privy";
@@ -65,6 +66,11 @@ export function WalletList({ memberId, passportWalletAddress }: WalletListProps)
             ? formatWalletType(linkedAccount.walletClientType ?? "external")
             : undefined,
         });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.members.wallets(memberIdRef.current),
+        });
+        // Default the passport selection to the wallet the user just linked.
+        setSelectedAddress(address.toLowerCase());
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (
@@ -84,31 +90,6 @@ export function WalletList({ memberId, passportWalletAddress }: WalletListProps)
           toast({
             title: "Wallet unavailable",
             description: "This wallet is already linked to another account.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.members.wallets(memberIdRef.current),
-      });
-
-      // Promote external wallets to passport on explicit link, but only when
-      // no passport is set yet — additional wallets stay non-passport.
-      if (!isEmbedded && !passportRef.current) {
-        try {
-          await authenticatedPatch(
-            `/api/v2/members/${memberIdRef.current}/wallet`,
-            { walletAddress: address }
-          );
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.members.wallets(memberIdRef.current),
-          });
-          refreshMember();
-        } catch (err) {
-          toast({
-            title: "Could not set passport wallet",
-            description: err instanceof Error ? err.message : String(err),
             variant: "destructive",
           });
         }
@@ -132,7 +113,6 @@ export function WalletList({ memberId, passportWalletAddress }: WalletListProps)
 
   const dbAddressSet = new Set(dbWallets.map((w) => w.walletAddress.toLowerCase()));
 
-  // Build deduplicated rows keyed by address
   const rowMap = new Map<string, WalletRow>();
   const passportLower = passportWalletAddress?.toLowerCase() ?? null;
 
@@ -170,10 +150,11 @@ export function WalletList({ memberId, passportWalletAddress }: WalletListProps)
   }
 
   const rows = Array.from(rowMap.values());
+  const hasMultiple = rows.length > 1;
 
-  // Sync any Privy external wallets not yet in our DB.
-  // Idempotent: early-returns when the address is already in dbAddressSet.
-  // The per-render one-at-a-time loop avoids racing POSTs when multiple wallets appear.
+  // Sync any Privy external wallets not yet in our DB so they're visible in
+  // the list. Does NOT promote to passport — selection is explicit via the
+  // radio + Continue flow.
   for (const wallet of externalWallets) {
     if (!dbAddressSet.has(wallet.address.toLowerCase())) {
       syncWalletToDb(wallet.address, wallet.walletClientType);
@@ -212,24 +193,42 @@ export function WalletList({ memberId, passportWalletAddress }: WalletListProps)
     }
   }
 
-  async function handleUseAppWallet() {
-    if (!embeddedWallet || isSettingAppWallet) return;
-    setIsSettingAppWallet(true);
-    try {
-      await authenticatedPatch(`/api/v2/members/${memberId}/wallet`, {
-        walletAddress: embeddedWallet.address,
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.members.wallets(memberId) });
-      refreshMember();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      toast({
-        title: "Could not set passport wallet",
-        description: message,
-        variant: "destructive",
-      });
-      setIsSettingAppWallet(false);
+  // Default passport selection: current passport, else the most recently-
+  // added external wallet (users typically prefer self-custody), else the
+  // only wallet available.
+  const defaultSelection =
+    passportLower ??
+    rows.find((r) => r.type === "external")?.address.toLowerCase() ??
+    rows[0]?.address.toLowerCase() ??
+    null;
+  const activeSelection = selectedAddress ?? defaultSelection;
+
+  async function handleContinue() {
+    if (isSaving || rows.length === 0) return;
+    const target = activeSelection;
+    if (!target) return;
+
+    if (target !== passportLower) {
+      setIsSaving(true);
+      try {
+        await authenticatedPatch(`/api/v2/members/${memberId}/wallet`, {
+          walletAddress: target,
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.members.wallets(memberId) });
+        await refreshMember();
+      } catch (err) {
+        toast({
+          title: "Could not set passport wallet",
+          description: err instanceof Error ? err.message : String(err),
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+      setIsSaving(false);
     }
+
+    onContinue?.();
   }
 
   function copyAddress(address: string) {
@@ -239,103 +238,119 @@ export function WalletList({ memberId, passportWalletAddress }: WalletListProps)
   }
 
   const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  const hasPassport = !!passportWalletAddress;
 
   return (
     <div className="space-y-5">
-      <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl bg-white">
+      <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl bg-white overflow-hidden">
         {rows.length === 0 ? (
           <div className="py-6 px-4 text-center text-sm text-gray-500">
             No wallets linked yet.
           </div>
         ) : (
-          rows.map((row) => (
-            <motion.div
-              key={row.address}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center justify-between py-3 px-4"
-            >
-              <div className="flex items-center space-x-3 min-w-0">
-                {row.isPassport ? (
-                  <Globe className="h-4 w-4 text-lime-600 flex-shrink-0" />
-                ) : (
-                  <Wallet
-                    className={`h-4 w-4 flex-shrink-0 ${
-                      row.type === "external" ? "text-sky-500" : "text-gray-400"
-                    }`}
-                  />
+          rows.map((row) => {
+            const addrLower = row.address.toLowerCase();
+            const isSelected = hasMultiple && activeSelection === addrLower;
+            const clickable = hasMultiple;
+            return (
+              <motion.div
+                key={row.address}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={clickable ? () => setSelectedAddress(addrLower) : undefined}
+                className={cn(
+                  "flex items-center justify-between py-3 px-4 transition-colors",
+                  clickable && "cursor-pointer hover:bg-gray-50",
+                  isSelected && "bg-lime-50"
                 )}
-                <button
-                  onClick={() => copyAddress(row.address)}
-                  className={`text-sm font-mono font-medium hover:opacity-80 transition-opacity flex items-center space-x-1 ${
-                    row.isPassport ? "text-lime-600" : "text-sky-600"
-                  }`}
-                  title="Click to copy full address"
-                >
-                  <span>{truncate(row.address)}</span>
-                  {copiedAddress === row.address ? (
-                    <Check className="h-3 w-3 text-green-600" />
-                  ) : (
-                    <Copy className="h-3 w-3 text-gray-400" />
+              >
+                <div className="flex items-center space-x-3 min-w-0">
+                  {hasMultiple && (
+                    <span
+                      className={cn(
+                        "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                        isSelected
+                          ? "border-lime-500 bg-lime-500"
+                          : "border-gray-300 bg-white"
+                      )}
+                      aria-hidden="true"
+                    >
+                      {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
                   )}
-                </button>
-              </div>
-              <div className="flex items-center space-x-1.5 flex-shrink-0">
-                {row.isPassport && (
+                  {row.isPassport ? (
+                    <Globe className="h-4 w-4 text-lime-600 flex-shrink-0" />
+                  ) : (
+                    <Wallet
+                      className={cn(
+                        "h-4 w-4 flex-shrink-0",
+                        row.type === "external" ? "text-sky-500" : "text-gray-400"
+                      )}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyAddress(row.address);
+                    }}
+                    className={cn(
+                      "text-sm font-mono font-medium hover:opacity-80 transition-opacity flex items-center space-x-1",
+                      row.isPassport ? "text-lime-600" : "text-sky-600"
+                    )}
+                    title="Click to copy full address"
+                  >
+                    <span>{truncate(row.address)}</span>
+                    {copiedAddress === row.address ? (
+                      <Check className="h-3 w-3 text-green-600" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center space-x-1.5 flex-shrink-0">
+                  {row.isPassport && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-lime-100 text-lime-800 text-xs px-1.5 py-0"
+                    >
+                      Passport
+                    </Badge>
+                  )}
                   <Badge
                     variant="secondary"
-                    className="bg-lime-100 text-lime-800 text-xs px-1.5 py-0"
+                    className="bg-gray-100 text-gray-600 text-xs px-1.5 py-0"
                   >
-                    Passport
+                    {row.type === "embedded" ? "App Wallet" : row.label ?? "External"}
                   </Badge>
-                )}
-                <Badge
-                  variant="secondary"
-                  className="bg-gray-100 text-gray-600 text-xs px-1.5 py-0"
-                >
-                  {row.type === "embedded" ? "App Wallet" : row.label ?? "External"}
-                </Badge>
-              </div>
-            </motion.div>
-          ))
+                </div>
+              </motion.div>
+            );
+          })
         )}
       </div>
 
-      {!hasPassport ? (
-        <div className="space-y-3">
-          <Button
-            onClick={() => linkWallet()}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Link self-custody wallet
-          </Button>
-          {embeddedWallet && (
-            <Button
-              onClick={handleUseAppWallet}
-              variant="outline"
-              disabled={isSettingAppWallet}
-              className="w-full"
-            >
-              {isSettingAppWallet ? "Setting..." : "Use app wallet as passport"}
-            </Button>
-          )}
-          <p className="text-xs text-gray-500 text-center">
-            Link your own wallet to use it as your passport, or continue with the app
-            wallet.
-          </p>
-        </div>
-      ) : (
+      <div className="space-y-3">
         <Button
           onClick={() => linkWallet()}
           variant="outline"
           className="w-full"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Link another wallet
+          Link self-custody wallet
         </Button>
-      )}
+        <Button
+          onClick={handleContinue}
+          disabled={isSaving || !activeSelection}
+          className="w-full bg-slate-900 hover:bg-slate-800 text-white"
+        >
+          {isSaving ? "Saving..." : "Continue"}
+        </Button>
+        {hasMultiple && (
+          <p className="text-xs text-gray-500 text-center">
+            Select the wallet to use as your passport, then continue.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

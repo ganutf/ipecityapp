@@ -2,7 +2,11 @@ import { Wallet } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { WalletList } from "./WalletList";
 
-export function WalletStep() {
+interface WalletStepProps {
+  onContinue?: () => void;
+}
+
+export function WalletStep({ onContinue }: WalletStepProps) {
   const { member, memberId } = useAuth();
 
   if (!memberId) {
@@ -24,6 +28,7 @@ export function WalletStep() {
       <WalletList
         memberId={memberId}
         passportWalletAddress={member?.walletAddress ?? null}
+        onContinue={onContinue}
       />
     </div>
   );

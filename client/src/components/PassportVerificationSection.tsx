@@ -11,15 +11,13 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { authenticatedPost } from "@/lib/api";
-import { useSignMessage } from "wagmi";
-import { useConnectWallet } from "@privy-io/react-auth";
-import { useActiveWallet } from "@/hooks/useActiveWallet";
+import { useConnectWallet, useWallets } from "@privy-io/react-auth";
 import { createSiweMessage } from "viem/siwe";
 import { useEnsLookup } from "@/hooks/useEnsLookup";
 import { useAuth } from "@/contexts/AuthContext";
 import { mainnet } from "viem/chains";
 import { ApplicationForm } from "@/components/ApplicationForm";
-import { CheckCircle, AlertCircle, Globe, Clock, Wallet, Users, ShieldOff, Loader2 } from "lucide-react";
+import { CheckCircle, AlertCircle, Clock, Wallet, Users, ShieldOff, Loader2 } from "lucide-react";
 
 interface PassportMemberData {
   isMember: boolean;
@@ -59,12 +57,17 @@ export function PassportVerificationSection({
   const { member: authMember, refreshMember } = useAuth();
 
   const { connectWallet } = useConnectWallet();
-  const { activeWallet, isExternalWallet, disconnectExternalWallet } = useActiveWallet();
-  const address = activeWallet?.address as `0x${string}` | undefined;
-  const isConnected = !!activeWallet;
+  const { wallets } = useWallets();
 
-  // Keep useSignMessage from wagmi (works with @privy-io/wagmi)
-  const { signMessage } = useSignMessage();
+  // The passport wallet is the user's chosen identity from the wallet step.
+  // We sign and look up ENS using *that* wallet specifically — not whatever
+  // Privy's external-preference picks — so the user's choice is honored.
+  const memberWallet = memberData?.member?.walletAddress?.toLowerCase();
+  const passportPrivyWallet = memberWallet
+    ? wallets.find((w) => w.address.toLowerCase() === memberWallet)
+    : undefined;
+  const address = passportPrivyWallet?.address as `0x${string}` | undefined;
+  const isConnected = !!passportPrivyWallet;
 
   const [verificationStatus, setVerificationStatus] = useState<
     "idle" | "checking" | "verifying" | "verified" | "failed"
@@ -73,8 +76,8 @@ export function PassportVerificationSection({
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState<string>("");
 
-  // ENS lookup for connected wallet
-  const { ensName, ensNames, isLoading: ensLoading } = useEnsLookup(address);
+  // ENS lookup for the passport wallet
+  const { ensNames, isLoading: ensLoading } = useEnsLookup(address);
 
   // Hide application form if user gets approved
   useEffect(() => {
@@ -93,21 +96,9 @@ export function PassportVerificationSection({
   // Check if current wallet has Ipê City domain - explicit boolean
   const hasIpeCityDomain = ensNames.length > 0;
 
-  // Detect wallet mismatch: wagmi has a wallet connected but the member has
-  // either no wallet linked or a different one. This happens when the connected
-  // wallet is already linked to a different member (backend refuses to relink).
-  // In that case we must NOT offer to sign — signing with a wallet that belongs
-  // to another account would be an attempt to hijack their passport.
-  const memberWallet = memberData?.member?.walletAddress?.toLowerCase();
-  const connectedWallet = address?.toLowerCase();
-  const walletMismatch = Boolean(
-    isConnected && connectedWallet && memberWallet && connectedWallet !== memberWallet
-  );
-  const walletUnlinked = Boolean(
-    isConnected && connectedWallet && !memberWallet
-  );
-
-
+  // Member set a passport but Privy doesn't have that wallet in this session
+  // — user needs to (re)connect it before they can sign for verification.
+  const passportNotConnected = !!memberWallet && !passportPrivyWallet;
 
   // Handle wallet connection for verification
   useEffect(() => {
@@ -123,8 +114,10 @@ export function PassportVerificationSection({
       if (!selectedDomain) {
         throw new Error("No ENS domain selected for verification");
       }
+      if (!passportPrivyWallet) {
+        throw new Error("Passport wallet not connected");
+      }
 
-      // Create SIWE message for signature verification
       const message = createSiweMessage({
         address: walletAddress as `0x${string}`,
         chainId: mainnet.id,
@@ -135,31 +128,31 @@ export function PassportVerificationSection({
         nonce: Math.random().toString(36).substring(2, 15),
       });
 
-      // Request signature from user's wallet
-      return new Promise((resolve, reject) => {
-        signMessage(
-          { message },
-          {
-            onSuccess: async (signature) => {
-              try {
-                // Send verification request with signature (uses v2 endpoint with memberId)
-                const response = await authenticatedPost("/api/v2/auth/passport/verify", {
-                    memberId,
-                    ensName: selectedDomain,
-                    walletAddress,
-                    message,
-                    signature,
-                });
-                resolve(response);
-              } catch (error) {
-                reject(error);
-              }
-            },
-            onError: (error) => {
-              reject(new Error("Signature verification cancelled or failed"));
-            },
-          }
+      // Sign with the passport wallet specifically, going through Privy's
+      // per-wallet provider rather than wagmi's active account. Otherwise an
+      // also-connected external wallet could sign in place of the embedded
+      // wallet the user picked as their passport.
+      const provider = await passportPrivyWallet.getEthereumProvider();
+      let signature: string;
+      try {
+        signature = (await provider.request({
+          method: "personal_sign",
+          params: [message, walletAddress],
+        })) as string;
+      } catch (err) {
+        throw new Error(
+          err instanceof Error
+            ? err.message
+            : "Signature verification cancelled or failed"
         );
+      }
+
+      return await authenticatedPost("/api/v2/auth/passport/verify", {
+        memberId,
+        ensName: selectedDomain,
+        walletAddress,
+        message,
+        signature,
       });
     },
     onSuccess: () => {
@@ -283,54 +276,32 @@ export function PassportVerificationSection({
             </div>
           )}
 
-          {/* Disconnect External Wallet Button - hidden in wizard mode */}
-          {!isWizard && isExternalWallet && disconnectExternalWallet && (
-            <div className="text-center">
+          {/* Passport wallet exists in the member record but isn't connected
+              in this Privy session — prompt the user to connect it before
+              they can sign. */}
+          {passportNotConnected && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+              <p className="text-amber-800 font-medium flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Passport wallet not connected
+              </p>
+              <p className="text-sm text-amber-700">
+                Connect {memberWallet?.slice(0, 6)}…{memberWallet?.slice(-4)} to
+                sign and verify your passport.
+              </p>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  disconnectExternalWallet();
-                  setWalletConnectedForVerification(false);
-                  setVerificationStatus("idle");
-                }}
+                onClick={() => connectWallet()}
+                className="mt-2"
               >
-                Disconnect Wallet
+                Connect Passport Wallet
               </Button>
             </div>
           )}
 
-          {/* Wallet conflict warning — the connected wallet is either linked
-              to another member (walletUnlinked + has ENS) or doesn't match the
-              member's own linked wallet (walletMismatch). Block sign/verify. */}
-          {isConnected && !ensLoading && (walletMismatch || (walletUnlinked && hasIpeCityDomain)) && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg space-y-2">
-              <p className="text-red-800 font-medium flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                {walletMismatch ? "Wrong wallet connected" : "Wallet linked to another account"}
-              </p>
-              <p className="text-sm text-red-700">
-                {walletMismatch
-                  ? `This account is linked to ${memberWallet?.slice(0, 6)}…${memberWallet?.slice(-4)}. Connect that wallet to continue.`
-                  : "The wallet currently connected is already linked to a different member. You can't verify a passport with a wallet that isn't yours."}
-              </p>
-              {isExternalWallet && disconnectExternalWallet && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={disconnectExternalWallet}
-                  className="mt-2"
-                >
-                  Disconnect Wallet
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* Show domain verification button if Ipe City domain is found AND
-              the wallet actually belongs to this member (no mismatch). */}
+          {/* Show domain verification button if Ipe City domain is found. */}
           {isConnected && address && !ensLoading && hasIpeCityDomain &&
-            !walletMismatch && !walletUnlinked &&
             memberData?.member?.status !== "active_member" && (
             <div className="space-y-3">
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -378,10 +349,8 @@ export function PassportVerificationSection({
             </div>
           )}
 
-          {/* Show application button only if NO Ipe City domain is found AND
-              the wallet isn't a mismatch and isn't linked elsewhere. */}
+          {/* Show application button only if NO Ipe City domain is found. */}
           {isConnected && address && !ensLoading && hasIpeCityDomain === false &&
-            !walletMismatch && !walletUnlinked &&
             memberData?.member?.status !== "active_member" &&
             memberData?.member?.status !== "pending_application_review" && (
               <div className="space-y-4">

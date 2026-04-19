@@ -127,6 +127,26 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     }
   }, [privyAuthenticated, privyReady, getAccessToken]);
 
+  /**
+   * Clear wagmi's persistent localStorage keys. Wagmi remembers the last
+   * connector/account across reloads, which would otherwise auto-reconnect an
+   * external wallet into a fresh Privy session and bind it as a linked
+   * account on the new DID. Targeted removal (not a full localStorage nuke)
+   * so other app state (React Query persistence, theme, etc.) is preserved.
+   */
+  const clearWagmiStorage = () => {
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('wagmi.')) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch {
+      // localStorage may be unavailable (private mode, etc.) — non-fatal
+    }
+  };
+
   // Query member status from backend when we have a token
   const {
     data: memberData,
@@ -147,12 +167,21 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
 
       if (!response.ok) {
         if (response.status === 401) {
+          // Server says the session is invalid (token expired, Privy user
+          // deleted externally, etc.). Clear wagmi's persistent state so the
+          // next sign-in starts clean; Privy's own reauth handles the token.
+          clearWagmiStorage();
           setAccountConflict(null);
           return null;
         }
         if (response.status === 409) {
           const body = await response.json().catch(() => ({}));
           if (body?.error === 'ACCOUNT_CONFLICT') {
+            // The conflict screen offers a Log Out CTA that runs handleLogout
+            // (full cleanup). Clear wagmi storage here too so even if the user
+            // hard-refreshes instead of clicking Log Out, they don't carry a
+            // stale wallet into the next attempt.
+            clearWagmiStorage();
             setAccountConflict({
               message: body.message || 'Account conflict',
               conflictBy: body.conflictBy === 'wallet' ? 'wallet' : 'email',
@@ -195,6 +224,10 @@ function AuthProviderWithPrivy({ children }: AuthProviderProps) {
     } catch {
       // Ignore if no active connection
     }
+
+    // Clear wagmi's persistent state so a future Privy sign-in starts from
+    // a clean slate (no leaked external-wallet auto-reconnect).
+    clearWagmiStorage();
 
     await privyLogout();
     setAccessToken(null);

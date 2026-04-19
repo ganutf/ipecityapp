@@ -11,7 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Pencil, Save, X, Eye, Clock, Globe, Wallet, Loader2 } from "lucide-react";
+import { Pencil, Save, X, Eye, Clock, Globe, Wallet, Loader2, Mail, Twitter, Linkedin, Instagram, Tag, Calendar, Fingerprint, ShieldCheck, Check, UserCircle2, Hash } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { getMemberTypeInfo } from "@/lib/memberTypeConfig";
 import { useConnectWallet } from "@privy-io/react-auth";
 import { useActiveWallet } from "@/hooks/useActiveWallet";
@@ -506,61 +508,88 @@ export default function AdminPage() {
       </div>
 
       {/* Member Application Details Modal */}
-      {selectedMember && (
+      {selectedMember && (() => {
+        const statusBadgeClass =
+          selectedMember.status === 'active_member' ? 'bg-lime-100 text-lime-800 border-lime-200' :
+          selectedMember.status === 'pending_application_review' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+          selectedMember.status === 'approved_application' ? 'bg-sky-100 text-sky-800 border-sky-200' :
+          selectedMember.status === 'denied_application' ? 'bg-red-100 text-red-800 border-red-200' :
+          selectedMember.status === 'pending_id_verification' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+          selectedMember.status === 'passport_revoked' ? 'bg-red-100 text-red-800 border-red-200' :
+          'bg-gray-100 text-gray-700 border-gray-200';
+        const statusLabel =
+          selectedMember.status === 'active_member' ? 'Active Member' :
+          selectedMember.status === 'pending_application_review' ? 'Pending Review' :
+          selectedMember.status === 'approved_application' ? 'Approved' :
+          selectedMember.status === 'denied_application' ? 'Denied' :
+          selectedMember.status === 'pending_id_verification' ? 'Pending Verification' :
+          selectedMember.status === 'passport_revoked' ? 'Passport Revoked' :
+          selectedMember.status;
+        const formattedDate = selectedMember.createdAt
+          ? new Date(selectedMember.createdAt).toLocaleString("en-US", {
+              month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true, year: "numeric",
+            })
+          : 'Unknown';
+        const passportDisplay = selectedMember.ipePassport
+          || (selectedMember.ipeUsername ? `${selectedMember.ipeUsername}.ipecity.eth` : null);
+        const hasProfile = selectedMember.bio || (selectedMember.profileTags && selectedMember.profileTags.length > 0);
+        const hasSocial = selectedMember.twitter || selectedMember.linkedin || selectedMember.instagram;
+        const socialHandle = (url: string): string => {
+          try {
+            const u = new URL(url);
+            const last = u.pathname.split('/').filter(Boolean).pop();
+            return last ? `@${last}` : u.hostname;
+          } catch {
+            return url;
+          }
+        };
+        return (
         <Dialog open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Application Details</DialogTitle>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="space-y-2">
+              <DialogTitle className="flex items-center gap-2 text-slate-900">
+                <UserCircle2 className="h-5 w-5 text-slate-600" />
+                Application Details
+              </DialogTitle>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                <span className="inline-flex items-center gap-1">
+                  <Hash className="h-3 w-3" />
+                  Member #{selectedMember.id}
+                </span>
+                <span className="text-gray-300">·</span>
+                <span className="inline-flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {formattedDate}
+                </span>
+              </div>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Member ID</label>
-                  <p className="text-sm">#{selectedMember.id}</p>
+            <div className="space-y-6">
+              {/* Identity — username headline + status */}
+              <section className="flex items-start justify-between gap-4">
+                <div className="space-y-1 min-w-0">
+                  <div className="text-xs font-medium uppercase tracking-wider text-gray-500">Username</div>
+                  <div className="flex items-center gap-2 text-xl font-semibold text-slate-900 truncate">
+                    <Globe className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <span className="truncate">{selectedMember.ipeUsername || 'Not provided'}</span>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Username</label>
-                  <p className="text-sm">{selectedMember.ipeUsername || 'Not provided'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Status</label>
-                  <p className="text-sm">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      selectedMember.status === 'active_member'
-                        ? 'bg-green-100 text-green-800'
-                        : selectedMember.status === 'pending_application_review'
-                          ? 'bg-orange-100 text-orange-800'
-                          : selectedMember.status === 'approved_application'
-                            ? 'bg-blue-100 text-blue-800'
-                            : selectedMember.status === 'denied_application'
-                              ? 'bg-red-100 text-red-800'
-                              : selectedMember.status === 'pending_id_verification'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : selectedMember.status === 'passport_revoked'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {selectedMember.status === 'active_member' ? 'Active Member' :
-                       selectedMember.status === 'pending_application_review' ? 'Pending Review' :
-                       selectedMember.status === 'approved_application' ? 'Approved Application' :
-                       selectedMember.status === 'denied_application' ? 'Denied Application' :
-                       selectedMember.status === 'pending_id_verification' ? 'Pending Verification' :
-                       selectedMember.status === 'passport_revoked' ? 'Passport Revoked' :
-                       selectedMember.status}
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Member Type</label>
+                <Badge variant="outline" className={cn("flex-shrink-0", statusBadgeClass)}>
+                  {statusLabel}
+                </Badge>
+              </section>
+
+              {/* Member Type + Contact */}
+              <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                    <Tag className="h-3.5 w-3.5" /> Member Type
+                  </div>
                   {selectedMember.status === 'pending_application_review' || selectedMember.status === 'pending_claim' ? (
-                    // For pending applications - always editable
-                    <Select 
-                      value={selectedMemberType} 
+                    <Select
+                      value={selectedMemberType}
                       onValueChange={(value) => setSelectedMemberType(value as MemberType)}
                     >
-                      <SelectTrigger className="w-full mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="architect">Architect</SelectItem>
                         <SelectItem value="explorer">Explorer</SelectItem>
@@ -570,15 +599,12 @@ export default function AdminPage() {
                       </SelectContent>
                     </Select>
                   ) : isEditingMemberType ? (
-                    // Edit mode for approved members
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Select 
-                        value={editMemberType} 
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={editMemberType}
                         onValueChange={(value) => setEditMemberType(value as MemberType)}
                       >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="architect">Architect</SelectItem>
                           <SelectItem value="explorer">Explorer</SelectItem>
@@ -590,101 +616,168 @@ export default function AdminPage() {
                       <Button
                         size="sm"
                         onClick={() => {
-                          updateMemberTypeMutation.mutate({
-                            memberId: selectedMember.id,
-                            memberType: editMemberType
-                          });
+                          updateMemberTypeMutation.mutate({ memberId: selectedMember.id, memberType: editMemberType });
                         }}
                         disabled={updateMemberTypeMutation.isPending}
                         className="px-2"
                       >
                         <Save className="w-4 h-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsEditingMemberType(false)}
-                        className="px-2"
-                      >
+                      <Button size="sm" variant="outline" onClick={() => setIsEditingMemberType(false)} className="px-2">
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
                   ) : (
-                    // View mode for approved members
-                    <div className="flex items-center justify-between mt-1">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        getMemberTypeInfo(selectedMember.memberType).color
-                      }`}>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className={getMemberTypeInfo(selectedMember.memberType).color}>
                         {getMemberTypeInfo(selectedMember.memberType).label}
-                      </span>
+                      </Badge>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         onClick={() => {
                           setEditMemberType(selectedMember.memberType as MemberType);
                           setIsEditingMemberType(true);
                         }}
-                        className="px-2 py-1 h-6 text-xs"
+                        className="h-7 px-2 text-xs text-gray-500 hover:text-slate-900"
                       >
                         <Pencil className="w-3 h-3" />
                       </Button>
                     </div>
                   )}
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Email</label>
-                  <p className="text-sm">{selectedMember.email || 'Not provided'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Email Verified</label>
-                  <p className="text-sm">{selectedMember.emailVerified ? '✓ Yes' : '✗ No'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Passport Claim</label>
-                  <p className="text-sm">
-                    {selectedMember.ipePassport || (selectedMember.ipeUsername ? `${selectedMember.ipeUsername}.ipecity.eth` : 'Not claimed')}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Wallet Address</label>
-                  <p className="text-sm font-mono text-xs">{selectedMember.walletAddress || 'Not provided'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Registration Date</label>
-                  <p className="text-sm">
-                    {selectedMember.createdAt ?
-                      new Date(selectedMember.createdAt).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                        year: "numeric"
-                      }) : 
-                      'Unknown'}
-                  </p>
-                </div>
-              </div>
-              
-              {selectedMember.bio && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Bio</label>
-                  <p className="text-sm mt-1">{selectedMember.bio}</p>
-                </div>
-              )}
-
-              {selectedMember.profileTags && selectedMember.profileTags.length > 0 && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Profile Tags</label>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedMember.profileTags.map((tag: string, index: number) => (
-                      <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        {tag}
-                      </span>
-                    ))}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                    <Mail className="h-3.5 w-3.5" /> Email
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-slate-900 truncate">{selectedMember.email || 'Not provided'}</span>
+                    {selectedMember.email && (
+                      selectedMember.emailVerified ? (
+                        <Badge variant="outline" className="bg-lime-50 text-lime-700 border-lime-200 gap-1">
+                          <ShieldCheck className="h-3 w-3" /> Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                          Unverified
+                        </Badge>
+                      )
+                    )}
                   </div>
                 </div>
+              </section>
+
+              {/* Passport & Wallet */}
+              <section className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="text-xs font-medium uppercase tracking-wider text-gray-500">Passport &amp; Wallet</div>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                      <Fingerprint className="h-3.5 w-3.5" /> Passport Claim
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-mono text-slate-900">
+                        {passportDisplay || 'Not claimed'}
+                      </span>
+                      {passportDisplay && (
+                        selectedMember.passportVerified ? (
+                          <Badge variant="outline" className="bg-lime-50 text-lime-700 border-lime-200 gap-1">
+                            <ShieldCheck className="h-3 w-3" /> Verified
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                            Unverified
+                          </Badge>
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                      <Wallet className="h-3.5 w-3.5" /> Wallet Address
+                    </div>
+                    <span className="text-xs font-mono text-slate-700 break-all">
+                      {selectedMember.walletAddress || 'Not provided'}
+                    </span>
+                  </div>
+                  {selectedMember.farcasterFid != null && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                        <Hash className="h-3.5 w-3.5" /> Farcaster FID
+                      </div>
+                      <span className="text-sm text-slate-900">{selectedMember.farcasterFid}</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Profile */}
+              {hasProfile && (
+                <section className="space-y-3 pt-4 border-t border-gray-100">
+                  <div className="text-xs font-medium uppercase tracking-wider text-gray-500">Profile</div>
+                  {selectedMember.bio && (
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-medium text-gray-500">Bio</div>
+                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{selectedMember.bio}</p>
+                    </div>
+                  )}
+                  {selectedMember.profileTags && selectedMember.profileTags.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                        <Tag className="h-3.5 w-3.5" /> Skills &amp; Interests
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedMember.profileTags.map((tag: string, index: number) => (
+                          <Badge key={index} variant="secondary" className="bg-sky-50 text-sky-700 border-sky-100 font-normal">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* Social */}
+              {hasSocial && (
+                <section className="space-y-3 pt-4 border-t border-gray-100">
+                  <div className="text-xs font-medium uppercase tracking-wider text-gray-500">Social</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {selectedMember.twitter && (
+                      <a
+                        href={selectedMember.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 hover:border-sky-300 hover:bg-sky-50 transition-colors min-w-0"
+                      >
+                        <Twitter className="h-4 w-4 text-sky-500 flex-shrink-0" />
+                        <span className="text-sm text-slate-700 truncate">{socialHandle(selectedMember.twitter)}</span>
+                      </a>
+                    )}
+                    {selectedMember.linkedin && (
+                      <a
+                        href={selectedMember.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 hover:border-sky-300 hover:bg-sky-50 transition-colors min-w-0"
+                      >
+                        <Linkedin className="h-4 w-4 text-sky-600 flex-shrink-0" />
+                        <span className="text-sm text-slate-700 truncate">{socialHandle(selectedMember.linkedin)}</span>
+                      </a>
+                    )}
+                    {selectedMember.instagram && (
+                      <a
+                        href={selectedMember.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 hover:border-sky-300 hover:bg-sky-50 transition-colors min-w-0"
+                      >
+                        <Instagram className="h-4 w-4 text-pink-500 flex-shrink-0" />
+                        <span className="text-sm text-slate-700 truncate">{socialHandle(selectedMember.instagram)}</span>
+                      </a>
+                    )}
+                  </div>
+                </section>
               )}
 
               {/* Action buttons for pending applications */}
@@ -694,13 +787,14 @@ export default function AdminPage() {
                 const isDenying = denyingMemberIds.has(selectedMember.id);
                 const isBusy = isApproving || isDenying;
                 return (
-                <div className="pt-4 border-t space-y-3">
+                <div className="pt-4 border-t border-gray-100 space-y-3">
                   {isApproving && (
-                    <p className="text-xs text-gray-600">
-                      Minting passport on-chain — this can take up to 2 minutes. You can close this window and review other applications in the meantime.
-                    </p>
+                    <div className="flex items-start gap-2 p-3 rounded-md bg-sky-50 border border-sky-100 text-xs text-sky-800">
+                      <Loader2 className="h-4 w-4 mt-0.5 animate-spin text-sky-600 flex-shrink-0" />
+                      <span>Minting passport on-chain — this can take up to 2 minutes. You can close this window and review other applications in the meantime.</span>
+                    </div>
                   )}
-                  <div className="flex space-x-2">
+                  <div className="flex gap-2">
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -712,7 +806,7 @@ export default function AdminPage() {
                         });
                       }}
                       disabled={isBusy}
-                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400"
+                      className="bg-lime-500 hover:bg-lime-600 text-slate-900 disabled:bg-gray-300 disabled:text-gray-500"
                     >
                       {isApproving ? (
                         <>
@@ -720,7 +814,10 @@ export default function AdminPage() {
                           Approving…
                         </>
                       ) : (
-                        "Approve Application"
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          Approve Application
+                        </>
                       )}
                     </Button>
                     <Button
@@ -737,7 +834,10 @@ export default function AdminPage() {
                           Denying…
                         </>
                       ) : (
-                        "Deny"
+                        <>
+                          <X className="h-4 w-4 mr-2" />
+                          Deny
+                        </>
                       )}
                     </Button>
                   </div>
@@ -747,7 +847,8 @@ export default function AdminPage() {
             </div>
           </DialogContent>
         </Dialog>
-      )}
+        );
+      })()}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { WizardProgressBar, type WizardStep, type StepId } from "./WizardProgressBar";
 import { WalletStep } from "./WalletStep";
 import { EmailStep } from "./EmailStep";
+import { ProfileStep } from "./ProfileStep";
 import { PassportStep } from "./PassportStep";
 import { CompletionStep } from "./CompletionStep";
 
@@ -28,6 +29,7 @@ const slideVariants = {
 const STEP_LABELS: Record<StepId, string> = {
   wallet: "Wallet",
   email: "Email",
+  profile: "Profile",
   passport: "Passport",
 };
 
@@ -39,6 +41,9 @@ function useVerificationSteps(
     const completionById: Record<StepId, boolean> = {
       wallet: !!member?.walletAddress,
       email: !!member?.emailVerified,
+      // A display name is the only hard requirement for the profile step —
+      // the avatar upload is optional and always has a generated default.
+      profile: !!member?.displayName?.trim(),
       // Only active_member is a terminal state. Earlier states (pending review,
       // approved but not yet ENS-verified) still need action in the passport step.
       passport: member?.status === "active_member",
@@ -49,7 +54,7 @@ function useVerificationSteps(
       label: STEP_LABELS[id],
       isComplete: completionById[id],
     }));
-  }, [member?.walletAddress, member?.emailVerified, member?.status, stepOrder]);
+  }, [member?.walletAddress, member?.emailVerified, member?.displayName, member?.status, stepOrder]);
 
   const currentStepIndex = steps.findIndex((s) => !s.isComplete);
   const allComplete = currentStepIndex === -1;
@@ -80,13 +85,13 @@ export function VerificationWizard() {
   useEffect(() => {
     if (stepOrder || isMemberLoading || !member) return;
     if (member.emailVerified && !member.walletAddress) {
-      setStepOrder(["email", "wallet", "passport"]);
+      setStepOrder(["email", "wallet", "profile", "passport"]);
     } else {
-      setStepOrder(["wallet", "email", "passport"]);
+      setStepOrder(["wallet", "email", "profile", "passport"]);
     }
   }, [stepOrder, member, isMemberLoading]);
 
-  const effectiveOrder = stepOrder ?? ["wallet", "email", "passport"];
+  const effectiveOrder = stepOrder ?? ["wallet", "email", "profile", "passport"];
 
   const { steps, naturalActiveStep, allComplete, completedCount } =
     useVerificationSteps(member, effectiveOrder);
@@ -200,6 +205,9 @@ export function VerificationWizard() {
                 )}
                 {activeStep === "email" && (
                   <EmailStep onComplete={refreshMember} />
+                )}
+                {activeStep === "profile" && (
+                  <ProfileStep onComplete={() => { refreshMember(); setSelectedStep(null); }} />
                 )}
                 {activeStep === "passport" && (
                   <PassportStep onComplete={refreshMember} />

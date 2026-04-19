@@ -69,6 +69,8 @@ export const members = pgTable("members", {
   ipePassport: varchar("ipe_passport", { length: 255 }),
   
   // Profile/Application fields
+  displayName: varchar("display_name", { length: 100 }),
+  profileImageUrl: text("profile_image_url"),
   bio: text("bio"),
   twitter: varchar("twitter", { length: 100 }),
   linkedin: varchar("linkedin", { length: 100 }),
@@ -371,6 +373,25 @@ export const secureEmailSchema = z.string()
   .refine(val => !/<|>|"|'/.test(val), "Email contains invalid characters")
   .refine(val => val.split('@')[0].length <= VALIDATION_LIMITS.EMAIL_LOCAL_PART_MAX_LENGTH, "Email local part too long");
 
+export const secureDisplayNameSchema = z.string()
+  .trim()
+  .min(1, "Display name cannot be empty")
+  .max(100, "Display name too long")
+  .refine(val => {
+    return !VALIDATION_PATTERNS.DANGEROUS_PATTERNS.some(pattern => pattern.test(val));
+  }, "Display name contains potentially dangerous content");
+
+// Data URL for uploaded images (client-side resized, base64-encoded).
+// Accept empty string / null to allow clearing.
+export const secureProfileImageUrlSchema = z.string()
+  .max(300_000, "Image too large — please use a smaller photo")
+  .refine(val => {
+    if (!val) return true;
+    return /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/.test(val);
+  }, "Profile image must be a PNG, JPEG, or WebP data URL")
+  .optional()
+  .nullable();
+
 export const secureBioSchema = z.string()
   .max(VALIDATION_LIMITS.BIO_MAX_LENGTH, "Bio too long")
   .refine(val => {
@@ -415,6 +436,8 @@ export const secureFidSchema = z.number()
 export const applicationSchema = createInsertSchema(members).pick({
   farcasterFid: true,
   ipeUsername: true,
+  displayName: true,
+  profileImageUrl: true,
   bio: true,
   twitter: true,
   linkedin: true,
@@ -424,6 +447,8 @@ export const applicationSchema = createInsertSchema(members).pick({
 }).extend({
   farcasterFid: secureFidSchema,
   ipeUsername: secureUsernameSchema,
+  displayName: secureDisplayNameSchema.optional(),
+  profileImageUrl: secureProfileImageUrlSchema,
   bio: secureBioSchema,
   twitter: secureSocialHandleSchema,
   linkedin: secureSocialHandleSchema,
@@ -435,6 +460,8 @@ export const applicationSchema = createInsertSchema(members).pick({
 // Application schema with member ID
 export const applicationByMemberIdSchema = createInsertSchema(members).pick({
   ipeUsername: true,
+  displayName: true,
+  profileImageUrl: true,
   bio: true,
   twitter: true,
   linkedin: true,
@@ -444,6 +471,8 @@ export const applicationByMemberIdSchema = createInsertSchema(members).pick({
 }).extend({
   memberId: z.number().int().positive(),
   ipeUsername: secureUsernameSchema,
+  displayName: secureDisplayNameSchema.optional(),
+  profileImageUrl: secureProfileImageUrlSchema,
   bio: secureBioSchema,
   twitter: secureSocialHandleSchema,
   linkedin: secureSocialHandleSchema,

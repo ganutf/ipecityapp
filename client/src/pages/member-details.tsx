@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Briefcase, Link as LinkIcon } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 interface MemberDetailsData {
   id: number;
@@ -34,6 +35,7 @@ interface MemberDetailsData {
   pulseStreak: number;
   createdAt?: string;
   pfpUrl?: string;
+  profileImageUrl?: string | null;
   ipeBalance?: string;
 }
 
@@ -156,10 +158,11 @@ export default function MemberDetails() {
               displayName={member.displayName}
               username={member.username}
               fid={member.farcasterFid}
+              memberId={member.id}
               memberType={member.memberType}
               ipePassport={member.ipePassport}
               passportVerified={member.passportVerified}
-              pfpUrl={member.pfpUrl}
+              pfpUrl={resolveAvatarUrl(member.profileImageUrl, member.pfpUrl, member.id)}
               createdAt={member.createdAt}
             />
           </CardContent>

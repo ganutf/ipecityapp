@@ -1,17 +1,17 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  User,
   Globe,
   TrendingUp,
   Target
 } from "lucide-react";
 import { getMemberTypeInfo } from "@/lib/memberTypeConfig";
 import { Link } from "wouter";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 interface MemberCardProps {
   id: number;
-  farcasterFid: number;
+  farcasterFid?: number;
   displayName?: string;
   username?: string;
   memberType?: string;
@@ -19,32 +19,34 @@ interface MemberCardProps {
   totalPoints: number;
   pulseStreak: number;
   pfpUrl?: string;
+  profileImageUrl?: string | null;
   rank?: number;
   showRank?: boolean;
 }
 
 
-export function MemberCard({ 
+export function MemberCard({
   id,
-  farcasterFid, 
-  displayName, 
-  username, 
+  displayName,
+  username,
   memberType = 'pending',
   ipePassport,
   totalPoints,
   pulseStreak,
   pfpUrl,
+  profileImageUrl,
   rank,
   showRank = false
 }: MemberCardProps) {
   const memberTypeInfo = getMemberTypeInfo(memberType);
+  const avatarUrl = resolveAvatarUrl(profileImageUrl, pfpUrl, id);
 
   return (
     <Link href={`/member/${id}`}>
       <Card className="hover:shadow-md transition-shadow cursor-pointer group relative">
         {showRank && rank && (
           <div className="absolute -top-2 -left-2 z-10">
-            <Badge 
+            <Badge
               className={`
                 border-0
                 ${rank === 1 ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-900' : ''}
@@ -59,33 +61,20 @@ export function MemberCard({
         )}
         <CardContent className="p-4">
           <div className="flex items-start space-x-3">
-            {/* Profile Avatar */}
-            {pfpUrl ? (
-              <img 
-                src={pfpUrl} 
-                alt={`${displayName || username || 'User'} profile picture`}
-                className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-              />
-            ) : (
-              <div className="h-12 w-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                {displayName || username ? (
-                  <span className="text-white text-lg font-semibold">
-                    {(displayName || username || '?')[0].toUpperCase()}
-                  </span>
-                ) : (
-                  <User className="h-6 w-6 text-white" />
-                )}
-              </div>
-            )}
-            
+            <img
+              src={avatarUrl}
+              alt={`${displayName || username || 'Member'} profile picture`}
+              className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+            />
+
             <div className="flex-1 min-w-0">
               {/* Name and Type */}
               <div className="flex items-center justify-between gap-3 mb-2">
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
-                    {displayName || username}
+                    {displayName || username || `Member ${id}`}
                   </h3>
-                  <p className="text-xs text-gray-500">ID: {farcasterFid}</p>
+                  <p className="text-xs text-gray-500">ID: {id}</p>
                 </div>
                 
                 {/* Member Type Badge */}

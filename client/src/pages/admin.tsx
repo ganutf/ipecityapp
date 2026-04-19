@@ -20,6 +20,7 @@ import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { useLocation } from "wouter";
 import { PulseCard } from "@/components/PulseCard";
 import { authenticatedPost, authenticatedGet, authenticatedPatch } from "@/lib/api";
+import { defaultAvatarUrl } from "@/lib/avatar";
 import { useTimezone } from "@/contexts/TimezoneContext";
 import { convertDateTimeInputToUTC, formatPulseDate, getCurrentUTC } from "@/lib/dateUtils";
 
@@ -419,10 +420,15 @@ export default function AdminPage() {
                     return (
                       <tr key={member.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedMember(member)}>
                         <td className="py-2">
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={member.profileImageUrl || defaultAvatarUrl(member.id)}
+                              alt={member.displayName || member.ipeUsername || `Member ${member.id}`}
+                              className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+                            />
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {member.ipeUsername || member.email || `Member #${member.id}`}
+                                {member.displayName || member.ipeUsername || member.email || `Member #${member.id}`}
                               </div>
                               <div className="text-sm text-gray-500">
                                 <span>ID: {member.id}</span>

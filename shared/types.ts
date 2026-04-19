@@ -113,6 +113,8 @@ export interface MemberWalletsResponse {
 export interface CommunityMember {
   id: number;
   ipeUsername?: string | null;
+  displayName?: string | null;
+  profileImageUrl?: string | null;
   email?: string | null;
   walletAddress?: string | null;
   memberType: string;

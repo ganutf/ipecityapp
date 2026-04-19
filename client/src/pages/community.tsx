@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
+import { resolveAvatarUrl } from "@/lib/avatar";
 
 interface CommunityMember {
   id: number;
@@ -22,6 +23,7 @@ interface CommunityMember {
   displayName?: string;
   username?: string;
   pfpUrl?: string;
+  profileImageUrl?: string | null;
   rank?: number;
   ipeBalance?: string; // Formatted balance from server (e.g., "1,234.56")
   ipeBalanceRaw?: string; // Raw balance for sorting
@@ -91,13 +93,13 @@ function MemberRow({
         <td className="px-4 py-4 align-middle">
           <div className="flex items-center space-x-3">
             <img
-              src={member.pfpUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.farcasterFid}`}
-              alt={member.displayName || member.username || `User ${member.farcasterFid}`}
+              src={resolveAvatarUrl(member.profileImageUrl, member.pfpUrl, member.id)}
+              alt={member.displayName || member.username || `Member ${member.id}`}
               className="w-12 h-12 rounded-full object-cover"
             />
             <div>
               <div className="font-semibold text-gray-900">
-                {member.displayName || member.username || `User ${member.farcasterFid}`}
+                {member.displayName || member.username || `Member ${member.id}`}
               </div>
               <div className="text-sm text-gray-600">
                 Member ID: {member.id}

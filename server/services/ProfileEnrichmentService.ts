@@ -126,6 +126,8 @@ interface EnrichableMember {
   farcasterFid?: number | null;
   walletAddress?: string | null;
   ipeUsername?: string | null;
+  displayName?: string | null;
+  profileImageUrl?: string | null;
   bio?: string | null;
   [key: string]: unknown;
 }
@@ -155,10 +157,11 @@ export async function enrichBulkMembers<T extends EnrichableMember>(
 
     return {
       ...member,
-      displayName: profile?.displayName || member.ipeUsername || `Member ${member.id}`,
+      // Member-set values (DB) win over Farcaster-sourced values.
+      displayName: member.displayName || profile?.displayName || member.ipeUsername || `Member ${member.id}`,
       username: profile?.username || member.ipeUsername,
-      pfpUrl: profile?.pfpUrl,
-      bio: profile?.bio || member.bio,
+      pfpUrl: member.profileImageUrl || profile?.pfpUrl,
+      bio: member.bio || profile?.bio,
       ipeBalance: balance?.balance || '0',
       ipeBalanceRaw: balance?.balanceRaw || '0',
     };
@@ -184,10 +187,10 @@ export async function enrichSingleMember<T extends EnrichableMember>(
   return {
     ...member,
     ...stats,
-    displayName: profile?.displayName || member.ipeUsername || `Member ${member.id}`,
+    displayName: member.displayName || profile?.displayName || member.ipeUsername || `Member ${member.id}`,
     username: profile?.username || member.ipeUsername,
-    pfpUrl: profile?.pfpUrl,
-    bio: profile?.bio || member.bio,
+    pfpUrl: member.profileImageUrl || profile?.pfpUrl,
+    bio: member.bio || profile?.bio,
     ipeBalance: balance?.balance || '0',
     ipeBalanceRaw: balance?.balanceRaw || '0',
   };

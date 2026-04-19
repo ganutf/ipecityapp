@@ -556,7 +556,7 @@ router.post('/auth/application/submit', privyAuthMiddleware, async (req: PrivyAu
       return res.status(401).json({ error: 'Not authenticated or member not found' });
     }
 
-    const { ipeUsername, bio, twitter, linkedin, instagram, profileTags, walletAddress } = req.body;
+    const { ipeUsername, displayName, profileImageUrl, bio, twitter, linkedin, instagram, profileTags, walletAddress } = req.body;
     const memberId = req.member.id;
 
     if (!ipeUsername) {
@@ -566,6 +566,8 @@ router.post('/auth/application/submit', privyAuthMiddleware, async (req: PrivyAu
     // Atomic check-and-update to prevent race conditions on username and wallet
     const updatedMember = await storage.submitApplicationAtomic(memberId, {
       ipeUsername,
+      displayName,
+      profileImageUrl,
       bio,
       twitter,
       linkedin,
@@ -617,15 +619,34 @@ router.patch('/members/:memberId/profile', privyAuthMiddleware, async (req: Priv
       return res.status(403).json({ error: 'Cannot update another user profile' });
     }
 
-    const { bio, twitter, linkedin, instagram, profileTags } = req.body;
+    const { z } = await import('zod');
+    const {
+      secureDisplayNameSchema,
+      secureProfileImageUrlSchema,
+      secureBioSchema,
+      secureSocialHandleSchema,
+      secureProfileTagsSchema,
+    } = await import('@shared/schema');
 
-    const updatedMember = await storage.updateMember(memberId, {
-      bio,
-      twitter,
-      linkedin,
-      instagram,
-      profileTags,
-    });
+    const profileUpdateSchema = z.object({
+      displayName: secureDisplayNameSchema.optional(),
+      profileImageUrl: secureProfileImageUrlSchema,
+      bio: secureBioSchema,
+      twitter: secureSocialHandleSchema,
+      linkedin: secureSocialHandleSchema,
+      instagram: secureSocialHandleSchema,
+      profileTags: secureProfileTagsSchema,
+    }).partial();
+
+    const parsed = profileUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: 'Invalid profile data',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const updatedMember = await storage.updateMember(memberId, parsed.data);
 
     logger.info('Profile updated', { memberId });
 

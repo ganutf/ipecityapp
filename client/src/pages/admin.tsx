@@ -423,7 +423,7 @@ export default function AdminPage() {
                                 {member.ipeUsername || member.email || `Member #${member.id}`}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {member.email || (member.farcasterFid ? `FID: ${member.farcasterFid}` : '')}
+                                {member.email || `ID: ${member.id}`}
                               </div>
                             </div>
                             <Eye className="h-4 w-4 text-gray-400" />

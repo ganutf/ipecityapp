@@ -28,7 +28,6 @@ import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { StatsCards } from "@/components/profile/StatsCards";
 import { WalletsCard } from "@/components/profile/WalletsCard";
-import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { defaultAvatarUrl } from "@/lib/avatar";
 import {
   Mail,
@@ -122,13 +121,11 @@ export default function Profile2() {
 
 
   // Edit states
-  const [editingDisplayName, setEditingDisplayName] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
   const [editingSocial, setEditingSocial] = useState(false);
   const [editingTags, setEditingTags] = useState(false);
 
   // Form values
-  const [displayNameValue, setDisplayNameValue] = useState("");
   const [bioValue, setBioValue] = useState("");
   const [twitterValue, setTwitterValue] = useState("");
   const [linkedinValue, setLinkedinValue] = useState("");
@@ -215,27 +212,21 @@ export default function Profile2() {
       // Refresh member data from AuthContext
       refreshMember();
       // Reset edit modes
-      setEditingDisplayName(false);
       setEditingBio(false);
       setEditingSocial(false);
       setEditingTags(false);
     },
-    onError: () => {
+    onError: (err: Error) => {
       toast({
         title: "Update failed",
-        description: "Failed to update profile. Please try again.",
+        description: err?.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const handleDisplayNameSave = () => {
-    const trimmed = displayNameValue.trim();
-    if (!trimmed) {
-      toast({ title: "Name required", description: "Display name cannot be empty.", variant: "destructive" });
-      return;
-    }
-    updateProfileMutation.mutate({ displayName: trimmed });
+  const handleDisplayNameSave = async (name: string) => {
+    await updateProfileMutation.mutateAsync({ displayName: name });
   };
 
   const handleAvatarChange = async (dataUrl: string | null) => {
@@ -288,7 +279,6 @@ export default function Profile2() {
   // Use member (from auth context, stable reference) instead of memberData (recreated each render)
   useEffect(() => {
     if (member) {
-      setDisplayNameValue(member.displayName || member.ipeUsername || "");
       setBioValue(member.bio || "");
       setTwitterValue(member.twitter || "");
       setLinkedinValue(member.linkedin || "");
@@ -332,7 +322,7 @@ export default function Profile2() {
   return (
     <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
       <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
-        {/* Header with Profile Info */}
+        {/* Header with Profile Info (avatar + display name are edited inline here) */}
         <ProfileCard>
           <CardContent className="pt-4 md:pt-6">
             <ProfileHeader
@@ -345,71 +335,11 @@ export default function Profile2() {
               passportVerified={memberData?.member?.passportVerified}
               pfpUrl={member?.profileImageUrl || defaultAvatarUrl(memberId)}
               createdAt={memberData?.member?.createdAt}
+              onAvatarChange={handleAvatarChange}
+              onDisplayNameChange={handleDisplayNameSave}
             />
           </CardContent>
         </ProfileCard>
-
-        {/* Identity: avatar + display name */}
-        <Card className="bg-white shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold text-gray-900">Identity</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div>
-              <Label className="text-sm text-gray-600 mb-2 block">Profile photo</Label>
-              <AvatarUploader
-                currentUrl={member?.profileImageUrl}
-                fallbackUrl={defaultAvatarUrl(memberId)}
-                displayName={member?.displayName || member?.ipeUsername}
-                size="lg"
-                onChange={handleAvatarChange}
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-sm text-gray-600">Display name</Label>
-                {!editingDisplayName && (
-                  <Button variant="ghost" size="sm" onClick={() => setEditingDisplayName(true)}>
-                    <Edit3 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              {editingDisplayName ? (
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Input
-                    value={displayNameValue}
-                    onChange={(e) => setDisplayNameValue(e.target.value)}
-                    placeholder="How should we display your name?"
-                    maxLength={100}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={handleDisplayNameSave}
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      <Save className="h-4 w-4 mr-1" /> Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setDisplayNameValue(member?.displayName || member?.ipeUsername || "");
-                        setEditingDisplayName(false);
-                      }}
-                    >
-                      <X className="h-4 w-4 mr-1" /> Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-base font-medium text-gray-900">
-                  {member?.displayName || member?.ipeUsername || "Not set"}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Stats Cards */}
         <StatsCards

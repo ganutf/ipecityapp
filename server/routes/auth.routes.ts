@@ -640,6 +640,11 @@ router.patch('/members/:memberId/profile', privyAuthMiddleware, async (req: Priv
 
     const parsed = profileUpdateSchema.safeParse(req.body);
     if (!parsed.success) {
+      logger.warn('Profile update validation failed', {
+        memberId,
+        fields: Object.keys(req.body || {}),
+        issues: parsed.error.issues.map(i => ({ path: i.path, message: i.message })),
+      });
       return res.status(400).json({
         error: 'Invalid profile data',
         details: parsed.error.flatten(),

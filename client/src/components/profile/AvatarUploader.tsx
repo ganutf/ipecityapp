@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { resizeImageToDataUrl } from "@/lib/avatar";
 
 interface AvatarUploaderProps {
   currentUrl?: string | null;
@@ -18,30 +19,6 @@ const SIZE_CLASSES: Record<NonNullable<AvatarUploaderProps["size"]>, string> = {
   lg: "h-24 w-24 md:h-28 md:w-28",
 };
 
-const MAX_SIDE = 256;
-const MAX_BYTES = 250_000;
-
-async function resizeToDataUrl(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const w = Math.round(bitmap.width * scale);
-  const h = Math.round(bitmap.height * scale);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas not supported");
-  ctx.drawImage(bitmap, 0, 0, w, h);
-
-  // Step down quality until under size budget
-  for (const quality of [0.85, 0.75, 0.65, 0.55, 0.45]) {
-    const url = canvas.toDataURL("image/jpeg", quality);
-    if (url.length <= MAX_BYTES) return url;
-  }
-  return canvas.toDataURL("image/jpeg", 0.4);
-}
-
 export function AvatarUploader({
   currentUrl,
   fallbackUrl,
@@ -52,9 +29,15 @@ export function AvatarUploader({
 }: AvatarUploaderProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [isBusy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const imgSrc = currentUrl || fallbackUrl;
+  // Clear local preview once the server-confirmed value matches (or diverges).
+  useEffect(() => {
+    if (currentUrl !== undefined) setPreview(null);
+  }, [currentUrl]);
+
+  const imgSrc = preview || currentUrl || fallbackUrl;
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -63,9 +46,11 @@ export function AvatarUploader({
     }
     setBusy(true);
     try {
-      const dataUrl = await resizeToDataUrl(file);
+      const dataUrl = await resizeImageToDataUrl(file);
+      setPreview(dataUrl);
       await onChange(dataUrl);
     } catch (err) {
+      setPreview(null);
       toast({
         title: "Upload failed",
         description: err instanceof Error ? err.message : "Could not process image.",
@@ -80,6 +65,7 @@ export function AvatarUploader({
   const handleClear = async () => {
     setBusy(true);
     try {
+      setPreview(null);
       await onChange(null);
     } finally {
       setBusy(false);

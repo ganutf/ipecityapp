@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Coins } from "lucide-react";
+import { defaultAvatarUrl } from "@/lib/avatar";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, member, isLoading, logout, login } = useAuth();
@@ -94,17 +95,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               )}
 
               <span className="text-sm text-gray-600">
-                Hello, {member?.ipeUsername || member?.email?.split('@')[0] || 'User'}
+                Hello, {member?.displayName || member?.ipeUsername || member?.email?.split('@')[0] || 'User'}
               </span>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 rounded-full p-0">
-                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                      <span className="text-purple-600 text-sm font-semibold">
-                        {(member?.email?.split('@')[0] || 'U')[0].toUpperCase()}
-                      </span>
-                    </div>
+                  <Button variant="ghost" className="h-8 w-8 rounded-full p-0 overflow-hidden">
+                    <img
+                      src={member?.profileImageUrl || defaultAvatarUrl(member?.id)}
+                      alt={member?.displayName || member?.ipeUsername || "Profile"}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

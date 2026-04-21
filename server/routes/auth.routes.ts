@@ -566,14 +566,20 @@ router.post('/auth/application/submit', privyAuthMiddleware, async (req: PrivyAu
       return res.status(401).json({ error: 'Not authenticated or member not found' });
     }
 
-    const { ipeUsername, displayName, profileImageUrl, bio, twitter, linkedin, instagram, profileTags, walletAddress } = req.body;
+    const { ipeUsername, displayName, profileImageUrl, bio, twitter, linkedin, instagram, profileTags } = req.body;
     const memberId = req.member.id;
 
     if (!ipeUsername) {
       return res.status(400).json({ error: 'Username is required' });
     }
 
-    // Atomic check-and-update to prevent race conditions on username and wallet
+    if (!req.member.walletAddress) {
+      return res.status(400).json({ error: 'Passport wallet must be set before submitting an application' });
+    }
+
+    // Atomic check-and-update to prevent race conditions on username.
+    // Wallet was pinned in the wallet step — do not re-set it here, so a
+    // later-connected external wallet can't clobber the member's choice.
     const updatedMember = await storage.submitApplicationAtomic(memberId, {
       ipeUsername,
       displayName,
@@ -583,7 +589,6 @@ router.post('/auth/application/submit', privyAuthMiddleware, async (req: PrivyAu
       linkedin,
       instagram,
       profileTags,
-      walletAddress,
       status: 'pending_application_review',
     });
 
@@ -601,9 +606,6 @@ router.post('/auth/application/submit', privyAuthMiddleware, async (req: PrivyAu
   } catch (error) {
     if (error instanceof Error && error.message === 'USERNAME_TAKEN') {
       return res.status(400).json({ error: 'Username is already taken' });
-    }
-    if (error instanceof Error && error.message === 'WALLET_ALREADY_LINKED') {
-      return res.status(409).json({ error: 'This wallet is already linked to another account' });
     }
     logger.error('Application submit error', {
       error: error instanceof Error ? error.message : String(error),

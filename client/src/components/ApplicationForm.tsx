@@ -15,7 +15,6 @@ import { Loader2, CheckCircle, User, Globe, Twitter, Linkedin, Instagram, Tag } 
 import { PROFILE_TAGS, VALIDATION_LIMITS } from "@shared/constants";
 import { secureUsernameSchema, secureBioSchema, secureSocialHandleSchema, secureProfileTagsSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { useActiveWallet } from "@/hooks/useActiveWallet";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 import { validateSocialMediaUrl, type SocialPlatform } from "@/lib/utils";
@@ -56,8 +55,11 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
   const queryClient = useQueryClient();
   const { getAccessToken } = useAuth();
 
-  const { activeWallet } = useActiveWallet();
-  const address = activeWallet?.address as `0x${string}` | undefined;
+  // Pin the application to the member's chosen passport wallet (set in the
+  // wallet step), not whatever Privy currently has active. Otherwise an
+  // externally-connected wallet can override the user's pick and trigger a
+  // 409 if it already belongs to another account.
+  const passportWallet = memberData?.member?.walletAddress;
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const formRef = useRef<HTMLDivElement>(null);
@@ -121,15 +123,14 @@ export function ApplicationForm({ memberData, memberId, farcasterProfile, onSucc
   // Submit application mutation (uses v2 endpoint with memberId)
   const submitApplicationMutation = useMutation({
     mutationFn: async (data: ApplicationFormData) => {
-      if (!address) {
-        throw new Error("Wallet not connected");
+      if (!passportWallet) {
+        throw new Error("Passport wallet not set. Complete the wallet step first.");
       }
 
       const payload = {
         memberId,
         ...data,
         profileTags: selectedTags,
-        walletAddress: address,
       };
 
       try {

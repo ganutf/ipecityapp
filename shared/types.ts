@@ -29,6 +29,10 @@ export interface AuthMeResponse {
 export interface PrivyLinkedAccount {
   type: string;
   address?: string;
+  // Present on OAuth account types (google_oauth, github_oauth, etc.) —
+  // those put the address in `email`, not `address`.
+  email?: string;
+  name?: string;
   verified_at?: number;
   first_verified_at?: number;
   latest_verified_at?: number;

@@ -125,9 +125,19 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
             linkedAccounts: linkedAccounts.map(a => ({ type: a.type, address: a.address })),
           });
 
-          // Extract email from linked accounts
+          // Extract email from linked accounts. Privy stores it differently
+          // depending on the login method: `type: 'email'` uses `address`,
+          // while OAuth providers (google_oauth, github_oauth, ...) put the
+          // address in `email`. Prefer a direct email login if present, then
+          // fall back to the first OAuth account that carries an email.
           const emailAccount = linkedAccounts.find(account => account.type === 'email');
           privyEmail = emailAccount?.address;
+          if (!privyEmail) {
+            const oauthWithEmail = linkedAccounts.find(
+              account => account.type.endsWith('_oauth') && account.email
+            );
+            privyEmail = oauthWithEmail?.email;
+          }
 
           // Extract wallet from linked accounts - prefer external wallets
           // (matches client-side useActiveWallet which prefers external over embedded).

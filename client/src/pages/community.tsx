@@ -349,15 +349,13 @@ export default function Community() {
   // Show loading state
   if (authLoading) {
     return (
-      <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
-        <div className="w-full mx-auto px-3 md:px-4">
-          <Card className="bg-white shadow-sm">
-            <CardContent className="text-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900 mx-auto mb-4"></div>
-              <p className="text-gray-600 font-medium">Loading...</p>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="w-full space-y-4 md:space-y-6">
+        <Card className="bg-white shadow-sm">
+          <CardContent className="text-center py-16">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-900 mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Loading...</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -365,22 +363,20 @@ export default function Community() {
   // Show authentication required
   if (!isAuthenticated) {
     return (
-      <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
-        <div className="w-full mx-auto px-3 md:px-4">
-          <Card className="bg-white shadow-sm">
-            <CardContent className="text-center py-16 px-8">
-              <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Users className="h-8 w-8 text-slate-700" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
-                Authentication Required
-              </h2>
-              <p className="text-sm text-gray-600 max-w-md mx-auto">
-                Please sign in to view the community members and explore the Ipê City community.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="w-full space-y-4 md:space-y-6">
+        <Card className="bg-white shadow-sm">
+          <CardContent className="text-center py-16 px-8">
+            <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Users className="h-8 w-8 text-slate-700" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Authentication Required
+            </h2>
+            <p className="text-sm text-gray-600 max-w-md mx-auto">
+              Please sign in to view the community members and explore the Ipê City community.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -389,26 +385,24 @@ export default function Community() {
   if (error) {
     console.error("Community page error:", error);
     return (
-      <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
-        <div className="w-full mx-auto px-3 md:px-4">
-          <Card className="bg-white shadow-sm">
-            <CardContent className="text-center py-16 px-8">
-              <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Users className="h-8 w-8 text-red-600" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">
-                Error Loading Community
-              </h2>
-              <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
-                Failed to load community members. Please try again later.
-              </p>
-              <details className="text-left text-sm text-gray-500 max-w-md mx-auto bg-gray-50 rounded-lg p-4">
-                <summary className="cursor-pointer font-medium">Error Details</summary>
-                <pre className="mt-2 whitespace-pre-wrap text-xs">{error instanceof Error ? error.message : String(error)}</pre>
-              </details>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="w-full space-y-4 md:space-y-6">
+        <Card className="bg-white shadow-sm">
+          <CardContent className="text-center py-16 px-8">
+            <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Users className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              Error Loading Community
+            </h2>
+            <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
+              Failed to load community members. Please try again later.
+            </p>
+            <details className="text-left text-sm text-gray-500 max-w-md mx-auto bg-gray-50 rounded-lg p-4">
+              <summary className="cursor-pointer font-medium">Error Details</summary>
+              <pre className="mt-2 whitespace-pre-wrap text-xs">{error instanceof Error ? error.message : String(error)}</pre>
+            </details>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -417,8 +411,7 @@ export default function Community() {
   const filteredCount = sortedAndFilteredMembers.length;
 
   return (
-    <div className="w-full mx-auto bg-gray-50 px-3 md:px-4 space-y-4 md:space-y-6">
-      <div className="w-full mx-auto px-3 md:px-4 space-y-4 md:space-y-6">
+    <div className="w-full space-y-4 md:space-y-6">
         {/* Header Card */}
         <Card className="bg-white shadow-sm">
           <CardContent className="p-6">
@@ -597,7 +590,6 @@ export default function Community() {
             </CardContent>
           </Card>
         )}
-      </div>
     </div>
   );
 }

@@ -230,13 +230,33 @@ export function PassportVerificationSection({
 
   const bodyContent = (
     <div className="space-y-4">
-      {/* Wallet Connection - hidden in wizard mode (already completed) */}
-      {!isWizard && !isConnected && (
-        <div className="text-center">
-          <Button onClick={() => connectWallet()} className="w-full">
-            <Wallet className="mr-2 h-4 w-4" />
-            Connect Wallet
-          </Button>
+      {/* Passport wallet isn't in this Privy session — always offer a way to
+          (re)connect it. In wizard mode the wallet was picked a step ago, but
+          the session can drop the wallet (tab reload, external-wallet
+          disconnect), and without this prompt the page has no actionable UI. */}
+      {!isConnected && (
+        <div className="space-y-2 text-center">
+          {passportNotConnected ? (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-left space-y-2">
+              <p className="text-amber-800 font-medium flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Passport wallet not connected
+              </p>
+              <p className="text-sm text-amber-700">
+                Connect {memberWallet?.slice(0, 6)}…{memberWallet?.slice(-4)} to
+                verify or apply for your passport.
+              </p>
+              <Button onClick={() => connectWallet()} className="w-full">
+                <Wallet className="mr-2 h-4 w-4" />
+                Connect Passport Wallet
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => connectWallet()} className="w-full">
+              <Wallet className="mr-2 h-4 w-4" />
+              Connect Wallet
+            </Button>
+          )}
         </div>
       )}
 
@@ -273,30 +293,6 @@ export function PassportVerificationSection({
             <div className="flex flex-col items-center justify-center py-8 space-y-3">
               <Loader2 className="h-6 w-6 text-slate-400 animate-spin" />
               <p className="text-sm text-gray-500">Checking ENS subdomains for this wallet…</p>
-            </div>
-          )}
-
-          {/* Passport wallet exists in the member record but isn't connected
-              in this Privy session — prompt the user to connect it before
-              they can sign. */}
-          {passportNotConnected && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
-              <p className="text-amber-800 font-medium flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                Passport wallet not connected
-              </p>
-              <p className="text-sm text-amber-700">
-                Connect {memberWallet?.slice(0, 6)}…{memberWallet?.slice(-4)} to
-                sign and verify your passport.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => connectWallet()}
-                className="mt-2"
-              >
-                Connect Passport Wallet
-              </Button>
             </div>
           )}
 

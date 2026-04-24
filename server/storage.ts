@@ -286,12 +286,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMemberByEmail(email: string): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.email, email));
+    const [member] = await db.select().from(members)
+      .where(sql`LOWER(${members.email}) = ${email.toLowerCase()}`);
     return member;
   }
 
   async getMemberByWalletAddress(walletAddress: string): Promise<Member | undefined> {
-    const [member] = await db.select().from(members).where(eq(members.walletAddress, walletAddress.toLowerCase()));
+    const [member] = await db.select().from(members)
+      .where(sql`LOWER(${members.walletAddress}) = ${walletAddress.toLowerCase()}`);
     return member;
   }
 

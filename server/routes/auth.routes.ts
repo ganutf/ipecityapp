@@ -65,6 +65,25 @@ router.post('/auth/login', privyAuthMiddleware, async (req: PrivyAuthRequest, re
           conflictBy: email && existingMember.email === email ? 'email' : 'wallet',
         });
       } else {
+        // Before creating: if the wallet is linked to another member as a
+        // secondary (non-passport) wallet, surface a clean 409 instead of
+        // letting createMemberFromPrivy fail silently on member_wallets'
+        // unique constraint and returning a misleading "new user" state.
+        if (walletAddress) {
+          const linkedWallet = await storage.getMemberWalletByAddress(walletAddress);
+          if (linkedWallet) {
+            logger.warn('Login: wallet is a secondary wallet of another member', {
+              linkedMemberId: linkedWallet.memberId,
+              newPrivyId: privyId,
+            });
+            return res.status(409).json({
+              error: 'ACCOUNT_CONFLICT',
+              message: 'This wallet is linked to another account. Log out and sign in with the original method, or contact an admin.',
+              conflictBy: 'wallet',
+            });
+          }
+        }
+
         // No existing member found — create new one
         logger.info('Creating new member from Privy', {
           privyId, email, walletAddress,
@@ -227,6 +246,26 @@ router.get('/auth/me', optionalPrivyAuthMiddleware, async (req: PrivyAuthRequest
               wallet: privyWallet,
             },
           });
+        }
+
+        // Before creating: if the wallet is linked to another member as a
+        // secondary (non-passport) wallet, surface a clean 409 instead of
+        // letting createMemberFromPrivy fail silently on member_wallets'
+        // unique constraint and returning `isMember: false` (which the
+        // client renders as a new-user onboarding wizard).
+        if (privyWallet) {
+          const linkedWallet = await storage.getMemberWalletByAddress(privyWallet);
+          if (linkedWallet) {
+            logger.warn('Auth/me: wallet is a secondary wallet of another member', {
+              linkedMemberId: linkedWallet.memberId,
+              newPrivyId: req.privyUser.id,
+            });
+            return res.status(409).json({
+              error: 'ACCOUNT_CONFLICT',
+              message: 'This wallet is linked to another account. Log out and sign in with the original method, or contact an admin.',
+              conflictBy: 'wallet',
+            });
+          }
         }
 
         // No existing member found — auto-create new one

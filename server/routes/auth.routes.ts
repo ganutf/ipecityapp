@@ -9,6 +9,7 @@ import {
   enrichSingleMember,
 } from '../services/ProfileEnrichmentService';
 import { parseIntParam, handleServiceError } from '../lib/routeHelpers';
+import { sendApplicationSubmittedNotification } from '../lib/email';
 import { TIMING } from '@shared/constants';
 import type { PrivyLinkedAccount } from '@shared/types';
 import type { Member } from '@shared/schema';
@@ -17,6 +18,28 @@ const router = Router();
 
 // Create PulseService instance for community endpoints
 const pulseService = new PulseService(storage);
+
+async function notifyAdminsOfApplication(applicant: Member): Promise<void> {
+  if (!applicant.email || !applicant.walletAddress || !applicant.ipeUsername) {
+    return;
+  }
+  const allMembers = await storage.getAllMembers();
+  const adminEmails = allMembers
+    .filter((m) => m.memberType === 'admin' && m.email)
+    .map((m) => m.email as string);
+
+  await sendApplicationSubmittedNotification(adminEmails, {
+    displayName: applicant.displayName,
+    ipeUsername: applicant.ipeUsername,
+    email: applicant.email,
+    walletAddress: applicant.walletAddress,
+    bio: applicant.bio,
+    twitter: applicant.twitter,
+    linkedin: applicant.linkedin,
+    instagram: applicant.instagram,
+    profileTags: applicant.profileTags,
+  });
+}
 
 /**
  * POST /api/v2/auth/login
@@ -634,6 +657,13 @@ router.post('/auth/application/submit', privyAuthMiddleware, async (req: PrivyAu
     logger.info('Application submitted', {
       memberId,
       ipeUsername,
+    });
+
+    notifyAdminsOfApplication(updatedMember).catch((err) => {
+      logger.error('Failed to notify admins of new application', {
+        memberId,
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
 
     res.json({

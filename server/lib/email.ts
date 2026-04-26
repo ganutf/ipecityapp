@@ -137,6 +137,96 @@ export async function sendApprovalEmail(email: string, ipePassport: string): Pro
   });
 }
 
+interface ApplicationNotificationData {
+  displayName?: string | null;
+  ipeUsername: string;
+  email: string;
+  walletAddress: string;
+  bio?: string | null;
+  twitter?: string | null;
+  linkedin?: string | null;
+  instagram?: string | null;
+  profileTags?: string[] | null;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export async function sendApplicationSubmittedNotification(
+  adminEmails: string[],
+  applicant: ApplicationNotificationData
+): Promise<void> {
+  if (adminEmails.length === 0) {
+    logger.warn('No admin recipients for application notification', {
+      applicantUsername: applicant.ipeUsername,
+    });
+    return;
+  }
+
+  const fromEmail = 'noreply@updates.ipe.city';
+  const platformUrl = process.env.FRONTEND_URL || 'https://app.ipe.city';
+  const adminUrl = `${platformUrl}/admin`;
+  const displayLabel = applicant.displayName || applicant.ipeUsername;
+
+  const socialLines: string[] = [];
+  if (applicant.twitter) socialLines.push(`Twitter: ${applicant.twitter}`);
+  if (applicant.linkedin) socialLines.push(`LinkedIn: ${applicant.linkedin}`);
+  if (applicant.instagram) socialLines.push(`Instagram: ${applicant.instagram}`);
+  const tagsLine =
+    applicant.profileTags && applicant.profileTags.length > 0
+      ? `Tags: ${applicant.profileTags.join(', ')}`
+      : null;
+
+  const textLines = [
+    `${displayLabel} just submitted an application to the Ipê Platform.`,
+    '',
+    `Username: ${applicant.ipeUsername}`,
+    `Email: ${applicant.email}`,
+    `Wallet: ${applicant.walletAddress}`,
+    applicant.bio ? `Bio: ${applicant.bio}` : null,
+    ...socialLines,
+    tagsLine,
+    '',
+    `Review at: ${adminUrl}`,
+  ].filter((line): line is string => line !== null);
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>New application: ${escapeHtml(displayLabel)}</h2>
+      <p>${escapeHtml(displayLabel)} just submitted an application to the Ipê Platform.</p>
+      <table style="border-collapse: collapse;">
+        <tr><td style="padding: 4px 12px 4px 0; color: #666;">Username</td><td style="padding: 4px 0;"><strong>${escapeHtml(applicant.ipeUsername)}</strong></td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #666;">Email</td><td style="padding: 4px 0;">${escapeHtml(applicant.email)}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #666;">Wallet</td><td style="padding: 4px 0; font-family: monospace;">${escapeHtml(applicant.walletAddress)}</td></tr>
+        ${applicant.bio ? `<tr><td style="padding: 4px 12px 4px 0; color: #666; vertical-align: top;">Bio</td><td style="padding: 4px 0;">${escapeHtml(applicant.bio)}</td></tr>` : ''}
+        ${applicant.twitter ? `<tr><td style="padding: 4px 12px 4px 0; color: #666;">Twitter</td><td style="padding: 4px 0;">${escapeHtml(applicant.twitter)}</td></tr>` : ''}
+        ${applicant.linkedin ? `<tr><td style="padding: 4px 12px 4px 0; color: #666;">LinkedIn</td><td style="padding: 4px 0;">${escapeHtml(applicant.linkedin)}</td></tr>` : ''}
+        ${applicant.instagram ? `<tr><td style="padding: 4px 12px 4px 0; color: #666;">Instagram</td><td style="padding: 4px 0;">${escapeHtml(applicant.instagram)}</td></tr>` : ''}
+        ${tagsLine ? `<tr><td style="padding: 4px 12px 4px 0; color: #666;">Tags</td><td style="padding: 4px 0;">${escapeHtml(applicant.profileTags!.join(', '))}</td></tr>` : ''}
+      </table>
+      <p style="margin-top: 24px;"><a href="${adminUrl}" style="display: inline-block; background-color: #8B5CF6; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">Review application</a></p>
+    </div>
+  `;
+
+  await Promise.all(
+    adminEmails.map((adminEmail) =>
+      sendEmail({
+        to: adminEmail,
+        from: fromEmail,
+        subject: `New application: ${displayLabel}`,
+        text: textLines.join('\n'),
+        html,
+      })
+    )
+  );
+}
+
 export async function sendDenialEmail(email: string): Promise<boolean> {
   const fromEmail = 'team@updates.ipe.city';
 

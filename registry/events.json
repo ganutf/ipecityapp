@@ -1,0 +1,889 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-27T01:02:56.010Z",
+  "source": "luma",
+  "events": [
+    {
+      "id": "ipe-kickoff-buildathon-ideas-challenges-and-grants",
+      "displayName": "Kickoff Buildathon / Ideas, Challenges and Grants",
+      "description": "📝 What it is\nCurious about what to build at Ipê Village and how to get started?\nIn this session, we’ll break down how the buildathon works, explore key challenges and idea spaces, and share practical",
+      "startDate": "2026-04-06",
+      "endDate": "2026-04-06",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/cuvqksq7",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-xhA3aL1HzqbQExv",
+          "url": "https://luma.com/cuvqksq7"
+        }
+      }
+    },
+    {
+      "id": "ipe-village-floripa-2026",
+      "displayName": "Ipê Village Floripa 2026",
+      "description": "IPÊ VILLAGE 2026 IS LIVE.\n\nTo learn more about the event and passport options, visit ipe.city/village2026.\n\nSee you in the future.",
+      "startDate": "2026-04-06",
+      "endDate": "2026-05-02",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "village",
+      "parent": "ipe-village-floripa-2026-waitlist",
+      "url": "https://luma.com/4wtl1bdz",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-k27xQaKT0pUmXLu",
+          "url": "https://luma.com/4wtl1bdz"
+        }
+      }
+    },
+    {
+      "id": "ipe-village-floripa-2026-waitlist",
+      "displayName": "Ipê Village Floripa 2026 (Waitlist)",
+      "description": "This Luma event was used only as Waitlist.\nIf you want to join Ipê Village, go to https://ipe.city/village2026 and secure your ticket.\nSee you there! :)",
+      "startDate": "2026-04-06",
+      "endDate": "2026-05-02",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "village",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/0be7mh8x",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-ZbtoDM1BFuiGKgA",
+          "url": "https://luma.com/0be7mh8x"
+        }
+      }
+    },
+    {
+      "id": "ipe-don-t-trust-verify-security-basics",
+      "displayName": "Don't Trust, Verify - Security Basics.",
+      "description": "What changes when you operate in an environment with fewer regulations, fewer intermediaries, and no “daddy state” to call if something goes wrong?\nThis session is a practical introduction to security",
+      "startDate": "2026-04-07",
+      "endDate": "2026-04-07",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/kkcnk9f3",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-St1pdOcgvc2X3Ga",
+          "url": "https://luma.com/kkcnk9f3"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-08",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-08",
+      "endDate": "2026-04-08",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/u2zecv6g",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-TUNJS6BERiacUq1",
+          "url": "https://luma.com/u2zecv6g"
+        }
+      }
+    },
+    {
+      "id": "ipe-workshop-zama-how-to-build-apps-onchain-with-privacy",
+      "displayName": "Workshop Zama - How to build apps onchain with privacy",
+      "description": "Privacy is becoming a core part of onchain infrastructure.\nIn this hands-on session, Valerio Leo, founder of Ray Cash, will explore how developers can use Zama to build privacy-preserving tools onchai",
+      "startDate": "2026-04-08",
+      "endDate": "2026-04-08",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "workshop",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/cnmj3gqi",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-KuPs3E5PdDN5Wgo",
+          "url": "https://luma.com/cnmj3gqi"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-09",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-09",
+      "endDate": "2026-04-09",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/qk2o7ugw",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-uMScZDanbvrfFFf",
+          "url": "https://luma.com/qk2o7ugw"
+        }
+      }
+    },
+    {
+      "id": "ipe-openclaw-workshop-build-and-orchestrate-an-ai-agent-team",
+      "displayName": "OpenClaw Workshop: Build and Orchestrate an AI Agent Team",
+      "description": "A hands-on session designed to explore how founders are using AI agents to automate real workflows and generate results.\n\nIn this workshop, you’ll learn directly from a builder who has implemented Ope",
+      "startDate": "2026-04-09",
+      "endDate": "2026-04-09",
+      "location": "R. da Anchôva, 315, Florianópolis, BR",
+      "type": "workshop",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/nexvbhx7",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-DkEB09iT5KOHhXV",
+          "url": "https://luma.com/nexvbhx7"
+        }
+      }
+    },
+    {
+      "id": "ipe-the-startup-society-conference",
+      "displayName": "The Startup Society Conference",
+      "description": "Join Us for the Startup Societies Conference in Beautiful Florianópolis! 🌴🌐\n\nThe conference is part of the Ipê Village Pop-up City and marks the beginning of a month-long experience full of innovati",
+      "startDate": "2026-04-10",
+      "endDate": "2026-04-11",
+      "location": "IL Campanario Villaggio Resort, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-conference",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-n8ZO2XnbxO3KhjB",
+          "url": "https://luma.com/ipe-conference"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-13",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-13",
+      "endDate": "2026-04-13",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-13",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-DwNDEjwSginTlZ7",
+          "url": "https://luma.com/ipe-breakfast-13"
+        }
+      }
+    },
+    {
+      "id": "ipe-layer-1-3-from-zero-to-autonomous-systems",
+      "displayName": "Layer 1 & 3 - From Zero to Autonomous Systems",
+      "description": "Build + Intelligence: From 0 to Autonomous Systems\nA hands-on session to go from idea → product → intelligent system in one flow.\nThis workshop will be led by Caros Libardo, Bruno Amorim and Gabriel N",
+      "startDate": "2026-04-13",
+      "endDate": "2026-04-13",
+      "location": "R. da Anchôva, 315, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/paadwues",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-5kGJWR6TuRhwRtl",
+          "url": "https://luma.com/paadwues"
+        }
+      }
+    },
+    {
+      "id": "ipe-the-network-state-the-book-that-started-it-all",
+      "displayName": "The Network State: The Book That Started It All",
+      "description": "Why are we here?\nHere, in Ipê City, in this community, living this experiment.\nThere's a book behind all of this. A blueprint that Balaji wrote in 2022 that planted the seed for Network School, for th",
+      "startDate": "2026-04-13",
+      "endDate": "2026-04-13",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/eou6e05x",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-jT4d0FSVY4lApEf",
+          "url": "https://luma.com/eou6e05x"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-14",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-14",
+      "endDate": "2026-04-14",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-14",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-0SBCHVHpDhuqIzB",
+          "url": "https://luma.com/ipe-breakfast-14"
+        }
+      }
+    },
+    {
+      "id": "ipe-shipping-crypto-securely-in-the-ai-era-ssdlc-supply-chain-and-agent-safe-delivery",
+      "displayName": "Shipping Crypto Securely in the AI Era: SSDLC, Supply Chain, and Agent-Safe Delivery",
+      "description": "Shipping Crypto Securely in the AI Era\nSSDLC, Supply Chain, and Agent-Safe Delivery\nHow to build and ship crypto products securely in a world where AI agents are part of your stack.\nThis session will ",
+      "startDate": "2026-04-14",
+      "endDate": "2026-04-14",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/5bj8fp07",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-5WVVingM5SRo6K8",
+          "url": "https://luma.com/5bj8fp07"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-15",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-15",
+      "endDate": "2026-04-15",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-15",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-Bvkj6w6slsbREYC",
+          "url": "https://luma.com/ipe-breakfast-15"
+        }
+      }
+    },
+    {
+      "id": "ipe-layer-2-ai-skills-for-design-engineering",
+      "displayName": "Layer 2 - AI Skills for Design Engineering",
+      "description": "Layer 2 - AI Skills for Design Engineering\nAI made building fast. Nothing made building coherent.\nYou have a working prototype. Now what? The gap between \"it works\" and \"it ships\" isn't more code, it'",
+      "startDate": "2026-04-15",
+      "endDate": "2026-04-15",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ro999d6k",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-HVH3FWYs7kTk3OJ",
+          "url": "https://luma.com/ro999d6k"
+        }
+      }
+    },
+    {
+      "id": "ipe-workshop-obsidian-ai-agents-build-your-second-brain",
+      "displayName": "Workshop Obsidian × AI Agents: Build Your Second Brain",
+      "description": "The interfaces we inherited were designed to simulate an office inside a screen. Files in folders, documents on desktops. Now that machines are becoming genuine collaborators, this inherited structure",
+      "startDate": "2026-04-15",
+      "endDate": "2026-04-15",
+      "location": "R. da Anchôva, 315, Florianópolis, BR",
+      "type": "workshop",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/zu34c9sy",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-Tc9svTBdlytvw4T",
+          "url": "https://luma.com/zu34c9sy"
+        }
+      }
+    },
+    {
+      "id": "ipe-ath-in-collaboration-a-guide-to-becoming-a-contributor-to-the-zcash-ecosystem",
+      "displayName": "ATH In Collaboration! A guide to becoming a contributor to the Zcash Ecosystem",
+      "description": "Privacy is not a feature. It is the foundation. And Zcash is one of the few ecosystems building that foundation with real technical rigor and a global contributor community behind it.\nIn this workshop",
+      "startDate": "2026-04-16",
+      "endDate": "2026-04-16",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/jw3a77e3",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-qCEHO8xpM3nWlBQ",
+          "url": "https://luma.com/jw3a77e3"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-16",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-16",
+      "endDate": "2026-04-16",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-16",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-STDRjPwb3zrRAM2",
+          "url": "https://luma.com/ipe-breakfast-16"
+        }
+      }
+    },
+    {
+      "id": "ipe-safeguard-your-civil-liberties-with-logos",
+      "displayName": "Safeguard your civil liberties with Logos",
+      "description": "Civil liberties don't protect themselves. The tools to defend them need to be built, adopted, and scaled by communities who understand what's at stake.\nLogos is a social movement and decentralised tec",
+      "startDate": "2026-04-16",
+      "endDate": "2026-04-16",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ql29aw8b",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-fVAEBG8GdR88b7f",
+          "url": "https://luma.com/ql29aw8b"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-17",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-17",
+      "endDate": "2026-04-17",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-17",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-8HCq6Xa1OTpSOtP",
+          "url": "https://luma.com/ipe-breakfast-17"
+        }
+      }
+    },
+    {
+      "id": "ipe-knowledge-network-states-with-bonfires-ai",
+      "displayName": "Knowledge Network States with bonfires.ai",
+      "description": "A network state is a highly aligned online community with a capacity for collective action that crowdfunds territory around the world and eventually gains diplomatic recognition from pre-existing stat",
+      "startDate": "2026-04-17",
+      "endDate": "2026-04-17",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/zocrp9uq",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-txx2gFGYE7MZ3Fh",
+          "url": "https://luma.com/zocrp9uq"
+        }
+      }
+    },
+    {
+      "id": "ipe-tangem-pool-party-at-ipe-village",
+      "displayName": "Tangem Pool Party at Ipê Village",
+      "description": "Tangem keeps your crypto safe and offline, so you’re free to enjoy everything else.\nTangem is hosting a pool party during Ipê Village, bringing together builders and creators for a moment to connect a",
+      "startDate": "2026-04-17",
+      "endDate": "2026-04-18",
+      "location": "R. da Anchôva, 315, Florianópolis, BR",
+      "type": "village",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/vs21g1n7",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-7F4pyu7mHFuBirG",
+          "url": "https://luma.com/vs21g1n7"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-20",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-20",
+      "endDate": "2026-04-20",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-20",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-nfeiwB2DHGErImd",
+          "url": "https://luma.com/ipe-breakfast-20"
+        }
+      }
+    },
+    {
+      "id": "ipe-workshop-secure-digital-voting",
+      "displayName": "Workshop: Secure Digital Voting",
+      "description": "Join Jordi Pinyana, Digital Voting, Decentralization & Blockchain Developer, for a hands-on workshop empowering local groups, DAOs, and cities with secure, scalable governance tools.\nDiscover Vocdoni.",
+      "startDate": "2026-04-20",
+      "endDate": "2026-04-20",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "workshop",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/9l1ueymy",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-TpJohNBufRcKkbL",
+          "url": "https://luma.com/9l1ueymy"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-21",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-21",
+      "endDate": "2026-04-21",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-21",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-IKPCrFJLUcaj4zw",
+          "url": "https://luma.com/ipe-breakfast-21"
+        }
+      }
+    },
+    {
+      "id": "ipe-onboarding-ipe-city-platform",
+      "displayName": "Onboarding - Ipê City Platform",
+      "description": "Residents, time to get onchain.\nIn this 3-hour working session, we'll onboard you to the Ipê City platform (app.ipe.city): you'll create your onchain identity and publish your project to the Ipê Hub (",
+      "startDate": "2026-04-21",
+      "endDate": "2026-04-21",
+      "location": "R. da Anchôva, 315, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/fo4muhqi",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-GCXJEPrBlfcPC2j",
+          "url": "https://luma.com/fo4muhqi"
+        }
+      }
+    },
+    {
+      "id": "ipe-privacy-house-closing-gathering-fire-film-farewell",
+      "displayName": "Privacy House Closing Gathering - Fire, Film & Farewell",
+      "description": "We’ve reached the midpoint of Ipê Village 2026.\nTwo weeks in, two more to go, and with that, one of the houses begins its transition.\nPrivacy House has been a space for deep conversations and real con",
+      "startDate": "2026-04-21",
+      "endDate": "2026-04-22",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/q8ezjytd",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-XPE7vCFnkmG844w",
+          "url": "https://luma.com/q8ezjytd"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-22",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-22",
+      "endDate": "2026-04-22",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-22",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-Y1hhnx6GcZsjmcB",
+          "url": "https://luma.com/ipe-breakfast-22"
+        }
+      }
+    },
+    {
+      "id": "ipe-claude-workshop-how-to-actually-use-it-well",
+      "displayName": "Claude Workshop: How to Actually Use It Well",
+      "description": "Most people use Claude the way they use a search engine: type something in, get something out, move on. This workshop is about what comes after that.\nMikhail Savchenko, founder of INITE, builds AI sys",
+      "startDate": "2026-04-22",
+      "endDate": "2026-04-22",
+      "location": "R. da Anchôva, 315, Florianópolis, BR",
+      "type": "workshop",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/claude-workshop",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-GjRiKr1HXwpeBwf",
+          "url": "https://luma.com/claude-workshop"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-23",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-23",
+      "endDate": "2026-04-23",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/9ccnc0jc",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-41DPUZ8VAT9SbqP",
+          "url": "https://luma.com/9ccnc0jc"
+        }
+      }
+    },
+    {
+      "id": "ipe-next-big-idea-career-engineering-for-builders-and-techno-optimists",
+      "displayName": "Next Big Idea: Career Engineering for Builders and Techno-Optimists",
+      "description": "In an era of rapid AI evolution and shifting economic structures, being \"good at your job\" is no longer enough. To thrive, we must become the architects of our own career engineering. This workshop, b",
+      "startDate": "2026-04-23",
+      "endDate": "2026-04-23",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/next-big-idea",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-G5Osy2xG7shrtXa",
+          "url": "https://luma.com/next-big-idea"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-24",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-24",
+      "endDate": "2026-04-24",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-24",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-OLnpK3UvDKBGDUD",
+          "url": "https://luma.com/ipe-breakfast-24"
+        }
+      }
+    },
+    {
+      "id": "ipe-morning-yoga-brunch-by-yodl-pay",
+      "displayName": "Morning Yoga + Brunch by YODL Pay",
+      "description": "Morning Yoga + Brunch — SheFi Brazil by YODL Pay 🧘‍♀️✨\nTe convidamos para uma manhã especial e acolhedora: yoga na praia + brunch para reunir mulheres da nossa comunidade, e as que estão chegando ago",
+      "startDate": "2026-04-25",
+      "endDate": "2026-04-25",
+      "location": "Passeio dos Namorados, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/sk8dklet",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-bPp1pjHTBF8vj3v",
+          "url": "https://luma.com/sk8dklet"
+        }
+      }
+    },
+    {
+      "id": "ipe-doodle-experience",
+      "displayName": "Doodle experience",
+      "description": "You don't need to know how to draw. You just need a story to tell.\nIn this participatory session, artist l vaskez guides participants through simple drawings that become part of a collective mural. Us",
+      "startDate": "2026-04-26",
+      "endDate": "2026-04-26",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/doodle-experience",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-J0abLCFA3Pe2kFQ",
+          "url": "https://luma.com/doodle-experience"
+        }
+      }
+    },
+    {
+      "id": "ipe-artistic-sovereignty-in-the-digital-era",
+      "displayName": "Artistic Sovereignty in the Digital Era",
+      "description": "Who actually owns what you create online?\nEvery time an artist uploads a track, a visual piece, or any creative work to a centralized platform, they hand over far more than a file. The current busines",
+      "startDate": "2026-04-27",
+      "endDate": "2026-04-27",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/artistic-sovereignty",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-ISGr1icZV32BF4z",
+          "url": "https://luma.com/artistic-sovereignty"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-27",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-27",
+      "endDate": "2026-04-27",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-27",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-FFUBx3GtuOFYN8t",
+          "url": "https://luma.com/ipe-breakfast-27"
+        }
+      }
+    },
+    {
+      "id": "ipe-project-management-for-creative-minds",
+      "displayName": "Project Management for Creative Minds",
+      "description": "Project management doesn’t work the same for everyone, especially for creative minds. Traditional systems often don’t match how creatives actually think and work.\nWhen the frameworks don't match how y",
+      "startDate": "2026-04-27",
+      "endDate": "2026-04-27",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/project-for-creative-minds",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-V4tcOer3uM9BVjd",
+          "url": "https://luma.com/project-for-creative-minds"
+        }
+      }
+    },
+    {
+      "id": "ipe-agentic-world-building-for-anime-and-books",
+      "displayName": "Agentic World Building for Anime and Books",
+      "description": "Most writers hit the same wall around chapter ten. The story starts strong, then coherence quietly falls apart and continuity becomes impossible to track.\niggynore, Artizen resident, built the North S",
+      "startDate": "2026-04-28",
+      "endDate": "2026-04-28",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/agentic-for-anime-and-books",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-c8f9xRJEuIipz67",
+          "url": "https://luma.com/agentic-for-anime-and-books"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-28",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-28",
+      "endDate": "2026-04-28",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-28",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-nvHggEA2dulzUYy",
+          "url": "https://luma.com/ipe-breakfast-28"
+        }
+      }
+    },
+    {
+      "id": "ipe-film-screening-q-a-at-artizen-house-jamaican-shorts-by-ina-sotirova",
+      "displayName": "Film Screening + Q&A at Artizen House: Jamaican Shorts by Ina Sotirova",
+      "description": "Some stories can only be told through film.\nIna Sotirova, founder of Mango Magic Movement, brings a curated selection of her award-winning Jamaican short films to Artizen House: a documentary, an anim",
+      "startDate": "2026-04-28",
+      "endDate": "2026-04-29",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/jamaican-shorts",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-Z1Rgblh4HdaZ9rJ",
+          "url": "https://luma.com/jamaican-shorts"
+        }
+      }
+    },
+    {
+      "id": "ipe-vibe-life-day-artizen-house",
+      "displayName": "Vibe Life Day @ Artizen House",
+      "description": "A full-spectrum day where art, code, and culture meet in real time.\nThe day opens into a relaxed flow with BBQ, co-working, and open co-creation—an invitation to drop in, connect, and start building a",
+      "startDate": "2026-04-28",
+      "endDate": "2026-04-28",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/vibe-life-day",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-r03eeJBhMrfHBRu",
+          "url": "https://luma.com/vibe-life-day"
+        }
+      }
+    },
+    {
+      "id": "ipe-vibecoding-for-artists-workshop",
+      "displayName": "Vibecoding For Artists | Workshop",
+      "description": "Making art was never the hard part. Everything around it was.\nArtists today are expected to manage communities, design assets, write copy, schedule content, and market themselves before they even open",
+      "startDate": "2026-04-28",
+      "endDate": "2026-04-28",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "workshop",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/vibecoding-for-artists",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-M2Pgqe6Cykz8ZEW",
+          "url": "https://luma.com/vibecoding-for-artists"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-29",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-29",
+      "endDate": "2026-04-29",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-29",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-o3HCEHBFcJK6UFc",
+          "url": "https://luma.com/ipe-breakfast-29"
+        }
+      }
+    },
+    {
+      "id": "ipe-expedition-to-paramoverso-vr-experience",
+      "displayName": "Expedition to Paramoverso – VR Experience",
+      "description": "The Colombian páramo is one of the most biodiverse and threatened ecosystems on the planet. Most people will never set foot in one.\nThis immersive VR experience by Diego Pérez (@Sensopia) takes you in",
+      "startDate": "2026-04-29",
+      "endDate": "2026-04-29",
+      "location": "R. dos Corais, 244, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/expedition-paramoverso",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-VbL5zmClnGwde7C",
+          "url": "https://luma.com/expedition-paramoverso"
+        }
+      }
+    },
+    {
+      "id": "ipe-n8n-florianopolis-workshop-ai-workflow-engineering-with-n8n-claude-code",
+      "displayName": "n8n Florianópolis workshop: AI Workflow Engineering with n8n + Claude Code",
+      "description": "n8n Florianópolis workshop: AI Workflow Engineering with n8n + Claude Code\nA hands-on session exploring how builders are creating real workflows faster than ever using AI and why n8n is a powerful lay",
+      "startDate": "2026-04-29",
+      "endDate": "2026-04-29",
+      "location": "R. da Anchôva, 315, Florianópolis, BR",
+      "type": "workshop",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/l177b2lz",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-9lM8Aczcn5cbSPx",
+          "url": "https://luma.com/l177b2lz"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-04-30",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-04-30",
+      "endDate": "2026-04-30",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-30",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-PPU3IyC9vci31Mn",
+          "url": "https://luma.com/ipe-breakfast-30"
+        }
+      }
+    },
+    {
+      "id": "ipe-sound-temple-live-chorinho-closing-party",
+      "displayName": "Sound Temple: Live Chorinho | Closing Party",
+      "description": "A month of building deserves a proper send-off.\nThe Sound Temple Party is the closing celebration of Ipê Village 2026, happening right after Demo Day. It's the moment where builders, founders, and res",
+      "startDate": "2026-04-30",
+      "endDate": "2026-05-01",
+      "location": "R. da Anchôva, 315, Florianópolis, BR",
+      "type": "session",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/xx4ftvly",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-vuuau41zCorTZSy",
+          "url": "https://luma.com/xx4ftvly"
+        }
+      }
+    },
+    {
+      "id": "ipe-breakfast-open-mic-2026-05-01",
+      "displayName": "Ipê Breakfast | Open Mic",
+      "description": "Start your morning with people who are building something real.\nJoin us at Founder Haus for a healthy breakfast alongside Ipê Architects and Explorers. Every weekday, community members share live proj",
+      "startDate": "2026-05-01",
+      "endDate": "2026-05-01",
+      "location": "Founder Haus - Jurere In, Florianópolis, BR",
+      "type": "meal",
+      "parent": "ipe-village-floripa-2026",
+      "url": "https://luma.com/ipe-breakfast-1",
+      "metadataURI": null,
+      "external": {
+        "luma": {
+          "eventId": "evt-GwM1gqhzszAAM6k",
+          "url": "https://luma.com/ipe-breakfast-1"
+        }
+      }
+    }
+  ]
+}

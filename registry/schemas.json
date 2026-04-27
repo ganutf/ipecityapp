@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "easContract": "0x4200000000000000000000000000000000000021",
+  "registeredAt": "2026-04-27",
+  "registeredBy": "0xaa3C627475468a36e8F00bceB7BB0c18355E4ee1",
+  "schemas": {
+    "IpeResident": {
+      "uid": "0x7b2ad4657a5d1adb2d7c7468ba1187faff0b8f95b94f4ca6627cf8e045d529ca",
+      "schemaNumber": 1878,
+      "abi": "bytes32 firstEventId,string metadataURI",
+      "revocable": true,
+      "resolver": "0x0000000000000000000000000000000000000000",
+      "explorer": "https://base-sepolia.easscan.org/schema/view/0x7b2ad4657a5d1adb2d7c7468ba1187faff0b8f95b94f4ca6627cf8e045d529ca"
+    },
+    "IpeCheckin": {
+      "uid": "0xf2bd0502d494b2ac56a7d1ad994ccb2cb2f0fd6fd692e10f1af5f25ecb039579",
+      "schemaNumber": 1879,
+      "abi": "bytes32 eventId,uint8 role,bool inPerson,bytes32 externalRefHash",
+      "revocable": true,
+      "resolver": "0x0000000000000000000000000000000000000000",
+      "explorer": "https://base-sepolia.easscan.org/schema/view/0xf2bd0502d494b2ac56a7d1ad994ccb2cb2f0fd6fd692e10f1af5f25ecb039579"
+    },
+    "IpeRole": {
+      "uid": "0xdac4e801b13afde4022879ed53dd61f7363921bdf32fc59a85b10b253685b639",
+      "schemaNumber": 1880,
+      "abi": "bytes32 roleId,string metadataURI",
+      "revocable": true,
+      "resolver": "0x0000000000000000000000000000000000000000",
+      "explorer": "https://base-sepolia.easscan.org/schema/view/0xdac4e801b13afde4022879ed53dd61f7363921bdf32fc59a85b10b253685b639"
+    },
+    "IpeProjectLaunched": {
+      "uid": "0x2c2fd8f91080664ca69fcac6063f2fc3d35dc457f593d418b92ee349cb269089",
+      "schemaNumber": 1881,
+      "abi": "bytes32 eventId,bytes32 projectRefUID,string deliverableURI,address[] contributors,uint8 completionStatus,string metadataURI",
+      "revocable": true,
+      "resolver": "0x0000000000000000000000000000000000000000",
+      "explorer": "https://base-sepolia.easscan.org/schema/view/0x2c2fd8f91080664ca69fcac6063f2fc3d35dc457f593d418b92ee349cb269089"
+    },
+    "IpeSkill": {
+      "uid": "0x95d4a8afa59a9d8c87ee337e6d66ecf50a354d3fffabca66bd336fdd8dde6435",
+      "schemaNumber": 1882,
+      "abi": "bytes32 skill,uint8 tier,uint8 level,bytes32 evidenceRefUID,string metadataURI",
+      "revocable": true,
+      "resolver": "0x0000000000000000000000000000000000000000",
+      "explorer": "https://base-sepolia.easscan.org/schema/view/0x95d4a8afa59a9d8c87ee337e6d66ecf50a354d3fffabca66bd336fdd8dde6435"
+    }
+  }
+}

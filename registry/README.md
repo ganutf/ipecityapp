@@ -1,8 +1,13 @@
-# Ipê Event Registry
+# Ipê Registry
 
-Canonical registry of Ipê City events. The `id` of each entry is the
-vendor-agnostic identifier we hash onchain — everything else (Luma URL, name,
-location) is metadata.
+Canonical registry of Ipê City onchain artefacts:
+
+- [`events.json`](./events.json) — canonical Ipê event identifiers and metadata.
+- [`schemas.json`](./schemas.json) — EAS schema UIDs and ABIs deployed for the
+  Ipê platform.
+
+The `id` of each event is the vendor-agnostic identifier we hash onchain —
+everything else (Luma URL, name, location) is metadata.
 
 ## Onchain hash
 
@@ -50,3 +55,33 @@ ipe-breakfast-open-mic-2026-04-08
 ```
 
 Singletons keep their bare ID (e.g. `ipe-village-2026`, `ipe-demo-day`).
+
+## Schemas
+
+`schemas.json` records the EAS schema UIDs and ABIs that the Ipê platform
+attests against. Each schema UID is content-addressed by EAS — it changes if
+the ABI changes. Same immutability rule applies: **never edit a published
+schema entry**. To revise an ABI, register a new schema with EAS and add it as
+a new key in `schemas.json` (e.g. `IpeCheckinV2`).
+
+Canonical URL:
+
+```
+https://raw.githubusercontent.com/ganutf/ipecityapp/main/registry/schemas.json
+```
+
+Lookup by name:
+
+```js
+import schemas from "./schemas.json" with { type: "json" };
+
+const checkinUid = schemas.schemas.IpeCheckin.uid;
+const easContract = schemas.easContract;
+const chainId = schemas.chainId;
+```
+
+The current set lives on **Base Sepolia** (`chainId: 84532`) at the canonical
+EAS contract `0x4200000000000000000000000000000000000021`. Deploying to
+mainnet will require re-registering the schemas (UIDs are per-network) and
+publishing a separate `schemas.base.json` (or bumping `schemaVersion`).
+

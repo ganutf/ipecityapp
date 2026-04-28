@@ -9,6 +9,9 @@ import {
   passportVerifications,
   // Member wallets
   memberWallets,
+  // Projects
+  projects,
+  projectParticipants,
   // Auth V2 tables
   authUsers,
   passkeys,
@@ -36,6 +39,8 @@ import {
   type InsertUserSigner,
   type EmailVerificationRequest,
   type ApplicationByMemberId,
+  type Project,
+  type InsertProject,
   // Auth V2 types
   type AuthUser,
   type InsertAuthUser,
@@ -198,6 +203,12 @@ export interface IStorage {
   // Transactional Operations
   updateMemberWalletAtomic(memberId: number, walletAddress: string): Promise<Member>;
   submitApplicationAtomic(memberId: number, data: UpdateMember): Promise<Member>;
+
+  // Projects
+  createProject(data: InsertProject & { createdBy: number }, participantMemberIds: number[]): Promise<Project>;
+  getProject(id: number): Promise<{ project: Project; creator: Member; participants: Member[] } | undefined>;
+  listProjects(): Promise<Array<Project & { creator: Pick<Member, 'id' | 'displayName' | 'ipeUsername' | 'ipePassport' | 'profileImageUrl' | 'farcasterFid'> }>>;
+  listProjectsByMember(memberId: number): Promise<Project[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1409,6 +1420,113 @@ export class DatabaseStorage implements IStorage {
 
       return updatedMember;
     });
+  }
+
+  // ============================================
+  // PROJECTS
+  // ============================================
+
+  async createProject(
+    data: InsertProject & { createdBy: number },
+    participantMemberIds: number[],
+  ): Promise<Project> {
+    return await this.withTransaction(async (tx) => {
+      const { participantMemberIds: _omit, ...projectData } = data as InsertProject & {
+        createdBy: number;
+        participantMemberIds?: number[];
+      };
+
+      const [project] = await tx
+        .insert(projects)
+        .values(projectData)
+        .returning();
+
+      const dedupedIds = Array.from(new Set(participantMemberIds));
+      if (dedupedIds.length > 0) {
+        await tx.insert(projectParticipants).values(
+          dedupedIds.map((memberId) => ({
+            projectId: project.id,
+            memberId,
+          })),
+        );
+      }
+
+      return project;
+    });
+  }
+
+  async getProject(id: number): Promise<{ project: Project; creator: Member; participants: Member[] } | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    if (!project) return undefined;
+
+    const [creator] = await db.select().from(members).where(eq(members.id, project.createdBy));
+    if (!creator) return undefined;
+
+    const participants = await db
+      .select({
+        id: members.id,
+        privyId: members.privyId,
+        userId: members.userId,
+        farcasterFid: members.farcasterFid,
+        walletAddress: members.walletAddress,
+        status: members.status,
+        memberType: members.memberType,
+        emailVerified: members.emailVerified,
+        passportVerified: members.passportVerified,
+        email: members.email,
+        ipeUsername: members.ipeUsername,
+        ipePassport: members.ipePassport,
+        displayName: members.displayName,
+        profileImageUrl: members.profileImageUrl,
+        bio: members.bio,
+        twitter: members.twitter,
+        linkedin: members.linkedin,
+        instagram: members.instagram,
+        profileTags: members.profileTags,
+        createdAt: members.createdAt,
+        updatedAt: members.updatedAt,
+        membershipExpiresAt: members.membershipExpiresAt,
+        passportRevokedAt: members.passportRevokedAt,
+      })
+      .from(projectParticipants)
+      .innerJoin(members, eq(projectParticipants.memberId, members.id))
+      .where(eq(projectParticipants.projectId, id))
+      .orderBy(asc(projectParticipants.addedAt));
+
+    return { project, creator, participants: participants as Member[] };
+  }
+
+  async listProjects(): Promise<Array<Project & { creator: Pick<Member, 'id' | 'displayName' | 'ipeUsername' | 'ipePassport' | 'profileImageUrl' | 'farcasterFid'> }>> {
+    const rows = await db
+      .select({
+        project: projects,
+        creator: {
+          id: members.id,
+          displayName: members.displayName,
+          ipeUsername: members.ipeUsername,
+          ipePassport: members.ipePassport,
+          profileImageUrl: members.profileImageUrl,
+          farcasterFid: members.farcasterFid,
+        },
+      })
+      .from(projects)
+      .innerJoin(members, eq(projects.createdBy, members.id))
+      .orderBy(desc(projects.createdAt));
+
+    return rows.map((row) => ({ ...row.project, creator: row.creator }));
+  }
+
+  async listProjectsByMember(memberId: number): Promise<Project[]> {
+    const participantProjectIds = db
+      .select({ projectId: projectParticipants.projectId })
+      .from(projectParticipants)
+      .where(eq(projectParticipants.memberId, memberId));
+
+    return await db
+      .select()
+      .from(projects)
+      .where(or(eq(projects.createdBy, memberId), inArray(projects.id, participantProjectIds)))
+      .orderBy(desc(projects.createdAt));
   }
 }
 

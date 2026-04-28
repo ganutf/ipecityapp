@@ -17,6 +17,7 @@ import executionRoutes from "./routes/execution.routes";
 import attestationRoutes from "./routes/attestation.routes";
 import farcasterRoutes from "./routes/farcaster.routes";
 import passportRoutes from "./routes/passport.routes";
+import projectRoutes from "./routes/project.routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Apply security headers to all routes
@@ -34,6 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/v2/attestations', attestationRoutes);
   app.use('/api/v2/farcaster', farcasterRoutes);
   app.use('/api/v2/passport', passportRoutes);
+  app.use('/api/v2/projects', projectRoutes);
 
   /* ────────────────────────────────  HEALTH CHECK  ──────────────────────────────── */
   app.get("/health", async (_req, res) => {

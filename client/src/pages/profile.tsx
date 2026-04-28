@@ -28,6 +28,7 @@ import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { StatsCards } from "@/components/profile/StatsCards";
 import { WalletsCard } from "@/components/profile/WalletsCard";
+import { ProfileProjectsSection } from "@/components/profile/ProfileProjectsSection";
 import { defaultAvatarUrl } from "@/lib/avatar";
 import {
   Mail,
@@ -348,6 +349,9 @@ export default function Profile2() {
           createdAt={memberData?.member?.createdAt}
           ipeBalance={memberData?.member?.ipeBalance}
         />
+
+        {/* Projects Section */}
+        <ProfileProjectsSection memberId={memberId} isOwnProfile />
 
         {/* Bio Section */}
         <Card className="bg-white shadow-sm">

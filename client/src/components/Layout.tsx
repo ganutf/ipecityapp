@@ -37,6 +37,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { path: "/community", label: "Community", showWhen: "member" },
+    { path: "/projects", label: "Projects", showWhen: "member" },
     { path: "/pulses", label: "Pulses", showWhen: "member" },
     { path: "/admin", label: "Admin", showWhen: "admin" },
   ];
@@ -66,19 +67,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center space-x-4">
           {isAuthenticated && !isInVerificationProcess && (
             <nav className="flex space-x-1">
-              {navItems.filter(shouldShowNavItem).map((item) => (
-                <Link
-                  key={item.path}
-                  href={item.path}
-                  className={`text-sm px-3 py-2 rounded-lg transition-colors ${
-                    location === item.path
-                      ? "bg-purple-100 text-purple-700"
-                      : "text-gray-600 hover:text-purple-600 hover:bg-gray-100"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {navItems.filter(shouldShowNavItem).map((item) => {
+                const isActive = location === item.path || location.startsWith(item.path + "/");
+                return (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    className={`text-sm px-3 py-2 rounded-lg transition-colors ${
+                      isActive
+                        ? "bg-purple-100 text-purple-700"
+                        : "text-gray-600 hover:text-purple-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </nav>
           )}
           

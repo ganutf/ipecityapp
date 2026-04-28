@@ -153,6 +153,30 @@ export const PROFILE_TAGS = [
 export type ProfileTag = (typeof PROFILE_TAGS)[number];
 
 // ============================================
+// PROJECTS
+// ============================================
+
+export const PROJECT_STATES = [
+  'idea',
+  'mockup',
+  'working_prototype',
+  'beta',
+] as const;
+
+export type ProjectState = (typeof PROJECT_STATES)[number];
+
+export const PROJECT_VALIDATION_LIMITS = {
+  TITLE_MAX: 200,
+  DESCRIPTION_MAX: 2000,
+  RESULTS_MAX: 2000,
+  GRANT_TITLE_MAX: 200,
+  URL_MAX: 500,
+  MAX_PARTICIPANTS: 20,
+  MAX_TECH_STACK: 15,
+  TECH_TAG_MAX: 40,
+} as const;
+
+// ============================================
 // TIMING CONSTANTS
 // ============================================
 

@@ -138,6 +138,39 @@ export const pulseExecutions = pgTable("pulse_executions", {
   index("idx_pulse_executions_member_id").on(table.memberId),
 ]);
 
+// Projects - member-built apps, prototypes, ideas
+export const projects = pgTable("projects", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  imageDataUrl: text("image_data_url"),
+  liveUrl: varchar("live_url", { length: 500 }),
+  repoUrl: varchar("repo_url", { length: 500 }),
+  videoUrl: varchar("video_url", { length: 500 }),
+  state: varchar("state", { length: 30 }).notNull().default("idea"),
+  resultsAchieved: text("results_achieved"),
+  grantTitle: varchar("grant_title", { length: 200 }),
+  techStack: text("tech_stack").array(),
+  createdBy: integer("created_by").references(() => members.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_projects_created_by").on(table.createdBy),
+  index("idx_projects_created_at").on(table.createdAt),
+]);
+
+// Project participants join table
+export const projectParticipants = pgTable("project_participants", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  addedAt: timestamp("added_at").defaultNow(),
+}, (table) => [
+  unique("project_participants_unique").on(table.projectId, table.memberId),
+  index("idx_project_participants_project_id").on(table.projectId),
+  index("idx_project_participants_member_id").on(table.memberId),
+]);
+
 // Attestations - EAS attestations for pulse completions
 export const attestations = pgTable("attestations", {
   id: serial("id").primaryKey(),
@@ -216,6 +249,26 @@ export const attestationsRelations = relations(attestations, ({ one }) => ({
   pulseExecution: one(pulseExecutions, {
     fields: [attestations.pulseExecutionId],
     references: [pulseExecutions.id],
+  }),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  creator: one(members, {
+    fields: [projects.createdBy],
+    references: [members.id],
+    relationName: "ProjectCreator",
+  }),
+  participants: many(projectParticipants),
+}));
+
+export const projectParticipantsRelations = relations(projectParticipants, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectParticipants.projectId],
+    references: [projects.id],
+  }),
+  member: one(members, {
+    fields: [projectParticipants.memberId],
+    references: [members.id],
   }),
 }));
 
@@ -340,8 +393,8 @@ export const passportVerifications = pgTable("passport_verifications", {
 });
 
 // Member type validation - using shared constants
-import { MEMBER_TYPES, VALIDATION_LIMITS, VALIDATION_PATTERNS, RESERVED_USERNAMES } from './constants';
-export type { MemberType, MemberStatus, ProfileTag } from './constants';
+import { MEMBER_TYPES, VALIDATION_LIMITS, VALIDATION_PATTERNS, RESERVED_USERNAMES, PROJECT_STATES, PROJECT_VALIDATION_LIMITS } from './constants';
+export type { MemberType, MemberStatus, ProfileTag, ProjectState } from './constants';
 
 export const memberTypeEnum = z.enum(MEMBER_TYPES as unknown as [string, ...string[]]);
 
@@ -672,6 +725,50 @@ export const insertAttestationSchema = createInsertSchema(attestations).omit({
   message: "Attestation UID and transaction hash are required for completed status",
 });
 
+// Project schemas
+const projectStateEnum = z.enum(PROJECT_STATES as unknown as [string, ...string[]]);
+
+const optionalProjectUrlSchema = z.preprocess(
+  (val) => (typeof val === "string" && val.trim() === "" ? undefined : val),
+  z.string().url("Must be a valid URL").max(PROJECT_VALIDATION_LIMITS.URL_MAX, "URL too long").optional(),
+);
+
+export const insertProjectSchema = createInsertSchema(projects)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    createdBy: true,
+  })
+  .extend({
+    title: z.string().trim().min(1, "Title is required").max(PROJECT_VALIDATION_LIMITS.TITLE_MAX, "Title too long"),
+    description: z.string().min(1, "Description is required").max(PROJECT_VALIDATION_LIMITS.DESCRIPTION_MAX, "Description too long"),
+    imageDataUrl: z.string()
+      .max(400_000, "Image too large — please use a smaller image")
+      .refine(val => {
+        if (!val) return true;
+        return /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/.test(val);
+      }, "Image must be a PNG, JPEG, or WebP data URL")
+      .optional()
+      .nullable(),
+    liveUrl: optionalProjectUrlSchema,
+    repoUrl: optionalProjectUrlSchema,
+    videoUrl: optionalProjectUrlSchema,
+    state: projectStateEnum.default("idea"),
+    resultsAchieved: z.string().max(PROJECT_VALIDATION_LIMITS.RESULTS_MAX, "Results too long").optional().nullable(),
+    grantTitle: z.preprocess(
+      (val) => (typeof val === "string" && val.trim() === "" ? undefined : val),
+      z.string().max(PROJECT_VALIDATION_LIMITS.GRANT_TITLE_MAX, "Grant title too long").optional(),
+    ),
+    techStack: z.array(
+      z.string().min(1, "Tag cannot be empty").max(PROJECT_VALIDATION_LIMITS.TECH_TAG_MAX, "Tag too long"),
+    ).max(PROJECT_VALIDATION_LIMITS.MAX_TECH_STACK, "Too many tech-stack tags").optional().default([]),
+    participantMemberIds: z.array(z.number().int().positive())
+      .max(PROJECT_VALIDATION_LIMITS.MAX_PARTICIPANTS, "Too many participants")
+      .optional()
+      .default([]),
+  });
+
 // Types
 export type Member = typeof members.$inferSelect;
 export type InsertMember = z.infer<typeof insertMemberSchema>;
@@ -695,6 +792,10 @@ export type Attestation = typeof attestations.$inferSelect;
 export type InsertAttestation = z.infer<typeof insertAttestationSchema>;
 export type MemberWallet = typeof memberWallets.$inferSelect;
 export type InsertMemberWallet = typeof memberWallets.$inferInsert;
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type ProjectParticipant = typeof projectParticipants.$inferSelect;
+export type InsertProjectParticipant = typeof projectParticipants.$inferInsert;
 
 // ============================================
 // ADMIN V2 VALIDATION SCHEMAS

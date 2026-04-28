@@ -60,4 +60,12 @@ export const queryKeys = {
     verify: (token?: string) => ['/api/passport/verify', token] as const,
     availability: (username?: string) => ['/api/v2/passport/availability', username] as const,
   },
+
+  // Projects
+  projects: {
+    all: ['/api/v2/projects'] as const,
+    list: () => ['/api/v2/projects'] as const,
+    detail: (id: number | string) => [`/api/v2/projects/${id}`] as const,
+    byMember: (memberId: number | string) => [`/api/v2/projects/by-member/${memberId}`] as const,
+  },
 } as const;

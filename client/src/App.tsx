@@ -24,6 +24,9 @@ import MemberDetailsPage from "@/pages/member-details";
 import SignerApprovalPage from "@/pages/signer-approval";
 import VerifyPassportPage from "@/pages/verify-passport";
 import IdVerificationPage from "@/pages/id-verification";
+import ProjectsPage from "@/pages/projects";
+import ProjectsNewPage from "@/pages/projects-new";
+import ProjectDetailPage from "@/pages/project-detail";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -63,6 +66,9 @@ function Router() {
               <Route path="/pulse/:id" component={PulseDetailPage} />
               <Route path="/profile" component={ProfilePage} />
               <Route path="/member/:id" component={MemberDetailsPage} />
+              <Route path="/projects/new" component={ProjectsNewPage} />
+              <Route path="/projects/:id" component={ProjectDetailPage} />
+              <Route path="/projects" component={ProjectsPage} />
               <Route path="/signer-approval" component={SignerApprovalPage} />
               <Route path="/id-verification" component={IdVerificationPage} />
               <Route

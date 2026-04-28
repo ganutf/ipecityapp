@@ -7,11 +7,10 @@ import { authenticatedGet } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import {
   projectImageGradient,
-  projectStateAccent,
+  projectInitials,
+  projectStateBadgeColor,
   projectStateLabel,
 } from "@/components/projects/projectVisuals";
-import { Badge } from "@/components/ui/badge";
-import { ImageIcon } from "lucide-react";
 import type { Project } from "@shared/schema";
 
 interface ProfileProjectsSectionProps {
@@ -81,15 +80,16 @@ export function ProfileProjectsSection({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {projects.map((project) => {
-              const accent = projectStateAccent(project.state);
               const gradient = projectImageGradient(project.id);
+              const stateBadge = projectStateBadgeColor(project.state);
+              const initials = projectInitials(project.title);
               return (
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className={`flex items-center gap-3 p-3 rounded-md border-l-4 bg-gray-50 hover:bg-white hover:shadow-sm transition-all ${accent}`}
+                  className="group flex items-center gap-3 p-3 rounded-lg bg-white border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all"
                 >
-                  <div className="h-12 w-12 rounded-md overflow-hidden flex-shrink-0 ring-1 ring-gray-100">
+                  <div className="relative h-12 w-12 rounded-md overflow-hidden flex-shrink-0">
                     {project.imageDataUrl ? (
                       <img
                         src={project.imageDataUrl}
@@ -98,24 +98,25 @@ export function ProfileProjectsSection({
                       />
                     ) : (
                       <div className={`h-full w-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-                        <ImageIcon className="h-4 w-4 text-white/70" />
+                        <span className="text-sm font-bold text-white/85">{initials}</span>
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
-                      {project.title}
-                    </p>
-                    <p className="text-xs text-gray-600 truncate">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-slate-700 transition-colors">
+                        {project.title}
+                      </p>
+                      <span
+                        className={`inline-flex items-center text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0 ${stateBadge}`}
+                      >
+                        {projectStateLabel(project.state)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 truncate mt-0.5">
                       {project.description}
                     </p>
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className="text-xs whitespace-nowrap bg-gray-100 text-gray-700"
-                  >
-                    {projectStateLabel(project.state)}
-                  </Badge>
                 </Link>
               );
             })}

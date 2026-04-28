@@ -47,3 +47,26 @@ export function projectStateAccent(state: string | null | undefined): string {
       return "border-l-slate-400";
   }
 }
+
+export function projectStateBadgeColor(state: string | null | undefined): string {
+  switch (state as ProjectState) {
+    case "idea":
+      return "bg-amber-500 text-white";
+    case "mockup":
+      return "bg-sky-500 text-white";
+    case "working_prototype":
+      return "bg-lime-500 text-slate-900";
+    case "beta":
+      return "bg-purple-500 text-white";
+    default:
+      return "bg-slate-700 text-white";
+  }
+}
+
+export function projectInitials(title: string | null | undefined): string {
+  const t = (title ?? "").trim();
+  if (!t) return "P";
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}

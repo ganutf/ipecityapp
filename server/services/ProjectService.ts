@@ -4,9 +4,9 @@
  */
 
 import type { IStorage } from '../storage';
-import type { InsertProject, Member, Project } from '@shared/schema';
+import type { InsertProject, Member, Project, UpdateProject } from '@shared/schema';
 import { ACTIVE_MEMBER_STATUSES } from '@shared/constants';
-import { NotFoundError, ValidationError } from '../lib/errors';
+import { ForbiddenError, NotFoundError, ValidationError } from '../lib/errors';
 
 export class ProjectService {
   constructor(private storage: IStorage) {}
@@ -61,5 +61,60 @@ export class ProjectService {
       throw new ValidationError(`Invalid member id: ${memberId}`);
     }
     return this.storage.listProjectsByMember(memberId);
+  }
+
+  async updateProject(
+    actor: Member,
+    projectId: number,
+    input: UpdateProject,
+  ): Promise<Project> {
+    const existing = await this.storage.getProject(projectId);
+    if (!existing) throw new NotFoundError(`Project ${projectId} not found`);
+
+    const isOwner = existing.project.createdBy === actor.id;
+    const isAdmin = actor.memberType === 'admin';
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenError('You do not have permission to edit this project');
+    }
+
+    const { participantMemberIds, ...projectFields } = input as UpdateProject & {
+      participantMemberIds?: number[];
+    };
+
+    let dedupedIds: number[] | undefined;
+    if (participantMemberIds !== undefined) {
+      // Always include the creator (owner of the project, not the actor)
+      dedupedIds = Array.from(
+        new Set([...(participantMemberIds ?? []), existing.project.createdBy]),
+      );
+
+      const otherIds = dedupedIds.filter((id) => id !== existing.project.createdBy);
+      if (otherIds.length > 0) {
+        const fetched = await Promise.all(otherIds.map((id) => this.storage.getMember(id)));
+        fetched.forEach((member, idx) => {
+          if (!member) {
+            throw new ValidationError(`Participant ${otherIds[idx]} not found`);
+          }
+          if (!ACTIVE_MEMBER_STATUSES.includes(member.status as typeof ACTIVE_MEMBER_STATUSES[number])) {
+            throw new ValidationError(`Participant ${otherIds[idx]} is not an active member`);
+          }
+        });
+      }
+    }
+
+    return this.storage.updateProject(projectId, projectFields, dedupedIds);
+  }
+
+  async deleteProject(actor: Member, projectId: number): Promise<void> {
+    const existing = await this.storage.getProject(projectId);
+    if (!existing) throw new NotFoundError(`Project ${projectId} not found`);
+
+    const isOwner = existing.project.createdBy === actor.id;
+    const isAdmin = actor.memberType === 'admin';
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenError('You do not have permission to delete this project');
+    }
+
+    await this.storage.deleteProject(projectId);
   }
 }

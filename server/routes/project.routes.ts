@@ -12,7 +12,7 @@ import { validateRequest } from '../middleware/validation';
 import { auditLoggerV2 } from '../middleware/privyAuth';
 import { ProjectService } from '../services/ProjectService';
 import { storage } from '../storage';
-import { insertProjectSchema } from '@shared/schema';
+import { insertProjectSchema, updateProjectSchema } from '@shared/schema';
 import { parseIntParam, handleServiceError } from '../lib/routeHelpers';
 import { ValidationError } from '../lib/errors';
 
@@ -74,6 +74,45 @@ router.post(
       res.status(201).json(project);
     } catch (err) {
       handleServiceError(err, res, 'Failed to create project');
+    }
+  },
+);
+
+/** PATCH /api/v2/projects/:id — update (creator or admin) */
+router.patch(
+  '/:id',
+  privyAuthMiddleware,
+  auditLoggerV2('UPDATE_PROJECT'),
+  validateRequest(updateProjectSchema),
+  async (req: PrivyAuthRequest, res: Response) => {
+    try {
+      if (!req.member) {
+        throw new ValidationError('Authenticated member required');
+      }
+      const id = parseIntParam(req, 'id');
+      const project = await projectService.updateProject(req.member, id, req.body);
+      res.json(project);
+    } catch (err) {
+      handleServiceError(err, res, 'Failed to update project');
+    }
+  },
+);
+
+/** DELETE /api/v2/projects/:id — delete (creator or admin) */
+router.delete(
+  '/:id',
+  privyAuthMiddleware,
+  auditLoggerV2('DELETE_PROJECT'),
+  async (req: PrivyAuthRequest, res: Response) => {
+    try {
+      if (!req.member) {
+        throw new ValidationError('Authenticated member required');
+      }
+      const id = parseIntParam(req, 'id');
+      await projectService.deleteProject(req.member, id);
+      res.json({ success: true });
+    } catch (err) {
+      handleServiceError(err, res, 'Failed to delete project');
     }
   },
 );

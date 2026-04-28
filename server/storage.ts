@@ -41,6 +41,7 @@ import {
   type ApplicationByMemberId,
   type Project,
   type InsertProject,
+  type UpdateProject,
   // Auth V2 types
   type AuthUser,
   type InsertAuthUser,
@@ -209,6 +210,8 @@ export interface IStorage {
   getProject(id: number): Promise<{ project: Project; creator: Member; participants: Member[] } | undefined>;
   listProjects(): Promise<Array<Project & { creator: Pick<Member, 'id' | 'displayName' | 'ipeUsername' | 'ipePassport' | 'profileImageUrl' | 'farcasterFid'> }>>;
   listProjectsByMember(memberId: number): Promise<Project[]>;
+  updateProject(id: number, data: UpdateProject, participantMemberIds?: number[]): Promise<Project>;
+  deleteProject(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1527,6 +1530,40 @@ export class DatabaseStorage implements IStorage {
       .from(projects)
       .where(or(eq(projects.createdBy, memberId), inArray(projects.id, participantProjectIds)))
       .orderBy(desc(projects.createdAt));
+  }
+
+  async updateProject(
+    id: number,
+    data: UpdateProject,
+    participantMemberIds?: number[],
+  ): Promise<Project> {
+    return await this.withTransaction(async (tx) => {
+      const { participantMemberIds: _omit, ...projectFields } = data as UpdateProject & {
+        participantMemberIds?: number[];
+      };
+
+      const [updated] = await tx
+        .update(projects)
+        .set({ ...projectFields, updatedAt: new Date() })
+        .where(eq(projects.id, id))
+        .returning();
+
+      if (participantMemberIds) {
+        await tx.delete(projectParticipants).where(eq(projectParticipants.projectId, id));
+        const dedupedIds = Array.from(new Set(participantMemberIds));
+        if (dedupedIds.length > 0) {
+          await tx.insert(projectParticipants).values(
+            dedupedIds.map((memberId) => ({ projectId: id, memberId })),
+          );
+        }
+      }
+
+      return updated;
+    });
+  }
+
+  async deleteProject(id: number): Promise<void> {
+    await db.delete(projects).where(eq(projects.id, id));
   }
 }
 

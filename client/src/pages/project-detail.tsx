@@ -1,12 +1,36 @@
-import { Link, useRoute } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation, useRoute } from "wouter";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink, Github, Globe, Play, Award, Users } from "lucide-react";
-import { authenticatedGet } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Github,
+  Globe,
+  Play,
+  Award,
+  Users,
+  Pencil,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import { authenticatedDelete, authenticatedGet } from "@/lib/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { defaultAvatarUrl } from "@/lib/avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import {
   projectImageGradient,
   projectInitials,
@@ -24,11 +48,37 @@ interface ProjectDetailResponse {
 export default function ProjectDetailPage() {
   const [, params] = useRoute<{ id: string }>("/projects/:id");
   const id = params?.id;
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { member, memberId } = useAuth();
 
   const { data, isLoading, error } = useQuery<ProjectDetailResponse>({
     queryKey: id ? queryKeys.projects.detail(id) : queryKeys.projects.detail("missing"),
     queryFn: () => authenticatedGet(`/api/v2/projects/${id}`),
     enabled: !!id,
+  });
+
+  const deleteMutation = useMutation<void, Error>({
+    mutationFn: () => authenticatedDelete(`/api/v2/projects/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
+      if (memberId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects.byMember(memberId) });
+      }
+      toast({
+        title: "Project deleted",
+        description: "The project has been removed.",
+      });
+      setLocation("/projects");
+    },
+    onError: (err) => {
+      toast({
+        title: "Could not delete project",
+        description: err.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -68,16 +118,65 @@ export default function ProjectDetailPage() {
   const gradient = projectImageGradient(project.id);
   const stateBadge = projectStateBadgeColor(project.state);
   const initials = projectInitials(project.title);
+  const canManage =
+    !!memberId && (memberId === project.createdBy || member?.memberType === "admin");
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4 md:space-y-6">
-      <Link
-        href="/projects"
-        className="inline-flex items-center text-sm text-gray-600 hover:text-slate-900"
-      >
-        <ArrowLeft className="h-4 w-4 mr-1" />
-        Back to projects
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href="/projects"
+          className="inline-flex items-center text-sm text-gray-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to projects
+        </Link>
+        {canManage && (
+          <div className="flex items-center gap-2">
+            <Link href={`/projects/${project.id}/edit`}>
+              <Button variant="outline" size="sm" className="border-gray-200">
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </Link>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete this project?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently removes <span className="font-semibold">{project.title}</span> and
+                    all its participant links. This action can't be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteMutation.mutate()}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Delete project
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
+      </div>
 
       <Card className="bg-white shadow-sm overflow-hidden rounded-2xl border border-gray-100">
         {/* Hero cover */}

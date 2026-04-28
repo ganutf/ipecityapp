@@ -769,6 +769,8 @@ export const insertProjectSchema = createInsertSchema(projects)
       .default([]),
   });
 
+export const updateProjectSchema = insertProjectSchema.partial();
+
 // Types
 export type Member = typeof members.$inferSelect;
 export type InsertMember = z.infer<typeof insertMemberSchema>;
@@ -794,6 +796,7 @@ export type MemberWallet = typeof memberWallets.$inferSelect;
 export type InsertMemberWallet = typeof memberWallets.$inferInsert;
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type UpdateProject = z.infer<typeof updateProjectSchema>;
 export type ProjectParticipant = typeof projectParticipants.$inferSelect;
 export type InsertProjectParticipant = typeof projectParticipants.$inferInsert;
 

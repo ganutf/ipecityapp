@@ -27,6 +27,7 @@ import IdVerificationPage from "@/pages/id-verification";
 import ProjectsPage from "@/pages/projects";
 import ProjectsNewPage from "@/pages/projects-new";
 import ProjectDetailPage from "@/pages/project-detail";
+import ProjectEditPage from "@/pages/project-edit";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -67,6 +68,7 @@ function Router() {
               <Route path="/profile" component={ProfilePage} />
               <Route path="/member/:id" component={MemberDetailsPage} />
               <Route path="/projects/new" component={ProjectsNewPage} />
+              <Route path="/projects/:id/edit" component={ProjectEditPage} />
               <Route path="/projects/:id" component={ProjectDetailPage} />
               <Route path="/projects" component={ProjectsPage} />
               <Route path="/signer-approval" component={SignerApprovalPage} />

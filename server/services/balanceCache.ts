@@ -137,7 +137,7 @@ export async function fetchBulkBalances(addresses: string[]): Promise<BalanceMap
     const startTime = Date.now();
 
     // Get decimals (only need to fetch once) with retry logic
-    let decimals: number;
+    let decimals!: number;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         decimals = await tokenContract.decimals();
@@ -183,7 +183,7 @@ export async function fetchBulkBalances(addresses: string[]): Promise<BalanceMap
           logger.debug('Fetched balance for address', {
             service: 'balanceCache',
             address,
-            balance: balance.toString(),
+            balance: balance!.toString(),
             attempt,
           });
           break; // Success, exit retry loop

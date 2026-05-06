@@ -38,10 +38,10 @@ export interface AttestationResult {
 }
 
 class EASService {
-  private eas!: EAS;
+  private eas!: EASClass;
   private provider!: ethers.JsonRpcProvider;
   private signer!: ethers.Wallet;
-  private schemaEncoder!: SchemaEncoder;
+  private schemaEncoder!: SchemaEncoderClass;
   private initialized = false;
 
   private async initialize() {

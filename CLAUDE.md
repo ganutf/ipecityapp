@@ -129,6 +129,19 @@ Required for development:
 - Graceful shutdown handling
 - Winston structured logging
 
+### Branch Model & Deployment Flow
+Trunk-based, single long-lived branch:
+- `main` — source of truth. Coolify production app auto-deploys on every push to `main`.
+
+Day-to-day flow:
+1. Branch off `main` (`jean/short-description`), commit, push.
+2. Open a PR to `main`. CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs `npm run check` + `npm run test`. A teammate reviews.
+3. Merge. Coolify auto-deploys to prod.
+
+**Branch protection** on `main`: require PR + 1 review + green CI; direct pushes and force pushes blocked. **Do not commit directly to `main`.**
+
+No separate staging environment for now — verification happens via local `npm run dev` and PR review. Revisit staging when team or surface area grows.
+
 ## Common Development Patterns
 
 ### Database Operations
@@ -369,10 +382,16 @@ const baseClasses = "px-3 py-1.5 text-sm font-semibold rounded-full";
 
 ## Wallet Separation
 
-The system uses two separate wallets for different purposes:
+The system uses three separate wallets for different purposes:
 
 1. **Farcaster Developer Wallet** (`FARCASTER_DEVELOPER_MNEMONIC`): Used for sponsoring Farcaster signers
-2. **EAS Attestation Wallet** (`EAS_ATTESTATION_MNEMONIC`): Used exclusively for creating EAS attestations
+2. **EAS Attestation Wallet** (`EAS_ATTESTATION_MNEMONIC`): Used exclusively for creating EAS attestations (Base L2)
+3. **ENS Sponsor Wallet** (`ENS_ADMIN_MNEMONIC`): Pays gas to mint `*.ipecity.eth` subdomains on Ethereum mainnet
+   - Sponsor address (the one to **fund**): `0xb8Fa2D652dC7413A764816437D49e152f73af260`
+   - Owner of `ipecity.eth` (separate cold wallet, do not need to fund routinely): `0x7582Cde92962A71143185A6f8F397F52cC86ECFf`
+   - The owner has called `NameWrapper.setApprovalForAll(sponsor, true)`, so the sponsor can mint subdomains on the owner's behalf without the owner ever signing
+   - Fund the **sponsor** (`0xb8Fa2D…`) with ETH on Ethereum mainnet. Each passport mint runs three sequential transactions (`setSubnodeRecord` → `setAddr` → `setSubnodeOwner`)
+   - Symptom of insufficient funds: admin approval fails with "Execution reverted with reason: gas required exceeds allowance" — top up the sponsor wallet and retry. The error is misleading — it's the sponsor running out of ETH for gas estimation, not a real revert
 
 To get the address for funding the attestation wallet:
 ```bash

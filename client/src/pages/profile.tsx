@@ -165,6 +165,7 @@ export default function Profile2() {
       totalPoints: member.totalPoints,
       pulseStreak: member.pulseStreak,
       createdAt: member.createdAt?.toString(),
+      ipeBalance: member.ipeBalance,
     },
   } : undefined;
   const isLoading = isMemberLoading;

@@ -10,7 +10,6 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "node server/scripts/migrate.mjs",
     "admin:create": "tsx server/scripts/create-admin.ts",
     "admin:list": "tsx server/scripts/list-admins.ts",
     "keys:migrate": "tsx server/scripts/migrate-keys.ts",
@@ -18,18 +17,12 @@
     "members:verify-addresses": "tsx server/scripts/verify-member-addresses.ts",
     "attestations:create": "tsx server/scripts/create-attestations.ts",
     "wallet:attestation": "tsx server/scripts/get-attestation-wallet.ts",
-    "migrate:pulse-structure": "tsx server/scripts/migrate-pulse-structure.ts",
-    "rollback:pulse-structure": "tsx server/scripts/rollback-pulse-migration.ts",
-    "populate:pulse-types": "tsx server/scripts/populate-pulse-types.ts",
     "test-users:generate": "tsx server/scripts/generate-test-users.ts",
     "test-streak:compare": "tsx server/scripts/test-streak-calculation.ts",
     "test-active:status": "tsx server/scripts/test-active-pulse-status.ts",
     "onboarding": "tsx server/scripts/test-onboarding.ts",
-    "migrate:justaname-to-ens": "tsx server/scripts/migrate-justaname-to-ens.ts",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "production:check": "bash scripts/production-check.sh",
-    "production:deploy": "npm run production:check && npm run build && npm run start"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@ethereum-attestation-service/eas-sdk": "^2.7.0",

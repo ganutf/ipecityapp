@@ -8,9 +8,10 @@ import { StatsCards } from "@/components/profile/StatsCards";
 import { AboutSection } from "@/components/profile/AboutSection";
 import { SocialLinksSection } from "@/components/profile/SocialLinksSection";
 import { ProfileTagsSection } from "@/components/profile/ProfileTagsSection";
+import { ProfileProjectsSection } from "@/components/profile/ProfileProjectsSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Briefcase, Link as LinkIcon } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { resolveAvatarUrl } from "@/lib/avatar";
@@ -199,28 +200,7 @@ export default function MemberDetails() {
           showEmailVerification={false}
         />
 
-        {/* Projects Section - Placeholder */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base md:text-lg flex items-center space-x-2">
-              <Briefcase className="h-5 w-5" />
-              <span>Projects</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <div className="bg-gray-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
-                <LinkIcon className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Projects Coming Soon
-              </h3>
-              <p className="text-gray-600 max-w-md mx-auto">
-                Member project showcases and portfolio integration will be available in a future update.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <ProfileProjectsSection memberId={member.id} isOwnProfile={false} />
 
       </div>
     </div>

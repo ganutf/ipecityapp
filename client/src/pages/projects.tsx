@@ -11,6 +11,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { ProjectCard, type ProjectListItem } from "@/components/projects";
 import { PROJECT_STATES } from "@shared/constants";
 import { projectStateLabel } from "@/components/projects/projectVisuals";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProjectsResponse {
   projects: ProjectListItem[];
@@ -19,6 +20,7 @@ interface ProjectsResponse {
 type StateFilter = "all" | (typeof PROJECT_STATES)[number];
 
 export default function ProjectsPage() {
+  const { isAuthenticated, login } = useAuth();
   const { data, isLoading, error } = useQuery<ProjectsResponse>({
     queryKey: queryKeys.projects.all,
     queryFn: () => authenticatedGet("/api/v2/projects"),
@@ -26,6 +28,26 @@ export default function ProjectsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
+
+  const newProjectButton = (
+    <Button
+      onClick={isAuthenticated ? undefined : () => login()}
+      className="bg-lime-500 hover:bg-lime-600 text-slate-900"
+    >
+      <Plus className="h-4 w-4 mr-2" />
+      New Project
+    </Button>
+  );
+
+  const createFirstButton = (
+    <Button
+      onClick={isAuthenticated ? undefined : () => login()}
+      className="bg-lime-500 hover:bg-lime-600 text-slate-900"
+    >
+      <Plus className="h-4 w-4 mr-2" />
+      Create the first project
+    </Button>
+  );
 
   const filtered = useMemo(() => {
     const all = data?.projects ?? [];
@@ -64,12 +86,11 @@ export default function ProjectsPage() {
                 </p>
               </div>
             </div>
-            <Link href="/projects/new">
-              <Button className="bg-lime-500 hover:bg-lime-600 text-slate-900">
-                <Plus className="h-4 w-4 mr-2" />
-                New Project
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link href="/projects/new">{newProjectButton}</Link>
+            ) : (
+              newProjectButton
+            )}
           </div>
         </CardContent>
       </Card>
@@ -130,14 +151,12 @@ export default function ProjectsPage() {
                 ? "Try a different search or state filter."
                 : "Be the first to share what you're building."}
             </p>
-            {!data?.projects?.length && (
-              <Link href="/projects/new">
-                <Button className="bg-lime-500 hover:bg-lime-600 text-slate-900">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create the first project
-                </Button>
-              </Link>
-            )}
+            {!data?.projects?.length &&
+              (isAuthenticated ? (
+                <Link href="/projects/new">{createFirstButton}</Link>
+              ) : (
+                createFirstButton
+              ))}
           </CardContent>
         </Card>
       )}

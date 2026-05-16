@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { ExternalLink, ImageIcon } from "lucide-react";
 import { defaultAvatarUrl } from "@/lib/avatar";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   projectImageGradient,
   projectInitials,
@@ -9,6 +10,41 @@ import {
   projectStateLabel,
 } from "./projectVisuals";
 import type { Project } from "@shared/schema";
+
+interface ProjectClickWrapperProps {
+  projectId: number;
+  className: string;
+  children: React.ReactNode;
+}
+
+function ProjectClickWrapper({ projectId, className, children }: ProjectClickWrapperProps) {
+  const { isAuthenticated, login } = useAuth();
+
+  if (isAuthenticated) {
+    return (
+      <Link href={`/projects/${projectId}`} className={className}>
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => login()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          login();
+        }
+      }}
+      className={`${className} cursor-pointer`}
+    >
+      {children}
+    </div>
+  );
+}
 
 export interface ProjectListItem extends Project {
   creator: {
@@ -46,8 +82,8 @@ function FullProjectCard({ project }: { project: ProjectListItem }) {
 
   return (
     <Card className="group bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden rounded-xl border border-gray-100">
-      <Link
-        href={`/projects/${project.id}`}
+      <ProjectClickWrapper
+        projectId={project.id}
         className="block focus:outline-none focus:ring-2 focus:ring-lime-500 rounded-xl"
       >
         {/* Cover */}
@@ -143,7 +179,7 @@ function FullProjectCard({ project }: { project: ProjectListItem }) {
             )}
           </div>
         </div>
-      </Link>
+      </ProjectClickWrapper>
     </Card>
   );
 }
@@ -161,8 +197,8 @@ function CompactProjectCard({ project }: { project: ProjectListItem }) {
 
   return (
     <Card className="group bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden rounded-lg border border-gray-100">
-      <Link
-        href={`/projects/${project.id}`}
+      <ProjectClickWrapper
+        projectId={project.id}
         className="flex items-center gap-3 p-3 focus:outline-none focus:ring-2 focus:ring-lime-500 rounded-lg"
       >
         <div className="relative h-14 w-14 rounded-md overflow-hidden flex-shrink-0">
@@ -186,7 +222,7 @@ function CompactProjectCard({ project }: { project: ProjectListItem }) {
           <p className="text-xs text-gray-600 truncate mt-0.5">{project.description}</p>
           <p className="text-[11px] text-gray-500 mt-1 truncate">by {builderName}</p>
         </div>
-      </Link>
+      </ProjectClickWrapper>
     </Card>
   );
 }

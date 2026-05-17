@@ -13,7 +13,7 @@ import { resolveAvatarUrl } from "@/lib/avatar";
 
 interface CommunityMember {
   id: number;
-  farcasterFid: number;
+  farcasterFid: number | null;
   memberType: string;
   ipePassport?: string;
   totalPoints: number;
@@ -202,7 +202,7 @@ export default function Community() {
           member.username,
           member.ipePassport,
           member.memberType,
-          member.farcasterFid.toString(),
+          member.farcasterFid?.toString(),
         ]
           .filter(Boolean)
           .join(" ")

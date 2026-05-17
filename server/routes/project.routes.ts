@@ -19,8 +19,8 @@ import { ValidationError } from '../lib/errors';
 const router = Router();
 const projectService = new ProjectService(storage);
 
-/** GET /api/v2/projects — list all projects */
-router.get('/', privyAuthMiddleware, async (_req, res) => {
+/** GET /api/v2/projects — list all projects (public) */
+router.get('/', async (_req, res) => {
   try {
     const projects = await projectService.listProjects();
     res.json({ projects });
